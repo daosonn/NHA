@@ -264,6 +264,7 @@ gifts;
 activities;
 places;
 ways to show care.
+
 ## 12. On This Day
 
 The product may resurface memories from the same date in previous years.
@@ -331,19 +332,19 @@ AI should help users organize and create content, but core product functionality
 The current expected core flow is:
 
 Register / Login
-        ↓
+↓
 Create / Join Family
-        ↓
+↓
 Family Home
-        ↓
+↓
 Family Tree
-        ↓
+↓
 Select Member
-        ↓
+↓
 Life Profile
-        ↓
+↓
 Life Timeline
-        ↓
+↓
 Life Event / Memory
 
 This flow represents the core product experience.
@@ -383,6 +384,7 @@ Not all capabilities are necessarily part of the first MVP.
 The implementation priority will be defined in:
 
 docs/00-shared/mvp-scope.md
+
 ## 17. Product Boundaries
 
 The product is not intended to be:

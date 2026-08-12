@@ -5,6 +5,7 @@
 Act as a senior software engineer working inside this repository.
 
 Your responsibilities are to:
+
 - understand the existing system before changing it;
 - preserve architecture and project conventions;
 - implement the smallest correct change;
@@ -26,6 +27,7 @@ This project is a mobile-first responsive web application for preserving and sha
 The central product concept is the **Life Profile**.
 
 A Life Profile represents a family member's life and may contain:
+
 - personal information;
 - biography;
 - family relationships;
@@ -39,6 +41,7 @@ A Life Profile represents a family member's life and may contain:
 The **Family Tree** is primarily a relationship visualization and navigation mechanism that helps users discover family members and open their Life Profiles.
 
 The product may also provide AI-assisted capabilities such as:
+
 - speech-to-text;
 - summarization;
 - memory organization;
@@ -73,6 +76,7 @@ Detailed business rules belong in `docs/`.
 # 3. Tech Stack & Architecture
 
 ## Frontend
+
 - Next.js
 - App Router
 - TypeScript
@@ -80,20 +84,24 @@ Detailed business rules belong in `docs/`.
 - Mobile-first responsive UI
 
 ## Backend
+
 - NestJS
 - TypeScript
 - REST API
 - Prisma ORM
 
 ## Database
+
 - PostgreSQL
 - Docker Compose for local PostgreSQL
 
 ## AI Service
+
 - Python
 - FastAPI
 
 ## Repository
+
 - pnpm workspace / monorepo
 - Git + GitHub
 
@@ -111,10 +119,11 @@ The intended request flow is:
     NestJS
       /   \
      v     v
+
 PostgreSQL FastAPI
-   Prisma     |
-             v
-        AI providers/models
+Prisma |
+v
+AI providers/models
 
 Architecture responsibilities:
 
@@ -228,6 +237,7 @@ Prefer:
 ## Secrets
 
 Never commit:
+
 - `.env` files;
 - passwords;
 - database credentials;
@@ -327,18 +337,21 @@ Never claim that a command, test, lint, typecheck, or build passed unless it was
 For every implementation task:
 
 ## 1. Understand
+
 - Read this file.
 - Identify the affected application/domain.
 - Read relevant documentation.
 - Inspect existing implementation, types, tests, and contracts.
 
 ## 2. Plan
+
 - Determine the smallest valid change.
 - Identify affected files and integration boundaries.
 - Check for reusable existing implementations.
 - Identify database/API/architecture impacts before coding.
 
 ## 3. Implement
+
 - Follow existing patterns and architecture.
 - Keep scope narrow.
 - Maintain type safety.
@@ -346,10 +359,12 @@ For every implementation task:
 - Do not silently change shared contracts.
 
 ## 4. Verify
+
 - Run relevant formatting/lint/typecheck/tests/build checks.
 - Validate Prisma changes when database code changes.
 
 ## 5. Review
+
 - Inspect the final diff.
 - Remove debugging code.
 - Remove accidental unrelated changes.
@@ -357,7 +372,9 @@ For every implementation task:
 - Check whether documentation needs updating.
 
 ## 6. Report
+
 Summarize:
+
 - what changed;
 - important files changed;
 - checks executed;

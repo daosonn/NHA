@@ -14,6 +14,7 @@ Before starting:
 git checkout main
 git pull origin main
 ```
+
 Then create a branch from the latest main.
 
 2. Branch Naming
@@ -38,8 +39,7 @@ Rules:
 
 Use lowercase English.
 Use kebab-case.
-Keep one logical task per branch.
-3. Commit Convention
+Keep one logical task per branch. 3. Commit Convention
 
 Use Conventional Commits:
 
@@ -90,8 +90,7 @@ Never:
 push directly to main;
 force-push shared branches;
 rewrite shared history;
-push secrets or private credentials.
-5. Pull Requests
+push secrets or private credentials. 5. Pull Requests
 
 All changes to main must go through a Pull Request.
 
@@ -164,17 +163,16 @@ Never make shared schema changes only through a database GUI.
 
 Verify:
 
- Task is complete
- No unrelated changes
- No debug code
- No secrets
- Relevant lint passes
- Relevant typecheck passes
- Relevant tests pass
- Build passes when applicable
- Migration included when required
- Documentation updated when required
-10. Golden Rules
+Task is complete
+No unrelated changes
+No debug code
+No secrets
+Relevant lint passes
+Relevant typecheck passes
+Relevant tests pass
+Build passes when applicable
+Migration included when required
+Documentation updated when required 10. Golden Rules
 Keep main stable.
 Use short-lived branches.
 Integrate frequently.
