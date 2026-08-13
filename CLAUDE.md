@@ -150,6 +150,17 @@ Prefer a modular monolith for the NestJS backend.
 
 Detailed project specifications live under `docs/`.
 
+## Before starting any implementation
+
+1. Read `docs/project-status.md`.
+2. Read the active sprint document referenced there (`docs/sprints/sprint-N.md`).
+3. Read the relevant domain documentation:
+   - Frontend → `docs/01-frontend/`
+   - Backend → `docs/02-backend/`
+   - AI → `docs/03-ai/`
+   - Shared/API contract → `docs/00-shared/`
+4. Do not implement features outside the active sprint unless explicitly requested.
+
 Before implementing a task, identify its scope and read only the
 relevant documentation.
 
@@ -380,6 +391,19 @@ Summarize:
 - checks executed;
 - assumptions made;
 - unresolved issues or TODOs.
+
+## 7. Update Project Status
+
+After completing an implementation task:
+
+- Update the relevant checklist item(s) in the active sprint document
+  (`docs/sprints/sprint-N.md`, referenced from `docs/project-status.md`).
+- Update `docs/project-status.md` if the change moves something between
+  Completed / In Progress / Not Started, or adds a new Important Decision.
+- Do not mark a task complete in these documents unless it actually passed
+  verification (see § 7 Execution & Verification).
+- Skip this step only for pure documentation/discussion tasks that don't
+  correspond to a sprint checklist item.
 
 ---
 
