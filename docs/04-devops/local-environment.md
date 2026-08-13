@@ -1,5 +1,26 @@
 # Local Environment
 
+## Quick Start (new machine)
+
+```bash
+git clone https://github.com/daosonn/NHA.git
+cd NHA
+pnpm install
+pnpm bootstrap
+```
+
+`pnpm bootstrap` (script: `scripts/setup.mjs`) does everything in one shot:
+
+1. Creates `.env` files from `.env.example` if missing (root + `apps/api`)
+2. Starts local PostgreSQL via `docker compose up -d`
+3. Waits until the database is ready
+4. Applies Prisma migrations (`prisma migrate deploy`) and generates the
+   Prisma client (required — `apps/api/src/generated` is gitignored)
+
+It is idempotent — safe to re-run anytime (e.g. after pulling new
+migrations). Only prerequisite: **Docker Desktop running**. Node/pnpm are
+auto-downloaded if missing (pinned in root `package.json` → `devEngines`).
+
 ## Repository Layout
 
 This is a pnpm workspace monorepo with three applications:
@@ -10,49 +31,33 @@ This is a pnpm workspace monorepo with three applications:
 | `web` | `apps/web` | Next.js + Tailwind CSS       | Bootstrapped, default starter  |
 | `ai`  | `apps/ai`  | Python + FastAPI (planned)   | Not yet created                |
 
-## Prerequisites
-
-- Node.js >=24 <25 (see root `package.json` → `engines`)
-- pnpm 11.21.0 (see root `package.json` → `devEngines`)
-- Docker (for local PostgreSQL)
-
 ## Database (PostgreSQL via Docker Compose)
 
-Start the local database:
-
-```bash
-docker compose up -d
-```
-
-This starts `nha-postgres` (Postgres 17) on port `5432`. Credentials come from
-`docker-compose.yml` and must match `apps/api/.env`:
+`docker-compose.yml` starts `nha-postgres` (Postgres 17). Credentials and
+port come from the root `.env` (defaults work out of the box):
 
 ```
 POSTGRES_USER=nha
 POSTGRES_PASSWORD=nha_password
 POSTGRES_DB=nha
+POSTGRES_PORT=5432
 ```
 
 ## Environment Variables
 
-### Root (`.env.example`)
+### Root (`.env`)
 
-Used to configure the Docker Compose Postgres container:
+Configures the Docker Compose Postgres container (see above). Created from
+`.env.example` by `pnpm bootstrap`.
 
-```
-POSTGRES_USER=
-POSTGRES_PASSWORD=
-POSTGRES_DB=
-POSTGRES_PORT=5432
-```
-
-### `apps/api`
-
-Requires a `.env` file (not committed) with:
+### `apps/api` (`.env`)
 
 ```
-DATABASE_URL="postgresql://<user>:<password>@localhost:5432/<db>?schema=public"
+DATABASE_URL="postgresql://nha:nha_password@localhost:5432/nha?schema=public"
 ```
+
+Created from `apps/api/.env.example` by `pnpm bootstrap`. Must match the
+root Postgres credentials.
 
 Prisma does not load `.env` automatically in v7 — `apps/api/prisma.config.ts`
 explicitly loads it via `dotenv/config`, and `AppModule` loads it into
@@ -69,8 +74,6 @@ Not yet scaffolded. Requirements TBD.
 ## Running the Apps
 
 ```bash
-pnpm install          # install all workspace dependencies
-
 pnpm dev:api          # apps/api, NestJS in watch mode
 pnpm dev:web          # apps/web, Next.js dev server
 
@@ -91,5 +94,4 @@ pnpm --filter api build
 ## Open Questions
 
 - [ ] What does `apps/ai` need locally (Python version, venv/poetry, env vars)?
-- [ ] Should there be a single `docker compose up` that also runs the apps, or DB-only as today?
 - [ ] Seed data strategy for local development?

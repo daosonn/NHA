@@ -19,6 +19,7 @@
     }
   },
   "scripts": {
+    "bootstrap": "node scripts/setup.mjs",
     "dev:web": "pnpm --filter web dev",
     "dev:api": "pnpm --filter api start:dev",
     "lint:web": "pnpm --filter web lint",

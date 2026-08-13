@@ -189,6 +189,20 @@ a family event.
 
 The same memory may be displayed in multiple contexts without unnecessarily duplicating the underlying content.
 
+### Time-Capsule Memories
+
+Memories, messages, and memory boxes may be scheduled to unlock at a future
+date or milestone.
+
+Examples:
+
+- a letter for a child to open at age 18;
+- a message unlocked on a wedding anniversary;
+- memories left behind by a family member to be opened later.
+
+This supports the product's purpose of expressing care and passing stories
+across generations, even when the author is no longer present.
+
 ## 8. Family Space
 
 Each family should have a shared family-oriented space.
@@ -400,14 +414,17 @@ family relationships + personal life stories + long-term memories.
 
 ## 18. Open Product Decisions
 
+Decided so far (details in the referenced documents):
+
+- MVP scope — see `docs/00-shared/mvp-scope.md`;
+- core domain model: User ↔ Member linking, one global Life Profile per
+  person, multi-family membership, wiki-style placeholder profiles,
+  relationship model, and MVP privacy rules — see
+  `docs/00-shared/domain-model.md`.
+
 The following areas are not yet finalized:
 
-exact MVP scope;
 final product name;
-detailed User ↔ Member relationship;
-permission roles;
-privacy rules;
-exact family relationship model;
 media storage strategy;
 notification delivery method;
 AI providers and models;

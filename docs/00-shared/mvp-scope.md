@@ -1,69 +1,79 @@
 # MVP Scope
 
-> Status: draft skeleton — not yet filled in. Do not treat any item below as
-> decided until it is explicitly marked and reviewed.
+> Status: **decided** (2026-08-13) — based on the original product
+> specification (12 features / 21 screens) and team discussion. Feature IDs
+> (#N) below refer to the original spec's 機能一覧 (feature list).
 
 This document defines what is actually being built for the first release
 (MVP), based on the capability list in `product-overview.md` § 16.
 
-For each item: mark `IN` or `OUT`, and add a short note if useful (why,
-simplified version for v1, depends-on, etc.). Leave `TBD` if not decided yet.
-
 ## How to use this file
 
-- Anyone can fill in a row for a capability they own or have an opinion on.
-- If unsure, leave `TBD` — do not guess just to fill the cell.
-- Once a section is fully decided, remove `TBD` rows or mark the section
-  "Decided" so it's clear it's final.
+- This scope is decided. Changing a row is a product decision — discuss it
+  first, don't edit silently.
+- Suggested internal build order: **Foundation → Memory storage → AI**. If
+  time runs short, cut from the tail (AI features degrade gracefully — the
+  core product must work without them, see `product-overview.md` § 14).
 
 ---
 
 ## Core
 
-| Capability                         | IN / OUT / TBD | Notes |
-| ---------------------------------- | -------------- | ----- |
-| Authentication (register/login)    | TBD            |       |
-| Family creation / joining          | TBD            |       |
-| Family members                     | TBD            |       |
-| Life Profile                       | TBD            |       |
-| Life Timeline                      | TBD            |       |
-| Memories (photo/video/audio/story) | TBD            |       |
-| Family Tree                        | TBD            |       |
+| Capability                         | IN / OUT | Notes                                                                                |
+| ---------------------------------- | -------- | ------------------------------------------------------------------------------------ |
+| Authentication (register/login)    | IN       | Spec #12. Incl. join-by-invite-code and linking account to existing Member           |
+| Family creation / joining          | IN       | Spec #12, screen 4                                                                   |
+| Family members                     | IN       | Members can exist without accounts (created on their behalf) — see `domain-model.md` |
+| Life Profile                       | IN       | Spec #1 — **the core product value**; everything else feeds it                       |
+| Life Timeline                      | IN       | Spec #2                                                                              |
+| Memories (photo/video/audio/story) | IN       | Spec #3 — daily-moment posting                                                       |
+| Family Tree                        | IN       | Spec #4 — visualization + navigation to Life Profiles                                |
 
 ## Supporting
 
-| Capability                                | IN / OUT / TBD | Notes |
-| ----------------------------------------- | -------------- | ----- |
-| Albums                                    | TBD            |       |
-| Shared family memory space (Family Space) | TBD            |       |
-| Personal archive                          | TBD            |       |
-| Important-date reminders                  | TBD            |       |
-| On This Day                               | TBD            |       |
-| Notifications                             | TBD            |       |
-| Memory Map                                | TBD            |       |
+| Capability                                | IN / OUT | Notes                                                                     |
+| ----------------------------------------- | -------- | ------------------------------------------------------------------------- |
+| Albums                                    | IN       | Part of spec #5 (family memory box classification)                        |
+| Shared family memory space (Family Space) | IN       | Spec #5 + family home screen (screen 5); incl. collaborative memory boxes |
+| Time-capsule memory boxes                 | IN       | Spec #5 — boxes/messages scheduled to unlock at a future date             |
+| Personal archive                          | IN       | Spec #6 — private by default, owner decides sharing                       |
+| Important-date reminders                  | IN       | Spec #9 — the reminder part needs no AI; suggestions (AI) listed below    |
+| On This Day                               | **OUT**  | Spec #10 — post-MVP                                                       |
+| Notifications                             | IN       | Needed by posting (solution #1: notify new content) and reminders (#9)    |
+| Memory Map                                | **OUT**  | Spec #11 — post-MVP                                                       |
 
 ## AI-Assisted
 
-| Capability                     | IN / OUT / TBD | Notes |
-| ------------------------------ | -------------- | ----- |
-| Interest/preference analysis   | TBD            |       |
-| Greeting suggestions           | TBD            |       |
-| Gift suggestions               | TBD            |       |
-| Story assistance               | TBD            |       |
-| Automatic albums               | TBD            |       |
-| Automatic commemorative videos | TBD            |       |
+| Capability                     | IN / OUT | Notes                                                            |
+| ------------------------------ | -------- | ---------------------------------------------------------------- |
+| Interest/preference analysis   | IN       | Spec #7 — user can see analysis sources; opt-in content only     |
+| Greeting suggestions           | IN       | Spec #9                                                          |
+| Gift suggestions               | IN       | Spec #9                                                          |
+| Story assistance               | OUT      | Not among the original spec's 12 features — re-confirm if wanted |
+| Automatic albums               | IN       | Spec #8                                                          |
+| Automatic commemorative videos | IN       | Spec #8                                                          |
 
 ---
 
 ## Related Open Decisions
 
-These affect scope but are tracked separately — link or summarize once
-decided (see `product-overview.md` § 18):
+These affect scope but are tracked separately (see `product-overview.md` § 18
+and `domain-model.md`):
 
-- [ ] User ↔ Member relationship model
-- [ ] Permission roles
-- [ ] Privacy rules
-- [ ] Family relationship model (beyond parent/child/spouse/sibling)
+- [x] User ↔ Member relationship model — **decided**: Members exist
+      independently of accounts; an account can link to an existing Member.
+      One Life Profile per person, global across families. Details in
+      `domain-model.md`.
+- [x] Multi-family membership — **decided**: a user can belong to multiple
+      family spaces. Consequences tracked in `domain-model.md`.
+- [x] Permission roles — **decided for MVP**: single "User" role; placeholder
+      profiles are wiki-editable by the whole family. See `domain-model.md`.
+- [x] Privacy rules — **decided for MVP**: post to chosen families; all
+      shared content visible to the whole family (no per-item ACL); personal
+      archive private by default. See `domain-model.md`.
+- [x] Family relationship model — **decided**: base types + exceptional
+      types allowed (adopted, step, extended); set by whoever adds the
+      member; tree auto-renders. See `domain-model.md`.
 - [ ] Media storage strategy
 - [ ] Notification delivery method
 - [ ] AI providers and models
@@ -71,6 +81,9 @@ decided (see `product-overview.md` § 18):
 
 ## Out of Scope for MVP (explicit)
 
-List things intentionally excluded, so nobody re-proposes them mid-build:
+Intentionally excluded — do not re-propose mid-build without a product
+discussion:
 
-- (none decided yet)
+- On This Day (spec #10)
+- Memory Map (spec #11)
+- AI story assistance (not in the original 12-feature spec)

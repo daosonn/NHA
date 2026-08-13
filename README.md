@@ -31,15 +31,18 @@ Read in this order:
 
 ## Running the project
 
+Prerequisites: Docker Desktop running. Node/pnpm are auto-downloaded if
+missing (pinned in `package.json` → `devEngines`).
+
 ```bash
 pnpm install
-docker compose up -d   # starts local PostgreSQL
+pnpm bootstrap   # one-shot: .env files, PostgreSQL, migrations, Prisma client
 
-pnpm dev:api            # apps/api
-pnpm dev:web            # apps/web
+pnpm dev:api     # apps/api
+pnpm dev:web     # apps/web
 ```
 
-Full environment setup, env vars, and verification commands:
+`pnpm bootstrap` is safe to re-run anytime. Details:
 `docs/04-devops/local-environment.md`.
 
 ## Contributing
