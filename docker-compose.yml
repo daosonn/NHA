@@ -1,16 +1,19 @@
-version: '3.8'
 services:
   postgres:
-    image: postgres:15
+    image: postgres:17-alpine
+    container_name: nha-postgres
     restart: unless-stopped
+
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-nha}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nha_pass}
-      POSTGRES_DB: ${POSTGRES_DB:-nha_dev}
+      POSTGRES_USER: nha
+      POSTGRES_PASSWORD: nha_password
+      POSTGRES_DB: nha
+
     ports:
       - '5432:5432'
+
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
-  postgres-data:
+  postgres_data:
