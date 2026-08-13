@@ -2,16 +2,20 @@
 
 ## Current Sprint
 
-None yet — the project is in the **setup / planning phase**.
+**Sprint 1 — Core Features** (defined, not yet started)
 
+- Active sprint doc: `docs/sprints/sprint-01.md`
+- Later sprints: `docs/sprints/sprint-02.md` (Memories & AI),
+  `docs/sprints/sprint-03.md` (Notification / Settings / Release)
 - Setup record (completed): `docs/sprints/00-setup.md`
-- Sprint 1: not yet defined. MVP scope is now decided
-  (`docs/00-shared/mvp-scope.md`), so Sprint 1 can be planned by pulling
-  items from it.
 
 ## Current Focus
 
-- Defining Sprint 1 from the decided MVP scope.
+- Executing Sprint 1. First implementation task: the Sprint 1 Prisma schema
+  (designed in `docs/02-backend/database.md`).
+- Scheduling gaps flagged in `mvp-scope.md` (items IN scope but not in any
+  sprint: Google OAuth, time capsule, milestone timeline, auto albums,
+  automatic interest analysis) — schedule or defer before release.
 - Remaining domain questions (`docs/00-shared/domain-model.md`): leave
   semantics, wiki edit safety, time-capsule unlock semantics.
 
@@ -38,11 +42,14 @@ None yet — the project is in the **setup / planning phase**.
 - MVP scope decided (`docs/00-shared/mvp-scope.md`)
 - Screen inventory documented (`docs/01-frontend/screens.md`, 21 screens)
 - Core domain decisions recorded (`docs/00-shared/domain-model.md`)
+- Database designed for Sprint 1 (`docs/02-backend/database.md`)
+- Backend architecture / auth decided (`docs/02-backend/architecture.md`)
+- 3-sprint plan documented (`docs/sprints/sprint-01..03.md`)
 
 ## In Progress
 
-- Domain model details (open questions in `domain-model.md`)
-- Sprint 1 definition
+- Sprint 1 execution (nothing started yet — see checklist in
+  `docs/sprints/sprint-01.md`)
 
 ## Not Started
 
@@ -79,3 +86,12 @@ None yet — the project is in the **setup / planning phase**.
   extended); set by whoever adds the member; node removed when leaving.
 - **Privacy (2026-08-13)**: post to chosen families; everything shared is
   family-visible (no per-item ACL); personal archive private by default.
+- **Auth (2026-08-13)**: JWT access + refresh tokens (refresh hashed in DB,
+  revocable); email/password only for MVP, Google OAuth deferred — see
+  `docs/02-backend/architecture.md`.
+- **3-sprint plan (2026-08-13)**: Sprint 1 Core Features → Sprint 2
+  Memories & AI → Sprint 3 Notification/Settings/Release — see
+  `docs/sprints/`.
+- **Memories reuse Post (2026-08-13)**: Sprint 2 Memories page reads the
+  Sprint 1 `Post` table — no separate Memory model — see
+  `docs/02-backend/database.md`.
