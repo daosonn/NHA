@@ -2,7 +2,7 @@
 
 ## Current Sprint
 
-**Sprint 1 — Core Features** (defined, not yet started)
+**Sprint 1 — Core Features** (drafted — pending team review before start)
 
 - Active sprint doc: `docs/sprints/sprint-01.md`
 - Later sprints: `docs/sprints/sprint-02.md` (Memories & AI),
@@ -11,8 +11,10 @@
 
 ## Current Focus
 
-- Executing Sprint 1. First implementation task: the Sprint 1 Prisma schema
-  (designed in `docs/02-backend/database.md`).
+- **Team review (2026-08-14)**: re-check the database design
+  (`docs/02-backend/database.md`) and the 3-sprint plan, then decide when
+  Sprint 1 starts. The DB design is a proposal only — nothing implemented;
+  the actual Prisma schema is written once Sprint 1 begins.
 - Scheduling gaps flagged in `mvp-scope.md` (items IN scope but not in any
   sprint: Google OAuth, time capsule, milestone timeline, auto albums,
   automatic interest analysis) — schedule or defer before release.
@@ -48,8 +50,8 @@
 
 ## In Progress
 
-- Sprint 1 execution (nothing started yet — see checklist in
-  `docs/sprints/sprint-01.md`)
+- Reviewing the DB design and sprint plan (Sprint 1 has NOT started —
+  checklist in `docs/sprints/sprint-01.md` is all unchecked)
 
 ## Not Started
 

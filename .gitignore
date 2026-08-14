@@ -18,8 +18,10 @@ __pycache__/
 .env
 .env.local
 
-# VS Code
-.vscode/
+# VS Code (share only team-wide config)
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 
 # OS
 Thumbs.db
