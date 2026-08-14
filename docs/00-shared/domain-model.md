@@ -43,6 +43,9 @@ records how those entities relate as decisions are made.
 - Any member of the family can edit a placeholder member's profile
   (biography, life events, etc.). No manager/ACL concept in the MVP.
 - Once linked to an account, the profile belongs to that account's owner.
+- **Edit history is stored from the start** (decided 2026-08-14): every
+  profile/life-event edit writes an `EditHistory` row (editor + snapshot)
+  so history display/undo can be added later; no history UI in the MVP.
 
 ### Relationships (decided 2026-08-13)
 
@@ -56,21 +59,82 @@ records how those entities relate as decisions are made.
 ### Content & privacy (decided 2026-08-13)
 
 - Posting: the author chooses **which family/families** (one or more) a
-  post/memory goes to.
+  post/memory goes to. Re-confirmed 2026-08-14: arbitrary selection; the
+  composer's "public to all groups" is a UI shortcut that selects all
+  current groups (snapshot at post time — families joined later do not see
+  older posts).
 - Within a family, **all shared content is visible to all members** — no
   per-item permissions in the MVP.
 - **Personal archive is private by default**; the owner explicitly moves or
   shares content out of it.
+
+### Albums & photo surfaces (decided 2026-08-14)
+
+Three distinct concepts:
+
+- **Family memory library** ("kho ký ức gia đình") — one per family: all
+  media aggregated from the posts shared to that family (screen 13). A
+  derived view — content enters it by posting; no manual "add", no table.
+  The **Omoide tab renders this library as "album books"** (decided
+  2026-08-14): automatic grouping only (rule — by time/event — chosen at
+  UI design); books are presentation, not a stored entity.
+- **Personal albums** — **private to their owner**, never shown to anyone
+  else: user-created collections, items added manually (`Album` +
+  `AlbumItem` tables — see `database.md`).
+- **Profile gallery / timeline photos** (screen 8) — derived from the
+  member's shared content (posts authored/tagged + life events), visible
+  according to each post's family scope. Not the private albums.
+
+Personal albums contain **only media the owner uploaded** (decided
+2026-08-14): to keep another member's shared photo, download and re-upload
+it — no cross-owner references.
+
+### Memo = private notes about a person (decided 2026-08-14)
+
+- A memo is the author's **private note about a family member** (e.g.
+  interests, stories, gift ideas), optionally with photos.
+- **Only the author can view and edit** (decided 2026-08-14): memos are
+  never shared — WBS task 1.6.6 (private/shared) is dropped. Distinct from
+  posts — a memo annotates a person, it is not shared content. May feed AI
+  gift/care suggestions later.
+
+### Plans (decided 2026-08-14)
+
+- AI-drafted plans (surprise / quality time) are **saved** — they are
+  followed over days, not read-once suggestions like gift ideas.
+- **Private to their creator**; only the creator can edit and choose to
+  share. Sharing grants **view-only** access to chosen users (accounts) —
+  e.g. the co-conspirators of a surprise; the target stays excluded by the
+  owner's choice.
+
+### Special dates & widgets (decided 2026-08-14)
+
+- Upcoming special occasions render as **themed countdown widgets** on the
+  family home (e.g. ANNIVERSARY · bunting · "in 3 days · 50th
+  anniversary").
+- **Birthdays and memorials are derived automatically** from
+  `LifeProfile.birthDate` / `deathDate`; **anniversaries and custom
+  occasions are user-created** (`SpecialDate` in `database.md`).
+- Occasions recur annually; they feed reminders (Sprint 3) and the Special
+  Date Detail screen (screen 17).
+- Dates are **solar (Gregorian) only** — the product targets the Japanese
+  market (decided 2026-08-14); no lunar-calendar support needed.
 
 ## Open Questions
 
 - **Leave semantics**: when a member's node is removed, what happens to
   (a) relationships that routed through them (e.g. the link between their
   parents and children), and (b) content they had posted to that family?
-- **Wiki edit safety**: does placeholder editing need history/undo, or is
-  raw trust acceptable for the MVP?
 - **Time-capsule unlock semantics**: who can see that a locked box exists;
   what happens if the recipient has no account at unlock time.
+- **"Plan a surprise" data sources** (AI hub mock, 2026-08-14): the mock
+  copy assumes known availability ("Lan and Minh are free on Sunday") and
+  distances ("Grandma's house is 40 minutes away") — neither is stored
+  anywhere. Options: (1) MVP per WBS 2.6.2 — user types the context
+  manually, no schema change; (2) add a `MemberAvailability` table +
+  `address` on profiles (+ maps API for distance); (3) calendar
+  integration (post-MVP scale). Gift-ideas and celebration-video cards
+  need nothing new (Memo counts, birthDate, media counts).
 
 Fill in sections here as each question is decided, and update
 `docs/project-status.md` → Important Decisions.

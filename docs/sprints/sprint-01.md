@@ -21,6 +21,7 @@ build the family tree, post content with photos, and view member profiles.
 - [ ] 1.1.4 UI đăng nhập (form login)
 - [ ] 1.1.5 API đăng nhập (JWT access + refresh — see backend architecture)
 - [ ] 1.1.6 Đăng xuất (revoke refresh token)
+- [ ] 1.1.7 Khôi phục mật khẩu (quên mật khẩu — `PasswordResetToken`; added 2026-08-14, see `database.md`)
 
 ### 1.2 Nav1 – Trang chủ — Trang chính sau login
 
@@ -28,6 +29,7 @@ build the family tree, post content with photos, and view member profiles.
 - [ ] 1.2.2 Layout Home (responsive, mobile-first 375–430px)
 - [ ] 1.2.3 Load bài viết gần đây (feed cơ bản)
 - [ ] 1.2.4 Empty/loading state (UI đầy đủ)
+- [ ] 1.2.5 Widget dịp đặc biệt trên Home (countdown + theme — sinh nhật/ngày giỗ derived từ LifeProfile; added 2026-08-14, see `database.md`)
 
 ### 1.3 Tạo nhóm gia đình — Family Group
 
@@ -52,6 +54,8 @@ build the family tree, post content with photos, and view member profiles.
 - [ ] 1.5.3 Upload ảnh (upload + preview — qua storage service module)
 - [ ] 1.5.4 Tạo sự kiện (tên/ngày/nội dung)
 - [ ] 1.5.5 Visibility (chung/riêng tư — post to chosen families or private)
+- [ ] 1.5.6 Comment bài đăng (API + UI — added 2026-08-14, see `database.md`)
+- [ ] 1.5.7 Reaction bài đăng (đa dạng loại — added 2026-08-14, see `database.md`)
 
 ### 1.6 Nav4 – Hồ sơ đời cá nhân — Profile
 
@@ -59,8 +63,11 @@ build the family tree, post content with photos, and view member profiles.
 - [ ] 1.6.2 About (thông tin cá nhân)
 - [ ] 1.6.3 Timeline chung (bài viết/ảnh theo thời gian)
 - [ ] 1.6.4 Album/Gallery (danh sách ảnh)
-- [ ] 1.6.5 Memo cá nhân (tạo memo)
-- [ ] 1.6.6 Quyền riêng tư Memo (private/shared)
+- [ ] 1.6.5 Memo cá nhân (tạo memo — ghi chú về một thành viên, xem `database.md`)
+- ~~1.6.6 Quyền riêng tư Memo (private/shared)~~ — dropped 2026-08-14:
+  memo luôn private, chỉ chủ xem/sửa (see `database.md`)
+- [ ] 1.6.7 Album cá nhân (private — tạo album, tự thêm ảnh; added 2026-08-14, see `database.md`)
+- [ ] 1.6.8 Life Timeline milestones (LifeEvent CRUD + hiển thị theo thời gian; added 2026-08-14, see `database.md`)
 
 ### 1.7 Test Sprint 1
 

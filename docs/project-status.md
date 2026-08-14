@@ -11,15 +11,19 @@
 
 ## Current Focus
 
-- **Team review (2026-08-14)**: re-check the database design
-  (`docs/02-backend/database.md`) and the 3-sprint plan, then decide when
-  Sprint 1 starts. The DB design is a proposal only — nothing implemented;
-  the actual Prisma schema is written once Sprint 1 begins.
+- **DB design finalized at sprint 0 (2026-08-14)**: full-MVP design — 25
+  tables, 2 ER diagrams, decision log — in `docs/02-backend/database.md`;
+  domain decisions recorded in `docs/00-shared/domain-model.md`. Team
+  should ratify the day's decisions and sanity-check Sprint 1's added
+  tasks (1.1.7, 1.2.5, 1.5.6–7, 1.6.7–8; 1.6.6 dropped), then decide when
+  Sprint 1 starts. Next code step: `schema.prisma` + first migration.
 - Scheduling gaps flagged in `mvp-scope.md` (items IN scope but not in any
-  sprint: Google OAuth, time capsule, milestone timeline, auto albums,
-  automatic interest analysis) — schedule or defer before release.
+  sprint: Google OAuth, time capsule, auto albums, automatic interest
+  analysis) — schedule or defer before release. Milestone timeline was
+  scheduled 2026-08-14 as task 1.6.8.
 - Remaining domain questions (`docs/00-shared/domain-model.md`): leave
-  semantics, wiki edit safety, time-capsule unlock semantics.
+  semantics, time-capsule unlock semantics, "plan a surprise" data
+  sources (manual context vs availability/address data).
 
 ## Completed
 
@@ -44,7 +48,8 @@
 - MVP scope decided (`docs/00-shared/mvp-scope.md`)
 - Screen inventory documented (`docs/01-frontend/screens.md`, 21 screens)
 - Core domain decisions recorded (`docs/00-shared/domain-model.md`)
-- Database designed for Sprint 1 (`docs/02-backend/database.md`)
+- Database designed for the **full MVP** — 25 tables, sprint-0 revision
+  2026-08-14 (`docs/02-backend/database.md`)
 - Backend architecture / auth decided (`docs/02-backend/architecture.md`)
 - 3-sprint plan documented (`docs/sprints/sprint-01..03.md`)
 
@@ -97,3 +102,14 @@
 - **Memories reuse Post (2026-08-13)**: Sprint 2 Memories page reads the
   Sprint 1 `Post` table — no separate Memory model — see
   `docs/02-backend/database.md`.
+- **Full-MVP DB design + domain decisions (2026-08-14)**: 25 tables.
+  Albums split (family library = derived, rendered as Omoide "books" /
+  personal albums private / profile gallery derived); Memo = private
+  notes about a member (author-only, always); AI plans are saved
+  (`Plan` + `PlanShare` — owner edits, view-only sharing); birth/death
+  dates live on LifeProfile; wiki edits logged (`EditHistory`); diverse
+  reactions (base LIKE/LOVE/HAHA/WOW/SAD); solar-only dates (product
+  targets the Japanese market); special-date widgets (`SpecialDate`).
+  Comment/Reaction, password recovery, personal albums, LifeEvent
+  timeline, special-date widgets and `SpecialDate` CRUD scheduled into
+  sprint sub-tasks — full log in `database.md` → Decision Log.

@@ -1,5 +1,10 @@
 {
   "gitlens.currentLine.enabled": true,
   "gitlens.codeLens.enabled": false,
-  "gitlens.hovers.currentLine.over": "line"
+  "gitlens.hovers.currentLine.over": "line",
+  "github.copilot.chat.commitMessageGeneration.instructions": [
+    {
+      "text": "Commit messages MUST follow Conventional Commits (enforced by commitlint @commitlint/config-conventional): format '<type>(<optional-scope>): <subject>'. type must be one of: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert. Subject: English, imperative mood, must NOT start with an uppercase letter, no trailing period. Keep the header under 100 characters. Example: 'docs: finalize full-mvp database design and update sprint plans'."
+    }
+  ]
 }

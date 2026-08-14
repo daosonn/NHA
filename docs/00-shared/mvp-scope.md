@@ -28,7 +28,7 @@ This document defines what is actually being built for the first release
 | Family creation / joining          | IN       | Spec #12, screen 4                                                                                                                   |
 | Family members                     | IN       | Members can exist without accounts (created on their behalf) — see `domain-model.md`                                                 |
 | Life Profile                       | IN       | Spec #1 — **the core product value**; everything else feeds it                                                                       |
-| Life Timeline                      | IN       | Spec #2. Milestone-based timeline **not scheduled in Sprints 1–3** (WBS has content-by-time on profile only) — revisit               |
+| Life Timeline                      | IN       | Spec #2. Milestone timeline scheduled 2026-08-14 as task 1.6.8 (LifeEvent — see `database.md`)                                       |
 | Memories (photo/video/audio/story) | IN       | Spec #3 — daily-moment posting                                                                                                       |
 | Family Tree                        | IN       | Spec #4 — visualization + navigation to Life Profiles                                                                                |
 
