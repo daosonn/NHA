@@ -1,3 +1,10 @@
+// Full-MVP schema — implements docs/02-backend/database.md (sprint-0 design,
+// 2026-08-14). 25 models. Three constraints live as raw SQL in the migration
+// because Prisma cannot express CHECK constraints:
+//   - LifeProfile: exactly one of userId/memberId (XOR)
+//   - Media: at most one of postId/memoId/lifeEventId (one-parent rule)
+//   - Relationship: fromMemberId <> toMemberId
+
 generator client {
   provider            = "prisma-client"
   output              = "../src/generated/prisma"
@@ -10,10 +17,468 @@ datasource db {
   provider = "postgresql"
 }
 
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum RelationshipType {
+  PARENT
+  SPOUSE
+  SIBLING
+  ADOPTED_PARENT
+  STEP_PARENT
+  OTHER
+}
+
+enum PostType {
+  POST
+  EVENT
+}
+
+enum ReactionType {
+  LIKE
+  LOVE
+  HAHA
+  WOW
+  SAD
+}
+
+enum SpecialDateType {
+  BIRTHDAY
+  ANNIVERSARY
+  MEMORIAL
+  CUSTOM
+}
+
+enum SpecialDateTheme {
+  BUNTING
+  CONFETTI_CANDLES
+  FLORAL_BORDER
+}
+
+enum NotificationType {
+  NEW_POST
+  COMMENT
+  REACTION
+  MEMBER_TAG
+  FAMILY_INVITE
+  BIRTHDAY_REMINDER
+  EVENT_REMINDER
+  CARE_REMINDER
+  AI_SUGGESTION
+}
+
+enum VideoJobStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+enum EditEntityType {
+  LIFE_PROFILE
+  LIFE_EVENT
+}
+
+// ─── Accounts & auth ────────────────────────────────────────────────────────
+
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String   @id @default(uuid())
+  email                String   @unique
+  passwordHash         String
+  name                 String
+  avatarKey            String?
+  locale               String?
+  notificationSettings Json?
+  privacySettings      Json?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  createdFamilies     Family[]             @relation("FamilyCreator")
+  memberships         FamilyMember[]
+  lifeProfile         LifeProfile?         @relation("UserProfile")
+  editedProfiles      LifeProfile[]        @relation("ProfileLastEditor")
+  posts               Post[]
+  uploadedMedia       Media[]
+  memos               Memo[]
+  comments            Comment[]
+  reactions           Reaction[]
+  albums              Album[]
+  createdLifeEvents   LifeEvent[]          @relation("LifeEventCreator")
+  editedLifeEvents    LifeEvent[]          @relation("LifeEventLastEditor")
+  editHistories       EditHistory[]
+  createdSpecialDates SpecialDate[]
+  notifications       Notification[]
+  videoJobs           VideoJob[]
+  plans               Plan[]
+  planShares          PlanShare[]
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── Family & tree ──────────────────────────────────────────────────────────
+
+model Family {
+  id          String   @id @default(uuid())
+  name        String
+  inviteCode  String   @unique
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy     User           @relation("FamilyCreator", fields: [createdById], references: [id])
+  members       FamilyMember[]
+  relationships Relationship[]
+  postShares    PostFamily[]
+  specialDates  SpecialDate[]
+}
+
+model FamilyMember {
+  id          String   @id @default(uuid())
+  familyId    String
+  userId      String? // null = placeholder (no account)
+  displayName String
+  gender      Gender?
+  avatarKey   String?
+  joinedAt    DateTime @default(now())
+
+  family             Family               @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user               User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  placeholderProfile LifeProfile?         @relation("PlaceholderProfile")
+  relationsFrom      Relationship[]       @relation("RelationFrom")
+  relationsTo        Relationship[]       @relation("RelationTo")
+  postTags           PostMemberTag[]
+  lifeEventTags      LifeEventMemberTag[]
+  specialDateTags    SpecialDateMember[]
+  memosAbout         Memo[]
+  plansFor           Plan[]
+
+  @@unique([familyId, userId])
+}
+
+model LifeProfile {
+  id          String    @id @default(uuid())
+  userId      String?   @unique // global profile — XOR with memberId (CHECK in migration)
+  memberId    String?   @unique // placeholder profile
+  bio         String?
+  interests   Json?
+  birthDate   DateTime? @db.Date
+  deathDate   DateTime? @db.Date
+  updatedById String? // last editor (wiki edit tracking)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user       User?         @relation("UserProfile", fields: [userId], references: [id], onDelete: Cascade)
+  member     FamilyMember? @relation("PlaceholderProfile", fields: [memberId], references: [id], onDelete: Cascade)
+  updatedBy  User?         @relation("ProfileLastEditor", fields: [updatedById], references: [id], onDelete: SetNull)
+  lifeEvents LifeEvent[]
+}
+
+model Relationship {
+  id           String           @id @default(uuid())
+  familyId     String
+  fromMemberId String // PARENT: from is a parent of to
+  toMemberId   String
+  type         RelationshipType
+  label        String? // free text when type = OTHER
+  createdAt    DateTime         @default(now())
+
+  family     Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  fromMember FamilyMember @relation("RelationFrom", fields: [fromMemberId], references: [id], onDelete: Cascade)
+  toMember   FamilyMember @relation("RelationTo", fields: [toMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([familyId, fromMemberId, toMemberId, type])
+}
+
+// ─── Content ────────────────────────────────────────────────────────────────
+
+model Post {
+  id           String    @id @default(uuid())
+  authorUserId String
+  type         PostType
+  content      String?
+  eventDate    DateTime? // type = EVENT
+  eventTitle   String? // type = EVENT
+  place        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  author     User            @relation(fields: [authorUserId], references: [id])
+  families   PostFamily[] // no rows = private to the author
+  memberTags PostMemberTag[]
+  media      Media[]
+  comments   Comment[]
+  reactions  Reaction[]
+}
+
+model PostFamily {
+  postId   String
+  familyId String
+
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@id([postId, familyId])
+}
+
+model PostMemberTag {
+  postId   String
+  memberId String
+
+  post   Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  member FamilyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([postId, memberId])
+}
+
+model Media {
+  id             String   @id @default(uuid())
+  uploaderUserId String
+  postId         String? // one-parent rule: at most one parent set (CHECK in migration)
+  memoId         String?
+  lifeEventId    String?
+  storageKey     String // key in the storage backend — never a hard-coded URL
+  mimeType       String
+  sizeBytes      Int
+  createdAt      DateTime @default(now())
+
+  uploader  User       @relation(fields: [uploaderUserId], references: [id])
+  post      Post?      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  memo      Memo?      @relation(fields: [memoId], references: [id], onDelete: Cascade)
+  lifeEvent LifeEvent? @relation(fields: [lifeEventId], references: [id], onDelete: Cascade)
+
+  albumItems AlbumItem[]
+  coverOf    Album[]     @relation("AlbumCover")
+
+  @@index([postId])
+}
+
+model Comment {
+  id           String   @id @default(uuid())
+  postId       String
+  authorUserId String
+  content      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorUserId], references: [id])
+
+  @@index([postId])
+}
+
+model Reaction {
+  id        String       @id @default(uuid())
+  postId    String
+  userId    String
+  type      ReactionType
+  createdAt DateTime     @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([postId, userId]) // one reaction per user per post
+}
+
+// ─── Personal: memos, albums ────────────────────────────────────────────────
+
+model Memo {
+  id            String   @id @default(uuid())
+  ownerUserId   String // author — only they view/edit
+  aboutMemberId String // who the note is about
+  content       String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  owner       User         @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  aboutMember FamilyMember @relation(fields: [aboutMemberId], references: [id], onDelete: Cascade)
+  media       Media[]
+
+  @@index([ownerUserId, aboutMemberId])
+}
+
+model Album {
+  id           String   @id @default(uuid())
+  ownerUserId  String // private — owner only
+  name         String
+  description  String?
+  coverMediaId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  owner      User        @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  coverMedia Media?      @relation("AlbumCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  items      AlbumItem[]
+}
+
+model AlbumItem {
+  albumId String
+  mediaId String
+  addedAt DateTime @default(now())
+
+  album Album @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@id([albumId, mediaId])
+}
+
+// ─── Life timeline ──────────────────────────────────────────────────────────
+
+model LifeEvent {
+  id          String   @id @default(uuid())
+  profileId   String
+  title       String
+  description String?
+  eventDate   DateTime @db.Date
+  place       String?
+  type        String? // taxonomy TBD when milestone timeline UI is designed
+  createdById String
+  updatedById String? // last editor (wiki edit tracking)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  profile    LifeProfile          @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdBy  User                 @relation("LifeEventCreator", fields: [createdById], references: [id])
+  updatedBy  User?                @relation("LifeEventLastEditor", fields: [updatedById], references: [id], onDelete: SetNull)
+  memberTags LifeEventMemberTag[]
+  media      Media[]
+
+  @@index([profileId, eventDate])
+}
+
+model LifeEventMemberTag {
+  lifeEventId String
+  memberId    String
+
+  lifeEvent LifeEvent    @relation(fields: [lifeEventId], references: [id], onDelete: Cascade)
+  member    FamilyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([lifeEventId, memberId])
+}
+
+model EditHistory {
+  id           String         @id @default(uuid())
+  entityType   EditEntityType
+  entityId     String // polymorphic — validated in the service layer
+  editorUserId String
+  snapshot     Json // entity content after the edit
+  createdAt    DateTime       @default(now())
+
+  editor User @relation(fields: [editorUserId], references: [id])
+
+  @@index([entityType, entityId, createdAt])
+}
+
+// ─── Special dates, notifications ───────────────────────────────────────────
+
+model SpecialDate {
+  id          String           @id @default(uuid())
+  familyId    String
+  type        SpecialDateType
+  title       String
+  month       Int // recurs annually; countdown computed at display time
+  day         Int
+  originYear  Int? // for ordinals ("50th", "turns 63")
+  theme       SpecialDateTheme
+  createdById String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  family    Family              @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  createdBy User                @relation(fields: [createdById], references: [id])
+  members   SpecialDateMember[]
+}
+
+model SpecialDateMember {
+  specialDateId String
+  memberId      String
+
+  specialDate SpecialDate  @relation(fields: [specialDateId], references: [id], onDelete: Cascade)
+  member      FamilyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([specialDateId, memberId])
+}
+
+model Notification {
+  id              String           @id @default(uuid())
+  recipientUserId String
+  type            NotificationType
+  payload         Json // type-specific data (postId, memberId, date, …)
+  readAt          DateTime? // null = unread
+  createdAt       DateTime         @default(now())
+
+  recipient User @relation(fields: [recipientUserId], references: [id], onDelete: Cascade)
+
+  @@index([recipientUserId, readAt])
+}
+
+// ─── AI outputs ─────────────────────────────────────────────────────────────
+
+model VideoJob {
+  id               String         @id @default(uuid())
+  requesterUserId  String
+  status           VideoJobStatus @default(PENDING)
+  inputMediaIds    Json
+  resultStorageKey String? // set when DONE
+  error            String? // set when FAILED
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  requester User @relation(fields: [requesterUserId], references: [id])
+}
+
+model Plan {
+  id            String    @id @default(uuid())
+  ownerUserId   String // creator — only they edit/share
+  aboutMemberId String?
+  title         String
+  content       Json // steps/details — AI draft, editable by the owner
+  occasionDate  DateTime? @db.Date
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  owner       User          @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  aboutMember FamilyMember? @relation(fields: [aboutMemberId], references: [id], onDelete: SetNull)
+  shares      PlanShare[]
+}
+
+model PlanShare {
+  planId           String
+  sharedWithUserId String
+  sharedAt         DateTime @default(now())
+
+  plan       Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  sharedWith User @relation(fields: [sharedWithUserId], references: [id], onDelete: Cascade)
+
+  @@id([planId, sharedWithUserId])
 }

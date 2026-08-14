@@ -55,8 +55,13 @@
 
 ## In Progress
 
-- Reviewing the DB design and sprint plan (Sprint 1 has NOT started —
-  checklist in `docs/sprints/sprint-01.md` is all unchecked)
+- **Prisma schema for the full MVP implemented** (2026-08-14, branch
+  `feature/prisma-schema-mvp`): 25 models + migration
+  `20260814063321_full_mvp_schema` (incl. 3 CHECK constraints), applied to
+  the local DB; `prisma validate` + generate + `nest build` all pass.
+  Pending review/PR — tick task 1.3.1 when merged.
+- Reviewing the sprint plan (Sprint 1 checklist in
+  `docs/sprints/sprint-01.md` is otherwise unchecked)
 
 ## Not Started
 

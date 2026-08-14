@@ -390,6 +390,15 @@ Constraints: `unique(familyId, fromMemberId, toMemberId, type)`;
 `fromMemberId ≠ toMemberId`. Direction convention: PARENT means
 _from is a parent of to_. SPOUSE/SIBLING are symmetric — store once,
 normalize direction in service layer.
+
+**Kinship labels are derived — do not add enum values for them** (decided
+2026-08-14). Grandparents, uncles/aunts (oji/oba), in-laws, cousins, elder
+vs younger siblings, … are all computed from graph paths (1–3 hops) +
+`gender` + `birthDate` order, viewer-relative, via a kinship-labeling
+service + i18n dictionary (vi/ja — ja distinguishes 伯父/叔父 by age vs
+the parent). The add-member UI may offer kinship terms as input shortcuts;
+the service translates them into base edges (creating placeholder
+intermediates when needed).
 Removing a member from the family deletes their node and edges (decided
 leave-behavior for the tree; content handling is still an open question in
 `domain-model.md`).
