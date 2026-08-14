@@ -43,6 +43,12 @@
 - `pnpm-lock.yaml` now committed (was gitignored); stray nested workspace in
   `apps/web` removed
 
+### Sprint 1
+
+- Full-MVP Prisma schema: 25 models + migration
+  `20260814063321_full_mvp_schema` (incl. 3 CHECK constraints) — merged to
+  `main` in PR #1 (2026-08-14). Task 1.3.1 done.
+
 ### Planning Phase
 
 - MVP scope decided (`docs/00-shared/mvp-scope.md`)
@@ -55,13 +61,12 @@
 
 ## In Progress
 
-- **Prisma schema for the full MVP implemented** (2026-08-14, branch
-  `feature/prisma-schema-mvp`): 25 models + migration
-  `20260814063321_full_mvp_schema` (incl. 3 CHECK constraints), applied to
-  the local DB; `prisma validate` + generate + `nest build` all pass.
-  Pending review/PR — tick task 1.3.1 when merged.
-- Reviewing the sprint plan (Sprint 1 checklist in
-  `docs/sprints/sprint-01.md` is otherwise unchecked)
+- **AuthModule built on `feature/auth-module`** (2026-08-14): register /
+  login / refresh (with rotation) / logout, global JWT guard + `@Public`,
+  Swagger at `/api/docs`; verified by a 10-step live smoke test. Awaiting
+  commit + PR — tick tasks 1.1.2/1.1.3/1.1.5/1.1.6 when merged. Task
+  1.1.7 (password recovery) deferred: needs an email-infrastructure
+  decision.
 
 ## Not Started
 

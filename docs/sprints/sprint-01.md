@@ -33,8 +33,9 @@ build the family tree, post content with photos, and view member profiles.
 
 ### 1.3 Tạo nhóm gia đình — Family Group
 
-- [ ] 1.3.1 DB Family Group (Family + FamilyMember — incl. placeholder
-      members, see `database.md`)
+- [x] 1.3.1 DB Family Group (Family + FamilyMember — incl. placeholder
+      members, see `database.md`) — done 2026-08-14: full-MVP schema,
+      25 models + migration, merged in PR #1
 - [ ] 1.3.2 UI tạo nhóm (nhập tên nhóm)
 - [ ] 1.3.3 API tạo nhóm (lưu group, sinh invite code)
 - [ ] 1.3.4 Thêm thành viên (add member — có account hoặc placeholder)
