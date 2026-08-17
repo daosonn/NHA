@@ -22,6 +22,7 @@
     "bootstrap": "node scripts/setup.mjs",
     "dev:web": "pnpm --filter web dev",
     "dev:api": "pnpm --filter api start:dev",
+    "studio": "pnpm --filter api exec prisma studio",
     "lint:web": "pnpm --filter web lint",
     "lint:api": "pnpm --filter api lint",
     "lint": "pnpm lint:web && pnpm lint:api",
