@@ -20,6 +20,8 @@
   },
   "scripts": {
     "bootstrap": "node scripts/setup.mjs",
+    "dev:mobile": "pnpm --filter mobile start",
+    "dev:mobile:web": "pnpm --filter mobile web",
     "dev:web": "pnpm --filter web dev",
     "dev:api": "pnpm --filter api start:dev",
     "studio": "pnpm --filter api exec prisma studio",
@@ -27,6 +29,7 @@
     "lint:web": "pnpm --filter web lint",
     "lint:api": "pnpm --filter api lint",
     "lint": "pnpm lint:web && pnpm lint:api",
+    "build:tokens": "pnpm --filter @nha/tokens build",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky"
@@ -40,6 +43,12 @@
   },
   "lint-staged": {
     "apps/web/**/*.{js,jsx,ts,tsx}": [
+      "prettier --write"
+    ],
+    "apps/mobile/**/*.{js,jsx,ts,tsx}": [
+      "prettier --write"
+    ],
+    "packages/**/*.ts": [
       "prettier --write"
     ],
     "apps/api/**/*.ts": [

@@ -11,6 +11,16 @@
 
 ## Current Focus
 
+- **Frontend platform switched to Expo (2026-08-17)** — see Important
+  Decisions. Done: docs realigned, `packages/tokens` rebuilt,
+  `apps/mobile` on Expo SDK 57, Inter/Lora, design-system primitives, app
+  icons, and two screens against mock data — **Home**
+  (`app/(tabs)/index.tsx`) and **Family tree** (`app/family.tsx`).
+  Next per the build order in `architecture.md`: New moment, then Member
+  profile (Timeline / Album / Memo).
+- **Home is still styled with `StyleSheet`.** NativeWind arrived after it
+  was written; converting it is a mechanical follow-up, not a rewrite.
+  New screens use NativeWind.
 - **DB design finalized at sprint 0 (2026-08-14)**: full-MVP design — 25
   tables, 2 ER diagrams, decision log — in `docs/02-backend/database.md`;
   domain decisions recorded in `docs/00-shared/domain-model.md`. Team
@@ -93,7 +103,24 @@
 - PostgreSQL is the primary database.
 - Prisma is used for database access, via the `pg` driver adapter (required
   for SQL providers in Prisma 7).
-- Frontend uses Next.js + Tailwind CSS.
+- **Frontend is a native mobile app (2026-08-17)**: `apps/mobile` built with
+  Expo + expo-router + NativeWind is the primary client, replacing the
+  earlier "Next.js mobile-first web" decision. Reasons: iOS push
+  notifications, app-store presence, and scroll/gesture quality — the last
+  one matters because the audience includes older family members. All 21
+  screens in `screens.md` are designed as native screens (bottom nav,
+  bottom sheets, blurred headers, gestures). `apps/web` stays as a bare
+  Next.js scaffold with no decided role. See
+  `docs/01-frontend/architecture.md`.
+- **NativeWind confirmed (2026-08-17)**: `nativewind@4.2.6` +
+  `tailwindcss@3.4` verified working on Expo SDK 57 / RN 0.86 / React 19.
+  `tailwind.config.js` derives every colour, size, radius and font family
+  from `@nha/tokens` — Tailwind is a consumer of the tokens, never a
+  second source of truth. Off-scale mockup numbers (353px, 171.5px) are
+  _derived_, not intended: they are `393 − 20×2` and `(353 − 10)/2`, so
+  they are expressed as `flex-1` + padding + gap, never hardcoded.
+  `darkMode: 'class'` — the palette is a fixed warm light one, so dark
+  styles must never arrive from the OS setting.
 - Backend uses NestJS; prefer a modular monolith (see `CLAUDE.md` § 3).
 - pnpm workspace monorepo.
 - Conventional Commits are enforced via commitlint (husky `commit-msg` hook).
