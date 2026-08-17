@@ -72,6 +72,15 @@
   endpoints in the AuthModule. Tasks 1.1.8–1.1.9 stay unticked until the
   happy path is verified end-to-end with real Google/Facebook app
   credentials; frontend buttons come with the auth UI (1.1.1/1.1.4).
+- **FamilyModule built on `feature/family-module`** (2026-08-17): tasks
+  1.3.3–1.3.6 — create family + invite code, join via code (incl. linking
+  an account to a placeholder member), placeholder member CRUD,
+  relationships CRUD; membership-based authorization. Verified by
+  format/lint/build/test plus a 20-step live smoke test. Awaiting
+  commit + PR — tick 1.3.3–1.3.6 when merged. Assumptions to confirm with
+  the team: linked members' info is editable/removable only by themselves
+  (placeholders stay wiki-editable), and "add member with account" happens
+  via invite-code join rather than direct add.
 
 ## Not Started
 
