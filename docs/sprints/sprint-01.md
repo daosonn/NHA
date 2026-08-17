@@ -42,10 +42,15 @@ build the family tree, post content with photos, and view member profiles.
       members, see `database.md`) — done 2026-08-14: full-MVP schema,
       25 models + migration, merged in PR #1
 - [ ] 1.3.2 UI tạo nhóm (nhập tên nhóm)
-- [ ] 1.3.3 API tạo nhóm (lưu group, sinh invite code)
-- [ ] 1.3.4 Thêm thành viên (add member — có account hoặc placeholder)
-- [ ] 1.3.5 Chọn quan hệ thành viên (cha/mẹ/con/… + loại ngoại lệ)
-- [ ] 1.3.6 Sửa/xóa thành viên (CRUD)
+- [x] 1.3.3 API tạo nhóm (lưu group, sinh invite code) — done 2026-08-17:
+      merged in `107acb1`
+- [x] 1.3.4 Thêm thành viên (add member — có account hoặc placeholder) —
+      done 2026-08-17: placeholder qua API, account qua join-by-invite-code
+      (kèm link vào placeholder); merged in `107acb1`
+- [x] 1.3.5 Chọn quan hệ thành viên (cha/mẹ/con/… + loại ngoại lệ) — done
+      2026-08-17: relationships CRUD; merged in `107acb1`
+- [x] 1.3.6 Sửa/xóa thành viên (CRUD) — done 2026-08-17: placeholder
+      wiki-editable, linked member chỉ tự sửa/tự rời; merged in `107acb1`
 
 ### 1.4 Cây gia phả — Family Tree
 
