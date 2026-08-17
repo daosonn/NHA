@@ -1,0 +1,31 @@
+import { View } from 'react-native';
+
+import { colors } from '../../theme';
+import { Text } from '../ui/text';
+import { AppHeader } from './app-header';
+
+/**
+ * A named, navigable stub so the shell can be reviewed before the screens
+ * behind it exist. Delete each usage as its screen is built.
+ */
+export function PlaceholderScreen({ title }: { title: string }) {
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.background.page }}>
+      <AppHeader
+        center={
+          <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
+            {title}
+          </Text>
+        }
+      />
+      <View className="flex-1 items-center justify-center gap-sm bg-page p-xl">
+        <Text variant="body1" weight="semibold" color={colors.text.muted}>
+          {title}
+        </Text>
+        <Text variant="body2" color={colors.text.lightMuted}>
+          Not built yet.
+        </Text>
+      </View>
+    </View>
+  );
+}

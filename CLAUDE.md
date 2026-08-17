@@ -22,7 +22,7 @@ Prefer simple, explicit solutions over unnecessary abstraction or overengineerin
 
 # 2. Project Context
 
-This project is a mobile-first responsive web application for preserving and sharing family relationships, life stories, and memories.
+This project is a mobile application (iOS + Android, built with Expo) for preserving and sharing family relationships, life stories, and memories.
 
 The central product concept is the **Life Profile**.
 
@@ -77,11 +77,21 @@ Detailed business rules belong in `docs/`.
 
 ## Frontend
 
-- Next.js
-- App Router
-- TypeScript
-- Tailwind CSS
-- Mobile-first responsive UI
+The primary client is a **native mobile app**, not a web page.
+
+`apps/mobile` — primary client:
+
+- Expo (managed workflow) + `expo-router`
+- React Native + TypeScript
+- NativeWind (Tailwind syntax for React Native)
+- Icons: `lucide-react-native` only
+
+`apps/web` — Next.js + Tailwind CSS. Currently a bare scaffold; its role
+is not decided yet. Do not build product features there without an
+explicit decision.
+
+`packages/tokens` — design tokens (plain TypeScript constants, no React
+Native imports) shared by both clients.
 
 ## Backend
 
@@ -109,10 +119,7 @@ Detailed business rules belong in `docs/`.
 
 The intended request flow is:
 
-    Browser
-       |
-       v
-    Next.js
+    Expo app (apps/mobile)
        |
        | REST
        v
@@ -127,7 +134,7 @@ AI providers/models
 
 Architecture responsibilities:
 
-- Next.js owns presentation and frontend interaction.
+- The Expo app owns presentation and user interaction.
 - NestJS owns authentication, authorization, business logic, API contracts, and persistence coordination.
 - PostgreSQL stores authoritative application data.
 - Prisma owns database schema evolution and database access from NestJS.

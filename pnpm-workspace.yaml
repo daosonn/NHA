@@ -1,6 +1,16 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+
+# Metro (React Native) cannot resolve pnpm's default isolated node_modules
+# layout, so apps/mobile would not bundle at all. A flat, npm-like layout is
+# required. See docs/04-devops/mobile-development.md
+nodeLinker: hoisted
+
+# Expo and React Native ship inconsistent peer ranges across their many
+# packages; failing the install on those is noise, not signal.
+strictPeerDependencies: false
+
 allowBuilds:
   '@prisma/engines': false
   prisma: false

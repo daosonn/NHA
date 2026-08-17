@@ -5,8 +5,19 @@ node_modules/
 .next/
 out/
 
-# NestJS
+# NestJS / package builds
 dist/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+apps/mobile/android/
+apps/mobile/ios/
+*.keystore
+*.jks
+
+# Mockups (large, self-contained HTML — see docs/01-frontend/mockups/README.md)
+docs/01-frontend/mockups/*.html
 
 # Python
 venv/
