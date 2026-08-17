@@ -112,7 +112,8 @@ export class AuthService {
     return { success: true };
   }
 
-  private async issueTokens(
+  /** Shared with OAuthService — social logins issue the same token pair. */
+  async issueTokens(
     id: string,
     email: string,
     name: string,

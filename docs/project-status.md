@@ -18,9 +18,10 @@
   tasks (1.1.7, 1.2.5, 1.5.6–7, 1.6.7–8; 1.6.6 dropped), then decide when
   Sprint 1 starts. Next code step: `schema.prisma` + first migration.
 - Scheduling gaps flagged in `mvp-scope.md` (items IN scope but not in any
-  sprint: Google OAuth, time capsule, auto albums, automatic interest
-  analysis) — schedule or defer before release. Milestone timeline was
-  scheduled 2026-08-14 as task 1.6.8.
+  sprint: LINE + X social login (deferred — see Important Decisions), time
+  capsule, auto albums, automatic interest analysis) — schedule or defer
+  before release. Google + Facebook login scheduled 2026-08-17 as tasks
+  1.1.8–1.1.9. Milestone timeline was scheduled 2026-08-14 as task 1.6.8.
 - Remaining domain questions (`docs/00-shared/domain-model.md`): leave
   semantics, time-capsule unlock semantics, "plan a surprise" data
   sources (manual context vs availability/address data).
@@ -66,8 +67,11 @@
 
 ## In Progress
 
-- (nothing right now — next up: auth UI 1.1.1/1.1.4 or Family Group API
-  1.3.3+, see `docs/sprints/sprint-01.md`)
+- **Social login (Google + Facebook)** (2026-08-17): backend merged to
+  `main` in PR #3 — `OAuthAccount` table + OAuth authorization-code
+  endpoints in the AuthModule. Tasks 1.1.8–1.1.9 stay unticked until the
+  happy path is verified end-to-end with real Google/Facebook app
+  credentials; frontend buttons come with the auth UI (1.1.1/1.1.4).
 
 ## Not Started
 
@@ -113,6 +117,15 @@
 - **Memories reuse Post (2026-08-13)**: Sprint 2 Memories page reads the
   Sprint 1 `Post` table — no separate Memory model — see
   `docs/02-backend/database.md`.
+- **Social login (2026-08-17)**: customer requires social login for the
+  Japanese market. Phase 1 **Google + Facebook**, scheduled into Sprint 1
+  as tasks 1.1.8–1.1.9. **LINE deferred** (needs an email-permission
+  application; highest-value provider in Japan — re-confirm with the
+  customer). Phase 2 candidate: X. Instagram infeasible (Basic Display API
+  shut down; no consumer SSO). Policies: no auto-linking (409 if email
+  already registered), email required from the provider (reject if absent
+  or unverified). Schema impact: add `OAuthAccount` only — see
+  `docs/02-backend/architecture.md`.
 - **Full-MVP DB design + domain decisions (2026-08-14)**: 25 tables.
   Albums split (family library = derived, rendered as Omoide "books" /
   personal albums private / profile gallery derived); Memo = private
