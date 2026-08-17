@@ -16,12 +16,17 @@ build the family tree, post content with photos, and view member profiles.
 ### 1.1 Đăng ký / Đăng nhập — Authentication hoàn chỉnh
 
 - [ ] 1.1.1 UI đăng ký (form đăng ký)
-- [ ] 1.1.2 API đăng ký (tạo tài khoản)
-- [ ] 1.1.3 Validate dữ liệu (email/password)
+- [x] 1.1.2 API đăng ký (tạo tài khoản) — done 2026-08-17: merged in PR #2
+- [x] 1.1.3 Validate dữ liệu (email/password) — done 2026-08-17: DTO +
+      class-validator behind global ValidationPipe, merged in PR #2
 - [ ] 1.1.4 UI đăng nhập (form login)
-- [ ] 1.1.5 API đăng nhập (JWT access + refresh — see backend architecture)
-- [ ] 1.1.6 Đăng xuất (revoke refresh token)
+- [x] 1.1.5 API đăng nhập (JWT access + refresh — see backend architecture)
+      — done 2026-08-17: merged in PR #2
+- [x] 1.1.6 Đăng xuất (revoke refresh token) — done 2026-08-17: single-use
+      refresh rotation + revoke on logout, merged in PR #2
 - [ ] 1.1.7 Khôi phục mật khẩu (quên mật khẩu — `PasswordResetToken`; added 2026-08-14, see `database.md`)
+- [ ] 1.1.8 Google login (OAuth authorization code, `OAuthAccount` — customer requirement, added 2026-08-17; see `02-backend/architecture.md`)
+- [ ] 1.1.9 Facebook login (chung flow OAuth với 1.1.8 — added 2026-08-17; LINE deferred chờ quyền email, X phase 2)
 
 ### 1.2 Nav1 – Trang chủ — Trang chính sau login
 
@@ -33,13 +38,19 @@ build the family tree, post content with photos, and view member profiles.
 
 ### 1.3 Tạo nhóm gia đình — Family Group
 
-- [ ] 1.3.1 DB Family Group (Family + FamilyMember — incl. placeholder
-      members, see `database.md`)
+- [x] 1.3.1 DB Family Group (Family + FamilyMember — incl. placeholder
+      members, see `database.md`) — done 2026-08-14: full-MVP schema,
+      25 models + migration, merged in PR #1
 - [ ] 1.3.2 UI tạo nhóm (nhập tên nhóm)
-- [ ] 1.3.3 API tạo nhóm (lưu group, sinh invite code)
-- [ ] 1.3.4 Thêm thành viên (add member — có account hoặc placeholder)
-- [ ] 1.3.5 Chọn quan hệ thành viên (cha/mẹ/con/… + loại ngoại lệ)
-- [ ] 1.3.6 Sửa/xóa thành viên (CRUD)
+- [x] 1.3.3 API tạo nhóm (lưu group, sinh invite code) — done 2026-08-17:
+      merged in `107acb1`
+- [x] 1.3.4 Thêm thành viên (add member — có account hoặc placeholder) —
+      done 2026-08-17: placeholder qua API, account qua join-by-invite-code
+      (kèm link vào placeholder); merged in `107acb1`
+- [x] 1.3.5 Chọn quan hệ thành viên (cha/mẹ/con/… + loại ngoại lệ) — done
+      2026-08-17: relationships CRUD; merged in `107acb1`
+- [x] 1.3.6 Sửa/xóa thành viên (CRUD) — done 2026-08-17: placeholder
+      wiki-editable, linked member chỉ tự sửa/tự rời; merged in `107acb1`
 
 ### 1.4 Cây gia phả — Family Tree
 

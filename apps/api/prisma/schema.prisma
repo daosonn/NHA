@@ -84,6 +84,11 @@ enum EditEntityType {
   LIFE_EVENT
 }
 
+enum OAuthProvider {
+  GOOGLE
+  FACEBOOK
+}
+
 // ─── Accounts & auth ────────────────────────────────────────────────────────
 
 model User {
@@ -100,6 +105,7 @@ model User {
 
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
+  oauthAccounts       OAuthAccount[]
   createdFamilies     Family[]             @relation("FamilyCreator")
   memberships         FamilyMember[]
   lifeProfile         LifeProfile?         @relation("UserProfile")
@@ -143,6 +149,19 @@ model PasswordResetToken {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+}
+
+model OAuthAccount {
+  id                String        @id @default(uuid())
+  userId            String
+  provider          OAuthProvider
+  providerAccountId String
+  createdAt         DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
   @@index([userId])
 }
 

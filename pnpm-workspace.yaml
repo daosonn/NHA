@@ -13,6 +13,8 @@ strictPeerDependencies: false
 
 allowBuilds:
   '@prisma/engines': false
+  '@scarf/scarf': false
+  argon2: true
   prisma: false
   sharp: false
   unrs-resolver: true

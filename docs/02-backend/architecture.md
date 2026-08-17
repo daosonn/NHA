@@ -23,9 +23,26 @@ a concrete need appears — `CLAUDE.md` § 5).
   on Windows machines — decide at implementation, either is acceptable).
 - NestJS implementation: `AuthModule` with guards (`JwtAuthGuard` global by
   default, `@Public()` decorator for open routes like login/register).
-- **MVP is email/password only.** Google OAuth is in the product scope but
-  not scheduled in Sprints 1–3; the schema accommodates it later via a
-  separate `OAuthAccount` table without touching `User`.
+- **Social login (customer requirement 2026-08-17; scheduled into Sprint 1
+  as tasks 1.1.8–1.1.9)**: phase 1 is **Google + Facebook** — authorization
+  code flow handled entirely by NestJS (provider secrets stay server-side;
+  CSRF `state` bound to an httpOnly cookie). **LINE is deferred**, not
+  dropped: it needs an email-permission application in LINE Developers
+  Console, and it is the highest-value login in Japan — re-confirm with the
+  customer. X is a phase-2 candidate; Instagram is not viable (Basic
+  Display API shut down). Policies (decided 2026-08-17):
+  - **No auto-linking**: if the provider email already belongs to a `User`,
+    reject with 409 — the user must log in with email/password (a manual
+    "link account" flow in Settings can come later).
+  - **Email required**: if the provider returns no email (e.g. phone-only
+    Facebook accounts) or an unverified one, reject the login.
+  - Social-only accounts store an empty `passwordHash` (password login
+    already treats a malformed hash as a wrong password).
+  - Schema: `OAuthAccount` table (`provider` + `providerAccountId` unique);
+    `User` untouched.
+  - The OAuth callback returns the standard `AuthResult` JSON for now;
+    switch to a frontend redirect handoff when the auth UI (1.1.1/1.1.4)
+    lands.
 
 ## Authorization
 

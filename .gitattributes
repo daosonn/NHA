@@ -1,0 +1,7 @@
+# Git and prettier agree on LF everywhere (root .prettierrc: endOfLine "lf").
+# Prevents phantom "modified" files on Windows checkouts (core.autocrlf).
+* text=auto eol=lf
+
+# Windows batch scripts require CRLF to run
+*.bat text eol=crlf
+*.cmd text eol=crlf
