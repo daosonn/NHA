@@ -67,9 +67,11 @@
 
 ## In Progress
 
-- **Social login (Google + Facebook) on `feature/social-login`**
-  (2026-08-17): tasks 1.1.8–1.1.9 — `OAuthAccount` table + OAuth
-  authorization-code endpoints in the AuthModule. Tick when merged.
+- **Social login (Google + Facebook)** (2026-08-17): backend merged to
+  `main` in PR #3 — `OAuthAccount` table + OAuth authorization-code
+  endpoints in the AuthModule. Tasks 1.1.8–1.1.9 stay unticked until the
+  happy path is verified end-to-end with real Google/Facebook app
+  credentials; frontend buttons come with the auth UI (1.1.1/1.1.4).
 
 ## Not Started
 
