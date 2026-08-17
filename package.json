@@ -23,6 +23,7 @@
     "dev:web": "pnpm --filter web dev",
     "dev:api": "pnpm --filter api start:dev",
     "studio": "pnpm --filter api exec prisma studio",
+    "seed": "pnpm --filter api exec prisma db seed",
     "lint:web": "pnpm --filter web lint",
     "lint:api": "pnpm --filter api lint",
     "lint": "pnpm lint:web && pnpm lint:api",
