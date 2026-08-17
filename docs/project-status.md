@@ -48,6 +48,11 @@
 - Full-MVP Prisma schema: 25 models + migration
   `20260814063321_full_mvp_schema` (incl. 3 CHECK constraints) — merged to
   `main` in PR #1 (2026-08-14). Task 1.3.1 done.
+- AuthModule: register / login / refresh (single-use rotation) / logout,
+  global JWT guard + `@Public`, Swagger at `/api/docs` — merged to `main`
+  in PR #2 (2026-08-17). Tasks 1.1.2 / 1.1.3 / 1.1.5 / 1.1.6 done.
+  Task 1.1.7 (password recovery) deferred: needs an email-infrastructure
+  decision.
 
 ### Planning Phase
 
@@ -61,12 +66,8 @@
 
 ## In Progress
 
-- **AuthModule built on `feature/auth-module`** (2026-08-14): register /
-  login / refresh (with rotation) / logout, global JWT guard + `@Public`,
-  Swagger at `/api/docs`; verified by a 10-step live smoke test. Awaiting
-  commit + PR — tick tasks 1.1.2/1.1.3/1.1.5/1.1.6 when merged. Task
-  1.1.7 (password recovery) deferred: needs an email-infrastructure
-  decision.
+- (nothing right now — next up: auth UI 1.1.1/1.1.4 or Family Group API
+  1.3.3+, see `docs/sprints/sprint-01.md`)
 
 ## Not Started
 

@@ -16,11 +16,14 @@ build the family tree, post content with photos, and view member profiles.
 ### 1.1 Đăng ký / Đăng nhập — Authentication hoàn chỉnh
 
 - [ ] 1.1.1 UI đăng ký (form đăng ký)
-- [ ] 1.1.2 API đăng ký (tạo tài khoản)
-- [ ] 1.1.3 Validate dữ liệu (email/password)
+- [x] 1.1.2 API đăng ký (tạo tài khoản) — done 2026-08-17: merged in PR #2
+- [x] 1.1.3 Validate dữ liệu (email/password) — done 2026-08-17: DTO +
+      class-validator behind global ValidationPipe, merged in PR #2
 - [ ] 1.1.4 UI đăng nhập (form login)
-- [ ] 1.1.5 API đăng nhập (JWT access + refresh — see backend architecture)
-- [ ] 1.1.6 Đăng xuất (revoke refresh token)
+- [x] 1.1.5 API đăng nhập (JWT access + refresh — see backend architecture)
+      — done 2026-08-17: merged in PR #2
+- [x] 1.1.6 Đăng xuất (revoke refresh token) — done 2026-08-17: single-use
+      refresh rotation + revoke on logout, merged in PR #2
 - [ ] 1.1.7 Khôi phục mật khẩu (quên mật khẩu — `PasswordResetToken`; added 2026-08-14, see `database.md`)
 
 ### 1.2 Nav1 – Trang chủ — Trang chính sau login
