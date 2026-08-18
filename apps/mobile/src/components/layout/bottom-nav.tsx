@@ -4,6 +4,7 @@ import { BlurView } from 'expo-blur';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { History, House, Plus, Sparkles, UserRound } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -13,17 +14,17 @@ import { Text } from '../ui/text';
 const ITEM_WIDTH = 68;
 const ITEM_HEIGHT = 56;
 
-type TabConfig = { label: string; icon: LucideIcon };
+type TabConfig = { labelKey: string; icon: LucideIcon };
 
 /**
  * Home · Omoide · + · AI · Profile — the five destinations from the mockups.
  * The family tree is *not* a tab; it is reached from the group strip on Home.
  */
 const TABS: Record<string, TabConfig> = {
-  index: { label: 'Home', icon: House },
-  omoide: { label: 'Omoide', icon: History },
-  ai: { label: 'AI', icon: Sparkles },
-  profile: { label: 'Profile', icon: UserRound },
+  index: { labelKey: 'nav.home', icon: House },
+  omoide: { labelKey: 'nav.omoide', icon: History },
+  ai: { labelKey: 'nav.ai', icon: Sparkles },
+  profile: { labelKey: 'nav.profile', icon: UserRound },
 };
 
 /** The centre action, raised above the row. */
@@ -38,7 +39,10 @@ function TabItem({
   focused: boolean;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
+
   const Icon = config.icon;
+  const label = t(config.labelKey);
   const tint = focused ? colors.coral.primary : colors.text.lightMuted;
 
   return (
@@ -46,7 +50,7 @@ function TabItem({
       onPress={onPress}
       accessibilityRole="tab"
       accessibilityState={{ selected: focused }}
-      accessibilityLabel={config.label}
+      accessibilityLabel={label}
       style={{
         width: ITEM_WIDTH,
         height: ITEM_HEIGHT,
@@ -73,13 +77,14 @@ function TabItem({
         color={focused ? colors.text.primary : colors.text.lightMuted}
         style={{ letterSpacing: 0.2 }}
       >
-        {config.label}
+        {label}
       </Text>
     </Pressable>
   );
 }
 
 export function BottomNav({ state, navigation }: BottomTabBarProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   return (
@@ -137,7 +142,7 @@ export function BottomNav({ state, navigation }: BottomTabBarProps) {
                 <Pressable
                   onPress={go}
                   accessibilityRole="button"
-                  accessibilityLabel="New moment"
+                  accessibilityLabel={t('nav.newMoment')}
                   style={{
                     width: 44,
                     height: 44,

@@ -1,4 +1,5 @@
 import { useId, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 
@@ -82,6 +83,8 @@ export type FamilyTreeProps = {
  * before they behave on both platforms.
  */
 export function FamilyTree({ data, onSelectNode, onAddMember }: FamilyTreeProps) {
+  const { t } = useTranslation();
+
   const window = useWindowDimensions();
   const [measured, setMeasured] = useState<{ width: number; height: number } | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -141,7 +144,7 @@ export function FamilyTree({ data, onSelectNode, onAddMember }: FamilyTreeProps)
         canZoomOut={zoom > ZOOM_MIN}
       />
 
-      <CanvasHint>Tap a person to open their profile</CanvasHint>
+      <CanvasHint>{t('family.hint')}</CanvasHint>
       <AddMemberButton onPress={onAddMember} />
     </View>
   );

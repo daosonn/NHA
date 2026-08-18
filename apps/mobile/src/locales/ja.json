@@ -1,0 +1,261 @@
+{
+  "common": {
+    "or": "または",
+    "close": "閉じる",
+    "back": "戻る",
+    "showPassword": "パスワードを表示",
+    "hidePassword": "パスワードを隠す",
+    "notBuiltYet": "まだ準備中です。",
+    "none": "未選択",
+    "selectedOption": "{{label}}：{{value}}"
+  },
+  "nav": {
+    "home": "ホーム",
+    "omoide": "思い出",
+    "ai": "AI",
+    "profile": "プロフィール",
+    "newMoment": "投稿する",
+    "notifications": "お知らせ",
+    "notificationsUnread_other": "お知らせ、未読{{count}}件",
+    "settings": "アカウントと設定"
+  },
+  "auth": {
+    "modeLabel": "ログインまたは新規登録",
+    "signInTab": "ログイン",
+    "signUpTab": "新規登録",
+    "continueApple": "Appleで続ける",
+    "continueGoogle": "Googleで続ける",
+    "apple": "Apple",
+    "google": "Google",
+    "fields": {
+      "name": "お名前",
+      "namePlaceholder": "山田 花子",
+      "email": "メールアドレス",
+      "emailPlaceholder": "you@example.com",
+      "password": "パスワード",
+      "minCharacters": "{{count}}文字以上"
+    },
+    "welcome": {
+      "title": "家族の物語を\nしまっておく場所",
+      "subtitle": "写真も、メモも、残しておきたい小さなことも。家族だけが見られます。",
+      "create": "家族をつくる",
+      "haveAccount": "すでにアカウントをお持ちですか？",
+      "signIn": "ログイン",
+      "legal": "続けると、利用規約とプライバシーポリシーに同意したことになります。"
+    },
+    "signIn": {
+      "title": "おかえりなさい",
+      "subtitle": "留守のあいだに家族が残したものが、待っています。",
+      "keepSignedIn": "ログインしたままにする",
+      "forgot": "パスワードをお忘れですか？",
+      "submit": "ログイン"
+    },
+    "signUp": {
+      "title": "新規登録",
+      "subtitle": "アカウントはお一人につき一つ。このあと家系図にあなたの場所をつくります。",
+      "termsLabel": "利用規約とプライバシーポリシーに同意します",
+      "termsBefore": "",
+      "termsWord": "利用規約",
+      "termsBetween": "と",
+      "privacyWord": "プライバシーポリシー",
+      "termsAfter": "に同意します。",
+      "submit": "次へ"
+    },
+    "verify": {
+      "title": "メールをご確認ください",
+      "sentBefore": "{{count}}桁の確認コードをお送りしました：",
+      "sentAfter": "",
+      "fallbackAddress": "ご登録のメールアドレス",
+      "codeLabel": "{{count}}桁の確認コード",
+      "resendBefore": "再送信まで ",
+      "resend": "コードを再送信",
+      "verify": "確認する",
+      "continue": "次へ",
+      "changeEmail": "メールアドレスを変更",
+      "differentEmail": "別のメールアドレスを使う"
+    },
+    "forgot": {
+      "title": "パスワードをお忘れの方",
+      "subtitle": "ご登録のメールアドレスを教えてください。確認コードをお送りします。",
+      "submit": "コードを送信"
+    },
+    "reset": {
+      "title": "新しいパスワード",
+      "subtitle": "他の端末でログイン中の場合は、すべてログアウトされます。",
+      "newPassword": "新しいパスワード",
+      "confirmPassword": "パスワードの確認",
+      "mismatch": "パスワードが一致しません",
+      "submit": "保存してログイン"
+    }
+  },
+  "home": {
+    "recommendations": "おすすめ",
+    "seeAll": "すべて見る",
+    "familyTree": "家系図",
+    "openFamilyTree": "家系図を開く",
+    "join": "参加",
+    "moreGroups": "+{{count}}",
+    "swipeCue": "上にスワイプで思い出へ"
+  },
+  "family": {
+    "title": "家系図",
+    "generations_other": "{{count}}世代",
+    "members_other": "{{count}}人",
+    "pending_other": "承認待ち{{count}}人",
+    "hint": "タップするとその人のプロフィールが開きます",
+    "zoomIn": "拡大",
+    "zoomOut": "縮小",
+    "recenter": "中央に戻す",
+    "addMember": "家族を追加",
+    "addHere": "ここに追加",
+    "addMemberHere": "ここに家族を追加",
+    "you": "あなた",
+    "nodeLabel": "{{name}}、{{role}}",
+    "pendingRole": "{{role}}・承認待ち",
+    "waitingFor": "{{name}}さんを待っています",
+    "invitedAs": "{{role}}として招待・{{sent}}",
+    "resend": "再送信"
+  },
+  "invite": {
+    "sheet": {
+      "title": "家族を招待する",
+      "subtitle": "タップした場所にその人が入ります",
+      "closeScrim": "招待画面を閉じる",
+      "spot": "家系図の場所・{{id}}",
+      "nameLabel": "呼び名",
+      "namePlaceholder": "お名前",
+      "relationship": "続柄",
+      "relationshipTitle": "あなたから見た続柄は？",
+      "methodHeading": "どのように招待しますか",
+      "methodLabel": "招待方法",
+      "methodLink": "招待リンク",
+      "methodContact": "電話番号かメール",
+      "contactLabel": "送り先",
+      "contactPlaceholder": "電話番号またはメールアドレス",
+      "carries": "招待には場所と「{{kinship}}」が含まれるので、登録するとそのまま正しい場所に入ります。",
+      "copy": "コピー",
+      "copied": "コピーしました",
+      "share": "招待を共有",
+      "shareMessage": "{{name}}さん、NHAで家族に参加しませんか：{{link}}",
+      "shareFallbackName": "あなた",
+      "send": "招待を送る"
+    },
+    "preview": {
+      "nodeLabel": "{{name}}・{{role}}",
+      "yourSpot": "あなたの場所"
+    },
+    "page": {
+      "title": "招待",
+      "headline": "{{inviter}}さんが{{family}}に招待しています",
+      "subtitleBefore": "あなたのために",
+      "subtitleAfter": "の場所を空けて待っています。参加すると、家族みんなにあなたのプロフィールが表示されます。",
+      "membersJoined": "すでに{{count}}人の家族が参加しています",
+      "momentsWaiting": "{{count}}件の思い出があなたを待っています",
+      "privacy": "投稿はこの家族だけが見られます",
+      "join": "家族に参加する",
+      "notNow": "あとで",
+      "finePrint": "アカウントがなくても大丈夫です。次の画面で作れます。コード {{code}}"
+    }
+  },
+  "member": {
+    "sections": "{{name}}さんのプロフィール",
+    "timeline": "年表",
+    "album": "アルバム",
+    "memo": "メモ",
+    "editSelf": "プロフィールを編集",
+    "addDetails": "{{name}}さんの情報を追加",
+    "bornYear": "{{year}}年生まれ",
+    "lifespan": "{{born}}年 – {{died}}年",
+    "noBio": "まだ何も書かれていません。家族の誰でも書き始められます。",
+    "photos_other": "写真{{count}}枚",
+    "timelineEmpty": "まだ出来事がありません",
+    "timelineEmptyBody": "誕生、引っ越し、結婚 — 人生の節目になった日を。",
+    "timelineEmptyAction": "出来事を追加",
+    "albumCaption": "家族が共有した思い出から",
+    "albumEmpty": "まだ写真がありません",
+    "albumEmptyBody": "この人がタグ付けされた思い出が投稿されると、ここに集まります。",
+    "albumEmptyAction": "思い出を投稿",
+    "openPhoto": "写真を開く",
+    "memoEmpty": "まだメモがありません",
+    "memoEmptyBody": "{{name}}さんについて覚えておきたいこと — アレルギー、贈り物のヒント、聞いてみたい話。あなただけが見られます。",
+    "memoEmptyAction": "メモを書く",
+    "memoPrivate": "あなただけのメモです。{{name}}さんには表示されません。",
+    "memoCategories": {
+      "hobbies": "好きなもの",
+      "health": "健康",
+      "gift": "贈り物のヒント",
+      "memories": "聞いてみたい話",
+      "todo": "やること"
+    }
+  },
+  "moment": {
+    "title": "新しい思い出",
+    "caption": "ひとこと",
+    "captionPlaceholder": "どんなことがありましたか？",
+    "media": "写真・動画",
+    "addMedia": "写真か動画を追加",
+    "removePhoto": "写真を削除",
+    "removeVideo": "動画を削除",
+    "shareWith": "共有する相手",
+    "shareWithHint": "はじめはすべての家族が選ばれています。タップして外すと、その家族には表示されません。",
+    "audienceOption": "{{name}}、{{count}}人",
+    "postPrivately": "自分だけに投稿",
+    "postTo_other": "{{count}}つの家族に投稿",
+    "explainPrivate": "家族が選ばれていません。この思い出はあなただけのものになります。",
+    "explainEveryone": "同じ家族にいる人みんなに表示されます。",
+    "explainSkipped_other": "{{names}}は外れているので表示されません。"
+  },
+  "ai": {
+    "title": "AI",
+    "heading": "家族のカレンダー",
+    "subheading": "家族が大切にしている日と、その日が来る前に用意できるアイデア。",
+    "laterThisYear": "今年これから",
+    "dateCount_other": "カレンダーに{{count}}件",
+    "daysAway_other": "あと{{count}}日",
+    "occasionLabel": "{{title}}、{{meta}}",
+    "planSurprise": "サプライズを計画",
+    "giftIdeas": "贈り物のアイデア",
+    "video": "動画",
+    "kinds": {
+      "birthday": "誕生日",
+      "memorial": "命日",
+      "anniversary": "記念日",
+      "holiday": "行事",
+      "milestone": "節目"
+    },
+    "gifts": {
+      "title": "贈り物のアイデア",
+      "forPerson": "{{name}}さんへの贈り物のアイデア",
+      "evidence": "メモ{{notes}}件、写真{{photos}}枚、これまでの贈り物{{gifts}}件を読みました",
+      "save": "保存",
+      "saved": "保存済み"
+    }
+  },
+  "settings": {
+    "title": "アカウントと設定",
+    "signedOut": "ログインしていません",
+    "noEmail": "—",
+    "mockNotice": "このアカウントはまだ本当のログインではありません。ここでの操作はAPIに届きません。",
+    "signOut": "ログアウト",
+    "language": "言語",
+    "languageTitle": "言語を選ぶ"
+  },
+  "date": {
+    "dayMonth": "{{month}}{{day}}日",
+    "fullDate": "{{year}}年{{month}}{{day}}日",
+    "months": {
+      "1": "1月",
+      "2": "2月",
+      "3": "3月",
+      "4": "4月",
+      "5": "5月",
+      "6": "6月",
+      "7": "7月",
+      "8": "8月",
+      "9": "9月",
+      "10": "10月",
+      "11": "11月",
+      "12": "12月"
+    }
+  }
+}

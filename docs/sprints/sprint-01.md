@@ -15,11 +15,11 @@ build the family tree, post content with photos, and view member profiles.
 
 ### 1.1 Đăng ký / Đăng nhập — Authentication hoàn chỉnh
 
-- [ ] 1.1.1 UI đăng ký (form đăng ký)
+- [ ] 1.1.1 UI đăng ký (form đăng ký) — UI xong 2026-08-18 (mock, chưa nối API)
 - [x] 1.1.2 API đăng ký (tạo tài khoản) — done 2026-08-17: merged in PR #2
 - [x] 1.1.3 Validate dữ liệu (email/password) — done 2026-08-17: DTO +
       class-validator behind global ValidationPipe, merged in PR #2
-- [ ] 1.1.4 UI đăng nhập (form login)
+- [ ] 1.1.4 UI đăng nhập (form login) — UI xong 2026-08-18 (mock, chưa nối API)
 - [x] 1.1.5 API đăng nhập (JWT access + refresh — see backend architecture)
       — done 2026-08-17: merged in PR #2
 - [x] 1.1.6 Đăng xuất (revoke refresh token) — done 2026-08-17: single-use
@@ -31,7 +31,7 @@ build the family tree, post content with photos, and view member profiles.
 ### 1.2 Nav1 – Trang chủ — Trang chính sau login
 
 - [ ] 1.2.1 Navigation chính (Nav1/Nav2/Nav3/Nav4)
-- [ ] 1.2.2 Layout Home (responsive, mobile-first 375–430px)
+- [ ] 1.2.2 Layout Home (responsive, mobile-first 375–430px) — UI xong 2026-08-18 (mock data, chưa nối API)
 - [ ] 1.2.3 Load bài viết gần đây (feed cơ bản)
 - [ ] 1.2.4 Empty/loading state (UI đầy đủ)
 - [ ] 1.2.5 Widget dịp đặc biệt trên Home (countdown + theme — sinh nhật/ngày giỗ derived từ LifeProfile; added 2026-08-14, see `database.md`)
@@ -54,16 +54,18 @@ build the family tree, post content with photos, and view member profiles.
 
 ### 1.4 Cây gia phả — Family Tree
 
-- [x] 1.4.1 API relationship (dữ liệu cây) — done 2026-08-18:
-      `GET /api/families/:familyId/tree` trả member nodes + relationship
-      edges (membership-based authorization); verified lint/test/build +
-      live smoke test (200/401/403)
-- [ ] 1.4.2 Render Family Tree (hiển thị quan hệ)
-- [ ] 1.4.3 Click member → Profile (điều hướng profile)
+> Màn mời thành viên (invite sheet, pending spot, trang nhận lời mời) đã
+> code UI 2026-08-18 nhưng không nằm trong checklist sprint 1 — nó cần một
+> bản ghi invitation phía backend, xem `project-status.md` → Important
+> Decisions ("Invites are per-spot"). Cần thêm task backend trước khi nối.
+
+- [ ] 1.4.1 API relationship (dữ liệu cây)
+- [ ] 1.4.2 Render Family Tree (hiển thị quan hệ) — UI xong 2026-08-18 (mock data, chưa nối API)
+- [ ] 1.4.3 Click member → Profile (điều hướng profile) — UI xong 2026-08-18 (mock data, chưa nối API)
 
 ### 1.5 Nav2.5 – Bài viết / Ảnh / Sự kiện — Tạo nội dung
 
-- [ ] 1.5.1 UI Create Post (nhập nội dung)
+- [ ] 1.5.1 UI Create Post (nhập nội dung) — UI xong 2026-08-18 (mock data, chưa nối API)
 - [x] 1.5.2 API Post (create/edit/delete) — done 2026-08-18: PostModule
       (`POST/GET/PATCH/DELETE /api/posts`), chỉ tác giả sửa/xóa; post
       private trả 404 với người ngoài; verified lint/test/e2e/build +
@@ -76,18 +78,18 @@ build the family tree, post content with photos, and view member profiles.
       `type=EVENT` bắt buộc eventTitle + eventDate; POST thường cấm hai
       field này
 - [x] 1.5.5 Visibility (chung/riêng tư — post to chosen families or
-      private) — done 2026-08-18: `familyIds` chọn nhiều family (phải là
+      private) — UI xong 2026-08-18 (mock data, chưa nối API) — done 2026-08-18: `familyIds` chọn nhiều family (phải là
       thành viên); rỗng = riêng tư; PATCH thay được visibility
 - [ ] 1.5.6 Comment bài đăng (API + UI — added 2026-08-14, see `database.md`)
 - [ ] 1.5.7 Reaction bài đăng (đa dạng loại — added 2026-08-14, see `database.md`)
 
 ### 1.6 Nav4 – Hồ sơ đời cá nhân — Profile
 
-- [ ] 1.6.1 UI Profile (avatar + tên)
-- [ ] 1.6.2 About (thông tin cá nhân)
-- [ ] 1.6.3 Timeline chung (bài viết/ảnh theo thời gian)
-- [ ] 1.6.4 Album/Gallery (danh sách ảnh)
-- [ ] 1.6.5 Memo cá nhân (tạo memo — ghi chú về một thành viên, xem `database.md`)
+- [ ] 1.6.1 UI Profile (avatar + tên) — UI xong 2026-08-18 (mock data, chưa nối API)
+- [ ] 1.6.2 About (thông tin cá nhân) — UI xong 2026-08-18 (mock data, chưa nối API)
+- [ ] 1.6.3 Timeline chung (bài viết/ảnh theo thời gian) — UI xong 2026-08-18 (mock data, chưa nối API)
+- [ ] 1.6.4 Album/Gallery (danh sách ảnh) — UI xong 2026-08-18 (mock data, chưa nối API)
+- [ ] 1.6.5 Memo cá nhân (tạo memo — ghi chú về một thành viên, xem `database.md`) — UI xong 2026-08-18 (mock data, chưa nối API)
 - ~~1.6.6 Quyền riêng tư Memo (private/shared)~~ — dropped 2026-08-14:
   memo luôn private, chỉ chủ xem/sửa (see `database.md`)
 - [ ] 1.6.7 Album cá nhân (private — tạo album, tự thêm ảnh; added 2026-08-14, see `database.md`)

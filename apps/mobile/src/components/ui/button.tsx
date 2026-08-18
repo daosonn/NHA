@@ -3,7 +3,8 @@ import { ActivityIndicator, Pressable, View, type PressableProps } from 'react-n
 import { colors, fonts, radius } from '../../theme';
 import { Text } from './text';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'destructive' | 'destructiveSolid';
+export type ButtonVariant =
+  'primary' | 'secondary' | 'neutral' | 'ghost' | 'destructive' | 'destructiveSolid';
 export type ButtonSize = 'large' | 'medium' | 'small';
 
 type VariantStyle = {
@@ -34,6 +35,14 @@ const VARIANTS: Record<ButtonVariant, VariantStyle> = {
     bgPressed: colors.coral.light,
     fg: colors.coral.deep,
     border: colors.coral.border,
+    spinner: colors.coral.brand,
+  },
+  /** No brand opinion: identity providers, secondary actions beside a primary. */
+  neutral: {
+    bg: colors.background.card,
+    bgPressed: colors.background.subtle,
+    fg: colors.text.primary,
+    border: colors.state.borderNeutral,
     spinner: colors.coral.brand,
   },
   ghost: {
@@ -126,7 +135,7 @@ export function Button({
       <Text
         weight="semibold"
         color={fg}
-        style={{ fontFamily: fonts.semibold, fontSize: s.fontSize, lineHeight: s.fontSize * 1.2 }}
+        style={{ fontSize: s.fontSize, lineHeight: s.fontSize * 1.2 }}
       >
         {label}
       </Text>

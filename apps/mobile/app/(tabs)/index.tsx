@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
 import { EventWidget } from '../../src/components/home/event-widget';
@@ -21,6 +22,7 @@ import { colors, spacing } from '../../src/theme';
 const BOTTOM_INSET = 160;
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
 
   return (
@@ -47,7 +49,7 @@ export default function HomeScreen() {
 
         <EventWidget event={upcomingEvent} />
 
-        <SectionHeader title="Recommendations" actionLabel="See all" />
+        <SectionHeader title={t('home.recommendations')} actionLabel={t('home.seeAll')} />
 
         <RecommendationGrid
           feature={recommendations.feature}
