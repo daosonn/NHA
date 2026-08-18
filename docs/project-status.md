@@ -134,6 +134,13 @@
   shape hiding cross-family ids from non-authors. Merged to `main` in
   PR #5 (2026-08-18). Assumption to confirm: media set fixed at post
   creation (edit changes text/visibility/tags, not attachments).
+- Family feed API (2026-08-18): `GET /api/families/:familyId/posts` —
+  the family's shared posts, newest first, cursor-paginated (`limit`
+  1–50 default 20, `nextCursor`), membership-based authorization;
+  private posts never appear. Unblocks wiring the Home feed (1.2.3 —
+  API side done, UI not wired). Verified by lint/build + live smoke
+  test (ordering, pagination, 403 non-member, 401, limit validation,
+  new-member visibility). On branch `feature/post-feed`.
 
 ### Planning Phase
 

@@ -34,6 +34,12 @@ export interface PostDetail {
   updatedAt: Date;
 }
 
+export interface FamilyFeed {
+  items: PostDetail[];
+  /** Pass back as `cursor` for the next page; null = no more posts. */
+  nextCursor: string | null;
+}
+
 interface PostRecord {
   id: string;
   authorUserId: string;
@@ -49,6 +55,8 @@ interface PostRecord {
   memberTags: { memberId: string }[];
   media: PostMediaSummary[];
 }
+
+const FEED_DEFAULT_LIMIT = 20;
 
 const postDetailInclude = {
   author: { select: { name: true } },
@@ -130,6 +138,39 @@ export class PostService {
       return post.id;
     });
     return this.getPost(userId, postId);
+  }
+
+  /**
+   * Recent posts shared to one family, newest first (WBS 1.2.3). Within a
+   * family all shared content is visible to every member (domain-model.md),
+   * so membership is the only check — no per-post filtering needed.
+   */
+  async listFamilyFeed(
+    userId: string,
+    familyId: string,
+    query: { limit?: number; cursor?: string },
+  ): Promise<FamilyFeed> {
+    const membership = await this.prisma.familyMember.findUnique({
+      where: { familyId_userId: { familyId, userId } },
+      select: { id: true },
+    });
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this family');
+    }
+    const limit = query.limit ?? FEED_DEFAULT_LIMIT;
+    const posts = await this.prisma.post.findMany({
+      where: { families: { some: { familyId } } },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      // One extra row tells us whether another page exists.
+      take: limit + 1,
+      ...(query.cursor && { cursor: { id: query.cursor }, skip: 1 }),
+      include: postDetailInclude,
+    });
+    const page = posts.slice(0, limit);
+    return {
+      items: page.map((post) => this.toDetail(post)),
+      nextCursor: posts.length > limit ? page[page.length - 1].id : null,
+    };
   }
 
   /** Visible to the author and to members of families it is shared to. */
