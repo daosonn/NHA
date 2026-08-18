@@ -145,6 +145,23 @@ If multiple developers need to change the same shared contract or database model
 
 Do not reformat or refactor unrelated files.
 
+Status docs (docs/project-status.md and docs/sprints/\*.md) are edited by
+every branch, so conflicts there are normal. Rules:
+
+- Keep sprint checklist notes to ONE line, e.g. `— done 2026-08-18 (PR #12)`.
+  Put details in the PR description and the relevant docs file instead.
+- When these files conflict on merge, ALWAYS keep both sides — every
+  branch's ticks and entries must survive. Never resolve by picking one
+  side wholesale; that loses teammates' updates.
+- After resolving, re-read the file and check nothing was dropped or
+  duplicated before committing.
+
+Note for Claude Code users: `.claude/settings.json` ships a session-start
+hook that fetches origin and lists new commits and changed docs, and the
+same merge rules are written in CLAUDE.md, so the agent follows them
+automatically. If you do not use Claude Code, the hook simply never runs —
+nothing to install or configure.
+
 8. Database Changes
 
 All shared database schema changes must use Prisma migrations.
