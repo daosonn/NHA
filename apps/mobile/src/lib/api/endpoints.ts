@@ -11,6 +11,9 @@ import type {
   AddMemberRequest,
   AuthResult,
   CreateFamilyRequest,
+  CommentBody,
+  CommentList,
+  CommentSummary,
   CreatePostRequest,
   CreateRelationshipRequest,
   FamilyDetail,
@@ -25,11 +28,15 @@ import type {
   MediaSummary,
   OAuthProvider,
   PostDetail,
+  ProfileDetail,
+  ReactionState,
+  ReactionType,
   RefreshTokenRequest,
   RegisterRequest,
   RelationshipSummary,
   SuccessResult,
   UpdatePostRequest,
+  UpdateProfileRequest,
 } from './types';
 
 /** Builds `?a=1&b=2`, skipping anything not set. */
@@ -153,4 +160,63 @@ export const media = {
    * authenticated and supports Range requests.
    */
   streamUrl: (mediaId: string) => `${apiBaseUrl()}/media/${mediaId}`,
+};
+
+export const comments = {
+  /** Oldest first — see `CommentList`. Same `limit`/`cursor` as the feed. */
+  list: (postId: string, params: FeedQuery = {}) =>
+    apiRequest<CommentList>(`/posts/${postId}/comments${query(params)}`),
+
+  /** Anyone who can read the post can comment on it. */
+  create: (postId: string, body: CommentBody) =>
+    apiRequest<CommentSummary>(`/posts/${postId}/comments`, { method: 'POST', body }),
+
+  /** Author only — the post's author has no moderation power yet. */
+  update: (postId: string, commentId: string, body: CommentBody) =>
+    apiRequest<CommentSummary>(`/posts/${postId}/comments/${commentId}`, {
+      method: 'PATCH',
+      body,
+    }),
+
+  remove: (postId: string, commentId: string) =>
+    apiRequest<SuccessResult>(`/posts/${postId}/comments/${commentId}`, { method: 'DELETE' }),
+};
+
+export const reactions = {
+  /**
+   * One reaction per person per post, so this is a `PUT` on `/me` rather
+   * than a `POST` to a collection: setting LOVE after LIKE replaces it, it
+   * does not add a second.
+   */
+  set: (postId: string, type: ReactionType) =>
+    apiRequest<ReactionState>(`/posts/${postId}/reactions/me`, { method: 'PUT', body: { type } }),
+
+  /** Idempotent — removing a reaction you never left is not an error. */
+  clear: (postId: string) =>
+    apiRequest<ReactionState>(`/posts/${postId}/reactions/me`, { method: 'DELETE' }),
+};
+
+export const profiles = {
+  mine: () => apiRequest<ProfileDetail>('/me/profile'),
+
+  updateMine: (body: UpdateProfileRequest) =>
+    apiRequest<ProfileDetail>('/me/profile', { method: 'PATCH', body }),
+
+  /**
+   * A **linked** member's route serves their global profile — the very
+   * object `mine()` edits — while a placeholder serves that family's wiki
+   * profile. The route is the same; what comes back is not.
+   */
+  member: (familyId: string, memberId: string) =>
+    apiRequest<ProfileDetail>(`/families/${familyId}/members/${memberId}/profile`),
+
+  /**
+   * Placeholders are editable by any member of the family; a linked
+   * member's profile only by that member, 403 otherwise.
+   */
+  updateMember: (familyId: string, memberId: string, body: UpdateProfileRequest) =>
+    apiRequest<ProfileDetail>(`/families/${familyId}/members/${memberId}/profile`, {
+      method: 'PATCH',
+      body,
+    }),
 };

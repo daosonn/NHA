@@ -56,7 +56,8 @@ export function apiBaseUrl(): string {
 }
 
 export type RequestOptions = {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  /** `PUT` only where the server models a single-valued resource — `reactions.set`. */
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   /** Serialised as JSON, unless it is `FormData`, which is sent as-is. */
   body?: unknown;
   /** Off for register/login/refresh, which have no token yet. */

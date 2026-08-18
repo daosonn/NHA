@@ -12,4 +12,5 @@ export const queryKeys = {
   familyTree: (familyId: string) => ['families', familyId, 'tree'] as const,
   familyFeed: (familyId: string) => ['families', familyId, 'posts'] as const,
   post: (postId: string) => ['posts', postId] as const,
+  postComments: (postId: string) => ['posts', postId, 'comments'] as const,
 } as const;
