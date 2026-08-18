@@ -78,7 +78,7 @@ export class PostService {
     const mediaIds = dto.mediaIds ?? [];
     if (!content && mediaIds.length === 0) {
       throw new BadRequestException(
-        'A post needs text content or at least one photo',
+        'A post needs text content or at least one media attachment',
       );
     }
 
@@ -182,7 +182,7 @@ export class PostService {
         : post.content;
     if (!nextContent && post._count.media === 0) {
       throw new BadRequestException(
-        'A post needs text content or at least one photo',
+        'A post needs text content or at least one media attachment',
       );
     }
 

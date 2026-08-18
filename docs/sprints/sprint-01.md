@@ -70,7 +70,7 @@ build the family tree, post content with photos, and view member profiles.
       15-case live smoke test
 - [x] 1.5.3 Upload ảnh (upload + preview — qua storage service module) —
       done 2026-08-18: StorageService (local disk, `UPLOAD_DIR`) +
-      MediaModule (`POST /api/media` multipart ảnh ≤10MB,
+      MediaModule (`POST /api/media` multipart ảnh/video/audio ≤100MB;
       `GET /api/media/:id` stream có kiểm soát quyền xem)
 - [x] 1.5.4 Tạo sự kiện (tên/ngày/nội dung) — done 2026-08-18:
       `type=EVENT` bắt buộc eventTitle + eventDate; POST thường cấm hai

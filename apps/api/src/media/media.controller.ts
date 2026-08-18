@@ -26,7 +26,9 @@ import {
   type UploadedImage,
 } from './media.service';
 
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB per photo for the MVP
+// Single upload limit for every media type (team decision 2026-08-18).
+// Multer rejects larger files with 413 before they reach the service.
+const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 
 @ApiTags('media')
 @ApiBearerAuth()
@@ -47,7 +49,8 @@ export class MediaController {
     },
   })
   @ApiOperation({
-    summary: 'Upload a photo; attach it to a post via mediaIds (WBS 1.5.3)',
+    summary:
+      'Upload a photo, video, or audio file; attach it to a post via mediaIds (WBS 1.5.3)',
   })
   upload(
     @CurrentUser() user: AuthUser,

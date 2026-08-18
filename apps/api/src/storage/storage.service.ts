@@ -6,13 +6,22 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 // Extensions derive from the validated MIME type — never from the
-// client-supplied filename.
+// client-supplied filename. Photo/video/audio per the MVP memory scope
+// (docs/00-shared/mvp-scope.md); the mobile client produces mp4/mov
+// video (expo-image-picker) and m4a recordings (expo-av).
 const EXTENSION_BY_MIME: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
   'image/gif': 'gif',
   'image/heic': 'heic',
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+  'audio/mpeg': 'mp3',
+  'audio/mp4': 'm4a',
+  'audio/x-m4a': 'm4a',
+  'audio/aac': 'aac',
+  'audio/wav': 'wav',
 };
 
 /**

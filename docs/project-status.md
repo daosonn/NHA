@@ -83,11 +83,13 @@
   families, private content returns 404 to non-viewers) + StorageService
   (local disk, `UPLOAD_DIR`, swappable for S3 later) + `POST /api/media`
   (multipart photo ≤10MB) and `GET /api/media/:id` (authorized
-  streaming). Tasks 1.5.2–1.5.5 done; verified by lint/test/e2e/build +
-  15-case live smoke test. On branch `feature/family-tree-api`,
-  uncommitted. Assumptions to confirm: photos only for MVP upload
-  (jpeg/png/webp/gif/heic), media set fixed at post creation (edit
-  changes text/visibility/tags, not attachments).
+  streaming). Uploads accept photo/video/audio per the MVP memory scope
+  (jpeg/png/webp/gif/heic; mp4/mov; mp3/m4a/aac/wav) with a single
+  100MB limit for every type (decided 2026-08-18). Tasks 1.5.2–1.5.5
+  done; verified by lint/test/e2e/build + live smoke tests (15-case
+  matrix + video/audio/limits round). On branch `feature/post-module`.
+  Assumption to confirm: media set fixed at post creation (edit changes
+  text/visibility/tags, not attachments).
 
 ### Planning Phase
 
