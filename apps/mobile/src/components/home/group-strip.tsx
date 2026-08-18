@@ -1,4 +1,5 @@
 import { ChevronRight, Plus } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { colors, radius, spacing } from '../../theme';
@@ -39,6 +40,8 @@ export function GroupStrip({
   onAddPress,
   showTreeLink = true,
 }: GroupStripProps) {
+  const { t } = useTranslation();
+
   return (
     <View
       style={{
@@ -57,7 +60,7 @@ export function GroupStrip({
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel="Open family tree"
+        accessibilityLabel={t('home.openFamilyTree')}
         style={{ flexDirection: 'row', alignItems: 'center' }}
       >
         {groups.map((group, i) => (
@@ -84,7 +87,7 @@ export function GroupStrip({
             }}
           >
             <Text variant="caption" weight="semibold" color={colors.text.body}>
-              {`+${remainingCount}`}
+              {t('home.moreGroups', { count: remainingCount })}
             </Text>
           </View>
         )}
@@ -93,7 +96,7 @@ export function GroupStrip({
       <Pressable
         onPress={onAddPress}
         accessibilityRole="button"
-        accessibilityLabel="Add a family member"
+        accessibilityLabel={t('family.addMember')}
         style={{
           width: AVATAR,
           height: AVATAR,
@@ -111,7 +114,7 @@ export function GroupStrip({
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel="Open family tree"
+        accessibilityLabel={t('home.openFamilyTree')}
         style={{
           flex: 1,
           height: '100%',
@@ -124,7 +127,7 @@ export function GroupStrip({
         {showTreeLink && (
           <>
             <Text variant="caption" weight="medium" color={colors.text.muted}>
-              Family tree
+              {t('home.familyTree')}
             </Text>
 
             <View

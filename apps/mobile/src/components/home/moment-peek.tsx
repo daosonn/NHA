@@ -1,4 +1,5 @@
 import { ChevronUp } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { colors, radius, spacing } from '../../theme';
@@ -8,6 +9,8 @@ import { Text } from '../ui/text';
 
 /** Hint that the moments feed is one swipe away. */
 export function SwipeCue() {
+  const { t } = useTranslation();
+
   return (
     <View style={{ alignItems: 'center', gap: 2 }}>
       <ChevronUp size={18} color="rgba(24,24,27,0.22)" strokeWidth={2} />
@@ -17,7 +20,7 @@ export function SwipeCue() {
         color={colors.text.lightMuted}
         style={{ letterSpacing: 0.2 }}
       >
-        Swipe up for moments
+        {t('home.swipeCue')}
       </Text>
     </View>
   );

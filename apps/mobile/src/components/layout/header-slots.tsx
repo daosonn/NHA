@@ -1,4 +1,5 @@
-import { Bell, ChevronLeft } from 'lucide-react-native';
+import { Bell, ChevronLeft, Settings } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { colors, radius } from '../../theme';
@@ -11,24 +12,48 @@ export function BrandWordmark() {
       serif
       weight="bold"
       accessibilityRole="header"
-      style={{ fontSize: 22, lineHeight: 28, letterSpacing: 1.6 }}
+      style={{ fontSize: 22, lineHeight: 28, letterSpacing: 1.6, color: colors.coral.primary }}
     >
-      NHA
+      PRESENT
     </Text>
   );
 }
 
 /** Leading slot for any pushed screen. */
 export function BackButton({ onPress }: { onPress?: () => void }) {
+  const { t } = useTranslation();
+
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="Go back"
+      accessibilityLabel={t('common.back')}
       hitSlop={8}
       className="h-[32px] w-[32px] items-center justify-center"
     >
       <ChevronLeft size={20} color={colors.text.primary} strokeWidth={2} />
+    </Pressable>
+  );
+}
+
+/** Trailing slot on your own profile — the way in to Account & Settings. */
+export function SettingsButton({ onPress }: { onPress?: () => void }) {
+  const { t } = useTranslation();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={t('nav.settings')}
+      style={{
+        width: 40,
+        height: 40,
+        borderRadius: radius.full,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Settings size={21} color={colors.text.primary} strokeWidth={2} />
     </Pressable>
   );
 }
@@ -40,7 +65,9 @@ export type NotificationBellProps = {
 
 /** 40px touch target with the unread count riding the top-right of the bell. */
 export function NotificationBell({ count = 0, onPress }: NotificationBellProps) {
-  const label = count > 0 ? `Notifications, ${count} unread` : 'Notifications';
+  const { t } = useTranslation();
+
+  const label = count > 0 ? t('nav.notificationsUnread', { count }) : t('nav.notifications');
 
   return (
     <Pressable

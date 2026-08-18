@@ -1,7 +1,11 @@
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { FamilyTree } from '../src/components/family/family-tree';
+import { InviteSheet } from '../src/components/family/invite-sheet';
+import { PendingBanner } from '../src/components/family/pending-banner';
 import type { PositionedNode } from '../src/components/family/tree-layout';
 import { GroupStrip } from '../src/components/home/group-strip';
 import { AppHeader } from '../src/components/layout/app-header';
@@ -10,6 +14,12 @@ import { SectionHeader } from '../src/components/ui/section-header';
 import { Text } from '../src/components/ui/text';
 import { familyTree } from '../src/fixtures/family';
 import { familyGroups, remainingGroupCount } from '../src/fixtures/home';
+import {
+  defaultSpot,
+  familyInviteCode,
+  pendingInvite,
+  type TreeSpot,
+} from '../src/fixtures/invite';
 
 /**
  * The family tree is a pushed screen, not a tab: it is reached by tapping the
@@ -17,18 +27,25 @@ import { familyGroups, remainingGroupCount } from '../src/fixtures/home';
  * destination of its own.
  */
 export default function FamilyTreeScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
+  const [spot, setSpot] = useState<TreeSpot | null>(null);
 
   const subtitle = [
-    `${familyTree.generations.length} generations`,
-    `${familyTree.memberCount} members`,
-    familyTree.pendingCount > 0 ? `${familyTree.pendingCount} pending` : null,
+    t('family.generations', { count: familyTree.generations.length }),
+    t('family.members', { count: familyTree.memberCount }),
+    familyTree.pendingCount > 0 ? t('family.pending', { count: familyTree.pendingCount }) : null,
   ]
     .filter((part) => part !== null)
     .join(' · ');
 
-  const openMember = (node: PositionedNode) => {
-    if (node.state === 'empty') return;
+  // An empty node is an invitation waiting to happen, so it opens the invite
+  // sheet rather than a profile that does not exist yet.
+  const openNode = (node: PositionedNode) => {
+    if (node.state === 'empty') {
+      setSpot({ id: node.id, summary: defaultSpot.summary });
+      return;
+    }
     router.push({ pathname: '/member/[id]', params: { id: node.id } });
   };
 
@@ -38,7 +55,7 @@ export default function FamilyTreeScreen() {
         left={<BackButton onPress={() => router.back()} />}
         center={
           <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-            Family tree
+            {t('family.title')}
           </Text>
         }
       />
@@ -52,8 +69,24 @@ export default function FamilyTreeScreen() {
 
         <SectionHeader title={familyTree.name} subtitle={subtitle} size="lg" />
 
-        <FamilyTree data={familyTree} onSelectNode={openMember} />
+        {/* The banner overlays the canvas, so it shares this wrapper's box. */}
+        <View className="flex-1">
+          <FamilyTree
+            data={familyTree}
+            onSelectNode={openNode}
+            onAddMember={() => setSpot(defaultSpot)}
+          />
+
+          {familyTree.pendingCount > 0 && <PendingBanner invite={pendingInvite} />}
+        </View>
       </View>
+
+      <InviteSheet
+        visible={spot !== null}
+        onClose={() => setSpot(null)}
+        spot={spot ?? defaultSpot}
+        code={familyInviteCode}
+      />
     </View>
   );
 }

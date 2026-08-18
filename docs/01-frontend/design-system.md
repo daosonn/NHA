@@ -41,8 +41,7 @@ destructive red. Full values in `packages/tokens/src/colors.ts`.
 
 The mockups were drawn in Be Vietnam Pro. The product ships English first
 and Japanese second, and Be Vietnam Pro has no Japanese glyphs, so Inter
-replaces it — visually near-identical at these sizes. When Japanese lands,
-add Noto Sans JP as a fallback instead of swapping the primary face.
+replaces it — visually near-identical at these sizes.
 
 | Token    | Size / line height |
 | -------- | ------------------ |
@@ -56,6 +55,37 @@ add Noto Sans JP as a fallback instead of swapping the primary face.
 | display  | 26 / 34            |
 
 Weights: 400 / 500 / 600 / 700.
+
+#### Japanese type — chosen, not yet bundled
+
+Neither Inter nor Lora has Japanese glyphs, so this is a font swap, not a
+fallback. React Native has no synthetic bolding: every weight is a
+separate loaded family, so a face that ships fewer weights takes the whole
+scale down with it.
+
+| Slot                         | Face                             |
+| ---------------------------- | -------------------------------- |
+| Emotional headings (`serif`) | **Zen Maru Gothic** Bold/Black   |
+| Body and UI                  | **Noto Sans JP** 400/500/600/700 |
+
+Zen Maru Gothic replaces Lora: its rounded terminals answer the rounded
+cards, pills and avatar rings the whole UI is built from, where a Mincho
+would read as a newspaper.
+
+The body face is Noto Sans JP rather than Zen Maru Gothic Regular for two
+reasons. Its 400/500/600/700 statics map one-to-one onto the Inter roles
+above, so nothing in the weight scale has to be re-tuned. And rounded
+terminals lose definition at 12–14px once the glyphs are dense kanji —
+this app is explicitly read by grandparents, and `caption` at 12px is
+where that would show first.
+
+So the pairing is warm where the app is being warm, and plain where it is
+being read.
+
+Until they are bundled, Japanese renders in the **device font** with a real
+`fontWeight` — `theme/typeface.ts` makes that swap, and it is the only
+place that decides a font family. The cost of bundling is ~30–50 MB of
+TTF across the six weights, which is why it is a separate decision.
 
 ### Radius
 
@@ -80,10 +110,15 @@ shadow, no gradient.**
 | ----------- | ------------------------------------------------------ | ------------------------ | ------------------------------------------ |
 | Primary     | `#F58B7B` bg, white text                               | `#E4776A`                | `#F1EFEC` bg, `#B5B1AB` text               |
 | Secondary   | white bg, `#B8422F` text, 1.5px `#F5A497` inset border | `#FDE7E2` bg             | white bg, `#B5B1AB` text, `#E7E5E2` border |
+| Neutral     | white bg, `#18181B` text, 1.5px `#E7E1DC` border       | `#F4F2EF` bg             | white bg, `#B5B1AB` text, `#E7E5E2` border |
 | Ghost       | transparent, `#52525B` text                            | `rgba(24,24,27,0.06)` bg | `#C4C1BC` text                             |
 | Destructive | white bg, `#C13B3B` text, `#EFB4B4` border             | `#FBEAEA` bg             | same as others                             |
 
 Destructive also has a solid form: `#D14343` → pressed `#B93A3A`.
+
+**Neutral** carries no brand opinion. It is for identity providers, whose
+logos must keep their own colours, and for a secondary action standing
+beside a primary one where coral would make them compete.
 
 Sizes: Large 52 (font 16, padding 26), Medium 44 (font 15, padding 22),
 Small 32 (font 13, padding 14). Icon sits left of the label, gap 8, 20px
@@ -120,6 +155,80 @@ White, radius 20, padding 14–20, shadow
 `0 8px 24px rgba(24,24,27,0.05)` plus a `1px rgba(24,24,27,0.06)` inset
 border.
 
+### Segmented tabs
+
+A 4px-padded `#F4F2EF` track, radius `9999`, segments `flex-1` at height 44.
+The active segment is a **white pill** with the card shadow — deliberately
+not coral, which would be a sixth accent use. Active label 600 primary,
+inactive 500 muted, optional count appended in the muted tone.
+
+Used for Timeline / Album / Memo on the Life Profile and for Link / Contact
+in the invite sheet.
+
+### Form fields
+
+Label 500/12.5 secondary above the control. Input is white, radius 14,
+1.5px `#E7E5E2` border, 15px text. Focus swaps the border to coral brand
+and adds `0 0 0 4px rgba(240,112,95,0.1)`. An optional character counter
+sits right-aligned under the field.
+
+React Native has no synthetic bolding, so every weight is a separate font
+family — `TextInput` must set `fontFamily` explicitly or it falls back to
+the system face.
+
+Optional slots, all on the same component:
+
+| Slot     | Behaviour                                                       |
+| -------- | --------------------------------------------------------------- |
+| Icon     | Leads the field, muted at rest and coral brand on focus         |
+| `secure` | Masks the value and adds an eye toggle at 44px effective target |
+| `error`  | Red border, red message replacing the hint — never both at once |
+
+### Checkbox
+
+20px, radius 8. Off is white with a 1.5px `#E7E1DC` border; on is a coral
+fill with a white check. **The label is part of the touch target**, and it
+is plain text rather than a nested pressable — an interactive element
+inside another one is invalid markup on the web, and a checkbox whose words
+cannot be tapped is a small cruelty on a phone.
+
+### One-time code
+
+Six boxes, `flex-1`, 62px tall, gap 9. The active box takes the coral focus
+border and shows a 1.8×24 coral caret when empty.
+
+The boxes are a **drawing**; the input is one real field stretched over
+them at zero opacity. Six separate inputs would each need focus juggling
+and would break paste, autofill and the one-time-code suggestion strip —
+all of which matter more than the illusion of six fields.
+
+### Divider and text link
+
+Divider is a 1px `#E7E1DC` hairline, optionally interrupted by a word.
+
+A text link is coral `#DE5947`, semibold, no underline: the accent already
+means "this is the way forward" everywhere else, and underlines would
+compete with the timeline threads.
+
+### Sheet
+
+Bottom sheet: scrim `rgba(24,24,27,0.45)`, white panel with a 24px top
+radius, a 36×4 grabber, then title / subtitle / body / actions. Slides up.
+
+Currently a plain React Native `Modal`; `@gorhom/bottom-sheet` is still the
+choice for anything that needs snap points or drag-to-dismiss.
+
+### Action badge on an avatar
+
+An action that changes a face belongs on that face. Edit on a Life Profile
+is a 34px coral circle at the avatar's bottom-right with a 2.5px gap ring
+in the page colour — the same construction as the Pending clock badge on a
+tree node.
+
+This is a badge, which is one of coral's five permitted uses. It also keeps
+the space between the name and the section tabs empty, which is what makes
+a profile read as a person rather than as a toolbar.
+
 ## Family tree
 
 - Nodes are 60px avatars with a 3px warm-white ring.
@@ -148,12 +257,50 @@ and generation are already fixed, so accepting only attaches a profile. If
 the invite is cancelled or expires the node falls back to Empty and the
 thread disappears.
 
+Implementation note: the thread is data, not styling. A **Pending** child
+has a descent entry that renders dashed; an **Empty** spot has no descent
+entry at all, so no line is drawn to it. Nothing has been promised yet, and
+the tree must not draw a line to a promise that was not made.
+
+Tapping an Empty node opens the invite sheet with that node as the spot.
+
+### Pending banner
+
+While an invite is outstanding, a white pill floats over the top-left of
+the canvas: clock chip, "Waiting for {name}", then
+"Invited as {role} · {sent}" and a Resend action. It is inset from the
+right rather than fixed-width, so it can never slide under the zoom
+controls on a narrow screen.
+
 ## Logo
 
 Flat two-color mark: a solid coral house silhouette with a heart cut out
 in blush negative space, reading like an envelope opening onto a note
 inside. Coral `#F58B7B` on blush `#FDE7E2`. No gradients or shadows in the
 mark. Holds together down to 16px.
+
+## Copy
+
+No component writes English into itself. Every user-visible string is a
+key in `apps/mobile/src/locales/en.json`, read through `t()` — including
+accessibility labels, which are read aloud and so are copy too.
+
+Primitives split into two kinds:
+
+- **Given its words** — `Button`, `EmptyState`, `SectionHeader`,
+  `Chip`, `PlaceholderScreen`. These take `label` / `title` /
+  `description` as props and stay ignorant of the catalogue; the caller
+  passes an already-translated string.
+- **Owns its words** — `TextField` (show/hide password), `SelectField`
+  ("Close"), `OtpInput`. Their copy is part of the control, not of the
+  screen, so they call `t()` themselves.
+
+Counts always go through i18next plurals with `{ count }`, never a
+ternary: Japanese has no plural form, and `n === 1 ? 'photo' : 'photos'`
+bakes in the assumption that every language does.
+
+See `architecture.md` § Language for the catalogue layout, the
+content-versus-copy boundary, and `pnpm --filter mobile check:i18n`.
 
 ## Source
 

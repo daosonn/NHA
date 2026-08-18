@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Polygon } from 'react-native-svg';
 
@@ -76,6 +77,8 @@ export type EventWidgetProps = {
 
 /** The next thing the family has to show up for. */
 export function EventWidget({ event, onJoin }: EventWidgetProps) {
+  const { t } = useTranslation();
+
   return (
     <View
       style={[
@@ -123,7 +126,7 @@ export function EventWidget({ event, onJoin }: EventWidgetProps) {
       </View>
 
       <View style={{ position: 'absolute', left: 14, bottom: 14 }}>
-        <Button label="Join" size="small" onPress={onJoin} />
+        <Button label={t('home.join')} size="small" onPress={onJoin} />
       </View>
 
       <View

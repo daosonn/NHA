@@ -14,10 +14,31 @@
 - **Frontend platform switched to Expo (2026-08-17)** — see Important
   Decisions. Done: docs realigned, `packages/tokens` rebuilt,
   `apps/mobile` on Expo SDK 57, Inter/Lora, design-system primitives, app
-  icons, and two screens against mock data — **Home**
-  (`app/(tabs)/index.tsx`) and **Family tree** (`app/family.tsx`).
-  Next per the build order in `architecture.md`: New moment, then Member
-  profile (Timeline / Album / Memo).
+  icons, and **the whole first-pass screen set against mock data**
+  (2026-08-18) — all eight items in the `architecture.md` build order:
+  **Home** (`app/(tabs)/index.tsx`), **Family tree** (`app/family.tsx`),
+  **Life Profile** (`app/member/[id].tsx`) and the **Profile tab** sharing
+  one body (`components/member/profile-body.tsx`), **New moment**
+  (`app/(tabs)/new.tsx`), the **invite sheet** + **pending spot state** on
+  the tree, and the **Invitation page** (`app/invite/[code].tsx`).
+  Verified: `tsc --noEmit` clean, prettier clean, and a static web export
+  prerendering all 16 routes with the expected copy and no nested
+  `<button>`.
+- **Second mobile pass done (2026-08-18)**: **auth** — Welcome, Sign in,
+  Create account, Verify (6-digit code) and a three-step password reset,
+  behind a mock in-memory session gate with Sign out in Settings; and
+  **AI** — the calendar hub on the AI tab plus Gift ideas
+  (`app/ai/gifts.tsx`). Profile hero reworked: "Add memory" removed and
+  Edit moved to a badge on the avatar. Verified the same way — typecheck,
+  prettier, 27-route static export grepped for content, and no nested or
+  interactive-in-`<button>` markup. Next: wire screens to the API —
+  nothing talks to the backend yet, everything reads `src/fixtures/`.
+- **Deferred on the mobile app**: pinch-to-zoom / drag-to-pan on the family
+  tree (the zoom buttons cover the same ground for now; needs
+  `react-native-gesture-handler`), the web invite-acceptance page for
+  someone without the app, which waits on the `apps/web` decision, and the
+  remaining AI screens (Memory video, Surprise plan, Occasions list,
+  Reminders, Add occasion — mockups 9c–9g).
 - **Home is still styled with `StyleSheet`.** NativeWind arrived after it
   was written; converting it is a mechanical follow-up, not a rewrite.
   New screens use NativeWind.
@@ -35,6 +56,16 @@
 - Remaining domain questions (`docs/00-shared/domain-model.md`): leave
   semantics, time-capsule unlock semantics, "plan a surprise" data
   sources (manual context vs availability/address data).
+- **Invites are family-wide, but the tree design assumes per-person
+  invites** (2026-08-17). `design-system.md` says a tree spot is reserved
+  when an invite is sent and falls back to Empty if it is cancelled or
+  expires — but `Family.inviteCode` is one permanent code for the whole
+  family, with no record of who was invited to which spot. The `Pending`
+  node state therefore cannot be told apart from an ordinary placeholder.
+  Decided 2026-08-17 that the UI leads and the backend follows.
+  **Resolved on the UI side 2026-08-18** — the invite sheet now defines the
+  shape the backend has to grow into; see Important Decisions. The backend
+  change itself is still to schedule.
 
 ## Completed
 
@@ -128,6 +159,43 @@
   they are expressed as `flex-1` + padding + gap, never hardcoded.
   `darkMode: 'class'` — the palette is a fixed warm light one, so dark
   styles must never arrive from the OS setting.
+- **Invites are per-spot, not per-family (2026-08-18)** — UI-led decision,
+  backend to follow. The invite sheet sends a specific person to a specific
+  tree node: it captures the spot id, a display name and a relationship, and
+  only then produces a link. The receiver's page can therefore say who
+  invited them, as what, and where they land, which is what makes a cold
+  invite trustworthy. What the backend needs to add: an invitation record
+  carrying `{ familyId, memberId (the reserved spot), inviterId, name,
+relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
+  open "anyone with the link" path; it is not enough on its own, because a
+  single permanent family-wide code cannot distinguish a Pending node from
+  an ordinary placeholder. Kinship words shown in the sheet ("Sister",
+  "Step-parent") stay **derived labels** and must not become
+  `RelationshipType` enum values — each option carries the base type it maps
+  to (`docs/00-shared/domain-model.md`).
+- **A moment's audience is its privacy control (2026-08-18)** — the New
+  moment screen models `PostFamily` directly: each selected family circle is
+  one row, and selecting none means the post is private to its author, per
+  `docs/02-backend/database.md`. Because that rule is invisible in the
+  control itself, the screen always states the consequence in words under
+  the button rather than relying on the user to infer it.
+- **AI suggestions must show their working (2026-08-18)** — every
+  suggestion carries `why` and `source`, and the amount of evidence read is
+  stated before the first idea, not after. A recommendation nobody can
+  trace back to a memo, a photo or the timeline is a guess wearing the
+  family's clothes, and the reader has no way to tell the difference. This
+  constrains the AI service too: the FastAPI contract has to return the
+  provenance alongside the suggestion, not just the suggestion.
+- **A button that leads nowhere is not rendered (2026-08-18)** —
+  `FeaturedOccasion` draws an action only when given a handler, so Plan a
+  surprise and Video are absent until those screens exist. A dead control
+  costs more trust than a visibly missing feature.
+- **Auth session is a stand-in (2026-08-18)** — `src/features/auth/session.tsx`
+  keeps the signed-in user in memory only: no request, no token, no
+  persistence, so every reload starts at Welcome. The guard lives on the
+  `(auth)` and `(tabs)` route groups, which is the one place to change when
+  the AuthModule is wired. Tokens then belong in `expo-secure-store`, never
+  `AsyncStorage`.
 - Backend uses NestJS; prefer a modular monolith (see `CLAUDE.md` § 3).
 - pnpm workspace monorepo.
 - Conventional Commits are enforced via commitlint (husky `commit-msg` hook).
@@ -179,3 +247,47 @@
   Comment/Reaction, password recovery, personal albums, LifeEvent
   timeline, special-date widgets and `SpecialDate` CRUD scheduled into
   sprint sub-tasks — full log in `database.md` → Decision Log.
+- **App copy centralised (2026-08-18)**: every user-visible string in
+  `apps/mobile` — accessibility labels included — moved to
+  `src/locales/en.json` and read through `t()` (`i18next` +
+  `react-i18next` + `expo-localization`, language remembered in
+  `AsyncStorage` under `nha.locale`). The app is still English-only; this
+  is the step that makes Japanese a JSON file rather than a second pass
+  over 36 components. Counts go through i18next plurals, and month names
+  and date order come from the catalogue, because Japanese has no plural
+  form and writes the month before the day.
+  `pnpm --filter mobile check:i18n` diffs call sites against catalogues in
+  both directions. Boundary held: copy is translated, data is not — a
+  memo's text and an occasion's title stay fixture strings. **Open**:
+  relation words (`Grandmother`, `Sister`) are English nouns in the
+  fixtures today; the API should return a relationship type the app
+  labels, which is a domain question — see `architecture.md` § Language.
+- **Japanese type faces (2026-08-18)**: Zen Maru Gothic Bold/Black takes
+  the Lora slot (emotional headings) and Noto Sans JP 400/500/600/700
+  takes the Inter slot (body and UI). Neither Inter nor Lora has Japanese
+  glyphs, so this is a swap rather than a fallback. Noto Sans JP for body
+  because its statics map one-to-one onto the existing weight scale, and
+  because rounded terminals lose definition at 12–14px with dense kanji —
+  the app is explicitly read by grandparents. Decided, not yet built —
+  see `docs/01-frontend/design-system.md`.
+- **Japanese shipped, fonts deferred (2026-08-18)**: `ja.json` translated in
+  full (197 keys), language follows the device and is switchable in
+  Settings, choice remembered in `AsyncStorage`. Japanese plurals collapse
+  to `_other` and dates flip order (`4月12日` vs `12 Apr`) — both verified.
+  **Zen Maru Gothic and Noto Sans JP are chosen but not bundled**: ~30–50 MB
+  of TTF across six weights is an app-size decision, not a design one. Until
+  then `theme/typeface.ts` hands Japanese the device font with a real
+  `fontWeight`; verified by prerender that English renders
+  `font-family:Inter_600SemiBold` and Japanese renders `font-weight:600`
+  with no Latin face applied.
+- **API contract written from the server, not invented (2026-08-18)**:
+  `apps/mobile/src/lib/api/` (types, endpoints, fetch client, `ApiError`)
+  mirrors the 14 routes that actually exist in `apps/api` — auth and
+  families. Screens are untouched and still read fixtures; this is the seam
+  react-query hooks will sit on. Full map in `docs/00-shared/api-contract.md`.
+  **Blocking gap found: there is no `GET` for relationships.** `POST` and
+  `DELETE` exist and `FamilyDetail` returns `members` only, so the family
+  tree cannot be built from the API as it stands — the tree is drawn from
+  edges. Also missing for screens already built: email verification codes,
+  password reset (1.1.7, deferred), a public read of an invite code,
+  LifeProfile/LifeEvent/Memo, Post, and the whole of `apps/ai`.
