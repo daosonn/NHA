@@ -24,9 +24,7 @@
     "modeLabel": "Sign in or create an account",
     "signInTab": "Sign in",
     "signUpTab": "Create account",
-    "continueApple": "Continue with Apple",
     "continueGoogle": "Continue with Google",
-    "apple": "Apple",
     "google": "Google",
     "fields": {
       "name": "Full name",
@@ -323,12 +321,9 @@
   },
   "post": {
     "title": "Moment",
-    "momentsTitle": "Moments",
     "openLabel": "Open {{name}}'s moment",
     "openProfile": "Open {{name}}'s profile",
     "private": "PRIVATE",
-    "reactionCount_one": "{{count}} reaction",
-    "reactionCount_other": "{{count}} reactions",
     "comments_one": "{{count}} comment",
     "comments_other": "{{count}} comments",
     "noComments": "No comments yet. Say something.",
@@ -336,7 +331,6 @@
     "commentPlaceholder": "Write something",
     "send": "Send",
     "loadMoreComments": "Older comments",
-    "loadFailed": "Could not load the moments.",
     "emptyTitle": "No moments yet",
     "emptyBody": "The first photo somebody shares with this family lands here.",
     "unavailableTitle": "Not available",
@@ -347,6 +341,15 @@
       "haha": "Haha",
       "wow": "Wow",
       "sad": "Sad"
-    }
+    },
+    "families_one": "{{count}} FAMILY",
+    "families_other": "{{count}} FAMILIES"
+  },
+  "omoide": {
+    "summary": "{{photos}} photos by {{people}} people",
+    "openMoment": "Open the moment this photo belongs to",
+    "loadFailed": "Could not load the photos.",
+    "emptyTitle": "No photos yet",
+    "emptyBody": "Everything the family shares with a photo or a video shows up here."
   }
 }

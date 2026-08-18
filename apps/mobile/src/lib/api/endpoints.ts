@@ -6,6 +6,8 @@
  * Nothing is called yet — the screens still read fixtures — so this file is
  * the contract, verified against `apps/api`, waiting to be wired.
  */
+import { Platform } from 'react-native';
+
 import { apiBaseUrl, apiRequest } from './client';
 import type {
   AddMemberRequest,
@@ -141,15 +143,33 @@ export const media = {
   /**
    * One file per call, 100 MB ceiling for every type.
    *
-   * `uri` is what the image picker hands back. React Native's `FormData`
-   * takes this `{ uri, name, type }` shape rather than a `Blob`, and reads
-   * the file itself while the request streams.
+   * The two platforms need different things in the `FormData`, and getting
+   * it wrong fails quietly rather than loudly:
+   *
+   * - **Native** takes a `{ uri, name, type }` descriptor. React Native's
+   *   `FormData` understands it and streams the file off disk itself.
+   * - **Web** has no such thing. Appending that object stringifies it to
+   *   `"[object Object]"`, so the server receives a text field called
+   *   `file` and answers *"A file field is required"* — a 400 that looks
+   *   like a validation bug rather than a platform mistake. The blob has to
+   *   be fetched out of the `blob:`/`data:` URL the picker returned.
+   *
+   * The type is re-applied on web because a blob read back from an object
+   * URL can arrive with an empty `type`, and the server rejects
+   * `application/octet-stream` with a 415.
    */
-  upload: (file: { uri: string; name: string; type: string }) => {
+  upload: async (file: { uri: string; name: string; type: string }) => {
     const form = new FormData();
-    // The cast is unavoidable: RN's FormData accepts a file descriptor the
-    // DOM lib has no type for.
-    form.append('file', file as unknown as Blob);
+
+    if (Platform.OS === 'web') {
+      const raw = await fetch(file.uri).then((response) => response.blob());
+      const blob = raw.type === '' ? new Blob([raw], { type: file.type }) : raw;
+      form.append('file', blob, file.name);
+    } else {
+      // The cast is unavoidable: RN's FormData accepts a file descriptor the
+      // DOM lib has no type for.
+      form.append('file', file as unknown as Blob);
+    }
 
     return apiRequest<MediaSummary>('/media', { method: 'POST', body: form });
   },

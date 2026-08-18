@@ -1,4 +1,5 @@
 export {
+  apiAccessToken,
   apiBaseUrl,
   apiRequest,
   configureApi,

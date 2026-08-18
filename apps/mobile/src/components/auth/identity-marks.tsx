@@ -8,17 +8,12 @@ import { colors } from '../../theme';
  * Each provider's brand guidelines fix these shapes and colours: they are
  * the one place in the app where the palette does not apply, so they live
  * here instead of being mistaken for icons.
+ *
+ * Apple was here and was removed on 2026-08-18 — see `project-status.md`.
+ * Putting it back is a product decision, not a styling one: App Store
+ * guideline 4.8 ties it to whether the iOS build ships any other
+ * third-party login at all.
  */
-export function AppleMark({ size = 18 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Path
-        fill={colors.text.primary}
-        d="M17.05 12.54c-.02-2.2 1.8-3.25 1.88-3.3-1.02-1.5-2.62-1.7-3.19-1.72-1.36-.14-2.65.8-3.34.8-.69 0-1.75-.78-2.87-.76-1.48.02-2.84.86-3.6 2.18-1.53 2.66-.39 6.6 1.1 8.76.73 1.06 1.6 2.25 2.74 2.21 1.1-.04 1.52-.71 2.85-.71 1.33 0 1.7.71 2.87.69 1.18-.02 1.93-1.08 2.65-2.14.83-1.23 1.18-2.42 1.2-2.48-.03-.01-2.3-.88-2.32-3.53ZM14.9 5.9c.6-.74 1.01-1.76.9-2.78-.87.04-1.93.58-2.56 1.31-.56.65-1.06 1.7-.92 2.7.97.07 1.97-.5 2.58-1.23Z"
-      />
-    </Svg>
-  );
-}
 
 export function GoogleMark({ size = 19 }: { size?: number }) {
   return (

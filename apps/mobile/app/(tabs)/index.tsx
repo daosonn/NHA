@@ -1,23 +1,27 @@
 import { useRouter } from 'expo-router';
 import { HousePlus, TriangleAlert } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, View } from 'react-native';
+import { ActivityIndicator, FlatList, View } from 'react-native';
 
+import { PostCard } from '../../src/components/feed/post-card';
 import { EventWidget } from '../../src/components/home/event-widget';
 import { GroupStrip, type FamilyGroupSummary } from '../../src/components/home/group-strip';
-import { MomentPeek, SwipeCue } from '../../src/components/home/moment-peek';
+import { SwipeCue } from '../../src/components/home/moment-peek';
 import { RecommendationGrid } from '../../src/components/home/recommendation-grid';
 import { AppHeader } from '../../src/components/layout/app-header';
 import { BrandWordmark, NotificationBell } from '../../src/components/layout/header-slots';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { SectionHeader } from '../../src/components/ui/section-header';
+import { useActiveFamily } from '../../src/features/family/active-family';
 import { useFamilies } from '../../src/features/family/use-families';
-import type { FamilySummary } from '../../src/lib/api';
+import { useMemberIdLookup } from '../../src/features/family/use-member-for-user';
+import { useFamilyFeed } from '../../src/features/feed/use-family-feed';
 import { notificationCount, recommendations, upcomingEvent } from '../../src/fixtures/home';
+import type { FamilySummary, PostDetail } from '../../src/lib/api';
 import { colors, spacing } from '../../src/theme';
 
-/** Room for the bottom nav plus the moment sliver poking above it. */
-const BOTTOM_INSET = 160;
+/** Room for the bottom nav plus the home indicator. */
+const BOTTOM_INSET = 140;
 
 /** How many faces the strip draws before it collapses the rest into "+N". */
 const VISIBLE_GROUPS = 3;
@@ -38,8 +42,53 @@ function toStripGroups(families: FamilySummary[]): FamilyGroupSummary[] {
 export default function HomeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { familyId } = useActiveFamily();
 
   const { data: families, isPending, isError, refetch } = useFamilies();
+  const feed = useFamilyFeed(familyId);
+  const memberIdFor = useMemberIdLookup();
+
+  const posts: PostDetail[] = feed.data?.pages.flatMap((page) => page.items) ?? [];
+
+  /** The pill on a card: which family this reached, in that family's own name. */
+  const audienceLabel = (post: PostDetail): string | undefined => {
+    if (post.familyIds.length === 0 || families === undefined) return undefined;
+    if (post.familyIds.length > 1) return t('post.families', { count: post.familyIds.length });
+    return families.find((family) => family.id === post.familyIds[0])?.name;
+  };
+
+  const openAuthor = (post: PostDetail) => {
+    const memberId = memberIdFor(post.authorUserId);
+    if (memberId === null) return undefined;
+    return () => router.push({ pathname: '/member/[id]', params: { id: memberId } });
+  };
+
+  /**
+   * Everything above the fold, per mockup 3a. It is the list header rather
+   * than a separate screen because the mockup promises moments one swipe
+   * further down — and on a phone, "swipe up for moments" is scrolling this
+   * list. A gesture library would only reimplement what scrolling does.
+   */
+  const intro = (
+    <View style={{ gap: 14, paddingBottom: 14 }}>
+      <GroupStrip
+        groups={toStripGroups(families ?? [])}
+        remainingCount={Math.max(0, (families?.length ?? 0) - VISIBLE_GROUPS)}
+        onPress={() => router.push('/family')}
+        onAddPress={() => router.push('/create-family')}
+      />
+
+      {/* Both still read fixtures: special dates and recommendations have no
+          endpoint yet (`docs/00-shared/api-contract.md`). */}
+      <EventWidget event={upcomingEvent} />
+
+      <SectionHeader title={t('home.recommendations')} actionLabel={t('home.seeAll')} />
+
+      <RecommendationGrid feature={recommendations.feature} secondary={recommendations.secondary} />
+
+      <SwipeCue />
+    </View>
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.page }}>
@@ -49,90 +98,84 @@ export default function HomeScreen() {
         paddingRight={spacing.lg}
       />
 
-      <ScrollView
+      {renderBody()}
+    </View>
+  );
+
+  function renderBody() {
+    if (isError) {
+      return (
+        <EmptyState
+          renderIcon={({ size, color }) => (
+            <TriangleAlert size={size} color={color} strokeWidth={2} />
+          )}
+          title={t('home.loadFailed')}
+          actionLabel={t('home.retry')}
+          onActionPress={() => void refetch()}
+        />
+      );
+    }
+
+    // Deliberately blank rather than a spinner: the request is usually faster
+    // than a spinner is readable, and a flash of one is worse than a beat of
+    // nothing.
+    if (isPending || families === undefined) return null;
+
+    // An account with no family is an ordinary state, not an error —
+    // registration does not force anyone to make one first.
+    if (families.length === 0) {
+      return (
+        <EmptyState
+          renderIcon={({ size, color }) => <HousePlus size={size} color={color} strokeWidth={2} />}
+          title={t('home.noFamilyTitle')}
+          description={t('home.noFamilyBody')}
+          actionLabel={t('home.startFamily')}
+          onActionPress={() => router.push('/create-family')}
+        />
+      );
+    }
+
+    return (
+      <FlatList
+        data={posts}
+        keyExtractor={(post) => post.id}
+        ListHeaderComponent={intro}
         contentContainerStyle={{
           padding: spacing.xl,
           paddingBottom: BOTTOM_INSET,
-          gap: 14,
+          gap: 12,
         }}
         showsVerticalScrollIndicator={false}
-      >
-        {renderBody({ families, isPending, isError, refetch, router, t })}
-      </ScrollView>
-
-      <MomentPeek />
-    </View>
-  );
-}
-
-type BodyProps = {
-  families: FamilySummary[] | undefined;
-  isPending: boolean;
-  isError: boolean;
-  refetch: () => void;
-  router: ReturnType<typeof useRouter>;
-  t: ReturnType<typeof useTranslation>['t'];
-};
-
-/**
- * Four states, flat rather than nested.
- *
- * A chain of ternaries in the JSX put the reason for each branch out of
- * reach of the branch itself; this way the comment explaining "blank, not a
- * spinner" sits where the decision is made.
- */
-function renderBody({ families, isPending, isError, refetch, router, t }: BodyProps) {
-  if (isError) {
-    return (
-      <EmptyState
-        renderIcon={({ size, color }) => (
-          <TriangleAlert size={size} color={color} strokeWidth={2} />
+        // Only spend the cursor when the reader is nearly out of posts.
+        onEndReachedThreshold={0.4}
+        onEndReached={() => {
+          if (feed.hasNextPage && !feed.isFetchingNextPage) void feed.fetchNextPage();
+        }}
+        ListEmptyComponent={
+          feed.isPending ? null : (
+            <EmptyState
+              renderIcon={({ size, color }) => (
+                <HousePlus size={size} color={color} strokeWidth={2} />
+              )}
+              title={t('post.emptyTitle')}
+              description={t('post.emptyBody')}
+            />
+          )
+        }
+        ListFooterComponent={
+          feed.isFetchingNextPage ? (
+            <ActivityIndicator color={colors.coral.primary} style={{ paddingVertical: 16 }} />
+          ) : null
+        }
+        renderItem={({ item }) => (
+          <PostCard
+            post={item}
+            audienceLabel={audienceLabel(item)}
+            onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+            onAuthorPress={openAuthor(item)}
+          />
         )}
-        title={t('home.loadFailed')}
-        actionLabel={t('home.retry')}
-        onActionPress={refetch}
       />
     );
   }
-
-  // Deliberately blank rather than a spinner: the request is usually faster
-  // than a spinner is readable, and a flash of one is worse than a beat of
-  // nothing.
-  if (isPending || families === undefined) return null;
-
-  // An account with no family is an ordinary state, not an error —
-  // registration does not force anyone to make one first.
-  if (families.length === 0) {
-    return (
-      <EmptyState
-        renderIcon={({ size, color }) => <HousePlus size={size} color={color} strokeWidth={2} />}
-        title={t('home.noFamilyTitle')}
-        description={t('home.noFamilyBody')}
-        actionLabel={t('home.startFamily')}
-        onActionPress={() => router.push('/create-family')}
-      />
-    );
-  }
-
-  return (
-    <>
-      <GroupStrip
-        groups={toStripGroups(families)}
-        remainingCount={Math.max(0, families.length - VISIBLE_GROUPS)}
-        onPress={() => router.push('/family')}
-        onAddPress={() => router.push('/create-family')}
-      />
-
-      {/* Everything below still reads fixtures: special dates and
-          recommendations have no endpoint yet
-          (`docs/00-shared/api-contract.md`). */}
-      <EventWidget event={upcomingEvent} />
-
-      <SectionHeader title={t('home.recommendations')} actionLabel={t('home.seeAll')} />
-
-      <RecommendationGrid feature={recommendations.feature} secondary={recommendations.secondary} />
-
-      <SwipeCue onPress={() => router.push('/moments')} />
-    </>
-  );
 }
