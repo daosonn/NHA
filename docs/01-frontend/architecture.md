@@ -23,9 +23,13 @@ put product features there without an explicit decision.
 apps/mobile              Expo app — the product
 apps/web                 Next.js scaffold — role TBD
 packages/tokens          design tokens, plain TS, no React Native imports
-packages/contracts       (planned) zod schemas shared with the API
-packages/api-client      (planned) typed REST client
 ```
+
+`packages/contracts` and `packages/api-client` were planned and **dropped
+2026-08-18**. The client lives fine in `apps/mobile/src/lib/api`, and
+extracting it only pays off once `apps/web` has a role; a shared zod
+package would fight the API's own class-validator DTOs rather than share
+anything with them.
 
 `packages/tokens` must stay framework-agnostic: `apps/mobile` uses
 NativeWind (Tailwind 3.4) while `apps/web` uses Tailwind 4. Each app maps

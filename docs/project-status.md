@@ -45,9 +45,10 @@
 - **API integration foundation landed (2026-08-18)**: real session on
   `expo-secure-store`, refresh-on-401 behind a single-flight gate,
   `QueryClientProvider`, and hooks for families / family tree / family
-  feed. Sign in and Create account now call the server. **No other screen
-  is wired**: each is blocked on a product decision, not on an endpoint —
-  see `docs/00-shared/api-contract.md` § What blocks step 4.
+  feed. **Wired so far**: Sign in, Create account, Home (families, with
+  loading / error / "no family yet"), and the new create-or-join-family
+  screen. Everything else still reads `src/fixtures/` — see
+  `docs/00-shared/api-contract.md` § Step 4, screen by screen.
 - **Four blocking questions answered 2026-08-18** — see Important
   Decisions: solar-only stands, Apple joins Google and Facebook, Home gets
   a skippable empty state, kinship labels stay at the base relationships.

@@ -23,13 +23,14 @@ auto-downloaded if missing (pinned in root `package.json` → `devEngines`).
 
 ## Repository Layout
 
-This is a pnpm workspace monorepo with three applications:
+This is a pnpm workspace monorepo with four applications:
 
-| App   | Path       | Stack                        | Status                         |
-| ----- | ---------- | ---------------------------- | ------------------------------ |
-| `api` | `apps/api` | NestJS + Prisma + PostgreSQL | Bootstrapped, one `User` model |
-| `web` | `apps/web` | Next.js + Tailwind CSS       | Bootstrapped, default starter  |
-| `ai`  | `apps/ai`  | Python + FastAPI (planned)   | Not yet created                |
+| App      | Path          | Stack                           | Status                                                          |
+| -------- | ------------- | ------------------------------- | --------------------------------------------------------------- |
+| `mobile` | `apps/mobile` | Expo + expo-router + NativeWind | **The primary client.** Auth, Home and the family screens built |
+| `api`    | `apps/api`    | NestJS + Prisma + PostgreSQL    | 25 models; auth, families, posts and media modules merged       |
+| `web`    | `apps/web`    | Next.js + Tailwind CSS          | Bootstrapped starter; role undecided, no product code           |
+| `ai`     | `apps/ai`     | Python + FastAPI (planned)      | Not yet created                                                 |
 
 ## Database (PostgreSQL via Docker Compose)
 
@@ -74,11 +75,17 @@ Not yet scaffolded. Requirements TBD.
 ## Running the Apps
 
 ```bash
+pnpm dev:mobile       # apps/mobile, Expo dev server — scan the QR with Expo Go
+pnpm dev:mobile:web   # apps/mobile in a browser, for fast layout iteration
 pnpm dev:api          # apps/api, NestJS in watch mode
 pnpm dev:web          # apps/web, Next.js dev server
 
 # apps/ai — not yet available
 ```
+
+Mobile needs the API reachable from the device, not just from your machine:
+set `EXPO_PUBLIC_API_URL` in `apps/mobile/.env` to the LAN address. See
+`mobile-development.md`.
 
 ## Verification Commands
 
@@ -89,6 +96,14 @@ pnpm --filter api lint
 pnpm --filter api test
 pnpm --filter api test:e2e
 pnpm --filter api build
+```
+
+For the mobile app:
+
+```bash
+pnpm --filter mobile typecheck
+pnpm --filter mobile check:i18n
+pnpm exec prettier --check apps/mobile/src apps/mobile/app
 ```
 
 ## Open Questions

@@ -1,18 +1,5 @@
 # Backend Architecture
 
-## CORS
-
-Off unless something asks for it. The product client is the native Expo
-app, which sends no `Origin`, so CORS exists only for the browser dev tier
-(`pnpm dev:mobile:web`).
-
-`main.ts` reads `CORS_ORIGINS` (comma-separated). With it unset the
-allowlist is `http://localhost:8081` and `:19006` in development and
-**empty in production** — a deployed API nothing in a browser is meant to
-call should not hand out `Access-Control-Allow-Origin` on the strength of a
-default. Credentials stay off: bearer tokens travel in a header, never a
-cookie.
-
 > Scope: decisions needed before Sprint 1. Grows as the backend grows —
 > keep this the place where backend-wide decisions are recorded.
 
@@ -66,7 +53,7 @@ a concrete need appears — `CLAUDE.md` § 5).
 
 ## API Conventions
 
-- REST, JSON. Global prefix `/api` (set in `main.ts` when Sprint 1 starts).
+- REST, JSON. Global prefix `/api`, set in `main.ts`.
 - Validation: DTO classes + `class-validator` at every boundary; whitelist
   unknown properties away (`ValidationPipe({ whitelist: true })`).
 - Never return Prisma models directly — map to response DTOs.
@@ -74,6 +61,19 @@ a concrete need appears — `CLAUDE.md` § 5).
   (`statusCode`, `message`, `error`). Revisit if clients need error codes.
 - Media: uploads go through a **storage service module** (local disk for the
   MVP demo, S3-compatible later — see `database.md` → Media).
+
+## CORS
+
+Off unless something asks for it. The product client is the native Expo
+app, which sends no `Origin`, so CORS exists only for the browser dev tier
+(`pnpm dev:mobile:web`).
+
+`main.ts` reads `CORS_ORIGINS` (comma-separated). With it unset the
+allowlist is `http://localhost:8081` and `:19006` in development and
+**empty in production** — a deployed API nothing in a browser is meant to
+call should not hand out `Access-Control-Allow-Origin` on the strength of a
+default. Credentials stay off: bearer tokens travel in a header, never a
+cookie.
 
 ## Open
 
