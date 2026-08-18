@@ -87,7 +87,14 @@
       "confirmPassword": "Confirm password",
       "mismatch": "The two do not match",
       "submit": "Save and sign in"
-    }
+    },
+    "errors": {
+      "invalidCredentials": "That email and password do not match.",
+      "emailTaken": "That email already has an account.",
+      "checkFields": "Check the fields above and try again."
+    },
+    "facebook": "Facebook",
+    "continueFacebook": "Continue with Facebook"
   },
   "home": {
     "recommendations": "Recommendations",
@@ -96,7 +103,12 @@
     "openFamilyTree": "Open family tree",
     "join": "Join",
     "moreGroups": "+{{count}}",
-    "swipeCue": "Swipe up for moments"
+    "swipeCue": "Swipe up for moments",
+    "noFamilyTitle": "No family yet",
+    "noFamilyBody": "Create one and invite the people you want to keep things with, or join with a code someone sent you.",
+    "startFamily": "Create or join a family",
+    "loadFailed": "Could not load your families.",
+    "retry": "Try again"
   },
   "family": {
     "title": "Family tree",
@@ -104,8 +116,6 @@
     "generations_other": "{{count}} generations",
     "members_one": "{{count}} member",
     "members_other": "{{count}} members",
-    "pending_one": "{{count}} pending",
-    "pending_other": "{{count}} pending",
     "hint": "Tap a person to open their profile",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
@@ -118,7 +128,21 @@
     "pendingRole": "{{role}} · pending",
     "waitingFor": "Waiting for {{name}}",
     "invitedAs": "Invited as {{role}} · {{sent}}",
-    "resend": "Resend"
+    "resend": "Resend",
+    "generation": "GEN {{index}}",
+    "relation": {
+      "parent": "Parent",
+      "child": "Child",
+      "spouse": "Spouse",
+      "sibling": "Sibling",
+      "adoptedParent": "Adoptive parent",
+      "adoptedChild": "Adopted child",
+      "stepParent": "Step-parent",
+      "stepChild": "Step-child"
+    },
+    "loadFailed": "Could not load the family tree.",
+    "emptyTitle": "Nobody here yet",
+    "emptyBody": "Add the people in this family and the tree draws itself."
   },
   "invite": {
     "sheet": {
@@ -210,7 +234,14 @@
     "explainPrivate": "No family selected — this moment stays private to you.",
     "explainEveryone": "Everyone you share a family with will see this.",
     "explainSkipped_one": "{{names}} is dimmed and will be skipped.",
-    "explainSkipped_other": "{{names}} are dimmed and will be skipped."
+    "explainSkipped_other": "{{names}} are dimmed and will be skipped.",
+    "noFamilies": "Create or join a family before posting.",
+    "permissionDenied": "NHA needs access to your photos to attach them.",
+    "errors": {
+      "tooLarge": "That file is over the 100MB limit.",
+      "unsupported": "That file type is not supported.",
+      "empty": "Add a photo or write something first."
+    }
   },
   "ai": {
     "title": "AI",
@@ -265,6 +296,57 @@
       "10": "Oct",
       "11": "Nov",
       "12": "Dec"
+    }
+  },
+  "errors": {
+    "offline": "Could not reach the server. Check your connection and try again.",
+    "generic": "Something went wrong. Please try again."
+  },
+  "createFamily": {
+    "title": "Your family",
+    "createTab": "Create",
+    "joinTab": "Join",
+    "createHeading": "Start a family space",
+    "createBody": "Only the people you invite can see anything you put here.",
+    "nameLabel": "Family name",
+    "namePlaceholder": "Mom's side",
+    "createSubmit": "Create family",
+    "joinHeading": "Join with a code",
+    "joinBody": "The eight characters someone in the family sent you.",
+    "codeLabel": "Invite code",
+    "codePlaceholder": "ABCD2345",
+    "joinSubmit": "Join family",
+    "errors": {
+      "codeNotFound": "No family matches that code.",
+      "alreadyMember": "You are already in that family."
+    }
+  },
+  "post": {
+    "title": "Moment",
+    "momentsTitle": "Moments",
+    "openLabel": "Open {{name}}'s moment",
+    "openProfile": "Open {{name}}'s profile",
+    "private": "PRIVATE",
+    "reactionCount_one": "{{count}} reaction",
+    "reactionCount_other": "{{count}} reactions",
+    "comments_one": "{{count}} comment",
+    "comments_other": "{{count}} comments",
+    "noComments": "No comments yet. Say something.",
+    "addComment": "Add a comment",
+    "commentPlaceholder": "Write something",
+    "send": "Send",
+    "loadMoreComments": "Older comments",
+    "loadFailed": "Could not load the moments.",
+    "emptyTitle": "No moments yet",
+    "emptyBody": "The first photo somebody shares with this family lands here.",
+    "unavailableTitle": "Not available",
+    "unavailableBody": "This moment was removed, or it was never shared with you.",
+    "reactions": {
+      "like": "Like",
+      "love": "Love",
+      "haha": "Haha",
+      "wow": "Wow",
+      "sad": "Sad"
     }
   }
 }

@@ -298,6 +298,22 @@ Branch naming should follow the project Git workflow, for example:
     fix/login-redirect
     refactor/memory-service
 
+## Shared status docs stay out of feature branches
+
+`docs/project-status.md` and `docs/sprints/*.md` are shared mutable
+state: every parallel branch that edits them will merge-conflict with
+every other (decided 2026-08-18 after two such conflicts corrupted the
+sprint checklist).
+
+- Feature branches/PRs MUST NOT modify `docs/project-status.md` or
+  `docs/sprints/*.md`. Contract/design docs that belong to the change
+  (e.g. `docs/00-shared/api-contract.md`) ride with the PR as usual.
+- After the PR merges, update those files in a small docs-only commit
+  made directly on `main` (allowed by team decision).
+- Keep sprint checklist notes to ONE line, e.g.
+  `— done 2026-08-18 (PR #12)`. Details belong in the PR description
+  and the relevant contract/design doc, not in the checklist.
+
 Before committing, inspect the staged diff.
 
 Do not create commits, push branches, merge branches, or open/merge Pull Requests unless the user explicitly requests the corresponding Git operation.
@@ -411,6 +427,9 @@ After completing an implementation task:
   (`docs/sprints/sprint-N.md`, referenced from `docs/project-status.md`).
 - Update `docs/project-status.md` if the change moves something between
   Completed / In Progress / Not Started, or adds a new Important Decision.
+- Make these updates as a docs-only commit directly on `main` **after**
+  the feature PR merges — never on the feature branch (§ 6, "Shared
+  status docs"). Keep sprint notes to one line.
 - Do not mark a task complete in these documents unless it actually passed
   verification (see § 7 Execution & Verification).
 - Skip this step only for pure documentation/discussion tasks that don't

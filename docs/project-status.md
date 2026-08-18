@@ -2,7 +2,9 @@
 
 ## Current Sprint
 
-**Sprint 1 — Core Features** (drafted — pending team review before start)
+**Sprint 1 — Core Features** (in progress — PRs #1–#9 merged; the
+"pending team review before start" note was stale and is removed
+2026-08-18)
 
 - Active sprint doc: `docs/sprints/sprint-01.md`
 - Later sprints: `docs/sprints/sprint-02.md` (Memories & AI),
@@ -42,6 +44,46 @@
 - **Home is still styled with `StyleSheet`.** NativeWind arrived after it
   was written; converting it is a mechanical follow-up, not a rewrite.
   New screens use NativeWind.
+- **API integration foundation landed (2026-08-18)**: real session on
+  `expo-secure-store`, refresh-on-401 behind a single-flight gate,
+  `QueryClientProvider`, and hooks for families / family tree / family
+  feed. **Wired 2026-08-18**: Sign in, Create account, Home, create-or-join
+  family, the **family tree** (read plus adding a member), **New moment**
+  (pick media → upload → post), and a **moments list + post detail** with
+  comments and reactions. Life Profile, Omoide and the AI tab still read
+  `src/fixtures/` — per-screen status is in
+  `docs/01-frontend/architecture.md` § Wiring status.
+- **Client mirror caught up with PRs #7–#9 (2026-08-18)**: `types.ts` and
+  `endpoints.ts` had fallen behind the ten routes those PRs added.
+  `PostDetail` gained `commentCount` / `reactionCount` / `myReaction`, and
+  comments, reactions and profiles now have endpoint groups. Replayed
+  against a running server, including the case the optimistic reaction
+  update depends on: changing LIKE to LOVE replaces the reaction rather
+  than adding one.
+- **`expo-image-picker` added (2026-08-18)** — the last thing standing
+  between New moment and a working end-to-end post.
+- **Sprint 1 stands at 24 of 38 tasks (2026-08-18).** Groups 1.1, 1.3, 1.4
+  and 1.5 are essentially closed. Group 1.2 waits on one endpoint
+  (`SpecialDate`, task 1.2.5). **Group 1.6 — the one containing "the
+  central screen of the product" — has one of seven done**, and it is the
+  API half; no Life Profile UI is wired.
+- **Two gaps in the sprint plan itself**, both worth a team decision rather
+  than a silent fix:
+  1. **Apple Sign In has no task.** It was decided on 2026-08-18 and is
+     mandatory on iOS once any other third-party login ships, but 1.1.8 and
+     1.1.9 cover only Google and Facebook.
+  2. **Task 1.5.3 is marked backend-only** ("preview thuộc UI 1.5.1") while
+     1.5.1 is described as "nhập nội dung". The media picker fell between
+     the two; it was built on 2026-08-18 under 1.5.1, but the WBS should
+     say who owns it.
+- **Nothing has been run on a physical device yet.** Every ticked frontend
+  task was verified by typecheck, prettier, `check:i18n`, a static export,
+  and replaying the endpoints against a running server — not by a person
+  using the app. The picker, blur, sheets and gestures only tell the truth
+  on hardware (`docs/04-devops/mobile-development.md`).
+- **Four blocking questions answered 2026-08-18** — see Important
+  Decisions: solar-only stands, Apple joins Google and Facebook, Home gets
+  a skippable empty state, kinship labels stay at the base relationships.
 - **DB design finalized at sprint 0 (2026-08-14)**: full-MVP design — 25
   tables, 2 ER diagrams, decision log — in `docs/02-backend/database.md`;
   domain decisions recorded in `docs/00-shared/domain-model.md`. Team
@@ -230,6 +272,16 @@
   they are expressed as `flex-1` + padding + gap, never hardcoded.
   `darkMode: 'class'` — the palette is a fixed warm light one, so dark
   styles must never arrive from the OS setting.
+- **State libraries reviewed (2026-08-18)**: `@tanstack/react-query` and
+  `expo-secure-store` added because each solves a problem the app has
+  today (cursor pagination and cache sharing; tokens surviving a restart).
+  **`zustand`, `react-hook-form` and `zod` deliberately not added** — the
+  only cross-screen state is the active family, and the six existing forms
+  are simple enough for `useState` while the server already validates and
+  returns per-field messages. `packages/api-client` and
+  `packages/contracts` are dropped from the plan: the client lives fine in
+  `apps/mobile`, and a shared zod package would fight the API's
+  class-validator DTOs. Revisit each when a second case appears.
 - **Invites are per-spot, not per-family (2026-08-18)** — UI-led decision,
   backend to follow. The invite sheet sends a specific person to a specific
   tree node: it captures the spot id, a display name and a relationship, and
@@ -267,6 +319,23 @@ relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
   `(auth)` and `(tabs)` route groups, which is the one place to change when
   the AuthModule is wired. Tokens then belong in `expo-secure-store`, never
   `AsyncStorage`.
+- **Solar-only reaffirmed (2026-08-18)**: the Occasions mockups showing
+  lunar dates are what changes, not the schema. See `domain-model.md`.
+- **Social login is Apple + Google + Facebook (2026-08-18)**: Apple is
+  added because App Store guideline 4.8 makes it mandatory on iOS once any
+  other third-party login ships. Apple's flow differs from the other two
+  (an identity token, not a plain authorization-code redirect), so it is
+  its own backend task. The mockups need a third button.
+- **No mandatory family step (2026-08-18)**: registration lands on Home,
+  which shows an empty state with a way to create or join a family. Every
+  screen therefore has to survive `familyId === null` — that is a
+  first-class state now, not an edge case.
+- **Kinship labels stay basic for the MVP (2026-08-18)**: the app shows the
+  base relationship translated from `RelationshipType`, and does **not**
+  derive "Grandmother" or "Aunt" from paths through the graph. Consequence
+  to accept: a node with no direct edge to the viewer — a grandparent, a
+  cousin — shows its name with no role line under it. Revisit once the tree
+  has been used by a real family.
 - Backend uses NestJS; prefer a modular monolith (see `CLAUDE.md` § 3).
 - pnpm workspace monorepo.
 - Conventional Commits are enforced via commitlint (husky `commit-msg` hook).

@@ -162,6 +162,15 @@ export type InviteSheetProps = {
   spot?: TreeSpot;
   /** Family invite code — carried by the link. */
   code: string;
+  /**
+   * Creates the spot. Called with the name and the kinship shortcut, which
+   * carries the `RelationshipType` and the direction the edge points.
+   * Omitted while the screen has nothing to write to.
+   */
+  onSubmit?: (input: { name: string; option: KinshipOption }) => void;
+  submitting?: boolean;
+  /** Catalogue key for whatever went wrong, shown above the button. */
+  errorKey?: string | null;
 };
 
 /**
@@ -172,7 +181,15 @@ export type InviteSheetProps = {
  * would buy nothing here. The tree's pinch/pan is where that library earns
  * its place.
  */
-export function InviteSheet({ visible, onClose, spot = defaultSpot, code }: InviteSheetProps) {
+export function InviteSheet({
+  visible,
+  onClose,
+  spot = defaultSpot,
+  code,
+  onSubmit,
+  submitting = false,
+  errorKey = null,
+}: InviteSheetProps) {
   const { t } = useTranslation();
 
   const [name, setName] = useState('');
@@ -290,6 +307,16 @@ export function InviteSheet({ visible, onClose, spot = defaultSpot, code }: Invi
             </View>
           </View>
 
+          {errorKey !== null && (
+            <Text
+              variant="caption"
+              color={colors.themes.destructive.text}
+              accessibilityRole="alert"
+            >
+              {t(errorKey)}
+            </Text>
+          )}
+
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <Pressable
               onPress={share}
@@ -314,8 +341,15 @@ export function InviteSheet({ visible, onClose, spot = defaultSpot, code }: Invi
                 label={t('invite.sheet.send')}
                 size="large"
                 fullWidth
-                disabled={name.trim() === ''}
-                onPress={onClose}
+                disabled={name.trim() === '' || chosen === undefined}
+                loading={submitting}
+                onPress={() => {
+                  if (onSubmit === undefined || chosen === undefined) {
+                    onClose();
+                    return;
+                  }
+                  onSubmit({ name: name.trim(), option: chosen });
+                }}
                 renderIcon={({ size, color }) => (
                   <Send size={size} color={color} strokeWidth={2.1} />
                 )}

@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { colors, radius } from '../../theme';
-import type { AudienceGroup } from '../../fixtures/moment';
 import { Avatar } from '../ui/avatar';
 import { Text } from '../ui/text';
 
@@ -13,6 +12,15 @@ const ITEM_WIDTH = 76;
 /** Two rings: the page colour cuts a gap, the coral one reads as "on". */
 const RING_ON = `0 0 0 2px ${colors.background.page}, 0 0 0 4px ${colors.coral.brand}`;
 const RING_OFF = `0 0 0 2px ${colors.background.page}, 0 0 0 4px ${colors.state.disabledBorder}`;
+
+export type AudienceGroup = {
+  /** `Family.id`. */
+  id: string;
+  /** `Family.name`. */
+  name: string;
+  tone: 'light' | 'dark';
+  memberCount: number;
+};
 
 export type AudiencePickerProps = {
   groups: AudienceGroup[];

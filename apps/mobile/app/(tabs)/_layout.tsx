@@ -16,9 +16,13 @@ import { useSession } from '../../src/features/auth/session';
  * sits on the group: one gate rather than five.
  */
 export default function TabsLayout() {
-  const { session } = useSession();
+  const { status } = useSession();
 
-  if (session === null) return <Redirect href="/welcome" />;
+  // The keychain read is async, so "not read yet" is its own state. Treating
+  // it as signed out would bounce every returning user through Welcome on
+  // every cold start.
+  if (status === 'loading') return null;
+  if (status === 'anonymous') return <Redirect href="/welcome" />;
 
   return (
     <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <BottomNav {...props} />}>
