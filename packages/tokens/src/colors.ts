@@ -77,6 +77,8 @@ export const colors = {
     pressOverlay: 'rgba(24,24,27,0.06)',
     borderDefault: 'rgba(24,24,27,0.06)',
     borderStrong: 'rgba(24,24,27,0.08)',
+    /** Visible hairline on a white surface: neutral buttons, list rows. */
+    borderNeutral: '#E7E1DC',
     /** Dashed outline of an "add here" affordance. */
     borderDashed: '#C6C2BC',
     scrim: 'rgba(24,24,27,0.28)',

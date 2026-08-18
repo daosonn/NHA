@@ -1,4 +1,5 @@
 import { Crosshair, Minus, Plus, UserRoundPlus } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { colors, elevation, radius } from '../../theme';
@@ -46,6 +47,8 @@ export function ZoomControls({
   canZoomIn,
   canZoomOut,
 }: ZoomControlsProps) {
+  const { t } = useTranslation();
+
   return (
     <View
       className="absolute right-md top-md items-center"
@@ -58,19 +61,19 @@ export function ZoomControls({
         elevation.floating,
       ]}
     >
-      <ControlButton label="Zoom in" disabled={!canZoomIn} onPress={onZoomIn}>
+      <ControlButton label={t('family.zoomIn')} disabled={!canZoomIn} onPress={onZoomIn}>
         <Plus size={19} color={colors.text.secondary} strokeWidth={2} />
       </ControlButton>
 
       <View style={{ width: 20, height: 1, backgroundColor: '#EFEBE7' }} />
 
-      <ControlButton label="Zoom out" disabled={!canZoomOut} onPress={onZoomOut}>
+      <ControlButton label={t('family.zoomOut')} disabled={!canZoomOut} onPress={onZoomOut}>
         <Minus size={19} color={colors.text.secondary} strokeWidth={2} />
       </ControlButton>
 
       <View style={{ width: 20, height: 1, backgroundColor: '#EFEBE7' }} />
 
-      <ControlButton label="Recenter" disabled={false} onPress={onRecenter}>
+      <ControlButton label={t('family.recenter')} disabled={false} onPress={onRecenter}>
         <Crosshair size={18} color={colors.text.secondary} strokeWidth={2} />
       </ControlButton>
     </View>
@@ -94,11 +97,13 @@ export function CanvasHint({ children }: { children: string }) {
 
 /** Add-a-member action, bottom right of the canvas. */
 export function AddMemberButton({ onPress }: { onPress?: () => void }) {
+  const { t } = useTranslation();
+
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="Add a family member"
+      accessibilityLabel={t('family.addMember')}
       className="absolute bottom-lg right-lg h-[52px] w-[52px] items-center justify-center bg-coral"
       style={{ borderRadius: radius.full }}
     >

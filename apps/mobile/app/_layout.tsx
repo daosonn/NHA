@@ -1,6 +1,7 @@
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Imported per weight rather than from the package root: the root index
@@ -17,9 +18,23 @@ import Lora_700Bold from '@expo-google-fonts/lora/700Bold/Lora_700Bold.ttf';
 // Registers the Tailwind utilities with NativeWind. Must be imported once,
 // at the root.
 import '../global.css';
+import { SessionProvider } from '../src/features/auth/session';
+// Importing the module is what initialises i18next, so it must happen before
+// any screen calls `t()`. `restoreLocale` then swaps in a stored choice.
+import '../src/i18n';
+import { restoreLocale } from '../src/i18n/locale';
 import { colors } from '../src/theme';
 
 export default function RootLayout() {
+  // Deliberately not a render gate. i18next is already initialised with the
+  // device language by the import above, so the first paint is correct for
+  // almost everyone; waiting on storage would blank the screen for a tick
+  // and would prerender to nothing at all on web. When the stored choice
+  // arrives, react-i18next re-renders the tree.
+  useEffect(() => {
+    void restoreLocale();
+  }, []);
+
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -37,12 +52,14 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: colors.background.page },
-        }}
-      />
+      <SessionProvider>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.background.page },
+          }}
+        />
+      </SessionProvider>
     </SafeAreaProvider>
   );
 }

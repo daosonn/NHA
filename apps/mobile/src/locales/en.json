@@ -1,0 +1,270 @@
+{
+  "common": {
+    "or": "or",
+    "close": "Close",
+    "back": "Go back",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "notBuiltYet": "Not built yet.",
+    "none": "none",
+    "selectedOption": "{{label}}: {{value}}"
+  },
+  "nav": {
+    "home": "Home",
+    "omoide": "Omoide",
+    "ai": "AI",
+    "profile": "Profile",
+    "newMoment": "New moment",
+    "notifications": "Notifications",
+    "notificationsUnread_one": "Notifications, {{count}} unread",
+    "notificationsUnread_other": "Notifications, {{count}} unread",
+    "settings": "Account and settings"
+  },
+  "auth": {
+    "modeLabel": "Sign in or create an account",
+    "signInTab": "Sign in",
+    "signUpTab": "Create account",
+    "continueApple": "Continue with Apple",
+    "continueGoogle": "Continue with Google",
+    "apple": "Apple",
+    "google": "Google",
+    "fields": {
+      "name": "Full name",
+      "namePlaceholder": "Nguyen Minh",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "password": "Password",
+      "minCharacters": "At least {{count}} characters"
+    },
+    "welcome": {
+      "title": "A private home for\nthe family story",
+      "subtitle": "Photos, notes and the small things worth keeping. Only your family can see them.",
+      "create": "Create your family",
+      "haveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "legal": "By continuing you agree to the Terms and Privacy Policy."
+    },
+    "signIn": {
+      "title": "Welcome back",
+      "subtitle": "Everything your family added while you were away is waiting.",
+      "keepSignedIn": "Keep me signed in",
+      "forgot": "Forgot password?",
+      "submit": "Sign in"
+    },
+    "signUp": {
+      "title": "Create account",
+      "subtitle": "One account per person. You will be placed in the family tree next.",
+      "termsLabel": "I agree to the Terms and Privacy Policy",
+      "termsBefore": "I agree to the ",
+      "termsWord": "Terms",
+      "termsBetween": " and ",
+      "privacyWord": "Privacy Policy",
+      "termsAfter": ".",
+      "submit": "Continue"
+    },
+    "verify": {
+      "title": "Check your email",
+      "sentBefore": "We sent a {{count}}-digit code to ",
+      "sentAfter": ".",
+      "fallbackAddress": "your email",
+      "codeLabel": "{{count}}-digit verification code",
+      "resendBefore": "Resend code in ",
+      "resend": "Resend code",
+      "verify": "Verify",
+      "continue": "Continue",
+      "changeEmail": "Change email address",
+      "differentEmail": "Use a different email"
+    },
+    "forgot": {
+      "title": "Forgot your password",
+      "subtitle": "Tell us the email on the account and we will send a code to it.",
+      "submit": "Send code"
+    },
+    "reset": {
+      "title": "Choose a new password",
+      "subtitle": "Anyone still signed in on another device will be signed out.",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm password",
+      "mismatch": "The two do not match",
+      "submit": "Save and sign in"
+    }
+  },
+  "home": {
+    "recommendations": "Recommendations",
+    "seeAll": "See all",
+    "familyTree": "Family tree",
+    "openFamilyTree": "Open family tree",
+    "join": "Join",
+    "moreGroups": "+{{count}}",
+    "swipeCue": "Swipe up for moments"
+  },
+  "family": {
+    "title": "Family tree",
+    "generations_one": "{{count}} generation",
+    "generations_other": "{{count}} generations",
+    "members_one": "{{count}} member",
+    "members_other": "{{count}} members",
+    "pending_one": "{{count}} pending",
+    "pending_other": "{{count}} pending",
+    "hint": "Tap a person to open their profile",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "recenter": "Recenter",
+    "addMember": "Add a family member",
+    "addHere": "Add here",
+    "addMemberHere": "Add a family member here",
+    "you": "YOU",
+    "nodeLabel": "{{name}}, {{role}}",
+    "pendingRole": "{{role}} · pending",
+    "waitingFor": "Waiting for {{name}}",
+    "invitedAs": "Invited as {{role}} · {{sent}}",
+    "resend": "Resend"
+  },
+  "invite": {
+    "sheet": {
+      "title": "Invite a family member",
+      "subtitle": "They will be linked to the spot you tapped",
+      "closeScrim": "Close the invite sheet",
+      "spot": "Spot in the tree · {{id}}",
+      "nameLabel": "Name to remember them by",
+      "namePlaceholder": "Their name",
+      "relationship": "Relationship",
+      "relationshipTitle": "How are they related to you?",
+      "methodHeading": "How should we invite them",
+      "methodLabel": "Invite method",
+      "methodLink": "Invite link",
+      "methodContact": "Phone or email",
+      "contactLabel": "Where to send it",
+      "contactPlaceholder": "Phone number or email",
+      "carries": "The invite carries their spot and \"{{kinship}}\", so they land in the right place after signing up.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "share": "Share the invite",
+      "shareMessage": "{{name}}, join our family on NHA: {{link}}",
+      "shareFallbackName": "You",
+      "send": "Send invite"
+    },
+    "preview": {
+      "nodeLabel": "{{name}} · {{role}}",
+      "yourSpot": "YOUR SPOT"
+    },
+    "page": {
+      "title": "Invitation",
+      "headline": "{{inviter}} invited you to {{family}}",
+      "subtitleBefore": "They saved a spot for you as their ",
+      "subtitleAfter": ". Accept and your profile fills that spot for the whole family.",
+      "membersJoined": "{{count}} family members already joined",
+      "momentsWaiting": "{{count}} shared moments waiting for you",
+      "privacy": "Only this family can see what you post",
+      "join": "Join the family",
+      "notNow": "Not now",
+      "finePrint": "No account yet? You will set one up in one step. Code {{code}}."
+    }
+  },
+  "member": {
+    "sections": "{{name}}'s profile sections",
+    "timeline": "Timeline",
+    "album": "Album",
+    "memo": "Memo",
+    "editSelf": "Edit your profile",
+    "addDetails": "Add details about {{name}}",
+    "bornYear": "Born {{year}}",
+    "lifespan": "{{born}} – {{died}}",
+    "noBio": "No story here yet. Anyone in the family can start it.",
+    "photos_one": "{{count}} photo",
+    "photos_other": "{{count}} photos",
+    "timelineEmpty": "No milestones yet",
+    "timelineEmptyBody": "Births, moves, weddings — the moments that mark a life.",
+    "timelineEmptyAction": "Add a milestone",
+    "albumCaption": "From memories this family shared",
+    "albumEmpty": "No photos yet",
+    "albumEmptyBody": "Photos appear here when someone posts a memory and tags this person.",
+    "albumEmptyAction": "Post a memory",
+    "openPhoto": "Open photo",
+    "memoEmpty": "No notes yet",
+    "memoEmptyBody": "Things to remember about {{name}} — allergies, gift ideas, stories to ask for. Only you will see them.",
+    "memoEmptyAction": "Write a note",
+    "memoPrivate": "Private to you. {{name}} cannot see these notes.",
+    "memoCategories": {
+      "hobbies": "Interest",
+      "health": "Health",
+      "gift": "Gift idea",
+      "memories": "Ask about",
+      "todo": "To do"
+    }
+  },
+  "moment": {
+    "title": "New moment",
+    "caption": "Caption",
+    "captionPlaceholder": "What happened?",
+    "media": "Media",
+    "addMedia": "Add a photo or video",
+    "removePhoto": "Remove photo",
+    "removeVideo": "Remove video",
+    "shareWith": "Share with",
+    "shareWithHint": "Every family is lit by default. Tap one to dim it — dimmed families will not see this moment.",
+    "audienceOption": "{{name}}, {{count}} members",
+    "postPrivately": "Post privately",
+    "postTo_one": "Post to {{count}} family",
+    "postTo_other": "Post to {{count}} families",
+    "explainPrivate": "No family selected — this moment stays private to you.",
+    "explainEveryone": "Everyone you share a family with will see this.",
+    "explainSkipped_one": "{{names}} is dimmed and will be skipped.",
+    "explainSkipped_other": "{{names}} are dimmed and will be skipped."
+  },
+  "ai": {
+    "title": "AI",
+    "heading": "The family calendar",
+    "subheading": "Every date the family keeps, with an idea ready before it arrives.",
+    "laterThisYear": "Later this year",
+    "dateCount_one": "{{count}} date on the calendar",
+    "dateCount_other": "{{count}} dates on the calendar",
+    "daysAway_one": "in {{count}} day",
+    "daysAway_other": "in {{count}} days",
+    "occasionLabel": "{{title}}, {{meta}}",
+    "planSurprise": "Plan a surprise",
+    "giftIdeas": "Gift ideas",
+    "video": "Video",
+    "kinds": {
+      "birthday": "Birthday",
+      "memorial": "Memorial",
+      "anniversary": "Anniversary",
+      "holiday": "Holiday",
+      "milestone": "Milestone"
+    },
+    "gifts": {
+      "title": "Gift ideas",
+      "forPerson": "Gift ideas for {{name}}",
+      "evidence": "Read {{notes}} notes, {{photos}} photos and {{gifts}} past gifts",
+      "save": "Save",
+      "saved": "Saved"
+    }
+  },
+  "settings": {
+    "title": "Account & Settings",
+    "signedOut": "Signed out",
+    "noEmail": "—",
+    "mockNotice": "This account is not signed in for real yet. Nothing here reaches the API.",
+    "signOut": "Sign out",
+    "language": "Language",
+    "languageTitle": "Choose a language"
+  },
+  "date": {
+    "dayMonth": "{{day}} {{month}}",
+    "fullDate": "{{day}} {{month}} {{year}}",
+    "months": {
+      "1": "Jan",
+      "2": "Feb",
+      "3": "Mar",
+      "4": "Apr",
+      "5": "May",
+      "6": "Jun",
+      "7": "Jul",
+      "8": "Aug",
+      "9": "Sep",
+      "10": "Oct",
+      "11": "Nov",
+      "12": "Dec"
+    }
+  }
+}
