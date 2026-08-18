@@ -30,7 +30,7 @@ both move together.
 
 ## What exists today
 
-Twenty-one routes, all verified against the source.
+Twenty-two routes, all verified against the source.
 
 ### Auth — `apps/api/src/auth/`
 
@@ -80,12 +80,20 @@ read the tree screen needs (task 1.4.1, merged 2026-08-18).
 
 ### Posts — `apps/api/src/post/` (tasks 1.5.2–1.5.5, merged in PR #5)
 
-| Route                   | Returns       |
-| ----------------------- | ------------- |
-| `POST /posts`           | `PostDetail`  |
-| `GET /posts/:postId`    | `PostDetail`  |
-| `PATCH /posts/:postId`  | `PostDetail`  |
-| `DELETE /posts/:postId` | `{ success }` |
+| Route                           | Returns       |
+| ------------------------------- | ------------- |
+| `POST /posts`                   | `PostDetail`  |
+| `GET /posts/:postId`            | `PostDetail`  |
+| `PATCH /posts/:postId`          | `PostDetail`  |
+| `DELETE /posts/:postId`         | `{ success }` |
+| `GET /families/:familyId/posts` | `FamilyFeed`  |
+
+`FamilyFeed` is `{ items: PostDetail[], nextCursor: string | null }` —
+the family's shared posts, newest first. Query params: `limit` (1–50,
+default 20) and `cursor` (echo back `nextCursor` for the next page;
+`null` means the end). Requires membership of the family; the viewer's
+own private posts are **not** in the feed — it shows only what was
+shared to this family.
 
 `PostDetail` is `{ id, authorUserId, authorName, type, content, eventDate,
 eventTitle, place, familyIds, taggedMemberIds, media[], createdAt,
@@ -107,7 +115,6 @@ Semantics the app must respect:
   not attached elsewhere) and cannot be changed by PATCH — a `mediaIds`
   key in PATCH is silently stripped by the whitelist pipe.
 - Tagged members must belong to the families the post is shared to.
-- There is **no list/feed endpoint yet** (task 1.2.3).
 
 ### Media — `apps/api/src/media/` (task 1.5.3, merged in PR #5)
 
@@ -142,7 +149,7 @@ an endpoint, so no amount of frontend work will connect these screens.
 | **Invitation** (`invite/[code].tsx`) | A public read of an invite code — who invited you, which family, which spot. `POST /families/join` both requires a token and joins immediately, so it cannot preview. |
 | **Life Profile** (`member/[id].tsx`) | LifeProfile, LifeEvent, the derived gallery, Memo.                                                                                                                    |
 | **New moment** (`(tabs)/new.tsx`)    | ~~Post + media upload~~ — **resolved**: `POST /media` then `POST /posts` (tasks 1.5.2–1.5.5, PR #5).                                                                  |
-| **Home**                             | SpecialDate widgets, recommendations, and the moments **feed — still missing** (`GET` list of posts, task 1.2.3).                                                     |
+| **Home**                             | ~~moments feed~~ — **resolved**: `GET /families/:familyId/posts` (task 1.2.3). Still missing: SpecialDate widgets and recommendations.                                |
 | **AI tab + gift ideas**              | The whole of `apps/ai` — the FastAPI service does not exist.                                                                                                          |
 
 ### The relationship-label question

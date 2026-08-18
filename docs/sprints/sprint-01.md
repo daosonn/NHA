@@ -32,7 +32,9 @@ build the family tree, post content with photos, and view member profiles.
 
 - [ ] 1.2.1 Navigation chính (Nav1/Nav2/Nav3/Nav4)
 - [ ] 1.2.2 Layout Home (responsive, mobile-first 375–430px) — UI xong 2026-08-18 (mock data, chưa nối API)
-- [ ] 1.2.3 Load bài viết gần đây (feed cơ bản)
+- [ ] 1.2.3 Load bài viết gần đây (feed cơ bản) — API done 2026-08-18:
+      `GET /api/families/:familyId/posts` (mới nhất trước, cursor
+      pagination, membership-based authorization); UI chưa nối
 - [ ] 1.2.4 Empty/loading state (UI đầy đủ)
 - [ ] 1.2.5 Widget dịp đặc biệt trên Home (countdown + theme — sinh nhật/ngày giỗ derived từ LifeProfile; added 2026-08-14, see `database.md`)
 
