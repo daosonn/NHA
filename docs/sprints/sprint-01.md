@@ -48,7 +48,7 @@ build the family tree, post content with photos, and view member profiles.
 - [ ] 1.2.4 Empty/loading state (UI đầy đủ) — done cho Home, cây gia phả,
       moments và post detail (2026-08-18). Còn Life Profile, Omoide, AI —
       các màn chưa nối API.
-- [ ] 1.2.5 Widget dịp đặc biệt trên Home (countdown + theme — sinh nhật/ngày giỗ derived từ LifeProfile; added 2026-08-14, see `database.md`)
+- [ ] 1.2.5 Widget dịp đặc biệt trên Home (countdown + theme — sinh nhật/ngày giỗ derived từ LifeProfile; added 2026-08-14, see `database.md`) — API done 2026-08-18 (PR #11: `GET /families/:familyId/special-dates`); UI chưa nối
 
 ### 1.3 Tạo nhóm gia đình — Family Group
 
