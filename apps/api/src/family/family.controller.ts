@@ -25,6 +25,7 @@ import {
   type FamilyDetail,
   type FamilyMemberSummary,
   type FamilySummary,
+  type FamilyTree,
   type JoinFamilyResult,
   type RelationshipSummary,
 } from './family.service';
@@ -70,6 +71,17 @@ export class FamilyController {
     @Param('familyId', ParseUUIDPipe) familyId: string,
   ): Promise<FamilyDetail> {
     return this.familyService.getFamily(user.userId, familyId);
+  }
+
+  @Get(':familyId/tree')
+  @ApiOperation({
+    summary: 'Family tree data — member nodes + relationship edges (WBS 1.4.1)',
+  })
+  tree(
+    @CurrentUser() user: AuthUser,
+    @Param('familyId', ParseUUIDPipe) familyId: string,
+  ): Promise<FamilyTree> {
+    return this.familyService.getTree(user.userId, familyId);
   }
 
   @Post(':familyId/members')
