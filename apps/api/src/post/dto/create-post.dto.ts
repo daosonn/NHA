@@ -24,10 +24,11 @@ export class CreatePostDto {
   content?: string;
 
   @ApiPropertyOptional({
-    description: 'ISO 8601 — required when type = EVENT (WBS 1.5.4)',
+    description:
+      'ISO 8601 date or datetime — required when type = EVENT (WBS 1.5.4)',
   })
   @IsOptional()
-  @IsISO8601()
+  @IsISO8601({ strict: true })
   eventDate?: string;
 
   @ApiPropertyOptional({

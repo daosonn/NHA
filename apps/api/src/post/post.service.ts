@@ -72,11 +72,13 @@ export class PostService {
   async create(userId: string, dto: CreatePostDto): Promise<PostDetail> {
     const content = this.normalizeText(dto.content);
     const eventTitle = this.normalizeText(dto.eventTitle);
-    const eventDate = dto.eventDate ? new Date(dto.eventDate) : null;
+    const eventDate = dto.eventDate ? this.parseDate(dto.eventDate) : null;
     this.validateEventFields(dto.type, eventTitle, eventDate);
 
     const mediaIds = dto.mediaIds ?? [];
-    if (!content && mediaIds.length === 0) {
+    // An EVENT is never empty — its title is mandatory (WBS 1.5.4 lists
+    // content as optional there).
+    if (!content && mediaIds.length === 0 && dto.type !== PostType.EVENT) {
       throw new BadRequestException(
         'A post needs text content or at least one media attachment',
       );
@@ -164,6 +166,11 @@ export class PostService {
     if (!post) {
       throw new NotFoundException('Post not found');
     }
+    // 404 before 403: non-viewers must not learn that a private post
+    // exists (same rule as getPost — a 403 here would be an oracle).
+    if (!(await this.canView(userId, post))) {
+      throw new NotFoundException('Post not found');
+    }
     if (post.authorUserId !== userId) {
       throw new ForbiddenException('Only the author can edit a post');
     }
@@ -172,27 +179,38 @@ export class PostService {
       dto.eventTitle !== undefined
         ? this.normalizeText(dto.eventTitle)
         : post.eventTitle;
+    // `undefined` = unchanged; null/'' = clear (rejected below for EVENT).
+    // Without the explicit null branch, new Date(null) would silently
+    // rewrite the date to 1970-01-01.
     const nextDate =
-      dto.eventDate !== undefined ? new Date(dto.eventDate) : post.eventDate;
+      dto.eventDate === undefined
+        ? post.eventDate
+        : dto.eventDate
+          ? this.parseDate(dto.eventDate)
+          : null;
     this.validateEventFields(post.type, nextTitle, nextDate);
 
     const nextContent =
       dto.content !== undefined
         ? this.normalizeText(dto.content)
         : post.content;
-    if (!nextContent && post._count.media === 0) {
+    if (
+      !nextContent &&
+      post._count.media === 0 &&
+      post.type !== PostType.EVENT
+    ) {
       throw new BadRequestException(
         'A post needs text content or at least one media attachment',
       );
     }
 
-    if (dto.familyIds) {
-      await this.requireMembershipInAll(userId, dto.familyIds);
-    }
-    // Tags are validated against the visibility that results from this
-    // update, whichever of the two lists is being changed.
+    // Membership is re-checked against the visibility that results from
+    // this update — including the unchanged stored list: an author who
+    // left a family must not keep writing into its feed. Un-sharing
+    // (familyIds: []) stays possible for ex-members.
     const effectiveFamilyIds =
       dto.familyIds ?? post.families.map((f) => f.familyId);
+    await this.requireMembershipInAll(userId, effectiveFamilyIds);
     const effectiveTagIds =
       dto.taggedMemberIds ?? post.memberTags.map((t) => t.memberId);
     await this.validateTags(userId, effectiveTagIds, effectiveFamilyIds);
@@ -230,10 +248,15 @@ export class PostService {
       where: { id: postId },
       select: {
         authorUserId: true,
+        families: { select: { familyId: true } },
         media: { select: { storageKey: true } },
       },
     });
     if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+    // 404 before 403 — same privacy rule as getPost/update.
+    if (!(await this.canView(userId, post))) {
       throw new NotFoundException('Post not found');
     }
     if (post.authorUserId !== userId) {
@@ -391,5 +414,16 @@ export class PostService {
   private normalizeText(value: string | undefined): string | null {
     const trimmed = value?.trim();
     return trimmed ? trimmed : null;
+  }
+
+  /** @IsISO8601({ strict: true }) guards the format; this guards forms
+   *  JS Date cannot parse (week dates, ordinal dates) from becoming an
+   *  Invalid Date that Prisma turns into a 500. */
+  private parseDate(value: string): Date {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException('eventDate is not a parsable date');
+    }
+    return date;
   }
 }

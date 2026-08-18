@@ -109,18 +109,30 @@
   (200 with nodes+edges / 401 unauthenticated / 403 non-member).
   On branch `feature/family-tree-api` — pending PR.
 - Post + Media modules (2026-08-18): `POST/GET/PATCH/DELETE /api/posts`
-  (author-only edit/delete, EVENT requires title+date, visibility via
-  `familyIds` — empty = private, tags must stay inside the shared
-  families, private content returns 404 to non-viewers) + StorageService
-  (local disk, `UPLOAD_DIR`, swappable for S3 later) + `POST /api/media`
-  (multipart photo ≤10MB) and `GET /api/media/:id` (authorized
-  streaming). Uploads accept photo/video/audio per the MVP memory scope
+  (author-only edit/delete, EVENT requires title+date — content optional
+  for events, visibility via `familyIds` — empty = private, tags must
+  stay inside the shared families, private content returns 404 to
+  non-viewers on every verb) + StorageService (local disk, `UPLOAD_DIR`,
+  swappable for S3 later; uploads stream to a temp file, never buffered
+  in memory) + `POST /api/media` and `GET /api/media/:id` (authorized
+  streaming with HTTP Range/206 for video/audio playback). Uploads
+  accept photo/video/audio per the MVP memory scope
   (jpeg/png/webp/gif/heic; mp4/mov; mp3/m4a/aac/wav) with a single
   100MB limit for every type (decided 2026-08-18). Tasks 1.5.2–1.5.5
-  done; verified by lint/test/e2e/build + live smoke tests (15-case
-  matrix + video/audio/limits round). On branch `feature/post-module`.
-  Assumption to confirm: media set fixed at post creation (edit changes
-  text/visibility/tags, not attachments).
+  done. Verified by lint/build + manual live smoke tests (authorization
+  matrix, Range, date-validation and ex-member cases); **no automated
+  tests for these modules yet** — the jest suites are still the NestJS
+  scaffold specs. Code-review round 2026-08-18 (9 review agents, 17
+  findings): critical fixes applied — PATCH re-checks current
+  membership (ex-member loses write access but can still un-share),
+  PATCH/DELETE return 404 like GET for non-viewable posts (no existence
+  oracle), `eventDate: null` and invalid ISO dates rejected as 400
+  (were silent 1970-01-01 / 500), upload cleanup when the DB insert
+  fails. Deferred to a follow-up branch before 1.5.6–7: dedupe
+  canView/membership helpers, `UpdatePostDto` via PartialType, response
+  shape hiding cross-family ids from non-authors. On branch
+  `feature/post-module`. Assumption to confirm: media set fixed at post
+  creation (edit changes text/visibility/tags, not attachments).
 
 ### Planning Phase
 
@@ -260,6 +272,13 @@ relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
   Comment/Reaction, password recovery, personal albums, LifeEvent
   timeline, special-date widgets and `SpecialDate` CRUD scheduled into
   sprint sub-tasks — full log in `database.md` → Decision Log.
+- **Media uploads (2026-08-18)**: uploads accept photo, video, and audio
+  (per the MVP memory scope) with a **single 100MB limit for every
+  type**; local-disk storage behind the storage service module for the
+  MVP demo, streamed to disk (never buffered in memory). Client-declared
+  MIME type is trusted for now (no content sniffing) — revisit before
+  release, together with automated tests for the post/media
+  authorization matrix.
 - **App copy centralised (2026-08-18)**: every user-visible string in
   `apps/mobile` — accessibility labels included — moved to
   `src/locales/en.json` and read through `t()` (`i18next` +
