@@ -8,6 +8,7 @@ import { FamilyModule } from './family/family.module';
 import { MediaModule } from './media/media.module';
 import { PostModule } from './post/post.module';
 import { ProfileModule } from './profile/profile.module';
+import { SpecialDateModule } from './special-date/special-date.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ProfileModule } from './profile/profile.module';
     MediaModule,
     PostModule,
     ProfileModule,
+    SpecialDateModule,
   ],
   controllers: [AppController],
   providers: [AppService],
