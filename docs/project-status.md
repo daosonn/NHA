@@ -144,6 +144,32 @@
   shape hiding cross-family ids from non-authors. Merged to `main` in
   PR #5 (2026-08-18). Assumption to confirm: media set fixed at post
   creation (edit changes text/visibility/tags, not attachments).
+- Life Profile API (2026-08-18): `GET/PATCH /api/me/profile` +
+  `GET/PATCH /api/families/:familyId/members/:memberId/profile` — the
+  display rule from domain-model.md (linked member → global profile,
+  placeholder → family-local wiki profile), wiki editing by any family
+  member for placeholders (linked profiles are owner-only), every edit
+  logged to `EditHistory` with editor + snapshot, `updatedById`
+  stamped. Fields: bio, interests (string list), birthDate/deathDate
+  (strict ISO, death ≥ birth) — the single source the 1.2.5 widgets and
+  Sprint-3 reminders derive from. Task 1.6.2 API side done; verified by
+  lint/build + 11-case live smoke test incl. EditHistory rows in the
+  DB. On branch `feature/life-profile`, uncommitted.
+- Comments + Reactions API (2026-08-18): CRUD
+  `/api/posts/:postId/comments` (oldest first, cursor-paginated; anyone
+  who can view the post comments, only the comment author edits/deletes
+  — post-author moderation is an open product call) and
+  `PUT/DELETE /api/posts/:postId/reactions/me` (one reaction per user
+  per post, upsert to change type, idempotent delete). `PostDetail`
+  gained `commentCount` / `reactionCount` / `myReaction`, so feed cards
+  and the post-detail screen need no extra calls. Ships with the
+  deferred cleanup: FamilyService now exports the membership checks and
+  PostService exports `canViewPost`/`assertViewable` — MediaService and
+  the new comment/reaction services delegate instead of copying the
+  privacy rule; `UpdatePostDto` collapsed to
+  `PartialType(OmitType(CreatePostDto, ...))`. Tasks 1.5.6–1.5.7 API
+  side done; verified by lint/build + 16-case live smoke test. On
+  branch `feature/post-engagement`, uncommitted.
 - Family feed API (2026-08-18): `GET /api/families/:familyId/posts` —
   the family's shared posts, newest first, cursor-paginated (`limit`
   1–50 default 20, `nextCursor`), membership-based authorization;

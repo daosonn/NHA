@@ -34,7 +34,7 @@ replay — and matches `types.ts` exactly.
 
 ## What exists today
 
-Twenty-two routes, all verified against the source.
+Thirty-two routes, all verified against the source.
 
 ### Auth — `apps/api/src/auth/`
 
@@ -100,8 +100,10 @@ own private posts are **not** in the feed — it shows only what was
 shared to this family.
 
 `PostDetail` is `{ id, authorUserId, authorName, type, content, eventDate,
-eventTitle, place, familyIds, taggedMemberIds, media[], createdAt,
-updatedAt }` with `media[]` items `{ id, mimeType, sizeBytes }`.
+eventTitle, place, familyIds, taggedMemberIds, media[], commentCount,
+reactionCount, myReaction, createdAt, updatedAt }` with `media[]` items
+`{ id, mimeType, sizeBytes }`. `myReaction` is the viewer's own reaction
+(`null` when they have not reacted) — it differs per viewer.
 
 Semantics the app must respect:
 
@@ -119,6 +121,59 @@ Semantics the app must respect:
   not attached elsewhere) and cannot be changed by PATCH — a `mediaIds`
   key in PATCH is silently stripped by the whitelist pipe.
 - Tagged members must belong to the families the post is shared to.
+
+### Comments & Reactions — `apps/api/src/post/` (tasks 1.5.6–1.5.7)
+
+| Route                                       | Returns          |
+| ------------------------------------------- | ---------------- |
+| `POST /posts/:postId/comments`              | `CommentSummary` |
+| `GET /posts/:postId/comments`               | `CommentList`    |
+| `PATCH /posts/:postId/comments/:commentId`  | `CommentSummary` |
+| `DELETE /posts/:postId/comments/:commentId` | `{ success }`    |
+| `PUT /posts/:postId/reactions/me`           | `ReactionState`  |
+| `DELETE /posts/:postId/reactions/me`        | `ReactionState`  |
+
+`CommentSummary` is `{ id, postId, authorUserId, authorName, content,
+createdAt, updatedAt }`; `CommentList` is `{ items, nextCursor }` with the
+same `limit`/`cursor` params as the feed, **oldest first** (a thread reads
+top-down). Anyone who can view the post can comment; only the comment's
+author edits or deletes it (post-author moderation is an open product
+call). All routes 404 on posts the caller cannot view — same rule as
+everywhere else.
+
+Reactions: one per user per post — `PUT .../reactions/me` with
+`{ type: LIKE | LOVE | HAHA | WOW | SAD }` sets or changes it, `DELETE`
+removes it (idempotent). Both return
+`{ myReaction, reactionCount }` so the UI can update optimistically and
+reconcile.
+
+### Life Profiles — `apps/api/src/profile/` (task 1.6.2 API side)
+
+| Route                                                 | Returns         |
+| ----------------------------------------------------- | --------------- |
+| `GET /me/profile`                                     | `ProfileDetail` |
+| `PATCH /me/profile`                                   | `ProfileDetail` |
+| `GET /families/:familyId/members/:memberId/profile`   | `ProfileDetail` |
+| `PATCH /families/:familyId/members/:memberId/profile` | `ProfileDetail` |
+
+`ProfileDetail` is `{ id, userId, memberId, displayName, bio,
+interests: string[], birthDate, deathDate, updatedAt }`.
+
+Display rule (domain-model.md): a **linked** member's route serves their
+**global** profile — the same one `/me/profile` edits — while a
+**placeholder** serves its family-local wiki profile (`memberId` set,
+`userId` null).
+
+Editing: placeholder profiles are wiki-editable by any member of the
+family; a linked member's profile is editable only by that member (403
+otherwise). Every successful PATCH writes an `EditHistory` row (editor +
+snapshot) — no history UI yet, but the log exists from day one.
+
+PATCH semantics: omitted = unchanged, `null` clears a date, `''` clears
+the bio, `interests` replaces the whole list. Dates are strict ISO 8601;
+`deathDate` before `birthDate` is a 400. `birthDate`/`deathDate` here are
+the single source the special-date widgets (1.2.5) and Sprint-3 reminders
+will derive from.
 
 ### Media — `apps/api/src/media/` (task 1.5.3, merged in PR #5)
 
@@ -151,7 +206,7 @@ an endpoint, so no amount of frontend work will connect these screens.
 | **Verify code** (`verify.tsx`)       | Send / confirm an email code. Registration returns tokens immediately today, so the screen has nothing to call.                                                       |
 | **Forgot + reset password**          | WBS 1.1.7, deferred pending an email-infrastructure decision.                                                                                                         |
 | **Invitation** (`invite/[code].tsx`) | A public read of an invite code — who invited you, which family, which spot. `POST /families/join` both requires a token and joins immediately, so it cannot preview. |
-| **Life Profile** (`member/[id].tsx`) | LifeProfile, LifeEvent, the derived gallery, Memo.                                                                                                                    |
+| **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~ — **resolved** (profile routes above, task 1.6.2). Still missing: LifeEvent (1.6.8), the derived gallery (1.6.4), Memo (1.6.5).                       |
 | **New moment** (`(tabs)/new.tsx`)    | ~~Post + media upload~~ — **resolved**: `POST /media` then `POST /posts` (tasks 1.5.2–1.5.5, PR #5).                                                                  |
 | **Home**                             | ~~moments feed~~ — **resolved**: `GET /families/:familyId/posts` (task 1.2.3). Still missing: SpecialDate widgets and recommendations.                                |
 | **AI tab + gift ideas**              | The whole of `apps/ai` — the FastAPI service does not exist.                                                                                                          |
