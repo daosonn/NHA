@@ -1,4 +1,5 @@
 import { Clock, Plus } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { colors, radius } from '../../theme';
@@ -79,10 +80,12 @@ function PendingBadge() {
 }
 
 function NodeLabel({ node }: { node: PositionedNode }) {
+  const { t } = useTranslation();
+
   if (node.state === 'empty') {
     return (
       <Text variant="caption" weight="medium" color={colors.text.subtle}>
-        Add here
+        {t('family.addHere')}
       </Text>
     );
   }
@@ -111,7 +114,7 @@ function NodeLabel({ node }: { node: PositionedNode }) {
             color={colors.text.white}
             style={{ lineHeight: 16, letterSpacing: 0.4 }}
           >
-            YOU
+            {t('family.you')}
           </Text>
         </View>
       ) : (
@@ -120,7 +123,7 @@ function NodeLabel({ node }: { node: PositionedNode }) {
           color={pending ? colors.coral.dark : colors.text.subtle}
           numberOfLines={1}
         >
-          {pending ? `${node.role} · pending` : node.role}
+          {pending ? t('family.pendingRole', { role: node.role }) : node.role}
         </Text>
       )}
     </>
@@ -132,7 +135,12 @@ function NodeLabel({ node }: { node: PositionedNode }) {
  * underneath. Positioned absolutely from the computed layout.
  */
 export function TreeNode({ node, onPress }: TreeNodeProps) {
-  const label = node.state === 'empty' ? 'Add a family member here' : `${node.name}, ${node.role}`;
+  const { t } = useTranslation();
+
+  const label =
+    node.state === 'empty'
+      ? t('family.addMemberHere')
+      : t('family.nodeLabel', { name: node.name, role: node.role });
 
   return (
     <Pressable

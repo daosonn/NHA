@@ -31,6 +31,9 @@ export const familyTree: FamilyTreeData = {
       members: [
         { id: 'minh', name: 'Minh', role: 'You', tone: 'light', state: 'active', isViewer: true },
         { id: 'linh', name: 'Linh', role: 'Sister', tone: 'dark', state: 'pending' },
+        // An empty spot has no descent thread on purpose: nothing has been
+        // promised yet, so the tree must not draw a line to it.
+        { id: 'spot-g3', name: '', role: '', tone: 'light', state: 'empty' },
       ],
     },
   ],
