@@ -27,18 +27,80 @@ export type KinshipOption = {
   type: RelationshipType;
   /** Where this lands them relative to you, in the reader's words. */
   hint: string;
+  /**
+   * Which end of the stored edge the **new** person sits on.
+   *
+   * `Relationship` is directed for parenthood — `from` is the parent — so
+   * "Mother" and "Daughter" are the same `PARENT` type pointing opposite
+   * ways. Getting this backwards silently inverts a generation in the tree.
+   */
+  newMemberIsFrom: boolean;
 };
 
 export const kinshipOptions: KinshipOption[] = [
-  { value: 'sister', label: 'Sister', type: 'SIBLING', hint: 'Same generation as you' },
-  { value: 'brother', label: 'Brother', type: 'SIBLING', hint: 'Same generation as you' },
-  { value: 'mother', label: 'Mother', type: 'PARENT', hint: 'One generation above you' },
-  { value: 'father', label: 'Father', type: 'PARENT', hint: 'One generation above you' },
-  { value: 'daughter', label: 'Daughter', type: 'PARENT', hint: 'One generation below you' },
-  { value: 'son', label: 'Son', type: 'PARENT', hint: 'One generation below you' },
-  { value: 'partner', label: 'Partner', type: 'SPOUSE', hint: 'Beside you' },
-  { value: 'step-parent', label: 'Step-parent', type: 'STEP_PARENT', hint: 'One generation above' },
-  { value: 'other', label: 'Someone else', type: 'OTHER', hint: 'You describe the relationship' },
+  {
+    value: 'sister',
+    label: 'Sister',
+    type: 'SIBLING',
+    hint: 'Same generation as you',
+    newMemberIsFrom: false,
+  },
+  {
+    value: 'brother',
+    label: 'Brother',
+    type: 'SIBLING',
+    hint: 'Same generation as you',
+    newMemberIsFrom: false,
+  },
+  {
+    value: 'mother',
+    label: 'Mother',
+    type: 'PARENT',
+    hint: 'One generation above you',
+    newMemberIsFrom: true,
+  },
+  {
+    value: 'father',
+    label: 'Father',
+    type: 'PARENT',
+    hint: 'One generation above you',
+    newMemberIsFrom: true,
+  },
+  {
+    value: 'daughter',
+    label: 'Daughter',
+    type: 'PARENT',
+    hint: 'One generation below you',
+    newMemberIsFrom: false,
+  },
+  {
+    value: 'son',
+    label: 'Son',
+    type: 'PARENT',
+    hint: 'One generation below you',
+    newMemberIsFrom: false,
+  },
+  {
+    value: 'partner',
+    label: 'Partner',
+    type: 'SPOUSE',
+    hint: 'Beside you',
+    newMemberIsFrom: false,
+  },
+  {
+    value: 'step-parent',
+    label: 'Step-parent',
+    type: 'STEP_PARENT',
+    hint: 'One generation above',
+    newMemberIsFrom: true,
+  },
+  {
+    value: 'other',
+    label: 'Someone else',
+    type: 'OTHER',
+    hint: 'You describe the relationship',
+    newMemberIsFrom: false,
+  },
 ];
 
 /** Where in the tree the invitee will land. */

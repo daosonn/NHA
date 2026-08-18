@@ -21,6 +21,7 @@ import Lora_700Bold from '@expo-google-fonts/lora/700Bold/Lora_700Bold.ttf';
 import '../global.css';
 import { SessionProvider } from '../src/features/auth/session';
 import { currentAccessToken, refreshSession } from '../src/features/auth/session-store';
+import { ActiveFamilyProvider } from '../src/features/family/active-family';
 import { configureApi } from '../src/lib/api';
 import { createQueryClient } from '../src/lib/query-client';
 // Importing the module is what initialises i18next, so it must happen before
@@ -72,12 +73,16 @@ export default function RootLayout() {
         {/* Inside the query provider: signing out has to empty the cache, or
             the next account reads the previous one's data. */}
         <SessionProvider>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.background.page },
-            }}
-          />
+          {/* Below the session: which family is active is only a question
+              once somebody is signed in. */}
+          <ActiveFamilyProvider>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.background.page },
+              }}
+            />
+          </ActiveFamilyProvider>
         </SessionProvider>
       </QueryClientProvider>
     </SafeAreaProvider>

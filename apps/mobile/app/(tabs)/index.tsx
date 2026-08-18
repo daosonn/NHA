@@ -132,7 +132,7 @@ function renderBody({ families, isPending, isError, refetch, router, t }: BodyPr
 
       <RecommendationGrid feature={recommendations.feature} secondary={recommendations.secondary} />
 
-      <SwipeCue />
+      <SwipeCue onPress={() => router.push('/moments')} />
     </>
   );
 }

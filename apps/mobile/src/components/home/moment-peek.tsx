@@ -1,6 +1,6 @@
 import { ChevronUp } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { colors, radius, spacing } from '../../theme';
 import { Avatar } from '../ui/avatar';
@@ -8,11 +8,21 @@ import { PhotoPlaceholder } from '../ui/photo-placeholder';
 import { Text } from '../ui/text';
 
 /** Hint that the moments feed is one swipe away. */
-export function SwipeCue() {
+export type SwipeCueProps = {
+  /** Opens the moments list. Without it the cue stays decorative. */
+  onPress?: () => void;
+};
+
+export function SwipeCue({ onPress }: SwipeCueProps) {
   const { t } = useTranslation();
 
   return (
-    <View style={{ alignItems: 'center', gap: 2 }}>
+    <Pressable
+      onPress={onPress}
+      disabled={onPress === undefined}
+      accessibilityRole={onPress === undefined ? undefined : 'button'}
+      style={{ alignItems: 'center', gap: 2 }}
+    >
       <ChevronUp size={18} color="rgba(24,24,27,0.22)" strokeWidth={2} />
       <Text
         variant="caption"
@@ -22,7 +32,7 @@ export function SwipeCue() {
       >
         {t('home.swipeCue')}
       </Text>
-    </View>
+    </Pressable>
   );
 }
 

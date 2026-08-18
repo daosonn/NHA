@@ -1,9 +1,8 @@
 import { Plus, X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Image, Pressable, ScrollView, View } from 'react-native';
 
 import { colors, radius } from '../../theme';
-import type { DraftMedia } from '../../fixtures/moment';
 import { PhotoPlaceholder } from '../ui/photo-placeholder';
 import { Text } from '../ui/text';
 
@@ -33,6 +32,25 @@ function RemoveButton({ onPress, label }: { onPress?: () => void; label: string 
   );
 }
 
+export type DraftMediaKind = 'photo' | 'video';
+
+export type DraftMedia = {
+  id: string;
+  kind: DraftMediaKind;
+  tone: 'light' | 'dark';
+  /** Videos only, pre-formatted — `0:12`. */
+  duration?: string;
+  /**
+   * Local file the picker handed back. Absent for the fixture tiles, which
+   * is why the striped placeholder is still here: it is what a tile looks
+   * like before there is a file behind it, not a permanent stand-in.
+   */
+  uri?: string;
+  /** Needed by the upload — React Native's `FormData` wants both. */
+  fileName?: string;
+  mimeType?: string;
+};
+
 export type MediaStripProps = {
   media: DraftMedia[];
   onRemove?: (item: DraftMedia) => void;
@@ -58,35 +76,49 @@ export function MediaStrip({ media, onRemove, onAdd }: MediaStripProps) {
     >
       {media.map((item) => (
         <View key={item.id} style={{ width: TILE, height: TILE }}>
-          <PhotoPlaceholder
-            tone={item.tone}
-            style={{
-              width: TILE,
-              height: TILE,
-              borderRadius: radius.xl,
-              borderWidth: 1,
-              borderColor: colors.state.borderDefault,
-              justifyContent: 'flex-end',
-              padding: 8,
-            }}
-          >
-            {item.kind === 'video' && item.duration !== undefined && (
-              <View
-                style={{
-                  alignSelf: 'flex-start',
-                  height: 20,
-                  paddingHorizontal: 8,
-                  borderRadius: radius.full,
-                  backgroundColor: 'rgba(9,9,11,0.45)',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text variant="badge" weight="medium" color={colors.text.white}>
-                  {item.duration}
-                </Text>
-              </View>
-            )}
-          </PhotoPlaceholder>
+          {item.uri !== undefined ? (
+            <Image
+              source={{ uri: item.uri }}
+              style={{
+                width: TILE,
+                height: TILE,
+                borderRadius: radius.xl,
+                borderWidth: 1,
+                borderColor: colors.state.borderDefault,
+              }}
+              accessibilityIgnoresInvertColors
+            />
+          ) : (
+            <PhotoPlaceholder
+              tone={item.tone}
+              style={{
+                width: TILE,
+                height: TILE,
+                borderRadius: radius.xl,
+                borderWidth: 1,
+                borderColor: colors.state.borderDefault,
+                justifyContent: 'flex-end',
+                padding: 8,
+              }}
+            >
+              {item.kind === 'video' && item.duration !== undefined && (
+                <View
+                  style={{
+                    alignSelf: 'flex-start',
+                    height: 20,
+                    paddingHorizontal: 8,
+                    borderRadius: radius.full,
+                    backgroundColor: 'rgba(9,9,11,0.45)',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text variant="badge" weight="medium" color={colors.text.white}>
+                    {item.duration}
+                  </Text>
+                </View>
+              )}
+            </PhotoPlaceholder>
+          )}
 
           <RemoveButton
             onPress={() => onRemove?.(item)}
