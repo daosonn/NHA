@@ -109,6 +109,33 @@
   shape the backend has to grow into; see Important Decisions. The backend
   change itself is still to schedule.
 
+## For the backend owner
+
+Raised by the frontend, neither actionable from `apps/mobile`.
+
+- **Comment moderation is decided for now, but the permission is in the
+  wrong place (2026-08-18).** Only a comment's author may edit or delete it;
+  the post's author has no moderation power. That is accepted for the MVP —
+  this is a family, not a public forum. The problem is that
+  `CommentSummary` carries no permission flag, so the app decides what to
+  render by comparing `authorUserId` against the signed-in user. The rule
+  now exists in two places, and the day the server relaxes it the app will
+  keep hiding a button the server would allow — or show one that 403s.
+  **Asked for**: `canEdit` / `canDelete` on `CommentSummary` (and the same
+  on `PostDetail` while the shape is being touched). The app then draws
+  what it is told and never has to change when the rule does.
+- **CORS is pinned to fixed ports and will break again (2026-08-18).** The
+  allowlist in `apps/api/src/main.ts` names `http://localhost:8081` and
+  `:19006`. Metro moves to the next free port whenever 8081 is taken, so a
+  second dev server puts the app on `:8082` and every request fails
+  preflight. It has already happened once. **Asked for**: in development,
+  accept any `http://localhost:<port>` / `127.0.0.1` origin via an origin
+  callback instead of a fixed list; production stays closed by default,
+  since the product client is native and sends no `Origin`. Note also that
+  the CORS code itself was written by the frontend session and rode in on
+  commit `e895259` on `ui-sprint2` — it has not been reviewed by whoever
+  owns `apps/api`.
+
 ## Completed
 
 ### Setup Phase
@@ -318,6 +345,31 @@ relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
   which shows an empty state with a way to create or join a family. Every
   screen therefore has to survive `familyId === null` — that is a
   first-class state now, not an edge case.
+- **Apple Sign In dropped (2026-08-18)** — reversing the decision taken
+  earlier the same day. Social login is **Google + Facebook only**. The
+  trade-off is understood and accepted: App Store guideline 4.8 requires
+  Sign in with Apple on iOS once any other third-party login ships, so an
+  iOS build carrying Google or Facebook risks rejection at review. That is
+  acceptable while the MVP is a demo rather than a store submission. Before
+  any App Store submission the team must either add Apple or drop the other
+  two from the iOS build. `AppleMark` was removed from the code rather than
+  left unused, so putting it back is a deliberate act.
+- **Omoide is one shelf, not albums, for the MVP (2026-08-18)** — every
+  photo and video shared with the family, grouped by the day it was posted
+  (mockup 10b). This needs **no new endpoint**:
+  `GET /families/:id/posts` already returns each post with its media and
+  already excludes private posts, which is exactly the boundary a shared
+  memory shelf should have. Grouping is by _posted_ date, not capture date,
+  because the server returns no capture metadata. Mockup 10a — albums by
+  occasion — waits for an album endpoint and for the still-open question of
+  what an album is derived from.
+- **Home is 3a then 2a (2026-08-18)** — the family strip, the special-date
+  widget and the recommendations sit above the fold exactly as in mockup 3a;
+  scrolling past the "swipe up for moments" cue continues into the feed of
+  mockup 2a. One `FlatList` with the 3a block as its header, because on a
+  phone "swipe up" _is_ scrolling — a gesture library would reimplement what
+  the list already does. The separate `/moments` screen built earlier the
+  same day is deleted: two feeds is one too many.
 - **Kinship labels stay basic for the MVP (2026-08-18)**: the app shows the
   base relationship translated from `RelationshipType`, and does **not**
   derive "Grandmother" or "Aunt" from paths through the graph. Consequence

@@ -1,43 +1,55 @@
-import { MessageCircle } from 'lucide-react-native';
+import { Image } from 'expo-image';
+import { Heart, MessageCircle } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
-import { formatFullDate } from '../../lib/date';
 import type { PostDetail } from '../../lib/api';
+import { formatFullDate } from '../../lib/date';
+import { mediaSource } from '../../lib/media-source';
 import { colors, elevation, radius, spacing } from '../../theme';
 import { Avatar } from '../ui/avatar';
-import { PhotoPlaceholder } from '../ui/photo-placeholder';
 import { Text } from '../ui/text';
+
+/** One photo fills the card; two share the width. Mockup 2a. */
+const SINGLE_MEDIA_HEIGHT = 200;
+const PAIR_MEDIA_HEIGHT = 104;
+/** Beyond this the card would push the next post off the screen entirely. */
+const MAX_TILES = 2;
 
 export type PostCardProps = {
   post: PostDetail;
+  /** Which family this reached, already resolved to a word by the screen. */
+  audienceLabel?: string;
   onPress?: () => void;
   /** Opens the author's Life Profile. Omitted when they are not in this family. */
   onAuthorPress?: () => void;
 };
 
 /**
- * One moment in the feed.
+ * One moment in the feed, drawn to mockup 2a.
  *
- * The author's avatar is its own press target, not part of the card's:
- * tapping a face anywhere in the app opens that person's Life Profile, and a
- * card that swallowed the tap would make the tree the only way in.
+ * Two press targets side by side rather than one inside the other: the
+ * author block opens their Life Profile, the body opens the moment. Nesting
+ * them would be the same mistake `GroupStrip` had — `react-native-web` turns
+ * every `accessibilityRole="button"` into a real `<button>`, and HTML does
+ * not allow one inside another.
  *
- * Media is drawn as placeholders. The bytes need a bearer token
- * (`api-contract.md` → Media), so real thumbnails wait for the image layer
- * that can carry one — the count is honest in the meantime.
+ * The audience pill is not decoration. A post carrying no family is private
+ * to its author (`docs/02-backend/database.md`), and that is invisible
+ * everywhere else in the card — so it is stated rather than implied.
  */
-export function PostCard({ post, onPress, onAuthorPress }: PostCardProps) {
+export function PostCard({ post, audienceLabel, onPress, onAuthorPress }: PostCardProps) {
   const { t } = useTranslation();
 
   const posted = formatFullDate(post.createdAt.slice(0, 10));
-  const isEvent = post.type === 'EVENT';
+  const isPrivate = post.familyIds.length === 0;
+  const tiles = post.media.slice(0, MAX_TILES);
+  const isPair = tiles.length > 1;
+  const hasBody =
+    (post.content !== null && post.content !== '') || tiles.length > 0 || post.eventTitle !== null;
 
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={t('post.openLabel', { name: post.authorName })}
+    <View
       style={{
         backgroundColor: colors.background.card,
         borderRadius: radius['2xl'],
@@ -46,83 +58,125 @@ export function PostCard({ post, onPress, onAuthorPress }: PostCardProps) {
         ...elevation.card,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <Pressable
-          onPress={onAuthorPress}
-          disabled={onAuthorPress === undefined}
-          accessibilityRole="button"
-          accessibilityLabel={t('post.openProfile', { name: post.authorName })}
-          hitSlop={6}
-        >
-          <Avatar size={40} />
-        </Pressable>
+      <Pressable
+        onPress={onAuthorPress}
+        disabled={onAuthorPress === undefined}
+        accessibilityRole={onAuthorPress === undefined ? undefined : 'button'}
+        accessibilityLabel={t('post.openProfile', { name: post.authorName })}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+      >
+        <Avatar size={40} />
 
         <View style={{ flex: 1, gap: 1 }}>
           <Text variant="body1" weight="semibold" numberOfLines={1}>
             {post.authorName}
           </Text>
 
-          {posted !== null && (
-            <Text variant="caption" color={colors.text.subtle}>
-              {posted}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            {posted !== null && (
+              <Text variant="caption" weight="medium" color={colors.text.lightMuted}>
+                {posted}
+              </Text>
+            )}
+
+            {(isPrivate || audienceLabel !== undefined) && (
+              <>
+                <Text variant="caption" color={colors.state.borderDefault}>
+                  ·
+                </Text>
+
+                <View
+                  style={{
+                    height: 18,
+                    paddingHorizontal: 8,
+                    borderRadius: radius.full,
+                    justifyContent: 'center',
+                    backgroundColor: isPrivate ? colors.background.muted : colors.coral.soft,
+                  }}
+                >
+                  <Text
+                    variant="badge"
+                    weight="semibold"
+                    color={isPrivate ? colors.text.secondary : colors.coral.deep}
+                    numberOfLines={1}
+                    style={{ letterSpacing: 0.2 }}
+                  >
+                    {isPrivate ? t('post.private') : audienceLabel}
+                  </Text>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Pressable>
+
+      {hasBody && (
+        <Pressable
+          onPress={onPress}
+          disabled={onPress === undefined}
+          accessibilityRole={onPress === undefined ? undefined : 'button'}
+          accessibilityLabel={t('post.openLabel', { name: post.authorName })}
+          style={{ gap: 12 }}
+        >
+          {post.type === 'EVENT' && post.eventTitle !== null && (
+            <Text variant="body1" weight="semibold">
+              {post.eventTitle}
             </Text>
           )}
-        </View>
 
-        {post.familyIds.length === 0 && (
-          <View
-            style={{
-              paddingHorizontal: 8,
-              height: 20,
-              borderRadius: radius.full,
-              backgroundColor: colors.background.subtle,
-              justifyContent: 'center',
-            }}
-          >
-            <Text variant="badge" weight="semibold" color={colors.text.muted}>
-              {t('post.private')}
+          {post.content !== null && post.content !== '' && (
+            <Text variant="body2" color={colors.text.secondary}>
+              {post.content}
             </Text>
-          </View>
-        )}
-      </View>
+          )}
 
-      {isEvent && post.eventTitle !== null && (
-        <Text variant="body1" weight="semibold">
-          {post.eventTitle}
-        </Text>
+          {tiles.length > 0 && (
+            <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+              {tiles.map((item) => (
+                <Image
+                  key={item.id}
+                  source={mediaSource(item.id)}
+                  style={{
+                    flex: isPair ? 1 : undefined,
+                    width: isPair ? undefined : '100%',
+                    height: isPair ? PAIR_MEDIA_HEIGHT : SINGLE_MEDIA_HEIGHT,
+                    borderRadius: isPair ? radius.lg : radius.xl,
+                    backgroundColor: colors.background.subtle,
+                  }}
+                  contentFit="cover"
+                  // A moment is worth a beat of blur rather than a blank rectangle.
+                  transition={160}
+                  recyclingKey={item.id}
+                  accessibilityIgnoresInvertColors
+                />
+              ))}
+            </View>
+          )}
+        </Pressable>
       )}
 
-      {post.content !== null && post.content !== '' && (
-        <Text variant="body2" color={colors.text.body}>
-          {post.content}
-        </Text>
-      )}
-
-      {post.media.length > 0 && (
-        <View style={{ flexDirection: 'row', gap: spacing.xs, flexWrap: 'wrap' }}>
-          {post.media.slice(0, 3).map((item) => (
-            <PhotoPlaceholder
-              key={item.id}
-              style={{ flex: 1, minWidth: 92, height: 92, borderRadius: radius.lg }}
-            />
-          ))}
-        </View>
-      )}
-
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-        {post.reactionCount > 0 && (
-          <Text variant="caption" color={colors.text.subtle}>
-            {t('post.reactionCount', { count: post.reactionCount })}
+      {/* Counts, not controls. Reacting and commenting happen on the post
+          itself; a share icon is absent because there is nothing to share a
+          moment to yet. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Heart
+            size={16}
+            color={post.myReaction === null ? colors.text.lightMuted : colors.coral.primary}
+            strokeWidth={2}
+          />
+          <Text variant="caption" weight="medium" color={colors.text.secondary}>
+            {post.reactionCount}
           </Text>
-        )}
+        </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <MessageCircle size={15} color={colors.text.subtle} strokeWidth={2} />
-          <Text variant="caption" color={colors.text.subtle}>
+          <MessageCircle size={16} color={colors.text.lightMuted} strokeWidth={2} />
+          <Text variant="caption" weight="medium" color={colors.text.secondary}>
             {post.commentCount}
           </Text>
         </View>
       </View>
-    </Pressable>
+    </View>
   );
 }
