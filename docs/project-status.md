@@ -2,7 +2,9 @@
 
 ## Current Sprint
 
-**Sprint 1 — Core Features** (drafted — pending team review before start)
+**Sprint 1 — Core Features** (in progress — PRs #1–#9 merged; the
+"pending team review before start" note was stale and is removed
+2026-08-18)
 
 - Active sprint doc: `docs/sprints/sprint-01.md`
 - Later sprints: `docs/sprints/sprint-02.md` (Memories & AI),
@@ -60,6 +62,25 @@
   than adding one.
 - **`expo-image-picker` added (2026-08-18)** — the last thing standing
   between New moment and a working end-to-end post.
+- **Sprint 1 stands at 24 of 38 tasks (2026-08-18).** Groups 1.1, 1.3, 1.4
+  and 1.5 are essentially closed. Group 1.2 waits on one endpoint
+  (`SpecialDate`, task 1.2.5). **Group 1.6 — the one containing "the
+  central screen of the product" — has one of seven done**, and it is the
+  API half; no Life Profile UI is wired.
+- **Two gaps in the sprint plan itself**, both worth a team decision rather
+  than a silent fix:
+  1. **Apple Sign In has no task.** It was decided on 2026-08-18 and is
+     mandatory on iOS once any other third-party login ships, but 1.1.8 and
+     1.1.9 cover only Google and Facebook.
+  2. **Task 1.5.3 is marked backend-only** ("preview thuộc UI 1.5.1") while
+     1.5.1 is described as "nhập nội dung". The media picker fell between
+     the two; it was built on 2026-08-18 under 1.5.1, but the WBS should
+     say who owns it.
+- **Nothing has been run on a physical device yet.** Every ticked frontend
+  task was verified by typecheck, prettier, `check:i18n`, a static export,
+  and replaying the endpoints against a running server — not by a person
+  using the app. The picker, blur, sheets and gestures only tell the truth
+  on hardware (`docs/04-devops/mobile-development.md`).
 - **Four blocking questions answered 2026-08-18** — see Important
   Decisions: solar-only stands, Apple joins Google and Facebook, Home gets
   a skippable empty state, kinship labels stay at the base relationships.
