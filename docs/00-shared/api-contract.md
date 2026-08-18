@@ -30,7 +30,7 @@ both move together.
 
 ## What exists today
 
-Thirty-two routes, all verified against the source.
+Thirty-three routes, all verified against the source.
 
 ### Auth — `apps/api/src/auth/`
 
@@ -171,6 +171,33 @@ the bio, `interests` replaces the whole list. Dates are strict ISO 8601;
 the single source the special-date widgets (1.2.5) and Sprint-3 reminders
 will derive from.
 
+### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side)
+
+| Route                                   | Returns                |
+| --------------------------------------- | ---------------------- |
+| `GET /families/:familyId/special-dates` | `UpcomingSpecialDates` |
+
+`UpcomingSpecialDates` is `{ items: SpecialDateItem[] }`, soonest first,
+`?limit` 1–50 (default 10). Each item:
+`{ source: 'DERIVED'|'CUSTOM', type, title, month, day, originYear,
+ordinal, theme, nextOccurrence, daysUntil, members[] }` with `members[]`
+items `{ memberId, displayName }`.
+
+- **DERIVED** items come from LifeProfile dates: a birthday per living
+  member with a `birthDate` (theme `CONFETTI_CANDLES`), a memorial per
+  member with a `deathDate` (theme `FLORAL_BORDER`). A deceased member
+  gets a memorial only, no birthday. No rows are stored.
+- **CUSTOM** items are `SpecialDate` rows (anniversaries etc.). Their
+  CRUD ships with Sprint 3 (task 3.2.3) — until then the table is
+  normally empty.
+- `title` is only set on CUSTOM items. **Derived items carry no text**:
+  build the label client-side from `type`, `members` and `ordinal`
+  ("Dad turns 63", 三回忌) — i18n lives in the app, per the
+  relationship-label principle.
+- `nextOccurrence` (YYYY-MM-DD) and `daysUntil`/`ordinal` are computed
+  at request time, never stored. Feb 29 occurrences roll to Mar 1 in
+  non-leap years.
+
 ### Media — `apps/api/src/media/` (task 1.5.3, merged in PR #5)
 
 | Route                 | Returns        |
@@ -204,7 +231,7 @@ an endpoint, so no amount of frontend work will connect these screens.
 | **Invitation** (`invite/[code].tsx`) | A public read of an invite code — who invited you, which family, which spot. `POST /families/join` both requires a token and joins immediately, so it cannot preview. |
 | **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~ — **resolved** (profile routes above, task 1.6.2). Still missing: LifeEvent (1.6.8), the derived gallery (1.6.4), Memo (1.6.5).                       |
 | **New moment** (`(tabs)/new.tsx`)    | ~~Post + media upload~~ — **resolved**: `POST /media` then `POST /posts` (tasks 1.5.2–1.5.5, PR #5).                                                                  |
-| **Home**                             | ~~moments feed~~ — **resolved**: `GET /families/:familyId/posts` (task 1.2.3). Still missing: SpecialDate widgets and recommendations.                                |
+| **Home**                             | ~~moments feed~~, ~~SpecialDate widgets~~ — **resolved** (`GET .../posts`, `GET .../special-dates`). Still missing: recommendations.                                  |
 | **AI tab + gift ideas**              | The whole of `apps/ai` — the FastAPI service does not exist.                                                                                                          |
 
 ### The relationship-label question

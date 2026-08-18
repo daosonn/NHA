@@ -36,7 +36,13 @@ build the family tree, post content with photos, and view member profiles.
       `GET /api/families/:familyId/posts` (mới nhất trước, cursor
       pagination, membership-based authorization); UI chưa nối
 - [ ] 1.2.4 Empty/loading state (UI đầy đủ)
-- [ ] 1.2.5 Widget dịp đặc biệt trên Home (countdown + theme — sinh nhật/ngày giỗ derived từ LifeProfile; added 2026-08-14, see `database.md`)
+- [ ] 1.2.5 Widget dịp đặc biệt trên Home (countdown + theme — sinh
+      nhật/ngày giỗ derived từ LifeProfile; added 2026-08-14, see
+      `database.md`) — API done 2026-08-18:
+      `GET /api/families/:familyId/special-dates` (sinh nhật/ngày giỗ
+      derive từ LifeProfile + row `SpecialDate` custom, sắp theo ngày
+      gần nhất, ordinal + theme + nextOccurrence tính lúc đọc; người
+      đã mất chỉ có ngày giỗ — assumption cần team xác nhận). UI chưa nối
 
 ### 1.3 Tạo nhóm gia đình — Family Group
 

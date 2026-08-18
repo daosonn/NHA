@@ -144,7 +144,19 @@
   (strict ISO, death ≥ birth) — the single source the 1.2.5 widgets and
   Sprint-3 reminders derive from. Task 1.6.2 API side done; verified by
   lint/build + 11-case live smoke test incl. EditHistory rows in the
-  DB. On branch `feature/life-profile`, uncommitted.
+  DB. Merged to `main` in PR #9 (2026-08-18).
+- Special-dates widget API (2026-08-18):
+  `GET /api/families/:familyId/special-dates` — upcoming occasions for
+  the family-home widgets (task 1.2.5 API side), soonest first, from
+  both sources in `database.md`: birthdays/memorials derived from
+  LifeProfile dates (no rows stored; deceased members get a memorial
+  only — assumption to confirm) plus stored `SpecialDate` rows (CRUD
+  stays in Sprint 3 task 3.2.3). Returns type/month/day/originYear/
+  ordinal/theme/nextOccurrence/daysUntil/members; derived items carry
+  no display text — the client labels them (i18n). Verified by
+  lint/build + live smoke test (today-edge, ordinal, deceased rule,
+  custom row, limit validation, 403). On branch
+  `feature/special-dates`, uncommitted.
 - Comments + Reactions API (2026-08-18): CRUD
   `/api/posts/:postId/comments` (oldest first, cursor-paginated; anyone
   who can view the post comments, only the comment author edits/deletes
