@@ -6,14 +6,17 @@ import {
   type JwtModuleOptions,
   type JwtSignOptions,
 } from '@nestjs/jwt';
+import { MailModule } from '../mail/mail.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { OAuthController } from './oauth/oauth.controller';
 import { OAuthService } from './oauth/oauth.service';
+import { PasswordResetService } from './password-reset.service';
 
 @Module({
   imports: [
+    MailModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService): JwtModuleOptions => ({
@@ -30,6 +33,7 @@ import { OAuthService } from './oauth/oauth.service';
   providers: [
     AuthService,
     OAuthService,
+    PasswordResetService,
     // Every route is protected by default; opt out with @Public().
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],

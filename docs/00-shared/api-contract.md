@@ -37,7 +37,9 @@ than letting this paragraph imply otherwise.
 
 ## What exists today
 
-Thirty-two routes, all verified against the source.
+Every route below is verified against the source; the live inventory is
+Swagger at `/api/docs` (no hand-maintained count here — it only causes
+merge conflicts).
 
 ### Auth — `apps/api/src/auth/`
 
@@ -49,6 +51,9 @@ Thirty-two routes, all verified against the source.
 | `POST /auth/logout`                  | ✔    | `{ success }` |
 | `GET /auth/oauth/:provider`          | —    | redirect      |
 | `GET /auth/oauth/:provider/callback` | —    | `AuthResult`  |
+| `POST /auth/password-reset/request`  | —    | `{ success }` |
+| `POST /auth/password-reset/verify`   | —    | `{ valid }`   |
+| `POST /auth/password-reset/confirm`  | —    | `{ success }` |
 
 `AuthResult` is `{ user: { id, email, name }, accessToken, refreshToken }`.
 
@@ -58,6 +63,15 @@ attempted. A dropped response costs the session.
 
 Social login is a browser redirect, not a fetch. Providers are Google and
 Facebook; a provider with no client ID configured returns 503.
+
+Password reset is the three-step flow of screen 3: `request` emails a
+6-digit code and answers success **whether or not the email exists** (no
+account enumeration). The code lives 15 minutes, dies after 5 wrong
+guesses, and is single-use. `verify` checks it without consuming — the
+middle UI step; `confirm` sets the new password and **revokes every
+refresh token**, signing all devices out. Delivery is SMTP (Gmail app
+password for the MVP); with SMTP unconfigured (local dev) the code is
+logged to the API console instead of sent.
 
 ### Families — `apps/api/src/family/`
 
@@ -207,7 +221,7 @@ an endpoint, so no amount of frontend work will connect these screens.
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Family tree** (`family.tsx`)       | ~~`GET` for relationships~~ — **resolved**: `GET /families/:familyId/tree` returns nodes + edges (task 1.4.1). Remaining: the kinship-label derivation below.         |
 | **Verify code** (`verify.tsx`)       | Send / confirm an email code. Registration returns tokens immediately today, so the screen has nothing to call.                                                       |
-| **Forgot + reset password**          | WBS 1.1.7, deferred pending an email-infrastructure decision.                                                                                                         |
+| **Forgot + reset password**          | ~~WBS 1.1.7~~ — **resolved**: `POST /auth/password-reset/{request,verify,confirm}` (email infrastructure decided 2026-08-18: SMTP/Gmail).                             |
 | **Invitation** (`invite/[code].tsx`) | A public read of an invite code — who invited you, which family, which spot. `POST /families/join` both requires a token and joins immediately, so it cannot preview. |
 | **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~ — **resolved** (profile routes above, task 1.6.2). Still missing: LifeEvent (1.6.8), the derived gallery (1.6.4), Memo (1.6.5).                       |
 | **New moment** (`(tabs)/new.tsx`)    | ~~Post + media upload~~ — **resolved**: `POST /media` then `POST /posts` (tasks 1.5.2–1.5.5, PR #5).                                                                  |
