@@ -1,3 +1,6 @@
+import type { AudienceGroup } from '../components/moment/audience-picker';
+import type { DraftMedia } from '../components/moment/media-strip';
+
 /**
  * Stand-in data for the New moment screen.
  *
@@ -13,25 +16,6 @@
  * - each attachment is a `Media` row; `mimeType` is what separates a photo
  *   from a video, so the draft carries `kind` rather than two lists.
  */
-
-export type DraftMediaKind = 'photo' | 'video';
-
-export type DraftMedia = {
-  id: string;
-  kind: DraftMediaKind;
-  tone: 'light' | 'dark';
-  /** Videos only, pre-formatted — `0:12`. */
-  duration?: string;
-};
-
-export type AudienceGroup = {
-  /** `Family.id`. */
-  id: string;
-  /** `Family.name`. */
-  name: string;
-  tone: 'light' | 'dark';
-  memberCount: number;
-};
 
 /**
  * Every family the author belongs to. The picker starts with all of them

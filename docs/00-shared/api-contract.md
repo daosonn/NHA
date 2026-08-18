@@ -5,9 +5,16 @@ what it may not.
 
 The client-side mirror of this document is `apps/mobile/src/lib/api/`:
 `types.ts` (the shapes), `endpoints.ts` (one function per route),
-`client.ts` (fetch, bearer token, errors). Those files were written from the
-NestJS controllers and DTOs, not from a wish list. When the server changes,
-both move together.
+`client.ts` (fetch, bearer token, refresh, errors). Those files were written
+from the NestJS controllers and DTOs, not from a wish list. When the server
+changes, both move together.
+
+Replayed against a running server on 2026-08-18, and matching `types.ts` as
+of that date: register, refresh (including a deliberate replay of a spent
+token), families list and create, tree, join, media upload, post create,
+feed, comment create and list, and all three reaction calls. Anything added
+after that date has not been replayed — say so when you add a row rather
+than letting this paragraph imply otherwise.
 
 ## Ground rules
 
@@ -218,19 +225,27 @@ return them.
 So the app owns that derivation, and it has to be done in the catalogue
 rather than in English: `祖母` is not a translation of "grandmother" that a
 string table can reach if the noun arrives from the server already in
-English. Flagged in `docs/01-frontend/architecture.md` § Language; still
-needs a decision before the tree is wired.
+English.
 
-## Wiring order, when the time comes
+**Decided 2026-08-18**: the MVP shows the **base relationship only** —
+parent, child, spouse, sibling and the exception types — translated
+directly from `RelationshipType` plus the direction of the edge. It does
+not walk the graph, so "Grandmother", "Aunt" and "Cousin" do not appear.
+The consequence to accept is that a node with no direct edge to the viewer
+shows its name with no role line under it. Revisit once a real family has
+used the tree.
 
-1. `configureApi({ baseUrl, getAccessToken })` once in `app/_layout.tsx`.
-2. Real session in `src/features/auth/session.tsx`: tokens to
-   `expo-secure-store`, never `AsyncStorage` (`CLAUDE.md` § 5). Refresh on
-   401, sign out when refresh itself fails.
-3. `QueryClientProvider`, then one hook per endpoint under
-   `src/features/<feature>/`.
+## Wiring order
+
+1. ~~`configureApi` once in `app/_layout.tsx`~~ — **done 2026-08-18**, at
+   module scope, because a child's effect can fire a request before the
+   root component's own effects run.
+2. ~~Real session~~ — **done 2026-08-18**. Tokens in `expo-secure-store`;
+   refresh on 401 behind a single-flight gate; sign out when refresh itself
+   fails.
+3. ~~`QueryClientProvider` + hooks~~ — **done 2026-08-18** for families,
+   family tree and the family feed.
 4. Screens swap a fixture import for a hook, and gain the loading and
-   error states they do not have yet.
-
-Steps 1–2 are auth work and land with the AuthModule wiring. Step 4 is per
-screen and is only possible for screens whose endpoints exist.
+   error states they did not have. **In progress** — per-screen status lives
+   in `docs/01-frontend/architecture.md` § Wiring status, so it stays next
+   to the code it describes instead of in this shared file.

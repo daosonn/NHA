@@ -8,7 +8,6 @@ import { FormScreen } from '../../src/components/layout/form-screen';
 import { Button } from '../../src/components/ui/button';
 import { OtpInput } from '../../src/components/ui/otp-input';
 import { Text } from '../../src/components/ui/text';
-import { useSession } from '../../src/features/auth/session';
 import { colors } from '../../src/theme';
 
 const CODE_LENGTH = 6;
@@ -28,12 +27,7 @@ function countdown(seconds: number): string {
 export default function VerifyScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { signIn } = useSession();
-  const { email, intent, name } = useLocalSearchParams<{
-    email?: string;
-    intent?: string;
-    name?: string;
-  }>();
+  const { email, intent } = useLocalSearchParams<{ email?: string; intent?: string }>();
 
   const [code, setCode] = useState('');
   const [seconds, setSeconds] = useState(RESEND_SECONDS);
@@ -47,12 +41,22 @@ export default function VerifyScreen() {
   const address = email ?? t('auth.verify.fallbackAddress');
   const resetting = intent === 'reset';
 
+  /**
+   * There is no endpoint behind this screen yet — nothing sends a code and
+   * nothing confirms one (`docs/00-shared/api-contract.md`). Registration
+   * returns a token pair straight away, so the sign-up flow no longer comes
+   * through here at all; only the reset flow does, and that only needs the
+   * address carried forward.
+   *
+   * It must not sign anyone in: doing so would hand out a session with no
+   * token behind it, reachable by anyone who opens `/verify` directly.
+   */
   const submit = () => {
     if (resetting) {
       router.push({ pathname: '/reset', params: { email: address } });
       return;
     }
-    signIn({ email: address, displayName: name !== undefined && name !== '' ? name : 'Minh' });
+    router.replace('/sign-in');
   };
 
   return (

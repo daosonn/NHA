@@ -1,39 +1,115 @@
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
 import { Send } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
-import { AudiencePicker } from '../../src/components/moment/audience-picker';
-import { MediaStrip } from '../../src/components/moment/media-strip';
+import { AudiencePicker, type AudienceGroup } from '../../src/components/moment/audience-picker';
+import { MediaStrip, type DraftMedia } from '../../src/components/moment/media-strip';
 import { Button } from '../../src/components/ui/button';
 import { Text } from '../../src/components/ui/text';
 import { TextField } from '../../src/components/ui/text-field';
-import {
-  audienceGroups,
-  draftCaption,
-  draftMedia,
-  type AudienceGroup,
-  type DraftMedia,
-} from '../../src/fixtures/moment';
+import { useFamilies } from '../../src/features/family/use-families';
+import { momentErrorKey } from '../../src/features/moment/moment-error';
+import { useCreateMoment } from '../../src/features/moment/use-create-moment';
+import type { FamilySummary } from '../../src/lib/api';
 import { colors, spacing } from '../../src/theme';
 
 /** Clears the bottom nav (56pt plus the home indicator) with room to breathe. */
 const BOTTOM_INSET = 140;
 
+function toAudience(families: FamilySummary[]): AudienceGroup[] {
+  return families.map((family, index) => ({
+    id: family.id,
+    name: family.name,
+    tone: index % 2 === 0 ? 'light' : 'dark',
+    memberCount: family.memberCount,
+  }));
+}
+
+/** Milliseconds from the picker to the `0:12` the tile draws. */
+function formatDuration(ms: number): string {
+  const total = Math.round(ms / 1000);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
+function toDraft(asset: ImagePicker.ImagePickerAsset): DraftMedia {
+  const isVideo = asset.type === 'video';
+
+  return {
+    id: asset.assetId ?? asset.uri,
+    kind: isVideo ? 'video' : 'photo',
+    tone: 'light',
+    uri: asset.uri,
+    fileName: asset.fileName ?? undefined,
+    mimeType: asset.mimeType ?? undefined,
+    duration:
+      isVideo && asset.duration !== null && asset.duration !== undefined
+        ? formatDuration(asset.duration)
+        : undefined,
+  };
+}
+
 export default function NewMomentScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
 
-  const [caption, setCaption] = useState(draftCaption);
-  const [media, setMedia] = useState<DraftMedia[]>(draftMedia);
-  const [selected, setSelected] = useState<string[]>(audienceGroups.map((group) => group.id));
+  const { data: families } = useFamilies();
+  const create = useCreateMoment();
+
+  const [caption, setCaption] = useState('');
+  const [media, setMedia] = useState<DraftMedia[]>([]);
+  // Excluded rather than selected: everything starts lit, and the
+  // destructive direction is the one that needs a deliberate tap.
+  const [excludedIds, setExcludedIds] = useState<string[]>([]);
+  const [permissionDenied, setPermissionDenied] = useState(false);
+
+  const audience = families === undefined ? [] : toAudience(families);
+  const selected = audience.filter((group) => !excludedIds.includes(group.id));
+  const excluded = audience.filter((group) => excludedIds.includes(group.id));
 
   const toggle = (group: AudienceGroup) =>
-    setSelected((current) =>
+    setExcludedIds((current) =>
       current.includes(group.id) ? current.filter((id) => id !== group.id) : [...current, group.id],
     );
 
-  const excluded = audienceGroups.filter((group) => !selected.includes(group.id));
+  const pick = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      setPermissionDenied(true);
+      return;
+    }
+
+    setPermissionDenied(false);
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images', 'videos'],
+      allowsMultipleSelection: true,
+      quality: 0.8,
+    });
+
+    if (result.canceled) return;
+    setMedia((current) => [...current, ...result.assets.map(toDraft)]);
+  };
+
+  const ready = caption.trim() !== '' || media.length > 0;
+
+  const submit = () => {
+    create.mutate(
+      { content: caption, media, familyIds: selected.map((group) => group.id) },
+      {
+        onSuccess: () => {
+          setCaption('');
+          setMedia([]);
+          setExcludedIds([]);
+          router.replace('/');
+        },
+      },
+    );
+  };
 
   // A count of families, worded so "1" does not read as a bug.
   const postLabel =
@@ -68,10 +144,18 @@ export default function NewMomentScreen() {
           <Text variant="body1" weight="semibold">
             {t('moment.media')}
           </Text>
+
           <MediaStrip
             media={media}
+            onAdd={() => void pick()}
             onRemove={(item) => setMedia((current) => current.filter((m) => m.id !== item.id))}
           />
+
+          {permissionDenied && (
+            <Text variant="caption" color={colors.themes.destructive.text}>
+              {t('moment.permissionDenied')}
+            </Text>
+          )}
         </View>
 
         <View style={{ gap: 8 }}>
@@ -84,14 +168,38 @@ export default function NewMomentScreen() {
             </Text>
           </View>
 
-          <AudiencePicker groups={audienceGroups} selected={selected} onToggle={toggle} />
+          {audience.length === 0 ? (
+            <Text variant="body2" color={colors.text.subtle}>
+              {t('moment.noFamilies')}
+            </Text>
+          ) : (
+            <AudiencePicker
+              groups={audience}
+              selected={selected.map((group) => group.id)}
+              onToggle={toggle}
+            />
+          )}
         </View>
 
         <View style={{ gap: 10 }}>
+          {create.error !== null && (
+            <Text
+              variant="caption"
+              color={colors.themes.destructive.text}
+              accessibilityRole="alert"
+              style={{ textAlign: 'center' }}
+            >
+              {t(momentErrorKey(create.error))}
+            </Text>
+          )}
+
           <Button
             label={postLabel}
             size="large"
             fullWidth
+            disabled={!ready}
+            loading={create.isPending}
+            onPress={submit}
             renderIcon={({ size, color }) => <Send size={size} color={color} strokeWidth={2.1} />}
           />
 

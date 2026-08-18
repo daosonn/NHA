@@ -86,7 +86,14 @@
       "confirmPassword": "パスワードの確認",
       "mismatch": "パスワードが一致しません",
       "submit": "保存してログイン"
-    }
+    },
+    "errors": {
+      "invalidCredentials": "メールアドレスまたはパスワードが正しくありません。",
+      "emailTaken": "このメールアドレスは既に登録されています。",
+      "checkFields": "入力内容を確認してもう一度お試しください。"
+    },
+    "facebook": "Facebook",
+    "continueFacebook": "Facebook で続ける"
   },
   "home": {
     "recommendations": "おすすめ",
@@ -95,13 +102,17 @@
     "openFamilyTree": "家系図を開く",
     "join": "参加",
     "moreGroups": "+{{count}}",
-    "swipeCue": "上にスワイプで思い出へ"
+    "swipeCue": "上にスワイプで思い出へ",
+    "noFamilyTitle": "まだ家族がありません",
+    "noFamilyBody": "家族を作って一緒に残したい人を招待するか、受け取ったコードで参加してください。",
+    "startFamily": "家族を作る・参加する",
+    "loadFailed": "家族の一覧を読み込めませんでした。",
+    "retry": "もう一度"
   },
   "family": {
     "title": "家系図",
     "generations_other": "{{count}}世代",
     "members_other": "{{count}}人",
-    "pending_other": "承認待ち{{count}}人",
     "hint": "タップするとその人のプロフィールが開きます",
     "zoomIn": "拡大",
     "zoomOut": "縮小",
@@ -114,7 +125,21 @@
     "pendingRole": "{{role}}・承認待ち",
     "waitingFor": "{{name}}さんを待っています",
     "invitedAs": "{{role}}として招待・{{sent}}",
-    "resend": "再送信"
+    "resend": "再送信",
+    "generation": "第{{index}}世代",
+    "relation": {
+      "parent": "親",
+      "child": "子",
+      "spouse": "配偶者",
+      "sibling": "きょうだい",
+      "adoptedParent": "養親",
+      "adoptedChild": "養子",
+      "stepParent": "継親",
+      "stepChild": "継子"
+    },
+    "loadFailed": "家系図を読み込めませんでした。",
+    "emptyTitle": "まだ誰もいません",
+    "emptyBody": "この家族の人を追加すると、家系図が自動で描かれます。"
   },
   "invite": {
     "sheet": {
@@ -203,7 +228,14 @@
     "postTo_other": "{{count}}つの家族に投稿",
     "explainPrivate": "家族が選ばれていません。この思い出はあなただけのものになります。",
     "explainEveryone": "同じ家族にいる人みんなに表示されます。",
-    "explainSkipped_other": "{{names}}は外れているので表示されません。"
+    "explainSkipped_other": "{{names}}は外れているので表示されません。",
+    "noFamilies": "投稿する前に家族を作成するか参加してください。",
+    "permissionDenied": "写真を添付するにはアクセス許可が必要です。",
+    "errors": {
+      "tooLarge": "ファイルが 100MB の上限を超えています。",
+      "unsupported": "この形式のファイルには対応していません。",
+      "empty": "写真を追加するか、何か書いてください。"
+    }
   },
   "ai": {
     "title": "AI",
@@ -256,6 +288,55 @@
       "10": "10月",
       "11": "11月",
       "12": "12月"
+    }
+  },
+  "errors": {
+    "offline": "サーバーに接続できませんでした。通信環境を確認してもう一度お試しください。",
+    "generic": "問題が発生しました。もう一度お試しください。"
+  },
+  "createFamily": {
+    "title": "家族",
+    "createTab": "作成",
+    "joinTab": "参加",
+    "createHeading": "家族のスペースを作る",
+    "createBody": "招待した人だけが、ここに残したものを見られます。",
+    "nameLabel": "家族の名前",
+    "namePlaceholder": "母方の家族",
+    "createSubmit": "家族を作成",
+    "joinHeading": "コードで参加",
+    "joinBody": "家族の誰かから届いた 8 文字のコードです。",
+    "codeLabel": "招待コード",
+    "codePlaceholder": "ABCD2345",
+    "joinSubmit": "家族に参加",
+    "errors": {
+      "codeNotFound": "そのコードの家族が見つかりません。",
+      "alreadyMember": "すでにその家族に参加しています。"
+    }
+  },
+  "post": {
+    "title": "思い出",
+    "momentsTitle": "思い出",
+    "openLabel": "{{name}}さんの投稿を開く",
+    "openProfile": "{{name}}さんのプロフィールを開く",
+    "private": "非公開",
+    "reactionCount_other": "リアクション {{count}}件",
+    "comments_other": "コメント {{count}}件",
+    "noComments": "まだコメントはありません。",
+    "addComment": "コメントを書く",
+    "commentPlaceholder": "何か書いてみましょう",
+    "send": "送信",
+    "loadMoreComments": "以前のコメント",
+    "loadFailed": "思い出を読み込めませんでした。",
+    "emptyTitle": "まだ思い出がありません",
+    "emptyBody": "家族の誰かが最初の写真を共有すると、ここに表示されます。",
+    "unavailableTitle": "表示できません",
+    "unavailableBody": "この投稿は削除されたか、共有されていません。",
+    "reactions": {
+      "like": "いいね",
+      "love": "大好き",
+      "haha": "うける",
+      "wow": "すごい",
+      "sad": "悲しい"
     }
   }
 }

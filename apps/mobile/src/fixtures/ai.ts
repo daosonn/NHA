@@ -1,15 +1,15 @@
 /**
  * Stand-in data for the AI section.
  *
- * Two rules are encoded here rather than in the screens, because they are
- * product rules and the UI must not be able to break them:
+ * One rule is encoded here rather than in the screens, because it is a
+ * product rule and the UI must not be able to break it: **every suggestion
+ * carries `why` and `source`**. A gift idea nobody can trace back to a
+ * memo, a photo or the timeline is a guess wearing the family's clothes,
+ * and the person reading it has no way to tell the difference.
  *
- * 1. An occasion is a date the family keeps. Some follow the lunar calendar
- *    (`note`), so the Gregorian day drifts every year and cannot be stored
- *    as a fixed date — see `docs/00-shared/domain-model.md`.
- * 2. Every suggestion carries `why` and `source`. A gift idea nobody can
- *    trace back to a memo, a photo or the timeline is a guess wearing the
- *    family's clothes, and the person reading it has no way to tell.
+ * Occasion dates are **solar only** (`docs/00-shared/domain-model.md`,
+ * reaffirmed 2026-08-18). `note` qualifies the date — a time, a place —
+ * and is not a second calendar.
  */
 
 export type OccasionKind = 'birthday' | 'memorial' | 'anniversary' | 'holiday' | 'milestone';
@@ -22,7 +22,7 @@ export type Occasion = {
   month: string;
   daysAway: number;
   kind: OccasionKind;
-  /** Anything that qualifies the date — a lunar reckoning, a time, a place. */
+  /** Anything that qualifies the date — a time, a place. */
   note: string | null;
 };
 
@@ -61,7 +61,7 @@ export const upcomingOccasions: Occasion[] = [
     month: 'Apr',
     daysAway: 32,
     kind: 'memorial',
-    note: 'lunar 10/2',
+    note: 'at the old house',
   },
   {
     id: 'oc_linh_graduation',

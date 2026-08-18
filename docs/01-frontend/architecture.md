@@ -23,9 +23,13 @@ put product features there without an explicit decision.
 apps/mobile              Expo app — the product
 apps/web                 Next.js scaffold — role TBD
 packages/tokens          design tokens, plain TS, no React Native imports
-packages/contracts       (planned) zod schemas shared with the API
-packages/api-client      (planned) typed REST client
 ```
+
+`packages/contracts` and `packages/api-client` were planned and **dropped
+2026-08-18**. The client lives fine in `apps/mobile/src/lib/api`, and
+extracting it only pays off once `apps/web` has a role; a shared zod
+package would fight the API's own class-validator DTOs rather than share
+anything with them.
 
 `packages/tokens` must stay framework-agnostic: `apps/mobile` uses
 NativeWind (Tailwind 3.4) while `apps/web` uses Tailwind 4. Each app maps
@@ -67,6 +71,7 @@ app/                      expo-router routes — file = route
     new.tsx               New moment
     ai.tsx                AI suggestions
     profile.tsx           My profile
+  create-family.tsx       Create or join — the way out of an empty account
   family.tsx              Family tree — pushed, not a tab
   member/[id].tsx         Life Profile (Timeline / Album / Memo)
   ai/gifts.tsx            Gift ideas — pushed from the AI tab
@@ -98,14 +103,42 @@ lives in `src/features/`.
 
 ## Signed in, signed out
 
-`src/features/auth/session.tsx` holds who is signed in. It is a stand-in:
-in memory, no request, no token, so every reload starts at Welcome.
+Two modules, split on purpose:
+
+- `src/features/auth/session-store.ts` — the token pair, **outside React**.
+  The API client has to read the access token synchronously on every
+  request, from a plain function, and a hook cannot be called from there.
+- `src/features/auth/session.tsx` — the React view of that store, via
+  `useSyncExternalStore`. Not a second copy of it.
+
+Persistence is `expo-secure-store`: the iOS keychain and the Android
+keystore. On web the module is a stub whose calls throw, so the store falls
+back to `localStorage` purely to keep the browser dev tier usable — nothing
+that matters should be demonstrated there.
+
+**Refresh is single-use rotation**, so at most one refresh may be in the air
+at a time. Opening the app fires several queries at once; if the access
+token has expired they all come back 401 together, and without a gate each
+would spend the same refresh token and all but the first would fail —
+taking the session down mid-use. `client.ts` collapses them onto one
+promise (`refreshOnce`) and retries each request once with the result.
+Verified against the running API on 2026-08-18: replaying a refresh token
+returns 401.
+
+`status` has three values, not two. `loading` covers the asynchronous read
+from the keychain; a guard that treated it as signed out would bounce every
+returning user through Welcome on every cold start.
 
 The guard sits on the two route **groups**, not on individual screens —
 `(tabs)/_layout.tsx` redirects to `/welcome` when there is no session, and
 `(auth)/_layout.tsx` redirects to `/` when there is one. That is one gate
-each way rather than one per screen, and it is the single place to change
-when the AuthModule is wired.
+each way rather than one per screen.
+
+One consequence for verification: both guards render `null` while the
+session is still loading, and an effect never runs during a prerender, so
+**every guarded route now prerenders empty**. The static-export check in
+`docs/04-devops/commands.md` still proves the modules evaluate and the
+bundle builds; it no longer proves a tab screen renders.
 
 `invite/[code].tsx` deliberately sits outside both: an invitation link is
 opened by someone who has no account yet.
@@ -117,11 +150,17 @@ the app must not derive permissions from what it finds in the session
 
 ## State
 
-- **Server state** — `@tanstack/react-query`. One hook per endpoint,
-  under `src/features/<feature>/`. No manual global cache.
-- **Client state** — `zustand`, only for state that genuinely spans
-  screens (active family, session). Everything else stays local.
-- **Auth tokens** — `expo-secure-store`, never `AsyncStorage`.
+- **Server state** — `@tanstack/react-query` (installed 2026-08-18). One
+  hook per endpoint under `src/features/<feature>/`, keys from
+  `src/lib/query-keys.ts`. Defaults live in `src/lib/query-client.ts`:
+  retry only what retrying can fix (an offline request, never a 404), and
+  never retry a mutation, because a retried "post moment" posts twice.
+- **Client state** — React context, and only for what genuinely spans
+  screens. **`zustand` was considered and not added**: the only candidate
+  is the active family, and one value does not need a store. Revisit when
+  there is a third.
+- **Auth tokens** — `expo-secure-store` (installed 2026-08-18), never
+  `AsyncStorage`.
 
 Authorization is enforced by the API. The app must not decide permissions
 from local state (`CLAUDE.md` § 3).
@@ -246,6 +285,60 @@ blur, sheets or gestures must be checked on the device before it is
 considered done.
 
 Setup details: `docs/04-devops/mobile-development.md`.
+
+## Wiring status
+
+Which screens talk to the server, and what holds the rest back. Kept here
+rather than in `docs/00-shared/api-contract.md`, which several people write
+to — that document describes what the API offers, this one describes what
+this app does with it.
+
+| Screen                  | State                                                                                                                                        |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sign in / Sign up       | **Wired.** Social buttons still render without handlers, pending Apple on the server.                                                        |
+| Home                    | **Wired** — families, with loading, error and a "no family yet" empty state. Event widget and recommendations stay on fixtures: no endpoint. |
+| Create / join family    | **Wired** (`app/create-family.tsx`). 404 = unknown code, 409 = already a member.                                                             |
+| Family tree             | **Wired**, including adding a member. See § Family tree below.                                                                               |
+| New moment              | **Wired** — pick media, upload, post, choose audience.                                                                                       |
+| Moments + Post detail   | **Wired** — feed, comments, reactions (`app/moments.tsx`, `app/post/[id].tsx`).                                                              |
+| Life Profile            | Header and About could be wired; Timeline, Album and Memo have no endpoint, so the screen waits rather than showing one working tab of four. |
+| Omoide                  | No album endpoints, and "derived from what" is undecided. Still a placeholder.                                                               |
+| AI tab + Gift ideas     | `apps/ai` does not exist.                                                                                                                    |
+| Invitation page         | Needs a public read of an invite code; `POST /families/join` requires a token and joins immediately, so it cannot preview.                   |
+| Verify / Forgot / Reset | No endpoint. They no longer fake a session — see § Auth.                                                                                     |
+
+### Family tree
+
+`GET /families/:id/tree` returns members and flat edges; the component takes
+rows, partner links and descents. `features/family/tree-from-graph.ts` is the
+piece between them.
+
+Generations come from distance to a root, and partners are then pulled level
+with each other — someone who married in has no parent in this family and
+would otherwise sit in the top row while their spouse sits three rows down.
+
+Two things it cannot produce, both for the same reason: `empty` and
+`pending` nodes describe a spot reserved for a named invitee, and the server
+has one invite code per family rather than per spot. The component still
+supports both states; nothing feeds them.
+
+Kinship words are base relationships only (decided 2026-08-18). A node with
+no direct edge to the viewer — a grandparent, a cousin — shows its name with
+no role line underneath.
+
+**Adding a member is two calls**, because there is no "add a related member"
+route: create the placeholder, then create the edge. If the edge fails the
+member is left behind rather than rolled back — the server owns transactions
+and the client must not pretend to.
+
+### Avatars
+
+A face is a way into a Life Profile, everywhere it appears: tree nodes, post
+authors, comment authors. Posts identify their author by `authorUserId` and
+profiles are opened by member id, so `features/family/use-member-for-user.ts`
+resolves one to the other through the family on screen. It returns `null`
+when the author is not in that family, and the avatar stays inert rather than
+leading somewhere that does not exist.
 
 ## Screens
 
