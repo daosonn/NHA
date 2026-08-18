@@ -72,6 +72,11 @@
   with the team: linked members' info is editable/removable only by
   themselves (placeholders stay wiki-editable); "add member with account"
   happens via invite-code join rather than direct add.
+- Family tree API: `GET /api/families/:familyId/tree` — member nodes +
+  relationship edges in one payload for the tree screen (2026-08-18).
+  Task 1.4.1 done; verified by lint/test/build + live smoke test
+  (200 with nodes+edges / 401 unauthenticated / 403 non-member).
+  On branch `feature/family-tree-api` — pending PR.
 
 ### Planning Phase
 
@@ -87,9 +92,11 @@
 
 - **Social login (Google + Facebook)** (2026-08-17): backend merged to
   `main` in PR #3 — `OAuthAccount` table + OAuth authorization-code
-  endpoints in the AuthModule. Tasks 1.1.8–1.1.9 stay unticked until the
-  happy path is verified end-to-end with real Google/Facebook app
-  credentials; frontend buttons come with the auth UI (1.1.1/1.1.4).
+  endpoints in the AuthModule. **Google verified end-to-end 2026-08-18**
+  (task 1.1.8 done — consent screen switched to External + test users).
+  Facebook (1.1.9) stays unticked until its happy path is verified —
+  needs the tester-role invite accepted on the Meta app. Frontend
+  buttons come with the auth UI (1.1.1/1.1.4).
 
 ## Not Started
 
