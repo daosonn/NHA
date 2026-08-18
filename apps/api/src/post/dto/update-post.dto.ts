@@ -10,7 +10,11 @@ import {
   MaxLength,
 } from 'class-validator';
 
-/** Omitted fields stay unchanged; the post's type is not editable. */
+/**
+ * Omitted fields stay unchanged. The post's type and its media set are
+ * not editable — a `mediaIds` property here is stripped by the global
+ * whitelist ValidationPipe, never applied.
+ */
 export class UpdatePostDto {
   @ApiPropertyOptional({
     maxLength: 5000,
@@ -21,9 +25,11 @@ export class UpdatePostDto {
   @MaxLength(5000)
   content?: string;
 
-  @ApiPropertyOptional({ description: 'ISO 8601 — only for EVENT posts' })
+  @ApiPropertyOptional({
+    description: 'ISO 8601 date or datetime — only for EVENT posts',
+  })
   @IsOptional()
-  @IsISO8601()
+  @IsISO8601({ strict: true })
   eventDate?: string;
 
   @ApiPropertyOptional({ maxLength: 200, description: 'Only for EVENT posts' })

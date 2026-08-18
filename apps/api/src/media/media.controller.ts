@@ -1,9 +1,12 @@
 import {
   Controller,
   Get,
+  Headers,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Post,
+  Res,
   StreamableFile,
   UploadedFile,
   UseInterceptors,
@@ -16,6 +19,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Response } from 'express';
 import {
   CurrentUser,
   type AuthUser,
@@ -23,12 +27,8 @@ import {
 import {
   MediaService,
   type MediaSummary,
-  type UploadedImage,
+  type UploadedMediaFile,
 } from './media.service';
-
-// Single upload limit for every media type (team decision 2026-08-18).
-// Multer rejects larger files with 413 before they reach the service.
-const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 
 @ApiTags('media')
 @ApiBearerAuth()
@@ -37,9 +37,8 @@ export class MediaController {
   constructor(private readonly mediaService: MediaService) {}
 
   @Post()
-  @UseInterceptors(
-    FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES } }),
-  )
+  // Storage + size limit come from MulterModule config in MediaModule.
+  @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -54,21 +53,50 @@ export class MediaController {
   })
   upload(
     @CurrentUser() user: AuthUser,
-    @UploadedFile() file?: UploadedImage,
+    @UploadedFile() file?: UploadedMediaFile,
   ): Promise<MediaSummary> {
     return this.mediaService.upload(user.userId, file);
   }
 
   @Get(':mediaId')
-  @ApiOperation({ summary: 'Stream a media file the viewer is allowed to see' })
+  @ApiOperation({
+    summary:
+      'Stream a media file the viewer is allowed to see (supports Range for video/audio playback)',
+  })
   async download(
     @CurrentUser() user: AuthUser,
     @Param('mediaId', ParseUUIDPipe) mediaId: string,
-  ): Promise<StreamableFile> {
-    const { stream, mimeType } = await this.mediaService.openForViewer(
+    @Res({ passthrough: true }) res: Response,
+    @Headers('range') range?: string,
+  ): Promise<StreamableFile | undefined> {
+    const result = await this.mediaService.openForViewer(
       user.userId,
       mediaId,
+      range,
     );
-    return new StreamableFile(stream, { type: mimeType });
+    res.setHeader('Accept-Ranges', 'bytes');
+    // The Content-Type replays what the client declared at upload; nosniff
+    // keeps browsers from second-guessing it.
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    if (result.kind === 'unsatisfiable') {
+      res.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
+      res.setHeader('Content-Range', `bytes */${result.size}`);
+      return undefined;
+    }
+    if (result.kind === 'partial') {
+      res.status(HttpStatus.PARTIAL_CONTENT);
+      res.setHeader(
+        'Content-Range',
+        `bytes ${result.start}-${result.end}/${result.size}`,
+      );
+      return new StreamableFile(result.stream, {
+        type: result.mimeType,
+        length: result.end - result.start + 1,
+      });
+    }
+    return new StreamableFile(result.stream, {
+      type: result.mimeType,
+      length: result.size,
+    });
   }
 }
