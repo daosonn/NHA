@@ -45,10 +45,21 @@
 - **API integration foundation landed (2026-08-18)**: real session on
   `expo-secure-store`, refresh-on-401 behind a single-flight gate,
   `QueryClientProvider`, and hooks for families / family tree / family
-  feed. **Wired so far**: Sign in, Create account, Home (families, with
-  loading / error / "no family yet"), and the new create-or-join-family
-  screen. Everything else still reads `src/fixtures/` — see
-  `docs/00-shared/api-contract.md` § Step 4, screen by screen.
+  feed. **Wired 2026-08-18**: Sign in, Create account, Home, create-or-join
+  family, the **family tree** (read plus adding a member), **New moment**
+  (pick media → upload → post), and a **moments list + post detail** with
+  comments and reactions. Life Profile, Omoide and the AI tab still read
+  `src/fixtures/` — per-screen status is in
+  `docs/01-frontend/architecture.md` § Wiring status.
+- **Client mirror caught up with PRs #7–#9 (2026-08-18)**: `types.ts` and
+  `endpoints.ts` had fallen behind the ten routes those PRs added.
+  `PostDetail` gained `commentCount` / `reactionCount` / `myReaction`, and
+  comments, reactions and profiles now have endpoint groups. Replayed
+  against a running server, including the case the optimistic reaction
+  update depends on: changing LIKE to LOVE replaces the reaction rather
+  than adding one.
+- **`expo-image-picker` added (2026-08-18)** — the last thing standing
+  between New moment and a working end-to-end post.
 - **Four blocking questions answered 2026-08-18** — see Important
   Decisions: solar-only stands, Apple joins Google and Facebook, Home gets
   a skippable empty state, kinship labels stay at the base relationships.

@@ -286,6 +286,60 @@ considered done.
 
 Setup details: `docs/04-devops/mobile-development.md`.
 
+## Wiring status
+
+Which screens talk to the server, and what holds the rest back. Kept here
+rather than in `docs/00-shared/api-contract.md`, which several people write
+to — that document describes what the API offers, this one describes what
+this app does with it.
+
+| Screen                  | State                                                                                                                                        |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sign in / Sign up       | **Wired.** Social buttons still render without handlers, pending Apple on the server.                                                        |
+| Home                    | **Wired** — families, with loading, error and a "no family yet" empty state. Event widget and recommendations stay on fixtures: no endpoint. |
+| Create / join family    | **Wired** (`app/create-family.tsx`). 404 = unknown code, 409 = already a member.                                                             |
+| Family tree             | **Wired**, including adding a member. See § Family tree below.                                                                               |
+| New moment              | **Wired** — pick media, upload, post, choose audience.                                                                                       |
+| Moments + Post detail   | **Wired** — feed, comments, reactions (`app/moments.tsx`, `app/post/[id].tsx`).                                                              |
+| Life Profile            | Header and About could be wired; Timeline, Album and Memo have no endpoint, so the screen waits rather than showing one working tab of four. |
+| Omoide                  | No album endpoints, and "derived from what" is undecided. Still a placeholder.                                                               |
+| AI tab + Gift ideas     | `apps/ai` does not exist.                                                                                                                    |
+| Invitation page         | Needs a public read of an invite code; `POST /families/join` requires a token and joins immediately, so it cannot preview.                   |
+| Verify / Forgot / Reset | No endpoint. They no longer fake a session — see § Auth.                                                                                     |
+
+### Family tree
+
+`GET /families/:id/tree` returns members and flat edges; the component takes
+rows, partner links and descents. `features/family/tree-from-graph.ts` is the
+piece between them.
+
+Generations come from distance to a root, and partners are then pulled level
+with each other — someone who married in has no parent in this family and
+would otherwise sit in the top row while their spouse sits three rows down.
+
+Two things it cannot produce, both for the same reason: `empty` and
+`pending` nodes describe a spot reserved for a named invitee, and the server
+has one invite code per family rather than per spot. The component still
+supports both states; nothing feeds them.
+
+Kinship words are base relationships only (decided 2026-08-18). A node with
+no direct edge to the viewer — a grandparent, a cousin — shows its name with
+no role line underneath.
+
+**Adding a member is two calls**, because there is no "add a related member"
+route: create the placeholder, then create the edge. If the edge fails the
+member is left behind rather than rolled back — the server owns transactions
+and the client must not pretend to.
+
+### Avatars
+
+A face is a way into a Life Profile, everywhere it appears: tree nodes, post
+authors, comment authors. Posts identify their author by `authorUserId` and
+profiles are opened by member id, so `features/family/use-member-for-user.ts`
+resolves one to the other through the family on screen. It returns `null`
+when the author is not in that family, and the avatar stays inert rather than
+leading somewhere that does not exist.
+
 ## Screens
 
 Inventory: `screens.md`. Visual spec: `design-system.md`.

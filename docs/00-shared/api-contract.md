@@ -9,9 +9,12 @@ The client-side mirror of this document is `apps/mobile/src/lib/api/`:
 from the NestJS controllers and DTOs, not from a wish list. When the server
 changes, both move together.
 
-Every shape below was replayed against the running API on 2026-08-18 —
-register, families list, family create, tree, feed, and a deliberate refresh
-replay — and matches `types.ts` exactly.
+Replayed against a running server on 2026-08-18, and matching `types.ts` as
+of that date: register, refresh (including a deliberate replay of a spent
+token), families list and create, tree, join, media upload, post create,
+feed, comment create and list, and all three reaction calls. Anything added
+after that date has not been replayed — say so when you add a row rather
+than letting this paragraph imply otherwise.
 
 ## Ground rules
 
@@ -243,17 +246,6 @@ used the tree.
 3. ~~`QueryClientProvider` + hooks~~ — **done 2026-08-18** for families,
    family tree and the family feed.
 4. Screens swap a fixture import for a hook, and gain the loading and
-   error states they did not have. **In progress** — see the table below.
-
-### Step 4, screen by screen
-
-| Screen               | State                                                                                                                                                                  |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sign in / Sign up    | **Wired** 2026-08-18. The social buttons still render without handlers, pending Apple on the server.                                                                   |
-| Home                 | **Wired** 2026-08-18 — families, plus loading, error and a "no family yet" empty state. The event widget and recommendations stay on fixtures: no endpoint.            |
-| Create / join family | **Wired** 2026-08-18 (`app/create-family.tsx`). 404 = unknown code, 409 = already a member, both replayed against the running server.                                  |
-| Family tree          | Endpoint ready, screen not wired: it needs a graph → generations/couples/descents adapter, because the API returns flat edges and the component takes a laid-out tree. |
-| New moment           | Needs `expo-image-picker` for media. Text-only posting is otherwise ready.                                                                                             |
-| Life Profile         | No endpoints — LifeProfile, LifeEvent, the derived gallery and Memo do not exist.                                                                                      |
-| Omoide               | No album endpoints, and "derived from what" is still undecided.                                                                                                        |
-| AI tab               | `apps/ai` does not exist.                                                                                                                                              |
+   error states they did not have. **In progress** — per-screen status lives
+   in `docs/01-frontend/architecture.md` § Wiring status, so it stays next
+   to the code it describes instead of in this shared file.
