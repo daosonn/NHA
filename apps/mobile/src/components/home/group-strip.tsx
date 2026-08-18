@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { colors, radius, spacing } from '../../theme';
-import type { FamilyGroupSummary } from '../../fixtures/home';
 import { Avatar } from '../ui/avatar';
 import { Text } from '../ui/text';
 
@@ -13,6 +12,12 @@ const OVERLAP = -9;
 /** Matches the strip fill so the ring reads as a gap, not a stroke. */
 const RING = `0 0 0 2px ${colors.background.subtle}`;
 const RING_ACTIVE = `${RING}, 0 0 0 3px rgba(240,112,95,0.35)`;
+
+export type FamilyGroupSummary = {
+  id: string;
+  name: string;
+  tone: 'light' | 'dark';
+};
 
 export type GroupStripProps = {
   groups: FamilyGroupSummary[];

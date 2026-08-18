@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { AuthModeTabs } from '../../src/components/auth/auth-mode-tabs';
-import { AppleMark, GoogleMark } from '../../src/components/auth/identity-marks';
+import { AppleMark, FacebookMark, GoogleMark } from '../../src/components/auth/identity-marks';
 import { FormScreen } from '../../src/components/layout/form-screen';
 import { Button } from '../../src/components/ui/button';
 import { Checkbox } from '../../src/components/ui/checkbox';
@@ -13,6 +13,7 @@ import { Divider } from '../../src/components/ui/divider';
 import { Text } from '../../src/components/ui/text';
 import { TextField } from '../../src/components/ui/text-field';
 import { TextLink } from '../../src/components/ui/text-link';
+import { authErrorKey } from '../../src/features/auth/auth-error';
 import { useSession } from '../../src/features/auth/session';
 import { colors } from '../../src/theme';
 
@@ -24,20 +25,47 @@ export default function SignInScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [stayed, setStayed] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorKey, setErrorKey] = useState<string | null>(null);
 
   const ready = email.trim().length > 0 && password.length > 0;
+
+  const submit = async () => {
+    setSubmitting(true);
+    setErrorKey(null);
+
+    try {
+      await signIn({ email: email.trim(), password, persist: stayed });
+      // No navigation here: `(auth)/_layout.tsx` redirects as soon as the
+      // session exists, so success and a cold start take the same path.
+    } catch (error) {
+      setErrorKey(authErrorKey(error));
+      setSubmitting(false);
+    }
+  };
 
   return (
     <FormScreen
       onBack={() => router.back()}
       footer={
         <>
+          {errorKey !== null && (
+            <Text
+              variant="caption"
+              color={colors.themes.destructive.text}
+              accessibilityRole="alert"
+            >
+              {t(errorKey)}
+            </Text>
+          )}
+
           <Button
             label={t('auth.signIn.submit')}
             size="large"
             fullWidth
             disabled={!ready}
-            onPress={() => signIn({ email: email.trim(), displayName: 'Minh' })}
+            loading={submitting}
+            onPress={() => void submit()}
           />
 
           <Divider label={t('common.or')} />
@@ -59,6 +87,15 @@ export default function SignInScreen() {
                 size="large"
                 fullWidth
                 renderIcon={() => <GoogleMark />}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button
+                label={t('auth.facebook')}
+                variant="neutral"
+                size="large"
+                fullWidth
+                renderIcon={() => <FacebookMark />}
               />
             </View>
           </View>

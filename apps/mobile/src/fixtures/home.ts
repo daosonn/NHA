@@ -1,3 +1,5 @@
+import type { FamilyGroupSummary } from '../components/home/group-strip';
+
 /**
  * Stand-in data for the Home screen.
  *
@@ -5,12 +7,6 @@
  * exist — see docs/01-frontend/architecture.md. Shapes here are a guess at
  * the contract, not the contract itself.
  */
-
-export type FamilyGroupSummary = {
-  id: string;
-  name: string;
-  tone: 'light' | 'dark';
-};
 
 export type UpcomingEvent = {
   id: string;

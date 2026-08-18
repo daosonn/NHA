@@ -155,6 +155,189 @@ export type CreateRelationshipRequest = {
   label?: string;
 };
 
+/**
+ * `GET /api/families/:familyId/tree` — nodes and edges in one payload.
+ *
+ * The server does not lay the tree out and does not name the relationships:
+ * "Grandmother" is derived from these edges plus the direction of travel and
+ * who is looking (`docs/00-shared/api-contract.md`).
+ */
+export type FamilyTree = {
+  id: string;
+  name: string;
+  members: FamilyMemberSummary[];
+  relationships: RelationshipSummary[];
+};
+
+// --------------------------------------------------------------- posts
+
+/** `apps/api/src/generated/prisma/enums.ts` → `PostType`. */
+export type PostType = 'POST' | 'EVENT';
+
+/** `apps/api/src/generated/prisma/enums.ts` → `ReactionType`. */
+export type ReactionType = 'LIKE' | 'LOVE' | 'HAHA' | 'WOW' | 'SAD';
+
+/** An attachment as it appears on a post — no URL, fetch it by id. */
+export type PostMediaSummary = {
+  id: string;
+  mimeType: string;
+  sizeBytes: number;
+};
+
+/** `PostService.PostDetail`. */
+export type PostDetail = {
+  id: string;
+  authorUserId: string;
+  authorName: string;
+  type: PostType;
+  content: string | null;
+  /** Only set for `EVENT`. */
+  eventDate: IsoDateTime | null;
+  eventTitle: string | null;
+  place: string | null;
+  /** Empty means private to the author — not "shared with everyone". */
+  familyIds: string[];
+  taggedMemberIds: string[];
+  media: PostMediaSummary[];
+  commentCount: number;
+  reactionCount: number;
+  /**
+   * **Per viewer**, not per post: this is *your* reaction, `null` when you
+   * have not reacted. Two people reading the same post get different values
+   * here, so it must never be cached under a key shared between accounts.
+   */
+  myReaction: ReactionType | null;
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+};
+
+/** `GET /api/families/:familyId/posts` — newest first, cursor-paginated. */
+export type FamilyFeed = {
+  items: PostDetail[];
+  /** Echo back as `cursor` for the next page; `null` is the end. */
+  nextCursor: string | null;
+};
+
+export type FeedQuery = {
+  /** 1–50, default 20. */
+  limit?: number;
+  cursor?: string;
+};
+
+/**
+ * `POST /api/posts`.
+ *
+ * `EVENT` requires `eventTitle` + `eventDate`; a plain `POST` forbids both
+ * and requires `content` or media. Omitting `familyIds` makes the post
+ * private to its author.
+ */
+export type CreatePostRequest = {
+  type: PostType;
+  content?: string;
+  /** Strict ISO 8601. */
+  eventDate?: string;
+  eventTitle?: string;
+  place?: string;
+  familyIds?: string[];
+  taggedMemberIds?: string[];
+  /** Your own uploads, not already attached elsewhere. Creation only. */
+  mediaIds?: string[];
+};
+
+/**
+ * `PATCH /api/posts/:postId`.
+ *
+ * Attachments are fixed at creation: a `mediaIds` key here is silently
+ * stripped by the server's whitelist pipe rather than rejected, so it is
+ * left out of the type entirely.
+ */
+export type UpdatePostRequest = Omit<CreatePostRequest, 'mediaIds'>;
+
+// --------------------------------------------------------------- media
+
+/** `POST /api/media` — upload first, then attach the ids to a post. */
+export type MediaSummary = {
+  id: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: IsoDateTime;
+};
+
+// ------------------------------------------------------ comments
+
+/** `CommentService.CommentSummary`. */
+export type CommentSummary = {
+  id: string;
+  postId: string;
+  authorUserId: string;
+  authorName: string;
+  content: string;
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+};
+
+/**
+ * `GET /api/posts/:postId/comments` — **oldest first**, unlike the feed.
+ * A thread reads top-down, so paging forward means reading further into the
+ * conversation rather than further into the past.
+ */
+export type CommentList = {
+  items: CommentSummary[];
+  nextCursor: string | null;
+};
+
+/** Body of both create and edit — `content` 1–2000 characters. */
+export type CommentBody = {
+  content: string;
+};
+
+// ----------------------------------------------------- reactions
+
+/**
+ * What both reaction routes return, so the UI can reconcile an optimistic
+ * update against the truth without a second request.
+ */
+export type ReactionState = {
+  myReaction: ReactionType | null;
+  reactionCount: number;
+};
+
+// ------------------------------------------------------ profiles
+
+/**
+ * `ProfileService.ProfileDetail` — one Life Profile.
+ *
+ * Which of `userId` / `memberId` is set says what kind it is: a **global**
+ * profile belongs to an account and is the same object in every family that
+ * person joined; a **placeholder** profile belongs to one family's member
+ * row and is wiki-editable by that family (`domain-model.md`).
+ */
+export type ProfileDetail = {
+  id: string;
+  /** Set for a global profile, `null` for a placeholder. */
+  userId: string | null;
+  /** Set for a placeholder, `null` for a global profile. */
+  memberId: string | null;
+  displayName: string;
+  bio: string | null;
+  interests: string[];
+  birthDate: IsoDateTime | null;
+  deathDate: IsoDateTime | null;
+  updatedAt: IsoDateTime;
+};
+
+/**
+ * PATCH semantics, which are not the usual ones: omit a key to leave it
+ * alone, send `null` to clear a date, send `''` to clear the bio, and send
+ * the whole `interests` array because it replaces rather than merges.
+ */
+export type UpdateProfileRequest = {
+  bio?: string;
+  interests?: string[];
+  birthDate?: string | null;
+  deathDate?: string | null;
+};
+
 /** What the delete endpoints return. */
 export type SuccessResult = {
   success: boolean;
