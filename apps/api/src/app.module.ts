@@ -7,6 +7,7 @@ import { PrismaModule } from './database/prisma/prisma.module';
 import { FamilyModule } from './family/family.module';
 import { MediaModule } from './media/media.module';
 import { PostModule } from './post/post.module';
+import { ProfileModule } from './profile/profile.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { PostModule } from './post/post.module';
     FamilyModule,
     MediaModule,
     PostModule,
+    ProfileModule,
   ],
   controllers: [AppController],
   providers: [AppService],
