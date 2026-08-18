@@ -55,6 +55,13 @@ export interface RelationshipSummary {
   label: string | null;
 }
 
+export interface FamilyTree {
+  id: string;
+  name: string;
+  members: FamilyMemberSummary[];
+  relationships: RelationshipSummary[];
+}
+
 const memberSelect = {
   id: true,
   userId: true,
@@ -124,6 +131,33 @@ export class FamilyService {
         inviteCode: true,
         createdAt: true,
         members: { select: memberSelect, orderBy: { joinedAt: 'asc' } },
+      },
+    });
+    if (!family) {
+      throw new NotFoundException('Family not found');
+    }
+    return family;
+  }
+
+  /** Nodes + edges of one family's tree; the client lays them out. */
+  async getTree(userId: string, familyId: string): Promise<FamilyTree> {
+    await this.requireMembership(familyId, userId);
+    const family = await this.prisma.family.findUnique({
+      where: { id: familyId },
+      select: {
+        id: true,
+        name: true,
+        members: { select: memberSelect, orderBy: { joinedAt: 'asc' } },
+        relationships: {
+          select: {
+            id: true,
+            fromMemberId: true,
+            toMemberId: true,
+            type: true,
+            label: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        },
       },
     });
     if (!family) {
