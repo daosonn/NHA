@@ -92,8 +92,16 @@ build the family tree, post content with photos, and view member profiles.
       private) — API done 2026-08-18: `familyIds` chọn nhiều family
       (phải là thành viên); rỗng = riêng tư; PATCH thay được visibility.
       UI xong 2026-08-18 (mock data, chưa nối API)
-- [ ] 1.5.6 Comment bài đăng (API + UI — added 2026-08-14, see `database.md`)
-- [ ] 1.5.7 Reaction bài đăng (đa dạng loại — added 2026-08-14, see `database.md`)
+- [ ] 1.5.6 Comment bài đăng (API + UI — added 2026-08-14, see
+      `database.md`) — API done 2026-08-18: CRUD
+      `/api/posts/:postId/comments` (ai xem được post thì comment được;
+      chỉ tác giả comment sửa/xóa — quyền xóa của chủ post là product
+      call chưa quyết); UI chưa nối
+- [ ] 1.5.7 Reaction bài đăng (đa dạng loại — added 2026-08-14, see
+      `database.md`) — API done 2026-08-18: `PUT/DELETE
+  /api/posts/:postId/reactions/me` (upsert 1 reaction/người/bài,
+      LIKE/LOVE/HAHA/WOW/SAD); PostDetail có thêm
+      commentCount/reactionCount/myReaction; UI chưa nối
 
 ### 1.6 Nav4 – Hồ sơ đời cá nhân — Profile
 

@@ -30,7 +30,7 @@ both move together.
 
 ## What exists today
 
-Twenty-two routes, all verified against the source.
+Twenty-eight routes, all verified against the source.
 
 ### Auth — `apps/api/src/auth/`
 
@@ -96,8 +96,10 @@ own private posts are **not** in the feed — it shows only what was
 shared to this family.
 
 `PostDetail` is `{ id, authorUserId, authorName, type, content, eventDate,
-eventTitle, place, familyIds, taggedMemberIds, media[], createdAt,
-updatedAt }` with `media[]` items `{ id, mimeType, sizeBytes }`.
+eventTitle, place, familyIds, taggedMemberIds, media[], commentCount,
+reactionCount, myReaction, createdAt, updatedAt }` with `media[]` items
+`{ id, mimeType, sizeBytes }`. `myReaction` is the viewer's own reaction
+(`null` when they have not reacted) — it differs per viewer.
 
 Semantics the app must respect:
 
@@ -115,6 +117,31 @@ Semantics the app must respect:
   not attached elsewhere) and cannot be changed by PATCH — a `mediaIds`
   key in PATCH is silently stripped by the whitelist pipe.
 - Tagged members must belong to the families the post is shared to.
+
+### Comments & Reactions — `apps/api/src/post/` (tasks 1.5.6–1.5.7)
+
+| Route                                       | Returns          |
+| ------------------------------------------- | ---------------- |
+| `POST /posts/:postId/comments`              | `CommentSummary` |
+| `GET /posts/:postId/comments`               | `CommentList`    |
+| `PATCH /posts/:postId/comments/:commentId`  | `CommentSummary` |
+| `DELETE /posts/:postId/comments/:commentId` | `{ success }`    |
+| `PUT /posts/:postId/reactions/me`           | `ReactionState`  |
+| `DELETE /posts/:postId/reactions/me`        | `ReactionState`  |
+
+`CommentSummary` is `{ id, postId, authorUserId, authorName, content,
+createdAt, updatedAt }`; `CommentList` is `{ items, nextCursor }` with the
+same `limit`/`cursor` params as the feed, **oldest first** (a thread reads
+top-down). Anyone who can view the post can comment; only the comment's
+author edits or deletes it (post-author moderation is an open product
+call). All routes 404 on posts the caller cannot view — same rule as
+everywhere else.
+
+Reactions: one per user per post — `PUT .../reactions/me` with
+`{ type: LIKE | LOVE | HAHA | WOW | SAD }` sets or changes it, `DELETE`
+removes it (idempotent). Both return
+`{ myReaction, reactionCount }` so the UI can update optimistically and
+reconcile.
 
 ### Media — `apps/api/src/media/` (task 1.5.3, merged in PR #5)
 
