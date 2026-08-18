@@ -30,7 +30,7 @@ both move together.
 
 ## What exists today
 
-Fourteen routes, all verified against the source.
+Twenty-one routes, all verified against the source.
 
 ### Auth — `apps/api/src/auth/`
 
@@ -60,6 +60,7 @@ Facebook; a provider with no client ID configured returns 503.
 | `GET /families`                                            | `FamilySummary[]`     |
 | `POST /families/join`                                      | `JoinFamilyResult`    |
 | `GET /families/:familyId`                                  | `FamilyDetail`        |
+| `GET /families/:familyId/tree`                             | `FamilyTree`          |
 | `POST /families/:familyId/members`                         | `FamilyMemberSummary` |
 | `PATCH /families/:familyId/members/:memberId`              | `FamilyMemberSummary` |
 | `DELETE /families/:familyId/members/:memberId`             | `{ success }`         |
@@ -73,6 +74,59 @@ with no account. `POST /families/join` with `linkMemberId` attaches an
 account to one, keeping everything already written about that person
 (`domain-model.md`).
 
+`FamilyTree` is `{ id, name, members, relationships }` — nodes plus edges
+in one payload; the client owns the layout (d3-hierarchy). This is the
+read the tree screen needs (task 1.4.1, merged 2026-08-18).
+
+### Posts — `apps/api/src/post/` (tasks 1.5.2–1.5.5, merged in PR #5)
+
+| Route                   | Returns       |
+| ----------------------- | ------------- |
+| `POST /posts`           | `PostDetail`  |
+| `GET /posts/:postId`    | `PostDetail`  |
+| `PATCH /posts/:postId`  | `PostDetail`  |
+| `DELETE /posts/:postId` | `{ success }` |
+
+`PostDetail` is `{ id, authorUserId, authorName, type, content, eventDate,
+eventTitle, place, familyIds, taggedMemberIds, media[], createdAt,
+updatedAt }` with `media[]` items `{ id, mimeType, sizeBytes }`.
+
+Semantics the app must respect:
+
+- **Visibility** is `familyIds` at create/edit; empty or omitted = private
+  to the author. A post you may not view returns **404 on every verb** —
+  never 403 — so "not found" and "not yours to see" are indistinguishable
+  by design.
+- Only the author edits/deletes. Editing re-checks the author's current
+  membership: after leaving a family you can only pull the post back
+  (`familyIds: []`, with `taggedMemberIds: []` if tags pointed there).
+- `type: EVENT` requires `eventTitle` + `eventDate` (strict ISO 8601;
+  content optional); plain `POST` forbids both and requires content or
+  media.
+- **Attachments are set at creation** via `mediaIds` (your own uploads,
+  not attached elsewhere) and cannot be changed by PATCH — a `mediaIds`
+  key in PATCH is silently stripped by the whitelist pipe.
+- Tagged members must belong to the families the post is shared to.
+- There is **no list/feed endpoint yet** (task 1.2.3).
+
+### Media — `apps/api/src/media/` (task 1.5.3, merged in PR #5)
+
+| Route                 | Returns        |
+| --------------------- | -------------- |
+| `POST /media`         | `MediaSummary` |
+| `GET /media/:mediaId` | file stream    |
+
+Upload is `multipart/form-data` with a single `file` field. Accepted:
+jpeg/png/webp/gif/heic, mp4/mov, mp3/m4a/aac/wav — **100MB max for any
+type** (413 beyond, 415 for other types). `MediaSummary` is
+`{ id, mimeType, sizeBytes, createdAt }`; upload first, then pass the ids
+as `mediaIds` when creating the post.
+
+Download requires a bearer token and the same visibility as the parent
+post (uploader always allowed; standalone media is uploader-only), and
+supports **HTTP Range / 206** — hand the URL plus the auth header to the
+video/audio player.
+
 ## What does not exist yet
 
 This is the part that decides what can actually be wired. Nothing below has
@@ -80,16 +134,16 @@ an endpoint, so no amount of frontend work will connect these screens.
 
 ### Blocking a screen that is already built
 
-| Screen                               | Needs                                                                                                                                                                                            |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Family tree** (`family.tsx`)       | **`GET` for relationships.** There is `POST` and `DELETE` but no read, and `FamilyDetail` returns `members` only. The tree is drawn from edges, so it cannot be built from the API as it stands. |
-| **Verify code** (`verify.tsx`)       | Send / confirm an email code. Registration returns tokens immediately today, so the screen has nothing to call.                                                                                  |
-| **Forgot + reset password**          | WBS 1.1.7, deferred pending an email-infrastructure decision.                                                                                                                                    |
-| **Invitation** (`invite/[code].tsx`) | A public read of an invite code — who invited you, which family, which spot. `POST /families/join` both requires a token and joins immediately, so it cannot preview.                            |
-| **Life Profile** (`member/[id].tsx`) | LifeProfile, LifeEvent, the derived gallery, Memo.                                                                                                                                               |
-| **New moment** (`(tabs)/new.tsx`)    | Post + PostFamily + media upload.                                                                                                                                                                |
-| **Home**                             | SpecialDate widgets, recommendations, the moments feed.                                                                                                                                          |
-| **AI tab + gift ideas**              | The whole of `apps/ai` — the FastAPI service does not exist.                                                                                                                                     |
+| Screen                               | Needs                                                                                                                                                                 |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Family tree** (`family.tsx`)       | ~~`GET` for relationships~~ — **resolved**: `GET /families/:familyId/tree` returns nodes + edges (task 1.4.1). Remaining: the kinship-label derivation below.         |
+| **Verify code** (`verify.tsx`)       | Send / confirm an email code. Registration returns tokens immediately today, so the screen has nothing to call.                                                       |
+| **Forgot + reset password**          | WBS 1.1.7, deferred pending an email-infrastructure decision.                                                                                                         |
+| **Invitation** (`invite/[code].tsx`) | A public read of an invite code — who invited you, which family, which spot. `POST /families/join` both requires a token and joins immediately, so it cannot preview. |
+| **Life Profile** (`member/[id].tsx`) | LifeProfile, LifeEvent, the derived gallery, Memo.                                                                                                                    |
+| **New moment** (`(tabs)/new.tsx`)    | ~~Post + media upload~~ — **resolved**: `POST /media` then `POST /posts` (tasks 1.5.2–1.5.5, PR #5).                                                                  |
+| **Home**                             | SpecialDate widgets, recommendations, and the moments **feed — still missing** (`GET` list of posts, task 1.2.3).                                                     |
+| **AI tab + gift ideas**              | The whole of `apps/ai` — the FastAPI service does not exist.                                                                                                          |
 
 ### The relationship-label question
 

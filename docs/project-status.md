@@ -107,7 +107,8 @@
   relationship edges in one payload for the tree screen (2026-08-18).
   Task 1.4.1 done; verified by lint/test/build + live smoke test
   (200 with nodes+edges / 401 unauthenticated / 403 non-member).
-  On branch `feature/family-tree-api` — pending PR.
+  Merged to `main` (2026-08-18) — closes the "no GET for relationships"
+  gap flagged by the mobile API-contract pass.
 - Post + Media modules (2026-08-18): `POST/GET/PATCH/DELETE /api/posts`
   (author-only edit/delete, EVENT requires title+date — content optional
   for events, visibility via `familyIds` — empty = private, tags must
@@ -130,8 +131,8 @@
   (were silent 1970-01-01 / 500), upload cleanup when the DB insert
   fails. Deferred to a follow-up branch before 1.5.6–7: dedupe
   canView/membership helpers, `UpdatePostDto` via PartialType, response
-  shape hiding cross-family ids from non-authors. On branch
-  `feature/post-module`. Assumption to confirm: media set fixed at post
+  shape hiding cross-family ids from non-authors. Merged to `main` in
+  PR #5 (2026-08-18). Assumption to confirm: media set fixed at post
   creation (edit changes text/visibility/tags, not attachments).
 
 ### Planning Phase

@@ -59,7 +59,11 @@ build the family tree, post content with photos, and view member profiles.
 > bản ghi invitation phía backend, xem `project-status.md` → Important
 > Decisions ("Invites are per-spot"). Cần thêm task backend trước khi nối.
 
-- [ ] 1.4.1 API relationship (dữ liệu cây)
+- [x] 1.4.1 API relationship (dữ liệu cây) — done 2026-08-18:
+      `GET /api/families/:familyId/tree` trả member nodes + relationship
+      edges (membership-based authorization); verified lint/test/build +
+      live smoke test (200/401/403); đã merge vào `main`. (Tick từng bị
+      mất khi resolve conflict PR #6 — khôi phục sau PR #5.)
 - [ ] 1.4.2 Render Family Tree (hiển thị quan hệ) — UI xong 2026-08-18 (mock data, chưa nối API)
 - [ ] 1.4.3 Click member → Profile (điều hướng profile) — UI xong 2026-08-18 (mock data, chưa nối API)
 
@@ -83,13 +87,9 @@ build the family tree, post content with photos, and view member profiles.
       `type=EVENT` bắt buộc eventTitle + eventDate (content tùy chọn);
       POST thường cấm hai field này; ngày validate strict ISO 8601
 - [x] 1.5.5 Visibility (chung/riêng tư — post to chosen families or
-      private) — UI xong 2026-08-18 (mock data, chưa nối API) — done 2026-08-18: `familyIds` chọn nhiều family (phải là
-      thành viên); rỗng = riêng tư; PATCH thay được visibility
-- [ ] 1.5.1 UI Create Post (nhập nội dung) — UI xong 2026-08-18 (mock data, chưa nối API)
-- [ ] 1.5.2 API Post (create/edit/delete)
-- [ ] 1.5.3 Upload ảnh (upload + preview — qua storage service module)
-- [ ] 1.5.4 Tạo sự kiện (tên/ngày/nội dung)
-- [ ] 1.5.5 Visibility (chung/riêng tư — post to chosen families or private) — UI xong 2026-08-18 (mock data, chưa nối API)
+      private) — API done 2026-08-18: `familyIds` chọn nhiều family
+      (phải là thành viên); rỗng = riêng tư; PATCH thay được visibility.
+      UI xong 2026-08-18 (mock data, chưa nối API)
 - [ ] 1.5.6 Comment bài đăng (API + UI — added 2026-08-14, see `database.md`)
 - [ ] 1.5.7 Reaction bài đăng (đa dạng loại — added 2026-08-14, see `database.md`)
 
