@@ -85,6 +85,11 @@ build the family tree, post content with photos, and view member profiles.
 - [x] 1.5.5 Visibility (chung/riêng tư — post to chosen families or
       private) — UI xong 2026-08-18 (mock data, chưa nối API) — done 2026-08-18: `familyIds` chọn nhiều family (phải là
       thành viên); rỗng = riêng tư; PATCH thay được visibility
+- [ ] 1.5.1 UI Create Post (nhập nội dung) — UI xong 2026-08-18 (mock data, chưa nối API)
+- [ ] 1.5.2 API Post (create/edit/delete)
+- [ ] 1.5.3 Upload ảnh (upload + preview — qua storage service module)
+- [ ] 1.5.4 Tạo sự kiện (tên/ngày/nội dung)
+- [ ] 1.5.5 Visibility (chung/riêng tư — post to chosen families or private) — UI xong 2026-08-18 (mock data, chưa nối API)
 - [ ] 1.5.6 Comment bài đăng (API + UI — added 2026-08-14, see `database.md`)
 - [ ] 1.5.7 Reaction bài đăng (đa dạng loại — added 2026-08-14, see `database.md`)
 
