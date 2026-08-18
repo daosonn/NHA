@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "git fetch origin --quiet 2>/dev/null || true; new=$(git log HEAD..origin/main --oneline --no-decorate -20 2>/dev/null); if [ -n \"$new\" ]; then echo '[team-updates] New commits on origin/main not in your local HEAD:'; echo \"$new\"; docs=$(git diff --name-only HEAD...origin/main -- docs/ 2>/dev/null); if [ -n \"$docs\" ]; then echo '--- docs changed (read these to catch up on team decisions) ---'; echo \"$docs\"; fi; echo '--- all files ---'; git diff --stat HEAD...origin/main 2>/dev/null | tail -8; fi",
+            "shell": "bash",
+            "timeout": 30,
+            "statusMessage": "Checking teammates' updates on origin/main..."
+          }
+        ]
+      }
+    ]
+  }
+}
