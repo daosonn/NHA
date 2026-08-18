@@ -359,6 +359,10 @@ For every implementation task:
 - Read this file.
 - Identify the affected application/domain.
 - Read relevant documentation.
+- When new commits from teammates have arrived on `main` since your last
+  session (the session-start `[team-updates]` hook lists them), read the
+  changed files under `docs/` before coding — that is where the team
+  records decisions, new requirements, and API-contract changes.
 - Inspect existing implementation, types, tests, and contracts.
 
 ## 2. Plan
