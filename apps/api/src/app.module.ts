@@ -5,6 +5,8 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './database/prisma/prisma.module';
 import { FamilyModule } from './family/family.module';
+import { MediaModule } from './media/media.module';
+import { PostModule } from './post/post.module';
 
 @Module({
   imports: [
@@ -12,6 +14,8 @@ import { FamilyModule } from './family/family.module';
     PrismaModule,
     AuthModule,
     FamilyModule,
+    MediaModule,
+    PostModule,
   ],
   controllers: [AppController],
   providers: [AppService],

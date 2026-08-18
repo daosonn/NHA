@@ -64,10 +64,20 @@ build the family tree, post content with photos, and view member profiles.
 ### 1.5 Nav2.5 – Bài viết / Ảnh / Sự kiện — Tạo nội dung
 
 - [ ] 1.5.1 UI Create Post (nhập nội dung)
-- [ ] 1.5.2 API Post (create/edit/delete)
-- [ ] 1.5.3 Upload ảnh (upload + preview — qua storage service module)
-- [ ] 1.5.4 Tạo sự kiện (tên/ngày/nội dung)
-- [ ] 1.5.5 Visibility (chung/riêng tư — post to chosen families or private)
+- [x] 1.5.2 API Post (create/edit/delete) — done 2026-08-18: PostModule
+      (`POST/GET/PATCH/DELETE /api/posts`), chỉ tác giả sửa/xóa; post
+      private trả 404 với người ngoài; verified lint/test/e2e/build +
+      15-case live smoke test
+- [x] 1.5.3 Upload ảnh (upload + preview — qua storage service module) —
+      done 2026-08-18: StorageService (local disk, `UPLOAD_DIR`) +
+      MediaModule (`POST /api/media` multipart ảnh ≤10MB,
+      `GET /api/media/:id` stream có kiểm soát quyền xem)
+- [x] 1.5.4 Tạo sự kiện (tên/ngày/nội dung) — done 2026-08-18:
+      `type=EVENT` bắt buộc eventTitle + eventDate; POST thường cấm hai
+      field này
+- [x] 1.5.5 Visibility (chung/riêng tư — post to chosen families or
+      private) — done 2026-08-18: `familyIds` chọn nhiều family (phải là
+      thành viên); rỗng = riêng tư; PATCH thay được visibility
 - [ ] 1.5.6 Comment bài đăng (API + UI — added 2026-08-14, see `database.md`)
 - [ ] 1.5.7 Reaction bài đăng (đa dạng loại — added 2026-08-14, see `database.md`)
 

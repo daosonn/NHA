@@ -29,6 +29,9 @@ __pycache__/
 .env
 .env.local
 
+# Media uploads (local-disk storage for the MVP demo)
+apps/api/uploads/
+
 # VS Code (share only team-wide config)
 .vscode/*
 !.vscode/extensions.json

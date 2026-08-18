@@ -77,6 +77,17 @@
   Task 1.4.1 done; verified by lint/test/build + live smoke test
   (200 with nodes+edges / 401 unauthenticated / 403 non-member).
   On branch `feature/family-tree-api` — pending PR.
+- Post + Media modules (2026-08-18): `POST/GET/PATCH/DELETE /api/posts`
+  (author-only edit/delete, EVENT requires title+date, visibility via
+  `familyIds` — empty = private, tags must stay inside the shared
+  families, private content returns 404 to non-viewers) + StorageService
+  (local disk, `UPLOAD_DIR`, swappable for S3 later) + `POST /api/media`
+  (multipart photo ≤10MB) and `GET /api/media/:id` (authorized
+  streaming). Tasks 1.5.2–1.5.5 done; verified by lint/test/e2e/build +
+  15-case live smoke test. On branch `feature/family-tree-api`,
+  uncommitted. Assumptions to confirm: photos only for MVP upload
+  (jpeg/png/webp/gif/heic), media set fixed at post creation (edit
+  changes text/visibility/tags, not attachments).
 
 ### Planning Phase
 

@@ -1,0 +1,395 @@
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { PrismaService } from '../database/prisma/prisma.service';
+import { PostType } from '../generated/prisma/enums';
+import { StorageService } from '../storage/storage.service';
+import { CreatePostDto } from './dto/create-post.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
+
+export interface PostMediaSummary {
+  id: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
+export interface PostDetail {
+  id: string;
+  authorUserId: string;
+  authorName: string;
+  type: PostType;
+  content: string | null;
+  eventDate: Date | null;
+  eventTitle: string | null;
+  place: string | null;
+  familyIds: string[];
+  taggedMemberIds: string[];
+  media: PostMediaSummary[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface PostRecord {
+  id: string;
+  authorUserId: string;
+  type: PostType;
+  content: string | null;
+  eventDate: Date | null;
+  eventTitle: string | null;
+  place: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  author: { name: string };
+  families: { familyId: string }[];
+  memberTags: { memberId: string }[];
+  media: PostMediaSummary[];
+}
+
+const postDetailInclude = {
+  author: { select: { name: true } },
+  families: { select: { familyId: true } },
+  memberTags: { select: { memberId: true } },
+  media: {
+    select: { id: true, mimeType: true, sizeBytes: true },
+    orderBy: { createdAt: 'asc' as const },
+  },
+};
+
+@Injectable()
+export class PostService {
+  private readonly logger = new Logger(PostService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService,
+  ) {}
+
+  async create(userId: string, dto: CreatePostDto): Promise<PostDetail> {
+    const content = this.normalizeText(dto.content);
+    const eventTitle = this.normalizeText(dto.eventTitle);
+    const eventDate = dto.eventDate ? new Date(dto.eventDate) : null;
+    this.validateEventFields(dto.type, eventTitle, eventDate);
+
+    const mediaIds = dto.mediaIds ?? [];
+    if (!content && mediaIds.length === 0) {
+      throw new BadRequestException(
+        'A post needs text content or at least one photo',
+      );
+    }
+
+    const familyIds = dto.familyIds ?? [];
+    await this.requireMembershipInAll(userId, familyIds);
+
+    const taggedMemberIds = dto.taggedMemberIds ?? [];
+    await this.validateTags(userId, taggedMemberIds, familyIds);
+
+    if (mediaIds.length > 0) {
+      await this.validateAttachableMedia(userId, mediaIds);
+    }
+
+    const postId = await this.prisma.$transaction(async (tx) => {
+      const post = await tx.post.create({
+        data: {
+          authorUserId: userId,
+          type: dto.type,
+          content,
+          eventDate,
+          eventTitle,
+          place: this.normalizeText(dto.place),
+          families: { create: familyIds.map((familyId) => ({ familyId })) },
+          memberTags: {
+            create: taggedMemberIds.map((memberId) => ({ memberId })),
+          },
+        },
+        select: { id: true },
+      });
+      if (mediaIds.length > 0) {
+        const attached = await tx.media.updateMany({
+          where: {
+            id: { in: mediaIds },
+            uploaderUserId: userId,
+            postId: null,
+            memoId: null,
+            lifeEventId: null,
+          },
+          data: { postId: post.id },
+        });
+        if (attached.count !== mediaIds.length) {
+          // A concurrent request attached one of these media first;
+          // throwing rolls the whole transaction back.
+          throw new ConflictException('Some media are no longer attachable');
+        }
+      }
+      return post.id;
+    });
+    return this.getPost(userId, postId);
+  }
+
+  /** Visible to the author and to members of families it is shared to. */
+  async getPost(userId: string, postId: string): Promise<PostDetail> {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      include: postDetailInclude,
+    });
+    // 404 in both cases — do not confirm that private posts exist.
+    if (!post || !(await this.canView(userId, post))) {
+      throw new NotFoundException('Post not found');
+    }
+    return this.toDetail(post);
+  }
+
+  async update(
+    userId: string,
+    postId: string,
+    dto: UpdatePostDto,
+  ): Promise<PostDetail> {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: {
+        authorUserId: true,
+        type: true,
+        content: true,
+        eventTitle: true,
+        eventDate: true,
+        families: { select: { familyId: true } },
+        memberTags: { select: { memberId: true } },
+        _count: { select: { media: true } },
+      },
+    });
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+    if (post.authorUserId !== userId) {
+      throw new ForbiddenException('Only the author can edit a post');
+    }
+
+    const nextTitle =
+      dto.eventTitle !== undefined
+        ? this.normalizeText(dto.eventTitle)
+        : post.eventTitle;
+    const nextDate =
+      dto.eventDate !== undefined ? new Date(dto.eventDate) : post.eventDate;
+    this.validateEventFields(post.type, nextTitle, nextDate);
+
+    const nextContent =
+      dto.content !== undefined
+        ? this.normalizeText(dto.content)
+        : post.content;
+    if (!nextContent && post._count.media === 0) {
+      throw new BadRequestException(
+        'A post needs text content or at least one photo',
+      );
+    }
+
+    if (dto.familyIds) {
+      await this.requireMembershipInAll(userId, dto.familyIds);
+    }
+    // Tags are validated against the visibility that results from this
+    // update, whichever of the two lists is being changed.
+    const effectiveFamilyIds =
+      dto.familyIds ?? post.families.map((f) => f.familyId);
+    const effectiveTagIds =
+      dto.taggedMemberIds ?? post.memberTags.map((t) => t.memberId);
+    await this.validateTags(userId, effectiveTagIds, effectiveFamilyIds);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.post.update({
+        where: { id: postId },
+        data: {
+          ...(dto.content !== undefined && { content: nextContent }),
+          ...(dto.place !== undefined && {
+            place: this.normalizeText(dto.place),
+          }),
+          ...(dto.eventTitle !== undefined && { eventTitle: nextTitle }),
+          ...(dto.eventDate !== undefined && { eventDate: nextDate }),
+        },
+      });
+      if (dto.familyIds) {
+        await tx.postFamily.deleteMany({ where: { postId } });
+        await tx.postFamily.createMany({
+          data: dto.familyIds.map((familyId) => ({ postId, familyId })),
+        });
+      }
+      if (dto.taggedMemberIds) {
+        await tx.postMemberTag.deleteMany({ where: { postId } });
+        await tx.postMemberTag.createMany({
+          data: dto.taggedMemberIds.map((memberId) => ({ postId, memberId })),
+        });
+      }
+    });
+    return this.getPost(userId, postId);
+  }
+
+  async remove(userId: string, postId: string): Promise<{ success: boolean }> {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: {
+        authorUserId: true,
+        media: { select: { storageKey: true } },
+      },
+    });
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+    if (post.authorUserId !== userId) {
+      throw new ForbiddenException('Only the author can delete a post');
+    }
+    // Cascades remove the media/family/tag/comment/reaction rows.
+    await this.prisma.post.delete({ where: { id: postId } });
+    // Files go best-effort after the DB commit — an orphan file is
+    // recoverable noise, a dangling DB row is not.
+    await Promise.all(
+      post.media.map(async ({ storageKey }) => {
+        try {
+          await this.storage.remove(storageKey);
+        } catch (error) {
+          this.logger.warn(
+            `Could not delete stored file ${storageKey}: ${String(error)}`,
+          );
+        }
+      }),
+    );
+    return { success: true };
+  }
+
+  private async canView(
+    userId: string,
+    post: { authorUserId: string; families: { familyId: string }[] },
+  ): Promise<boolean> {
+    if (post.authorUserId === userId) {
+      return true;
+    }
+    const familyIds = post.families.map((f) => f.familyId);
+    if (familyIds.length === 0) {
+      return false; // private post
+    }
+    const membership = await this.prisma.familyMember.findFirst({
+      where: { userId, familyId: { in: familyIds } },
+      select: { id: true },
+    });
+    return membership !== null;
+  }
+
+  /** EVENT requires title + date; plain POST must not carry them (WBS 1.5.4). */
+  private validateEventFields(
+    type: PostType,
+    eventTitle: string | null,
+    eventDate: Date | null,
+  ): void {
+    if (type === PostType.EVENT) {
+      if (!eventTitle || !eventDate) {
+        throw new BadRequestException(
+          'An event needs both eventTitle and eventDate',
+        );
+      }
+    } else if (eventTitle || eventDate) {
+      throw new BadRequestException(
+        'eventTitle and eventDate are only allowed when type = EVENT',
+      );
+    }
+  }
+
+  private async requireMembershipInAll(
+    userId: string,
+    familyIds: string[],
+  ): Promise<void> {
+    if (familyIds.length === 0) {
+      return;
+    }
+    const memberships = await this.prisma.familyMember.count({
+      where: { userId, familyId: { in: familyIds } },
+    });
+    if (memberships !== familyIds.length) {
+      throw new ForbiddenException(
+        'You can only share to families you belong to',
+      );
+    }
+  }
+
+  private async validateTags(
+    userId: string,
+    taggedMemberIds: string[],
+    familyIds: string[],
+  ): Promise<void> {
+    if (taggedMemberIds.length === 0) {
+      return;
+    }
+    const members = await this.prisma.familyMember.findMany({
+      where: { id: { in: taggedMemberIds } },
+      select: { id: true, familyId: true },
+    });
+    if (members.length !== taggedMemberIds.length) {
+      throw new NotFoundException('Some tagged members were not found');
+    }
+    if (familyIds.length > 0) {
+      // Everyone who can see the post must be able to see who is tagged.
+      const allowed = new Set(familyIds);
+      if (members.some((member) => !allowed.has(member.familyId))) {
+        throw new BadRequestException(
+          'Tagged members must belong to the families the post is shared to',
+        );
+      }
+      return;
+    }
+    // Private post: tags must still stay within the author's own families.
+    const memberFamilyIds = [
+      ...new Set(members.map((member) => member.familyId)),
+    ];
+    const myMemberships = await this.prisma.familyMember.count({
+      where: { userId, familyId: { in: memberFamilyIds } },
+    });
+    if (myMemberships !== memberFamilyIds.length) {
+      throw new BadRequestException(
+        'You can only tag members of your own families',
+      );
+    }
+  }
+
+  private async validateAttachableMedia(
+    userId: string,
+    mediaIds: string[],
+  ): Promise<void> {
+    const attachable = await this.prisma.media.count({
+      where: {
+        id: { in: mediaIds },
+        uploaderUserId: userId,
+        postId: null,
+        memoId: null,
+        lifeEventId: null,
+      },
+    });
+    if (attachable !== mediaIds.length) {
+      throw new BadRequestException(
+        'Media must be your own uploads and not attached elsewhere',
+      );
+    }
+  }
+
+  private toDetail(post: PostRecord): PostDetail {
+    return {
+      id: post.id,
+      authorUserId: post.authorUserId,
+      authorName: post.author.name,
+      type: post.type,
+      content: post.content,
+      eventDate: post.eventDate,
+      eventTitle: post.eventTitle,
+      place: post.place,
+      familyIds: post.families.map((f) => f.familyId),
+      taggedMemberIds: post.memberTags.map((t) => t.memberId),
+      media: post.media,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+    };
+  }
+
+  private normalizeText(value: string | undefined): string | null {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : null;
+  }
+}
