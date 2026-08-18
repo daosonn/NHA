@@ -134,6 +134,17 @@
   shape hiding cross-family ids from non-authors. Merged to `main` in
   PR #5 (2026-08-18). Assumption to confirm: media set fixed at post
   creation (edit changes text/visibility/tags, not attachments).
+- Life Profile API (2026-08-18): `GET/PATCH /api/me/profile` +
+  `GET/PATCH /api/families/:familyId/members/:memberId/profile` — the
+  display rule from domain-model.md (linked member → global profile,
+  placeholder → family-local wiki profile), wiki editing by any family
+  member for placeholders (linked profiles are owner-only), every edit
+  logged to `EditHistory` with editor + snapshot, `updatedById`
+  stamped. Fields: bio, interests (string list), birthDate/deathDate
+  (strict ISO, death ≥ birth) — the single source the 1.2.5 widgets and
+  Sprint-3 reminders derive from. Task 1.6.2 API side done; verified by
+  lint/build + 11-case live smoke test incl. EditHistory rows in the
+  DB. On branch `feature/life-profile`, uncommitted.
 - Comments + Reactions API (2026-08-18): CRUD
   `/api/posts/:postId/comments` (oldest first, cursor-paginated; anyone
   who can view the post comments, only the comment author edits/deletes

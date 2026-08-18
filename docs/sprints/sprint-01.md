@@ -99,14 +99,20 @@ build the family tree, post content with photos, and view member profiles.
       call chưa quyết); UI chưa nối
 - [ ] 1.5.7 Reaction bài đăng (đa dạng loại — added 2026-08-14, see
       `database.md`) — API done 2026-08-18: `PUT/DELETE
-  /api/posts/:postId/reactions/me` (upsert 1 reaction/người/bài,
+/api/posts/:postId/reactions/me` (upsert 1 reaction/người/bài,
       LIKE/LOVE/HAHA/WOW/SAD); PostDetail có thêm
       commentCount/reactionCount/myReaction; UI chưa nối
 
 ### 1.6 Nav4 – Hồ sơ đời cá nhân — Profile
 
 - [ ] 1.6.1 UI Profile (avatar + tên) — UI xong 2026-08-18 (mock data, chưa nối API)
-- [ ] 1.6.2 About (thông tin cá nhân) — UI xong 2026-08-18 (mock data, chưa nối API)
+- [ ] 1.6.2 About (thông tin cá nhân) — API done 2026-08-18:
+      `GET/PATCH /api/me/profile` +
+      `GET/PATCH /api/families/:familyId/members/:memberId/profile`
+      (display rule linked→global / placeholder→wiki; placeholder
+      wiki-editable bởi cả nhà, mọi edit ghi `EditHistory`; bio,
+      interests, birthDate/deathDate — nguồn cho widget 1.2.5).
+      UI xong 2026-08-18 (mock data, chưa nối API)
 - [ ] 1.6.3 Timeline chung (bài viết/ảnh theo thời gian) — UI xong 2026-08-18 (mock data, chưa nối API)
 - [ ] 1.6.4 Album/Gallery (danh sách ảnh) — UI xong 2026-08-18 (mock data, chưa nối API)
 - [ ] 1.6.5 Memo cá nhân (tạo memo — ghi chú về một thành viên, xem `database.md`) — UI xong 2026-08-18 (mock data, chưa nối API)
