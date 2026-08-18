@@ -331,17 +331,37 @@ export class FamilyService {
     return { success: true };
   }
 
-  /** Membership-based authorization (docs/02-backend/architecture.md). */
-  private async requireMembership(
-    familyId: string,
-    userId: string,
-  ): Promise<void> {
+  /**
+   * Membership-based authorization (docs/02-backend/architecture.md).
+   * Public: the single home of the "is this user in this family" check —
+   * other modules must call these instead of re-implementing them.
+   */
+  async requireMembership(familyId: string, userId: string): Promise<void> {
     const member = await this.prisma.familyMember.findUnique({
       where: { familyId_userId: { familyId, userId } },
       select: { id: true },
     });
     if (!member) {
       throw new ForbiddenException('You are not a member of this family');
+    }
+  }
+
+  /** Membership in every listed family; empty list passes. */
+  async requireMembershipInAll(
+    userId: string,
+    familyIds: string[],
+    message = 'You are not a member of every listed family',
+  ): Promise<void> {
+    if (familyIds.length === 0) {
+      return;
+    }
+    // familyIds are unique (DTO @ArrayUnique) and (familyId, userId) is
+    // unique, so a simple count comparison is exact.
+    const memberships = await this.prisma.familyMember.count({
+      where: { userId, familyId: { in: familyIds } },
+    });
+    if (memberships !== familyIds.length) {
+      throw new ForbiddenException(message);
     }
   }
 

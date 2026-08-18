@@ -7,6 +7,7 @@ import {
   UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma/prisma.service';
+import { PostService } from '../post/post.service';
 import { StorageService } from '../storage/storage.service';
 
 /** Multer file injected by FileInterceptor (streamed to a temp file). */
@@ -80,6 +81,7 @@ export class MediaService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    private readonly postService: PostService,
   ) {}
 
   /** Stores the file and creates a standalone Media row (no parent yet). */
@@ -187,18 +189,8 @@ export class MediaService {
       return media.memo.ownerUserId === userId;
     }
     if (media.post) {
-      if (media.post.authorUserId === userId) {
-        return true;
-      }
-      const familyIds = media.post.families.map((f) => f.familyId);
-      if (familyIds.length === 0) {
-        return false; // private post
-      }
-      const membership = await this.prisma.familyMember.findFirst({
-        where: { userId, familyId: { in: familyIds } },
-        select: { id: true },
-      });
-      return membership !== null;
+      // One home for the post-visibility rule — never a second copy here.
+      return this.postService.canViewPost(userId, media.post);
     }
     // Standalone or life-event media stays uploader-only until the
     // life-event flows land (WBS 1.6.8).

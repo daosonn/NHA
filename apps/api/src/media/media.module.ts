@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
+import { PostModule } from '../post/post.module';
 import { multerTempStorage } from '../storage/multer-temp-storage';
 import { StorageModule } from '../storage/storage.module';
 import { StorageService } from '../storage/storage.service';
@@ -13,6 +14,7 @@ const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 @Module({
   imports: [
     StorageModule,
+    PostModule,
     // Uploads stream to a temp file under the storage root instead of
     // buffering up to 100MB per request in memory; MediaService promotes
     // valid files into their permanent location.

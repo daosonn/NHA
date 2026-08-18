@@ -7,7 +7,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma/prisma.service';
-import { PostType } from '../generated/prisma/enums';
+import { FamilyService } from '../family/family.service';
+import { PostType, ReactionType } from '../generated/prisma/enums';
 import { StorageService } from '../storage/storage.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -30,6 +31,10 @@ export interface PostDetail {
   familyIds: string[];
   taggedMemberIds: string[];
   media: PostMediaSummary[];
+  commentCount: number;
+  reactionCount: number;
+  /** The viewer's own reaction, null when they have not reacted. */
+  myReaction: ReactionType | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,19 +59,12 @@ interface PostRecord {
   families: { familyId: string }[];
   memberTags: { memberId: string }[];
   media: PostMediaSummary[];
+  /** Filtered to the viewer's own reaction (0 or 1 rows). */
+  reactions: { type: ReactionType }[];
+  _count: { comments: number; reactions: number };
 }
 
 const FEED_DEFAULT_LIMIT = 20;
-
-const postDetailInclude = {
-  author: { select: { name: true } },
-  families: { select: { familyId: true } },
-  memberTags: { select: { memberId: true } },
-  media: {
-    select: { id: true, mimeType: true, sizeBytes: true },
-    orderBy: { createdAt: 'asc' as const },
-  },
-};
 
 @Injectable()
 export class PostService {
@@ -75,7 +73,24 @@ export class PostService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    private readonly familyService: FamilyService,
   ) {}
+
+  /** The include every PostDetail read uses — viewer-dependent because it
+   *  carries the viewer's own reaction. */
+  private detailInclude(userId: string) {
+    return {
+      author: { select: { name: true } },
+      families: { select: { familyId: true } },
+      memberTags: { select: { memberId: true } },
+      media: {
+        select: { id: true, mimeType: true, sizeBytes: true },
+        orderBy: { createdAt: 'asc' as const },
+      },
+      reactions: { where: { userId }, select: { type: true } },
+      _count: { select: { comments: true, reactions: true } },
+    };
+  }
 
   async create(userId: string, dto: CreatePostDto): Promise<PostDetail> {
     const content = this.normalizeText(dto.content);
@@ -150,13 +165,7 @@ export class PostService {
     familyId: string,
     query: { limit?: number; cursor?: string },
   ): Promise<FamilyFeed> {
-    const membership = await this.prisma.familyMember.findUnique({
-      where: { familyId_userId: { familyId, userId } },
-      select: { id: true },
-    });
-    if (!membership) {
-      throw new ForbiddenException('You are not a member of this family');
-    }
+    await this.familyService.requireMembership(familyId, userId);
     const limit = query.limit ?? FEED_DEFAULT_LIMIT;
     const posts = await this.prisma.post.findMany({
       where: { families: { some: { familyId } } },
@@ -164,7 +173,7 @@ export class PostService {
       // One extra row tells us whether another page exists.
       take: limit + 1,
       ...(query.cursor && { cursor: { id: query.cursor }, skip: 1 }),
-      include: postDetailInclude,
+      include: this.detailInclude(userId),
     });
     const page = posts.slice(0, limit);
     return {
@@ -177,13 +186,31 @@ export class PostService {
   async getPost(userId: string, postId: string): Promise<PostDetail> {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
-      include: postDetailInclude,
+      include: this.detailInclude(userId),
     });
     // 404 in both cases — do not confirm that private posts exist.
-    if (!post || !(await this.canView(userId, post))) {
+    if (!post || !(await this.canViewPost(userId, post))) {
       throw new NotFoundException('Post not found');
     }
     return this.toDetail(post);
+  }
+
+  /**
+   * 404 unless the post exists and the viewer may see it — the shared
+   * gate for everything hanging off a post (media, comments, reactions).
+   * 404 rather than 403 so private posts stay unconfirmable.
+   */
+  async assertViewable(userId: string, postId: string): Promise<void> {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: {
+        authorUserId: true,
+        families: { select: { familyId: true } },
+      },
+    });
+    if (!post || !(await this.canViewPost(userId, post))) {
+      throw new NotFoundException('Post not found');
+    }
   }
 
   async update(
@@ -209,7 +236,7 @@ export class PostService {
     }
     // 404 before 403: non-viewers must not learn that a private post
     // exists (same rule as getPost — a 403 here would be an oracle).
-    if (!(await this.canView(userId, post))) {
+    if (!(await this.canViewPost(userId, post))) {
       throw new NotFoundException('Post not found');
     }
     if (post.authorUserId !== userId) {
@@ -297,7 +324,7 @@ export class PostService {
       throw new NotFoundException('Post not found');
     }
     // 404 before 403 — same privacy rule as getPost/update.
-    if (!(await this.canView(userId, post))) {
+    if (!(await this.canViewPost(userId, post))) {
       throw new NotFoundException('Post not found');
     }
     if (post.authorUserId !== userId) {
@@ -321,7 +348,13 @@ export class PostService {
     return { success: true };
   }
 
-  private async canView(
+  /**
+   * The one post-visibility rule (docs/02-backend/architecture.md →
+   * Authorization): author sees their own; otherwise the viewer needs a
+   * membership in a family the post is shared to. Public so MediaService
+   * (and future consumers) delegate instead of copying it.
+   */
+  async canViewPost(
     userId: string,
     post: { authorUserId: string; families: { familyId: string }[] },
   ): Promise<boolean> {
@@ -362,17 +395,11 @@ export class PostService {
     userId: string,
     familyIds: string[],
   ): Promise<void> {
-    if (familyIds.length === 0) {
-      return;
-    }
-    const memberships = await this.prisma.familyMember.count({
-      where: { userId, familyId: { in: familyIds } },
-    });
-    if (memberships !== familyIds.length) {
-      throw new ForbiddenException(
-        'You can only share to families you belong to',
-      );
-    }
+    await this.familyService.requireMembershipInAll(
+      userId,
+      familyIds,
+      'You can only share to families you belong to',
+    );
   }
 
   private async validateTags(
@@ -447,6 +474,9 @@ export class PostService {
       familyIds: post.families.map((f) => f.familyId),
       taggedMemberIds: post.memberTags.map((t) => t.memberId),
       media: post.media,
+      commentCount: post._count.comments,
+      reactionCount: post._count.reactions,
+      myReaction: post.reactions[0]?.type ?? null,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
     };
