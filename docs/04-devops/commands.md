@@ -117,22 +117,31 @@ grep -c "Some text only that screen renders" .expo/ssr-test/family.html
 rm -rf .expo/ssr-test          # then set `output` back to "single"
 ```
 
-Caveat: `onLayout` never fires and `Dimensions` reports zero, so anything
-that waits for measurement renders empty here. That is a useful signal in
-itself — it is also an empty first frame on a real device.
+Caveats:
+
+- `onLayout` never fires and `Dimensions` reports zero, so anything that
+  waits for measurement renders empty here. That is a useful signal in
+  itself — it is also an empty first frame on a real device.
+- Since the session guards landed (2026-08-18), **every route behind
+  `(tabs)` or `(auth)` prerenders empty**: the guard renders `null` until
+  the keychain read finishes, and effects do not run in a prerender. The
+  export still proves the bundle builds and every module evaluates without
+  throwing; it no longer proves a guarded screen renders. Use the browser
+  or the phone for that.
 
 ## Troubleshooting
 
-| Symptom                                                                | Fix                                                                                                                                                                                                                                                                                  |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Stale bundle, weird resolution errors                                  | `cd apps/mobile && pnpm start --clear`                                                                                                                                                                                                                                               |
-| Blank white page on web, console shows a `TypeError` inside the bundle | The page is served but the JS crashed. Find the module: open the bundle URL from `index.html`, look at the reported line, then read the file path Metro records at the end of that module. A duplicated package across the monorepo is the usual cause — see `mobile-development.md` |
-| `Unable to resolve module <pkg>` after installing something            | Install it with `pnpm exec expo install <pkg>` from `apps/mobile`, not plain `pnpm add` — Expo picks the SDK-compatible version                                                                                                                                                      |
-| Port 8081 already in use                                               | `pnpm dev:mobile --port 8082`, or kill the listener: `Get-NetTCPConnection -LocalPort 8081 -State Listen \| Stop-Process -Id { $_.OwningProcess } -Force` in PowerShell                                                                                                              |
-| QR scans but never loads                                               | Windows Firewall — allow `node.exe` on Private networks. See `mobile-development.md`                                                                                                                                                                                                 |
-| Phone and PC on different networks                                     | `pnpm dev:mobile --tunnel`                                                                                                                                                                                                                                                           |
-| Dependency versions look wrong                                         | `cd apps/mobile && pnpm doctor`                                                                                                                                                                                                                                                      |
-| Anything unexplained after changing deps                               | `rm -rf node_modules apps/*/node_modules packages/*/node_modules && pnpm install`                                                                                                                                                                                                    |
+| Symptom                                                                               | Fix                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Stale bundle, weird resolution errors                                                 | `cd apps/mobile && pnpm start --clear`                                                                                                                                                                                                                                               |
+| Blank white page on web, console shows a `TypeError` inside the bundle                | The page is served but the JS crashed. Find the module: open the bundle URL from `index.html`, look at the reported line, then read the file path Metro records at the end of that module. A duplicated package across the monorepo is the usual cause — see `mobile-development.md` |
+| `Unable to resolve module <pkg>` after installing something                           | Install it with `pnpm exec expo install <pkg>` from `apps/mobile`, not plain `pnpm add` — Expo picks the SDK-compatible version                                                                                                                                                      |
+| Port 8081 already in use                                                              | `pnpm dev:mobile --port 8082`, or kill the listener: `Get-NetTCPConnection -LocalPort 8081 -State Listen \| Stop-Process -Id { $_.OwningProcess } -Force` in PowerShell                                                                                                              |
+| Web tab only: `blocked by CORS policy`, and the app says "could not reach the server" | The API's allowlist does not include the dev origin. It is `http://localhost:8081` and `:19006` outside production; override with `CORS_ORIGINS` in `apps/api/.env`. A phone is unaffected — a native fetch sends no `Origin`                                                        |
+| QR scans but never loads                                                              | Windows Firewall — allow `node.exe` on Private networks. See `mobile-development.md`                                                                                                                                                                                                 |
+| Phone and PC on different networks                                                    | `pnpm dev:mobile --tunnel`                                                                                                                                                                                                                                                           |
+| Dependency versions look wrong                                                        | `cd apps/mobile && pnpm doctor`                                                                                                                                                                                                                                                      |
+| Anything unexplained after changing deps                                              | `rm -rf node_modules apps/*/node_modules packages/*/node_modules && pnpm install`                                                                                                                                                                                                    |
 
 ## Adding a dependency to the mobile app
 

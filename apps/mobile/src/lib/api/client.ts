@@ -1,24 +1,33 @@
 /**
  * The one way the app talks to `apps/api`.
  *
- * Deliberately small: a base URL, a bearer token, and error handling. It is
- * not a data layer — caching, retries and loading state belong to
- * `@tanstack/react-query` on top of this (`docs/01-frontend/architecture.md`
- * § State), and putting them here would mean two of everything later.
+ * Deliberately small: a base URL, a bearer token, one retry after a refresh,
+ * and error handling. It is not a data layer — caching, deduplication and
+ * loading state belong to `@tanstack/react-query` on top of this
+ * (`docs/01-frontend/architecture.md` § State), and putting them here would
+ * mean two of everything later.
  */
 import { ApiError, type ApiErrorBody } from './errors';
 
 /**
  * The token is *supplied*, not stored here.
  *
- * Where a session lives is an auth decision — `expo-secure-store` when the
- * real one lands, never `AsyncStorage` (`CLAUDE.md` § 5). This module only
- * needs to be able to ask.
+ * Where a session lives is an auth decision — `expo-secure-store`, never
+ * `AsyncStorage` (`CLAUDE.md` § 5). This module only needs to be able to ask.
  */
 export type ApiConfig = {
   /** Origin plus the server's global prefix, e.g. `http://10.0.2.2:3000/api`. */
   baseUrl: string;
   getAccessToken: () => string | null;
+  /**
+   * Called when an authenticated request comes back 401. Resolve `true` once
+   * a fresh token is available and the request will be sent again, exactly
+   * once; resolve `false` and the 401 is handed to the caller.
+   *
+   * Never call this directly — go through `refreshOnce`, which collapses
+   * concurrent callers into a single attempt.
+   */
+  onUnauthorized?: () => Promise<boolean>;
 };
 
 /**
@@ -48,7 +57,7 @@ export function apiBaseUrl(): string {
 
 export type RequestOptions = {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
-  /** Serialised as JSON. Omit for GET. */
+  /** Serialised as JSON, unless it is `FormData`, which is sent as-is. */
   body?: unknown;
   /** Off for register/login/refresh, which have no token yet. */
   authenticated?: boolean;
@@ -60,17 +69,46 @@ function isErrorBody(value: unknown): value is ApiErrorBody {
 }
 
 /**
- * One request, one parsed result.
+ * At most one refresh in the air, ever.
  *
- * Every non-2xx becomes an `ApiError` rather than a rejected promise with a
- * raw `Response`: a caller that forgets to check `response.ok` gets a body
- * that type-checks as the success shape and fails somewhere far away.
+ * Opening the app fires several queries at once; if the access token has
+ * expired they all come back 401 together. Without this, each would spend
+ * the same single-use refresh token, the first would win and the rest would
+ * be rejected — taking the session down with them. Everyone waits on the
+ * same promise and then retries with whatever it produced.
  */
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+let inFlightRefresh: Promise<boolean> | null = null;
+
+function refreshOnce(): Promise<boolean> {
+  if (inFlightRefresh === null) {
+    const handler = config.onUnauthorized;
+
+    inFlightRefresh = (handler === undefined ? Promise.resolve(false) : handler())
+      .catch(() => false)
+      .finally(() => {
+        inFlightRefresh = null;
+      });
+  }
+
+  return inFlightRefresh;
+}
+
+/** Only exported for tests and for a full sign-out to reset the gate. */
+export function resetRefreshState(): void {
+  inFlightRefresh = null;
+}
+
+type RawResponse = { status: number; ok: boolean; payload: unknown };
+
+async function send(path: string, options: RequestOptions): Promise<RawResponse> {
   const { method = 'GET', body, authenticated = true, signal } = options;
 
+  // A multipart upload must set its own Content-Type: the boundary is part
+  // of it, and only the runtime knows what it picked.
+  const multipart = typeof FormData !== 'undefined' && body instanceof FormData;
+
   const headers: Record<string, string> = { Accept: 'application/json' };
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (body !== undefined && !multipart) headers['Content-Type'] = 'application/json';
 
   if (authenticated) {
     const token = config.getAccessToken();
@@ -82,7 +120,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     response = await fetch(`${config.baseUrl}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : multipart ? (body as FormData) : JSON.stringify(body),
       signal,
     });
   } catch (cause) {
@@ -92,13 +130,36 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   // 204 and an empty 200 both have no body to parse.
   const text = await response.text();
-  const payload: unknown = text === '' ? null : safeParse(text);
+  return {
+    status: response.status,
+    ok: response.ok,
+    payload: text === '' ? null : safeParse(text),
+  };
+}
 
-  if (!response.ok) {
-    throw ApiError.fromResponse(response.status, isErrorBody(payload) ? payload : null);
+/**
+ * One request, one parsed result.
+ *
+ * Every non-2xx becomes an `ApiError` rather than a rejected promise with a
+ * raw `Response`: a caller that forgets to check `response.ok` gets a body
+ * that type-checks as the success shape and fails somewhere far away.
+ */
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  let result = await send(path, options);
+
+  // An expired access token is the ordinary case, not an error worth showing.
+  // `authenticated: false` requests are excluded so that refresh itself —
+  // which is one of them — can never recurse into this.
+  if (result.status === 401 && options.authenticated !== false) {
+    const recovered = await refreshOnce();
+    if (recovered) result = await send(path, options);
   }
 
-  return payload as T;
+  if (!result.ok) {
+    throw ApiError.fromResponse(result.status, isErrorBody(result.payload) ? result.payload : null);
+  }
+
+  return result.payload as T;
 }
 
 function safeParse(text: string): unknown {

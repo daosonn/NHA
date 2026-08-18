@@ -5,13 +5,15 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { AuthModeTabs } from '../../src/components/auth/auth-mode-tabs';
-import { AppleMark, GoogleMark } from '../../src/components/auth/identity-marks';
+import { AppleMark, FacebookMark, GoogleMark } from '../../src/components/auth/identity-marks';
 import { FormScreen } from '../../src/components/layout/form-screen';
 import { Button } from '../../src/components/ui/button';
 import { Checkbox } from '../../src/components/ui/checkbox';
 import { Divider } from '../../src/components/ui/divider';
 import { Text } from '../../src/components/ui/text';
 import { TextField } from '../../src/components/ui/text-field';
+import { authErrorKey } from '../../src/features/auth/auth-error';
+import { useSession } from '../../src/features/auth/session';
 import { colors } from '../../src/theme';
 
 const MIN_PASSWORD = 8;
@@ -19,31 +21,59 @@ const MIN_PASSWORD = 8;
 export default function SignUpScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { register } = useSession();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [agreed, setAgreed] = useState(false);
 
+  const [submitting, setSubmitting] = useState(false);
+  const [errorKey, setErrorKey] = useState<string | null>(null);
+
   const ready =
     name.trim().length > 0 && email.trim().length > 0 && password.length >= MIN_PASSWORD && agreed;
+
+  /**
+   * Registration returns a token pair immediately — the server has no email
+   * confirmation step (`docs/00-shared/api-contract.md`), so this lands
+   * straight in the app. `verify.tsx` stays built and unreachable until that
+   * endpoint exists rather than pretending to check something.
+   */
+  const submit = async () => {
+    setSubmitting(true);
+    setErrorKey(null);
+
+    try {
+      await register({ name: name.trim(), email: email.trim(), password });
+    } catch (error) {
+      setErrorKey(authErrorKey(error));
+      setSubmitting(false);
+    }
+  };
 
   return (
     <FormScreen
       onBack={() => router.back()}
       footer={
         <>
+          {errorKey !== null && (
+            <Text
+              variant="caption"
+              color={colors.themes.destructive.text}
+              accessibilityRole="alert"
+            >
+              {t(errorKey)}
+            </Text>
+          )}
+
           <Button
             label={t('auth.signUp.submit')}
             size="large"
             fullWidth
             disabled={!ready}
-            onPress={() =>
-              router.push({
-                pathname: '/verify',
-                params: { email: email.trim(), intent: 'verify', name: name.trim() },
-              })
-            }
+            loading={submitting}
+            onPress={() => void submit()}
           />
 
           <Divider label={t('common.or')} />
@@ -65,6 +95,15 @@ export default function SignUpScreen() {
                 size="large"
                 fullWidth
                 renderIcon={() => <GoogleMark />}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button
+                label={t('auth.facebook')}
+                variant="neutral"
+                size="large"
+                fullWidth
+                renderIcon={() => <FacebookMark />}
               />
             </View>
           </View>

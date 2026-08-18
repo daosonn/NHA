@@ -15,11 +15,15 @@ build the family tree, post content with photos, and view member profiles.
 
 ### 1.1 Đăng ký / Đăng nhập — Authentication hoàn chỉnh
 
-- [ ] 1.1.1 UI đăng ký (form đăng ký) — UI xong 2026-08-18 (mock, chưa nối API)
+- [ ] 1.1.1 UI đăng ký (form đăng ký) — UI xong 2026-08-18; **nối API xong
+      2026-08-18** (`POST /auth/register`, token vào expo-secure-store). Chờ
+      verify trên thiết bị trước khi tick.
 - [x] 1.1.2 API đăng ký (tạo tài khoản) — done 2026-08-17: merged in PR #2
 - [x] 1.1.3 Validate dữ liệu (email/password) — done 2026-08-17: DTO +
       class-validator behind global ValidationPipe, merged in PR #2
-- [ ] 1.1.4 UI đăng nhập (form login) — UI xong 2026-08-18 (mock, chưa nối API)
+- [ ] 1.1.4 UI đăng nhập (form login) — UI xong 2026-08-18; **nối API xong
+      2026-08-18** (`POST /auth/login`, refresh-on-401 single-flight). Chờ
+      verify trên thiết bị trước khi tick.
 - [x] 1.1.5 API đăng nhập (JWT access + refresh — see backend architecture)
       — done 2026-08-17: merged in PR #2
 - [x] 1.1.6 Đăng xuất (revoke refresh token) — done 2026-08-17: single-use
@@ -31,11 +35,15 @@ build the family tree, post content with photos, and view member profiles.
 ### 1.2 Nav1 – Trang chủ — Trang chính sau login
 
 - [ ] 1.2.1 Navigation chính (Nav1/Nav2/Nav3/Nav4)
-- [ ] 1.2.2 Layout Home (responsive, mobile-first 375–430px) — UI xong 2026-08-18 (mock data, chưa nối API)
+- [ ] 1.2.2 Layout Home (responsive, mobile-first 375–430px) — UI xong
+      2026-08-18; **nối `GET /families` 2026-08-18** kèm loading / error /
+      empty. Widget dịp đặc biệt và recommendations vẫn là fixture (chưa có
+      endpoint).
 - [ ] 1.2.3 Load bài viết gần đây (feed cơ bản) — API done 2026-08-18:
       `GET /api/families/:familyId/posts` (mới nhất trước, cursor
       pagination, membership-based authorization); UI chưa nối
-- [ ] 1.2.4 Empty/loading state (UI đầy đủ)
+- [ ] 1.2.4 Empty/loading state (UI đầy đủ) — Home xong 2026-08-18 (kể cả
+      trạng thái "chưa có gia đình nào"); các màn khác chưa.
 - [ ] 1.2.5 Widget dịp đặc biệt trên Home (countdown + theme — sinh nhật/ngày giỗ derived từ LifeProfile; added 2026-08-14, see `database.md`)
 
 ### 1.3 Tạo nhóm gia đình — Family Group
@@ -43,7 +51,9 @@ build the family tree, post content with photos, and view member profiles.
 - [x] 1.3.1 DB Family Group (Family + FamilyMember — incl. placeholder
       members, see `database.md`) — done 2026-08-14: full-MVP schema,
       25 models + migration, merged in PR #1
-- [ ] 1.3.2 UI tạo nhóm (nhập tên nhóm)
+- [ ] 1.3.2 UI tạo nhóm (nhập tên nhóm) — **xong 2026-08-18**:
+      `app/create-family.tsx`, gộp cả tạo mới và tham gia bằng invite code, đã
+      nối `POST /families` + `POST /families/join`. Chờ verify trên thiết bị.
 - [x] 1.3.3 API tạo nhóm (lưu group, sinh invite code) — done 2026-08-17:
       merged in `107acb1`
 - [x] 1.3.4 Thêm thành viên (add member — có account hoặc placeholder) —

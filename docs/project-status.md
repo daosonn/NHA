@@ -42,6 +42,15 @@
 - **Home is still styled with `StyleSheet`.** NativeWind arrived after it
   was written; converting it is a mechanical follow-up, not a rewrite.
   New screens use NativeWind.
+- **API integration foundation landed (2026-08-18)**: real session on
+  `expo-secure-store`, refresh-on-401 behind a single-flight gate,
+  `QueryClientProvider`, and hooks for families / family tree / family
+  feed. Sign in and Create account now call the server. **No other screen
+  is wired**: each is blocked on a product decision, not on an endpoint —
+  see `docs/00-shared/api-contract.md` § What blocks step 4.
+- **Four blocking questions answered 2026-08-18** — see Important
+  Decisions: solar-only stands, Apple joins Google and Facebook, Home gets
+  a skippable empty state, kinship labels stay at the base relationships.
 - **DB design finalized at sprint 0 (2026-08-14)**: full-MVP design — 25
   tables, 2 ER diagrams, decision log — in `docs/02-backend/database.md`;
   domain decisions recorded in `docs/00-shared/domain-model.md`. Team
@@ -192,6 +201,16 @@
   they are expressed as `flex-1` + padding + gap, never hardcoded.
   `darkMode: 'class'` — the palette is a fixed warm light one, so dark
   styles must never arrive from the OS setting.
+- **State libraries reviewed (2026-08-18)**: `@tanstack/react-query` and
+  `expo-secure-store` added because each solves a problem the app has
+  today (cursor pagination and cache sharing; tokens surviving a restart).
+  **`zustand`, `react-hook-form` and `zod` deliberately not added** — the
+  only cross-screen state is the active family, and the six existing forms
+  are simple enough for `useState` while the server already validates and
+  returns per-field messages. `packages/api-client` and
+  `packages/contracts` are dropped from the plan: the client lives fine in
+  `apps/mobile`, and a shared zod package would fight the API's
+  class-validator DTOs. Revisit each when a second case appears.
 - **Invites are per-spot, not per-family (2026-08-18)** — UI-led decision,
   backend to follow. The invite sheet sends a specific person to a specific
   tree node: it captures the spot id, a display name and a relationship, and
@@ -229,6 +248,23 @@ relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
   `(auth)` and `(tabs)` route groups, which is the one place to change when
   the AuthModule is wired. Tokens then belong in `expo-secure-store`, never
   `AsyncStorage`.
+- **Solar-only reaffirmed (2026-08-18)**: the Occasions mockups showing
+  lunar dates are what changes, not the schema. See `domain-model.md`.
+- **Social login is Apple + Google + Facebook (2026-08-18)**: Apple is
+  added because App Store guideline 4.8 makes it mandatory on iOS once any
+  other third-party login ships. Apple's flow differs from the other two
+  (an identity token, not a plain authorization-code redirect), so it is
+  its own backend task. The mockups need a third button.
+- **No mandatory family step (2026-08-18)**: registration lands on Home,
+  which shows an empty state with a way to create or join a family. Every
+  screen therefore has to survive `familyId === null` — that is a
+  first-class state now, not an edge case.
+- **Kinship labels stay basic for the MVP (2026-08-18)**: the app shows the
+  base relationship translated from `RelationshipType`, and does **not**
+  derive "Grandmother" or "Aunt" from paths through the graph. Consequence
+  to accept: a node with no direct edge to the viewer — a grandparent, a
+  cousin — shows its name with no role line under it. Revisit once the tree
+  has been used by a real family.
 - Backend uses NestJS; prefer a modular monolith (see `CLAUDE.md` § 3).
 - pnpm workspace monorepo.
 - Conventional Commits are enforced via commitlint (husky `commit-msg` hook).

@@ -5,9 +5,13 @@ what it may not.
 
 The client-side mirror of this document is `apps/mobile/src/lib/api/`:
 `types.ts` (the shapes), `endpoints.ts` (one function per route),
-`client.ts` (fetch, bearer token, errors). Those files were written from the
-NestJS controllers and DTOs, not from a wish list. When the server changes,
-both move together.
+`client.ts` (fetch, bearer token, refresh, errors). Those files were written
+from the NestJS controllers and DTOs, not from a wish list. When the server
+changes, both move together.
+
+Every shape below was replayed against the running API on 2026-08-18 —
+register, families list, family create, tree, feed, and a deliberate refresh
+replay — and matches `types.ts` exactly.
 
 ## Ground rules
 
@@ -163,19 +167,38 @@ return them.
 So the app owns that derivation, and it has to be done in the catalogue
 rather than in English: `祖母` is not a translation of "grandmother" that a
 string table can reach if the noun arrives from the server already in
-English. Flagged in `docs/01-frontend/architecture.md` § Language; still
-needs a decision before the tree is wired.
+English.
 
-## Wiring order, when the time comes
+**Decided 2026-08-18**: the MVP shows the **base relationship only** —
+parent, child, spouse, sibling and the exception types — translated
+directly from `RelationshipType` plus the direction of the edge. It does
+not walk the graph, so "Grandmother", "Aunt" and "Cousin" do not appear.
+The consequence to accept is that a node with no direct edge to the viewer
+shows its name with no role line under it. Revisit once a real family has
+used the tree.
 
-1. `configureApi({ baseUrl, getAccessToken })` once in `app/_layout.tsx`.
-2. Real session in `src/features/auth/session.tsx`: tokens to
-   `expo-secure-store`, never `AsyncStorage` (`CLAUDE.md` § 5). Refresh on
-   401, sign out when refresh itself fails.
-3. `QueryClientProvider`, then one hook per endpoint under
-   `src/features/<feature>/`.
+## Wiring order
+
+1. ~~`configureApi` once in `app/_layout.tsx`~~ — **done 2026-08-18**, at
+   module scope, because a child's effect can fire a request before the
+   root component's own effects run.
+2. ~~Real session~~ — **done 2026-08-18**. Tokens in `expo-secure-store`;
+   refresh on 401 behind a single-flight gate; sign out when refresh itself
+   fails.
+3. ~~`QueryClientProvider` + hooks~~ — **done 2026-08-18** for families,
+   family tree and the family feed.
 4. Screens swap a fixture import for a hook, and gain the loading and
-   error states they do not have yet.
+   error states they did not have. **In progress** — see the table below.
 
-Steps 1–2 are auth work and land with the AuthModule wiring. Step 4 is per
-screen and is only possible for screens whose endpoints exist.
+### Step 4, screen by screen
+
+| Screen               | State                                                                                                                                                                  |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sign in / Sign up    | **Wired** 2026-08-18. The social buttons still render without handlers, pending Apple on the server.                                                                   |
+| Home                 | **Wired** 2026-08-18 — families, plus loading, error and a "no family yet" empty state. The event widget and recommendations stay on fixtures: no endpoint.            |
+| Create / join family | **Wired** 2026-08-18 (`app/create-family.tsx`). 404 = unknown code, 409 = already a member, both replayed against the running server.                                  |
+| Family tree          | Endpoint ready, screen not wired: it needs a graph → generations/couples/descents adapter, because the API returns flat edges and the component takes a laid-out tree. |
+| New moment           | Needs `expo-image-picker` for media. Text-only posting is otherwise ready.                                                                                             |
+| Life Profile         | No endpoints — LifeProfile, LifeEvent, the derived gallery and Memo do not exist.                                                                                      |
+| Omoide               | No album endpoints, and "derived from what" is still undecided.                                                                                                        |
+| AI tab               | `apps/ai` does not exist.                                                                                                                                              |

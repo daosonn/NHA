@@ -37,7 +37,7 @@ const LANGUAGE_OPTIONS = SUPPORTED_LOCALES.map((locale) => ({
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { session, signOut } = useSession();
+  const { user, signOut } = useSession();
   const locale = useLocale();
 
   return (
@@ -60,13 +60,13 @@ export default function SettingsScreen() {
 
           <View style={{ flex: 1, gap: 3 }}>
             <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-              {session?.displayName ?? t('settings.signedOut')}
+              {user?.name ?? t('settings.signedOut')}
             </Text>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
               <IconBadge size={22} renderIcon={(props) => <Mail {...props} strokeWidth={2.2} />} />
               <Text variant="caption" color={colors.text.muted}>
-                {session?.email ?? t('settings.noEmail')}
+                {user?.email ?? t('settings.noEmail')}
               </Text>
             </View>
           </View>
@@ -100,7 +100,7 @@ export default function SettingsScreen() {
           variant="destructive"
           size="large"
           fullWidth
-          onPress={signOut}
+          onPress={() => void signOut()}
         />
       </ScrollView>
     </View>

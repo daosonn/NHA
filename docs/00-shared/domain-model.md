@@ -119,6 +119,10 @@ it — no cross-owner references.
   Date Detail screen (screen 17).
 - Dates are **solar (Gregorian) only** — the product targets the Japanese
   market (decided 2026-08-14); no lunar-calendar support needed.
+  **Reaffirmed 2026-08-18** after the Occasions mockups (9e/9f/9g) turned up
+  showing lunar dates: the mockups are what changes, not the schema. The
+  lunar toggle, the "Lunar" pill and the "lunar 10/2" line come out of the
+  design before those screens are built.
 
 ## Open Questions
 

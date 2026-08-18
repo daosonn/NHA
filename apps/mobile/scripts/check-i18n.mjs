@@ -29,7 +29,10 @@ const SUFFIXES = ['', '_one', '_other'];
  * exists to match them against. `date.months.4` is built from the month
  * number in `src/lib/date.ts`.
  */
-const DYNAMIC = ['date.months.'];
+// Reached by a computed key, so no `t('…')` call site names them:
+// `date.months.<n>` from src/lib/date.ts, the error keys from
+// src/features/auth/auth-error.ts.
+const DYNAMIC = ['date.months.', 'errors.', 'auth.errors.', 'createFamily.errors.'];
 
 function walk(dir) {
   const out = [];

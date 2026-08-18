@@ -155,6 +155,103 @@ export type CreateRelationshipRequest = {
   label?: string;
 };
 
+/**
+ * `GET /api/families/:familyId/tree` — nodes and edges in one payload.
+ *
+ * The server does not lay the tree out and does not name the relationships:
+ * "Grandmother" is derived from these edges plus the direction of travel and
+ * who is looking (`docs/00-shared/api-contract.md`).
+ */
+export type FamilyTree = {
+  id: string;
+  name: string;
+  members: FamilyMemberSummary[];
+  relationships: RelationshipSummary[];
+};
+
+// --------------------------------------------------------------- posts
+
+/** `apps/api/src/generated/prisma/enums.ts` → `PostType`. */
+export type PostType = 'POST' | 'EVENT';
+
+/** An attachment as it appears on a post — no URL, fetch it by id. */
+export type PostMediaSummary = {
+  id: string;
+  mimeType: string;
+  sizeBytes: number;
+};
+
+/** `PostService.PostDetail`. */
+export type PostDetail = {
+  id: string;
+  authorUserId: string;
+  authorName: string;
+  type: PostType;
+  content: string | null;
+  /** Only set for `EVENT`. */
+  eventDate: IsoDateTime | null;
+  eventTitle: string | null;
+  place: string | null;
+  /** Empty means private to the author — not "shared with everyone". */
+  familyIds: string[];
+  taggedMemberIds: string[];
+  media: PostMediaSummary[];
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+};
+
+/** `GET /api/families/:familyId/posts` — newest first, cursor-paginated. */
+export type FamilyFeed = {
+  items: PostDetail[];
+  /** Echo back as `cursor` for the next page; `null` is the end. */
+  nextCursor: string | null;
+};
+
+export type FeedQuery = {
+  /** 1–50, default 20. */
+  limit?: number;
+  cursor?: string;
+};
+
+/**
+ * `POST /api/posts`.
+ *
+ * `EVENT` requires `eventTitle` + `eventDate`; a plain `POST` forbids both
+ * and requires `content` or media. Omitting `familyIds` makes the post
+ * private to its author.
+ */
+export type CreatePostRequest = {
+  type: PostType;
+  content?: string;
+  /** Strict ISO 8601. */
+  eventDate?: string;
+  eventTitle?: string;
+  place?: string;
+  familyIds?: string[];
+  taggedMemberIds?: string[];
+  /** Your own uploads, not already attached elsewhere. Creation only. */
+  mediaIds?: string[];
+};
+
+/**
+ * `PATCH /api/posts/:postId`.
+ *
+ * Attachments are fixed at creation: a `mediaIds` key here is silently
+ * stripped by the server's whitelist pipe rather than rejected, so it is
+ * left out of the type entirely.
+ */
+export type UpdatePostRequest = Omit<CreatePostRequest, 'mediaIds'>;
+
+// --------------------------------------------------------------- media
+
+/** `POST /api/media` — upload first, then attach the ids to a post. */
+export type MediaSummary = {
+  id: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: IsoDateTime;
+};
+
 /** What the delete endpoints return. */
 export type SuccessResult = {
   success: boolean;

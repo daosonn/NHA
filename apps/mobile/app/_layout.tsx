@@ -1,3 +1,4 @@
+import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -19,11 +20,26 @@ import Lora_700Bold from '@expo-google-fonts/lora/700Bold/Lora_700Bold.ttf';
 // at the root.
 import '../global.css';
 import { SessionProvider } from '../src/features/auth/session';
+import { currentAccessToken, refreshSession } from '../src/features/auth/session-store';
+import { configureApi } from '../src/lib/api';
+import { createQueryClient } from '../src/lib/query-client';
 // Importing the module is what initialises i18next, so it must happen before
 // any screen calls `t()`. `restoreLocale` then swaps in a stored choice.
 import '../src/i18n';
 import { restoreLocale } from '../src/i18n/locale';
 import { colors } from '../src/theme';
+
+// Module scope on purpose: this has to be in place before the first request,
+// and a child's effect can fire one before this component's own effects run.
+// The base URL keeps its default from `EXPO_PUBLIC_API_URL`.
+configureApi({
+  getAccessToken: currentAccessToken,
+  onUnauthorized: refreshSession,
+});
+
+// One client for the life of the process, created outside the component so a
+// fast refresh does not throw the cache away on every save.
+const queryClient = createQueryClient();
 
 export default function RootLayout() {
   // Deliberately not a render gate. i18next is already initialised with the
@@ -52,14 +68,18 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <SessionProvider>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.background.page },
-          }}
-        />
-      </SessionProvider>
+      <QueryClientProvider client={queryClient}>
+        {/* Inside the query provider: signing out has to empty the cache, or
+            the next account reads the previous one's data. */}
+        <SessionProvider>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: colors.background.page },
+            }}
+          />
+        </SessionProvider>
+      </QueryClientProvider>
     </SafeAreaProvider>
   );
 }

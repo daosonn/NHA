@@ -8,7 +8,6 @@ import { FormScreen } from '../../src/components/layout/form-screen';
 import { Button } from '../../src/components/ui/button';
 import { Text } from '../../src/components/ui/text';
 import { TextField } from '../../src/components/ui/text-field';
-import { useSession } from '../../src/features/auth/session';
 import { colors } from '../../src/theme';
 
 const MIN_PASSWORD = 8;
@@ -16,7 +15,6 @@ const MIN_PASSWORD = 8;
 export default function ResetPasswordScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { signIn } = useSession();
   const { email } = useLocalSearchParams<{ email?: string }>();
 
   const [password, setPassword] = useState('');
@@ -36,7 +34,10 @@ export default function ResetPasswordScreen() {
           size="large"
           fullWidth
           disabled={!ready}
-          onPress={() => signIn({ email: email ?? 'you@example.com', displayName: 'Minh' })}
+          // Password reset is WBS 1.1.7, deferred pending an email
+          // infrastructure decision, so there is nothing to submit to. The
+          // screen returns to sign-in rather than faking a session.
+          onPress={() => router.replace('/sign-in')}
         />
       }
     >

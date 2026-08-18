@@ -87,7 +87,14 @@
       "confirmPassword": "Confirm password",
       "mismatch": "The two do not match",
       "submit": "Save and sign in"
-    }
+    },
+    "errors": {
+      "invalidCredentials": "That email and password do not match.",
+      "emailTaken": "That email already has an account.",
+      "checkFields": "Check the fields above and try again."
+    },
+    "facebook": "Facebook",
+    "continueFacebook": "Continue with Facebook"
   },
   "home": {
     "recommendations": "Recommendations",
@@ -96,7 +103,12 @@
     "openFamilyTree": "Open family tree",
     "join": "Join",
     "moreGroups": "+{{count}}",
-    "swipeCue": "Swipe up for moments"
+    "swipeCue": "Swipe up for moments",
+    "noFamilyTitle": "No family yet",
+    "noFamilyBody": "Create one and invite the people you want to keep things with, or join with a code someone sent you.",
+    "startFamily": "Create or join a family",
+    "loadFailed": "Could not load your families.",
+    "retry": "Try again"
   },
   "family": {
     "title": "Family tree",
@@ -265,6 +277,29 @@
       "10": "Oct",
       "11": "Nov",
       "12": "Dec"
+    }
+  },
+  "errors": {
+    "offline": "Could not reach the server. Check your connection and try again.",
+    "generic": "Something went wrong. Please try again."
+  },
+  "createFamily": {
+    "title": "Your family",
+    "createTab": "Create",
+    "joinTab": "Join",
+    "createHeading": "Start a family space",
+    "createBody": "Only the people you invite can see anything you put here.",
+    "nameLabel": "Family name",
+    "namePlaceholder": "Mom's side",
+    "createSubmit": "Create family",
+    "joinHeading": "Join with a code",
+    "joinBody": "The eight characters someone in the family sent you.",
+    "codeLabel": "Invite code",
+    "codePlaceholder": "ABCD2345",
+    "joinSubmit": "Join family",
+    "errors": {
+      "codeNotFound": "No family matches that code.",
+      "alreadyMember": "You are already in that family."
     }
   }
 }

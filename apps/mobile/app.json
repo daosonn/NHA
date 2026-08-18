@@ -31,7 +31,7 @@
       "output": "single",
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-router", "expo-status-bar", "expo-localization"],
+    "plugins": ["expo-router", "expo-status-bar", "expo-localization", "expo-secure-store"],
     "experiments": {
       "typedRoutes": true
     }
