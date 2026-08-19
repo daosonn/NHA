@@ -278,7 +278,12 @@ every family; a placeholder's is family-local).
 place, type, taggedMemberIds, media[], createdById, updatedById,
 createdAt, updatedAt }` with `media[]` items `{ id, mimeType, sizeBytes }`.
 Lists are **oldest first** (a life timeline reads birth-to-now). `type` is
-free text — the taxonomy is still TBD (screen 9 filters).
+free text — the taxonomy is still TBD (screen 9 filters). `eventDate` is
+**date-only `YYYY-MM-DD`** (400 otherwise): the column is a DATE, and a
+datetime with a timezone offset would shift the stored day — `08:00+09:00`
+is yesterday in UTC. Title and eventDate are required and not clearable;
+PATCHing either to `null` is a 400, and a PATCH that changes nothing
+writes no `EditHistory` row.
 
 Same rules as the profile it hangs off:
 
@@ -354,8 +359,8 @@ an endpoint, so no amount of frontend work will connect these screens.
 | **Family tree** (`family.tsx`)       | ~~`GET` for relationships~~ — **resolved**: `GET /families/:familyId/tree` returns nodes + edges (task 1.4.1). Remaining: the kinship-label derivation below.                                                                                                                                 |
 | **Verify code** (`verify.tsx`)       | Send / confirm an email code for **sign-up**. Registration returns tokens immediately today, so that half of the screen has nothing to call. The reset half now has endpoints — see the row below.                                                                                            |
 | **Forgot + reset password**          | ~~WBS 1.1.7~~ — **resolved on the server**: `POST /auth/password-reset/{request,verify,confirm}` (email infrastructure decided 2026-08-18: SMTP/Gmail). **The app is not wired to them**: `endpoints.ts` has no password-reset group, and the three screens only navigate between themselves. |
-| **Invitation** (`invite/[code].tsx`) | A public read of an invite code — who invited you, which family, which spot. `POST /families/join` both requires a token and joins immediately, so it cannot preview.                                                                                                                         |
-| **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~ — **resolved** (profile routes above, task 1.6.2). Still missing: LifeEvent (1.6.8), the derived gallery (1.6.4), Memo (1.6.5).                                                                                                                                               |
+| **Invitation** (`invite/[code].tsx`) | ~~A public read of an invite code~~ — **resolved**: `GET /invitations/:code` previews and `POST /invitations/:code/accept` joins on the reserved spot (task 1.4.4, PR #16). The app is not wired to them yet.                                                                                 |
+| **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~ — **resolved** (profile routes above, task 1.6.2). ~~LifeEvent~~ — **resolved** (life-event routes above, task 1.6.8). Still missing: the derived gallery (1.6.4) and Memo (1.6.5).                                                                                           |
 | **New moment** (`(tabs)/new.tsx`)    | ~~Post + media upload~~ — **resolved**: `POST /media` then `POST /posts` (tasks 1.5.2–1.5.5, PR #5).                                                                                                                                                                                          |
 | **Home**                             | ~~moments feed~~ — **resolved and wired**. `GET .../special-dates` exists but the app does not call it, so the widget is still a fixture. Recommendations have no endpoint at all.                                                                                                            |
 | **AI tab + gift ideas**              | The whole of `apps/ai` — the FastAPI service does not exist.                                                                                                                                                                                                                                  |

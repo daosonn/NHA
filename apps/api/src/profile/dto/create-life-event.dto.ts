@@ -8,6 +8,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
 } from 'class-validator';
 
@@ -24,8 +25,16 @@ export class CreateLifeEventDto {
   @MaxLength(5000)
   description?: string;
 
-  @ApiProperty({ description: 'ISO 8601 — orders the timeline (screen 9)' })
+  @ApiProperty({
+    description:
+      'Date only, YYYY-MM-DD — orders the timeline (screen 9). The column ' +
+      'is a DATE; a datetime with a timezone offset would shift the day.',
+    example: '1988-01-05',
+  })
   @IsISO8601({ strict: true })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'eventDate must be a date only (YYYY-MM-DD)',
+  })
   eventDate!: string;
 
   @ApiPropertyOptional({ maxLength: 200 })

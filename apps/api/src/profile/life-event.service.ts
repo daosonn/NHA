@@ -172,16 +172,12 @@ export class LifeEventService {
       return shared !== null;
     }
     if (profile.memberId) {
-      const member = await this.prisma.familyMember.findUnique({
-        where: { id: profile.memberId },
-        select: { familyId: true },
-      });
-      if (!member) {
-        return false;
-      }
-      const membership = await this.prisma.familyMember.findUnique({
+      // One query, same relation-join shape as the linked branch above:
+      // the viewer's membership in the placeholder's family.
+      const membership = await this.prisma.familyMember.findFirst({
         where: {
-          familyId_userId: { familyId: member.familyId, userId },
+          userId,
+          family: { members: { some: { id: profile.memberId } } },
         },
         select: { id: true },
       });
@@ -237,11 +233,17 @@ export class LifeEventService {
       await this.validateAttachableMedia(editorUserId, mediaIds);
     }
 
+    const title = dto.title.trim();
+    if (!title) {
+      // @IsNotEmpty() lets "   " through — it only rejects ''.
+      throw new BadRequestException('A life event needs a title');
+    }
+
     const event = await this.prisma.$transaction(async (tx) => {
       const created = await tx.lifeEvent.create({
         data: {
           profileId,
-          title: dto.title.trim(),
+          title,
           description: this.normalizeText(dto.description),
           eventDate,
           place: this.normalizeText(dto.place),
@@ -284,31 +286,53 @@ export class LifeEventService {
     editorUserId: string,
     dto: UpdateLifeEventDto,
   ): Promise<LifeEventDetail> {
-    const existing = await this.findEventInProfile(profileId, eventId);
+    await this.findEventInProfile(profileId, eventId);
 
-    const nextTitle =
-      dto.title !== undefined ? dto.title.trim() : existing.title;
-    if (!nextTitle) {
+    // PartialType applies @IsOptional, which skips every validator for an
+    // explicit JSON null — so null reaches this far and must be handled
+    // here. Neither title nor eventDate is clearable (the model requires
+    // both); without these guards null.trim() is a 500 and new Date(null)
+    // silently rewrites the date to 1970-01-01.
+    if (dto.title !== undefined && !dto.title?.trim()) {
       throw new BadRequestException('A life event needs a title');
     }
-    const nextDate =
-      dto.eventDate !== undefined
-        ? this.parseDate(dto.eventDate)
-        : existing.eventDate;
-    const taggedMemberIds = dto.taggedMemberIds;
+    if (dto.eventDate !== undefined && !dto.eventDate) {
+      throw new BadRequestException('eventDate cannot be cleared');
+    }
+    const nextDate = dto.eventDate ? this.parseDate(dto.eventDate) : undefined;
+    // null tags = unchanged, same as omitted (only an array replaces).
+    const taggedMemberIds = dto.taggedMemberIds ?? undefined;
     if (taggedMemberIds) {
       await this.validateTags(editorUserId, taggedMemberIds);
+    }
+
+    // A no-op PATCH must not stamp an editor or append an EditHistory
+    // row — a client retry would otherwise fill the wiki log.
+    const hasChanges =
+      dto.title !== undefined ||
+      dto.description !== undefined ||
+      dto.eventDate !== undefined ||
+      dto.place !== undefined ||
+      dto.type !== undefined ||
+      taggedMemberIds !== undefined;
+    if (!hasChanges) {
+      const unchanged = await this.prisma.lifeEvent.findUniqueOrThrow({
+        where: { id: eventId },
+        include: eventInclude,
+      });
+      return this.toDetail(unchanged);
     }
 
     const event = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.lifeEvent.update({
         where: { id: eventId },
         data: {
-          ...(dto.title !== undefined && { title: nextTitle }),
+          // dto.title is non-null non-blank here (guarded above).
+          ...(dto.title !== undefined && { title: dto.title.trim() }),
           ...(dto.description !== undefined && {
             description: this.normalizeText(dto.description),
           }),
-          ...(dto.eventDate !== undefined && { eventDate: nextDate }),
+          ...(nextDate !== undefined && { eventDate: nextDate }),
           ...(dto.place !== undefined && {
             place: this.normalizeText(dto.place),
           }),
@@ -383,18 +407,18 @@ export class LifeEventService {
     return { success: true };
   }
 
+  /** Existence guard: 404 unless the event belongs to this profile. */
   private async findEventInProfile(
     profileId: string,
     eventId: string,
-  ): Promise<{ title: string; eventDate: Date }> {
+  ): Promise<void> {
     const event = await this.prisma.lifeEvent.findFirst({
       where: { id: eventId, profileId },
-      select: { title: true, eventDate: true },
+      select: { id: true },
     });
     if (!event) {
       throw new NotFoundException('Life event not found');
     }
-    return event;
   }
 
   /** Tags must stay inside the editor's own families — the same boundary
@@ -462,7 +486,9 @@ export class LifeEventService {
     };
   }
 
-  private normalizeText(value: string | undefined): string | null {
+  /** null is possible at runtime: PartialType admits explicit JSON null.
+   *  For the nullable columns it simply means "clear". */
+  private normalizeText(value: string | null | undefined): string | null {
     const trimmed = value?.trim();
     return trimmed ? trimmed : null;
   }
