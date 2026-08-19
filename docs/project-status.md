@@ -4,11 +4,14 @@
 
 **Sprint 1 — Core Features** (in progress — PRs #1–#9 merged; the
 "pending team review before start" note was stale and is removed
-2026-08-18)
+2026-08-18). **Backend has moved on to Sprint 2 (2026-08-19)**: sprint 1's
+backend side is finished, so `apps/api` work now follows
+`docs/sprints/sprint-02.md` while frontend wires the remaining sprint-1
+screens.
 
-- Active sprint doc: `docs/sprints/sprint-01.md`
-- Later sprints: `docs/sprints/sprint-02.md` (Memories & AI),
-  `docs/sprints/sprint-03.md` (Notification / Settings / Release)
+- Active sprint docs: `docs/sprints/sprint-01.md` (frontend wiring),
+  `docs/sprints/sprint-02.md` (backend + AI team)
+- Later: `docs/sprints/sprint-03.md` (Notification / Settings / Release)
 - Setup record (completed): `docs/sprints/00-setup.md`
 
 ## Current Focus
@@ -96,11 +99,14 @@
   than adding one.
 - **`expo-image-picker` added (2026-08-18)** — the last thing standing
   between New moment and a working end-to-end post.
-- **Sprint 1 stands at 24 of 38 tasks (2026-08-18).** Groups 1.1, 1.3, 1.4
-  and 1.5 are essentially closed. Group 1.2 waits on one endpoint
-  (`SpecialDate`, task 1.2.5). **Group 1.6 — the one containing "the
-  central screen of the product" — has one of seven done**, and it is the
-  API half; no Life Profile UI is wired.
+- **Sprint 1 stands at 30 of 39 tasks (2026-08-19; was 24/38 on
+  2026-08-18 — 1.4.4 was added since).** One more (1.6.7, personal
+  albums) lands with the open `feature/album` PR. **The backend side of
+  the sprint is finished**: every remaining unticked item is UI wiring
+  (1.1.7 reset screens, 1.2.5 widget, 1.6.1–1.6.3 Life Profile — all
+  their endpoints exist), finishing 1.2.4's empty states, verifying
+  Facebook E2E (1.1.9, needs the Meta tester-role invite accepted), and
+  the 1.7 stabilization pass.
 - **Two gaps in the sprint plan itself**, both worth a team decision rather
   than a silent fix:
   1. **Apple Sign In has no task.** It was decided on 2026-08-18 and is
@@ -347,6 +353,18 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   Life Profile tab unlocks (next: Memo 1.6.5, then gallery 1.6.4).
   Verified by lint/build/test + 29-case live smoke test incl. EditHistory
   rows in the DB. On branch `feature/life-events`. Also rides along:
+  **main was broken** by a PR #15 conflict resolution leftover
+  (`origin: origins` in `main.ts`) — `nest build` failed on main from
+  merge `e33e8a8` until this branch's fix. Code-review round 2026-08-19
+  (8 review agents): fixes applied — PATCH `title`/`eventDate: null`
+  (were a 500 and a silent 1970-01-01), whitespace-only title, `eventDate`
+  restricted to date-only `YYYY-MM-DD` (a `+09:00` datetime shifted the
+  stored day), no-op PATCH no longer writes EditHistory. **Deferred to the
+  Memo branch (1.6.5), which would otherwise copy them a third time**:
+  extract shared media-attach + tag-validation + parseDate/normalizeText +
+  best-effort file cleanup + a `ProfileService.resolveForMember` for the
+  wiki rule; also known: a tag-write FK race returns 500 (same window
+  exists in PostService).
 - Memo API (2026-08-19): private notes about a member —
   `GET/POST /api/families/:familyId/members/:memberId/memos` +
   `GET/PATCH/DELETE /api/memos/:memoId`. Always author-only (decision
@@ -385,18 +403,87 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   deletes in the MVP; a dump before risky work is the way back. Verified
   by a real backup→restore round-trip (row counts intact, API healthy
   after). See `docs/04-devops/local-environment.md` § Backup & restore.
-  **main was broken** by a PR #15 conflict resolution leftover
-  (`origin: origins` in `main.ts`) — `nest build` failed on main from
-  merge `e33e8a8` until this branch's fix. Code-review round 2026-08-19
-  (8 review agents): fixes applied — PATCH `title`/`eventDate: null`
-  (were a 500 and a silent 1970-01-01), whitespace-only title, `eventDate`
-  restricted to date-only `YYYY-MM-DD` (a `+09:00` datetime shifted the
-  stored day), no-op PATCH no longer writes EditHistory. **Deferred to the
-  Memo branch (1.6.5), which would otherwise copy them a third time**:
-  extract shared media-attach + tag-validation + parseDate/normalizeText +
-  best-effort file cleanup + a `ProfileService.resolveForMember` for the
-  wiki rule; also known: a tag-write FK race returns 500 (same window
-  exists in PostService).
+- Video job API (2026-08-19, sprint 2, task 2.2.2): the backend half of
+  video generation — `POST/GET /api/video-jobs` (+ `GET /:id` to poll)
+  and the internal completion callback
+  `POST /api/internal/video-jobs/:jobId/complete` for the AI team.
+  Sources are any images the requester may view
+  (`MediaService.assertViewableBatch`, the same gate as streaming, now
+  exported and returning selection order — the frame order). A definite
+  dispatch refusal rolls the job back and answers 503 `AI_UNAVAILABLE`
+  (no orphan rows) while a **timeout leaves the job PENDING** — the AI
+  service may have accepted and its callback completes it late.
+  Code-review round 2026-08-19 (8 agents) — fixes applied same-day:
+  `resultMediaId` FK (unique, migration `20260819090000`) replaces the
+  unindexed non-unique storageKey lookup that was an N+1 and could
+  resolve to another user's row; every status transition is a
+  conditional `updateMany` so a fast callback can't be dragged back to
+  PROCESSING and concurrent callbacks settle exactly once; the callback
+  validates mimeType against the storage whitelist and **measures size
+  from disk** (path escapes and ghost files are 400s); `error` +
+  `resultPath` together is a 400; comments got their own
+  `PaginationQueryDto` (sharing FeedQueryDto had made Swagger advertise
+  Memories filters the comments route ignores); the Memories `?memberId`
+  filter now matches any of a linked member's rows (same identity rule
+  as the gallery) and reuses `findMemberInFamily` + `parseIsoDate`; and
+  the date-only guard became one `IsDateOnly()` decorator (was 4
+  copies). Known notes: `?from`/`?to` bucket by **UTC day**, consistent
+  with Omoide's grouping but off-by-one for JST evening posts — team
+  question; a feed `nextCursor` is filter-bound (reuse it only with the
+  same filters). The result is registered as the requester's own
+  standalone Media, so it streams privately with Range/206. Verified by
+  lint/build/test + 22-case live smoke against a **mock AI service**
+  (dispatch payload, failure
+  rollback, auth matrix, DONE/FAILED paths, result privacy). On branch
+  `feature/video-jobs` (stacked on `feature/memory-list`). Render itself
+  is the AI team's — seam in `docs/03-ai/architecture.md`.
+- Memory list API (2026-08-19, sprint 2, tasks 2.1.1–2.1.2): Memories
+  reuse `Post` as designed — no new model; `GET /families/:id/posts`
+  gained optional filters `?memberId` (tagged-in plus authored-by when
+  linked; 404 outside the family), `?from`/`?to` (calendar days on the
+  posted date, same grouping choice as Omoide) and `?type`. Filters
+  combine and pagination is unchanged, so the Home feed path is
+  untouched. Verified by lint/build/test + 13-case live smoke (filters,
+  combinations, cursor pagination under filter, 400/404 matrix). On
+  branch `feature/memory-list`. Details in `api-contract.md`.
+- AI insight pipe (2026-08-19, sprint 2): the backend half of the
+  two-phase photo pipeline — `MediaInsight` hidden store (migration
+  `20260819071710`, table 26) + internal routes
+  `GET /api/internal/ai/media/pending` and
+  `PUT /api/internal/ai/media/:mediaId/insight` behind
+  `X-AI-Service-Token` (timing-safe compare; user JWTs do not open them;
+  unset token = 503 `AI_UNAVAILABLE`, core unaffected). Env
+  `AI_SERVICE_TOKEN`/`AI_SERVICE_URL` added to `.env.example`. Verified
+  by lint/build/test + 13-case live smoke (503 unconfigured, 401 matrix,
+  pending→ingest→drop-out, upsert re-analysis, 404/400) + DB-level
+  cascade check (delete photo → insight gone). On branch
+  `feature/ai-insight-pipe`. Contract: `docs/03-ai/architecture.md`.
+- Gallery API (2026-08-19): the Album tab, derived — `GET /api/me/gallery` +
+  `GET /api/families/:familyId/members/:memberId/gallery`. No new
+  table: media from posts authored by or tagged with the member, plus
+  their life-event media, filtered to what the viewer may see (the same
+  author/private/shared-family rule `PostService.canViewPost` applies
+  elsewhere, batched into one membership query instead of one call per
+  post — a code-review finding, fixed same-day). Not paginated, same
+  choice as the life-event timeline. Task 1.6.4 done — **closes group
+  1.6's Life Profile blocker**: About + all three tabs now have an
+  endpoint; wiring is what remains. Verified by lint/build/test + 21-case
+  live smoke test (own/tagged/private/life-event sources, cross-family
+  isolation, placeholder scoping, stranger 403) + full life-event (29) and
+  memo (22) regression smoke. On branch `feature/gallery` (stacked on
+  `feature/memo-api`).
+- Personal Album API (2026-08-19): `GET/POST/PATCH/DELETE /api/me/albums`
+  - `POST .../items` / `DELETE .../items/:mediaId`. No migration — `Album`
+  - `AlbumItem` shipped in the sprint-0 schema. Always private (never on a
+    profile), items are the owner's own uploads only, an album is a second
+    index onto media (not an exclusive parent — already-attached media can
+    be added, one media can sit in many albums), add/remove are idempotent,
+    cover must be an item and auto-clears when that item is removed,
+    deleting an album never touches the media. Task 1.6.7 done — **group
+    1.6 backend is now fully closed**. Verified by lint/build/test +
+    19-case live smoke test. No UI exists yet (screens.md #11 sketches only
+    a "choose album" step in Post a Moment). On branch `feature/album`
+    (stacked on `feature/gallery`).
 
 ### Planning Phase
 
@@ -572,6 +659,27 @@ relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
 - **Memories reuse Post (2026-08-13)**: Sprint 2 Memories page reads the
   Sprint 1 `Post` table — no separate Memory model — see
   `docs/02-backend/database.md`.
+- **Photo-insight pipeline is a two-phase design (2026-08-19)**: the AI
+  team's service analyses photos in the background (vision) and the
+  extracted facts live in **`MediaInsight`, a hidden store** no
+  user-facing API exposes; suggestion requests then combine those
+  insights with the requester's own memos. An insight inherits the
+  visibility of its source photo and is filtered per requester at bundle
+  time (anti-laundering rule), and it cascade-deletes with the photo.
+  **Comments are excluded** from AI context for now. This supersedes the
+  "manual context only" scope note **for photos**; consequence to
+  confirm with the customer: family photos leave the server for the
+  Claude API during analysis. See `docs/03-ai/architecture.md`.
+- **AI work is owned by a separate AI team (2026-08-19)**: `apps/ai`
+  (FastAPI), provider calls, prompts and the video render are theirs;
+  backend supplies the API side — the NestJS proxy, auth, context
+  gathering and the `docs/03-ai/architecture.md` contract both teams
+  build against (drafted 2026-08-19). Provider direction: **Claude API**
+  (AI team makes final model-level calls). Hard lines restated in the
+  contract: FastAPI stateless and never touches Postgres, app never
+  calls AI directly, core works when AI is down, every suggestion
+  carries `why`/`source`, and the context only ever contains the
+  requesting user's own private memos.
 - **Email infrastructure (2026-08-18)**: SMTP behind the `MailService`
   seam — Gmail SMTP with an app password for the MVP (env
   `SMTP_HOST/PORT/USER/PASS`, `MAIL_FROM`); with SMTP unconfigured

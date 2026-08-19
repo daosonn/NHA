@@ -36,26 +36,24 @@ build the family tree, post content with photos, and view member profiles.
 
 ### 1.2 Nav1 – Trang chủ — Trang chính sau login
 
-- [ ] 1.2.1 Navigation chính (Nav1/Nav2/Nav3/Nav4)
+- [x] 1.2.1 Navigation chính (Nav1/Nav2/Nav3/Nav4) — done 2026-08-18 trong
+      first-pass screen set nhưng chưa từng được tick: custom `BottomNav`
+      5 mục (Home · Omoide · + · AI · Profile), auth guard một cổng ở
+      `(tabs)/_layout.tsx`, cây gia phả vào từ Home theo thiết kế. Xác
+      nhận lại theo code 2026-08-19. **Chưa chạy thử trên máy thật** —
+      cùng caveat với các task UI khác.
 - [x] 1.2.2 Layout Home (responsive, mobile-first 375–430px) — done
       2026-08-18: nối `GET /families` kèm loading / error / "chưa có gia
       đình nào". Widget dịp đặc biệt (1.2.5) và recommendations vẫn là
       fixture vì chưa có endpoint. verify: typecheck + prettier + check:i18n + static export, và replay thật vào API đang chạy.
-- [ ] 1.2.3 Load bài viết gần đây (feed cơ bản) — API done 2026-08-18:
-      `GET /api/families/:familyId/posts`. UI **đã nối nhưng ở màn riêng**
-      (`app/moments.tsx`, vào từ dòng "Swipe up for moments" trên Home) —
-      chưa nhúng vào chính màn Home, nên chưa tick.
+- [x] 1.2.3 Load bài viết gần đây (feed cơ bản) — API done 2026-08-18:
+      `GET /api/families/:familyId/posts`. UI: feed giờ nằm ngay trong Home
+      (`app/moments.tsx` đã xoá khi gộp vào Home — xem
+      `docs/01-frontend/architecture.md` § Wiring status).
 - [ ] 1.2.4 Empty/loading state (UI đầy đủ) — done cho Home, cây gia phả,
-      <<<<<<< HEAD
       post detail và Omoide (2026-08-18). Còn Life Profile và AI — hai màn
       chưa nối API.
-- [ ] 1.2.5 Widget dịp đặc biệt trên Home (countdown + theme — sinh nhật/ngày giỗ derived từ LifeProfile; added 2026-08-14, see `database.md`)
-      \=======
-      moments và post detail (2026-08-18). Còn Life Profile, Omoide, AI —
-      các màn chưa nối API.
 - [ ] 1.2.5 Widget dịp đặc biệt trên Home (countdown + theme — sinh nhật/ngày giỗ derived từ LifeProfile; added 2026-08-14, see `database.md`) — API done 2026-08-18 (PR #11: `GET /families/:familyId/special-dates`); UI chưa nối
-
-> > > > > > > main
 
 ### 1.3 Tạo nhóm gia đình — Family Group
 
@@ -154,15 +152,14 @@ build the family tree, post content with photos, and view member profiles.
 
 ### 1.6 Nav4 – Hồ sơ đời cá nhân — Profile
 
-> **Nhóm chặn nhiều nhất tính đến 2026-08-18.** `GET/PATCH /me/profile` và
-> route profile theo member đã có (PR #9), nhưng màn Life Profile có ba tab
-> mà cả ba đều thiếu endpoint: Timeline cần `LifeEvent` (1.6.8), Memo cần
-> `Memo` (1.6.5), Album cần gallery derived (1.6.4). Nối riêng phần header
->
-> - About bây giờ sẽ cho ra một màn trung tâm với ba tab trống, nên frontend
->   đợi. Thứ tự mở khoá đề xuất: `LifeEvent` → `Memo` → gallery.
->   `LifeEvent` xong 2026-08-19 (1.6.8), `Memo` xong 2026-08-19 (1.6.5) —
->   còn gallery (1.6.4).
+> **Nhóm chặn nhiều nhất tính đến 2026-08-18 — hết chặn 2026-08-19.**
+> `GET/PATCH /me/profile` và route profile theo member đã có (PR #9), nhưng
+> màn Life Profile có ba tab mà cả ba đều thiếu endpoint: Timeline cần
+> `LifeEvent` (1.6.8), Memo cần `Memo` (1.6.5), Album cần gallery derived
+> (1.6.4). Cả ba xong trong ngày 2026-08-19, theo đúng thứ tự mở khoá đề
+> xuất `LifeEvent` → `Memo` → gallery — About + cả ba tab giờ đều có
+> endpoint; phần còn lại là nối UI (`docs/01-frontend/architecture.md`
+> § Wiring status).
 
 - [x] 1.6.1 UI Profile (avatar + tên) — nối API xong 2026-08-19 (dựng lại theo mockup 7)
 - [ ] 1.6.2 About (thông tin cá nhân) — API done 2026-08-18:

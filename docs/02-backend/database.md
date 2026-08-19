@@ -561,6 +561,12 @@ or tagged with the member, plus life-event media — filtered by the
 families the viewer shares with that member (enforced in the service
 layer). No table.
 
+**Done 2026-08-19** (`GalleryService`): `GET /me/gallery` and
+`GET /families/:familyId/members/:memberId/gallery`, same profile
+resolution as the rest of the Life Profile (linked → global, placeholder →
+local). Not paginated — one person's own history, same choice already
+made for the life-event timeline. See `api-contract.md` § Gallery.
+
 ### LifeEvent — life milestone (screens 9–10; core domain term)
 
 | Field                 | Type     | Notes                                                    |
@@ -711,6 +717,14 @@ viewing requires login.
 
 Post-review additions:
 
+- **`MediaInsight` — the hidden AI store (2026-08-19, migration
+  `20260819071710`)**: one row per photo — `{ id, mediaId UK (cascade),
+insight Json, model, createdAt/updatedAt }` — holding vision-extracted
+  facts written only through the internal AI ingest route and exposed by
+  no user-facing API; folded into suggestion context filtered by the
+  requester's visibility of the source photo. Cascade with `Media`:
+  deleting a picture withdraws its traces. Table 26 — the first addition
+  beyond the sprint-0 25; full design in `docs/03-ai/architecture.md`.
 - **Memos survive member removal (2026-08-19, migration
   `20260819052340`)**: `aboutMemberId` went nullable with **ON DELETE SET
   NULL** (was CASCADE) and `aboutName` snapshots the member's display name

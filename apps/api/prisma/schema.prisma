@@ -335,9 +335,30 @@ model Media {
   @@index([lifeEventId])
 
   albumItems AlbumItem[]
-  coverOf    Album[]     @relation("AlbumCover")
+  coverOf    Album[]       @relation("AlbumCover")
+  insight    MediaInsight?
+  resultOf   VideoJob?     @relation("VideoJobResult")
 
   @@index([postId])
+}
+
+// The hidden store (decided 2026-08-19, docs/03-ai/architecture.md):
+// vision-extracted facts about a photo, written only through the internal
+// AI ingest endpoint and never exposed by any user-facing API. It exists
+// solely to be folded back into suggestion context — filtered at use time
+// by the requester's own visibility of the source media, so an insight can
+// never leak content its photo would not have.
+model MediaInsight {
+  id        String   @id @default(uuid())
+  mediaId   String   @unique // one insight per photo; re-analysis overwrites
+  insight   Json // labels/scene/activities — shape owned by the AI team
+  model     String // which model produced it, so a model change can re-run
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Cascade: deleting a photo withdraws its traces — the hidden store must
+  // not remember what the user removed.
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
 }
 
 model Comment {
@@ -511,12 +532,22 @@ model VideoJob {
   requesterUserId  String
   status           VideoJobStatus @default(PENDING)
   inputMediaIds    Json
-  resultStorageKey String? // set when DONE
+  resultStorageKey String? // raw path the AI service reported (audit trail)
+  // The registered result row — written in the same transaction that
+  // creates it (review 2026-08-19: deriving it back from storageKey was
+  // an unindexed, non-unique lookup that could resolve to someone
+  // else's row). SetNull: deleting the media flips a DONE job's result
+  // to null rather than failing loudly — acceptable, it was the
+  // requester's own delete.
+  resultMediaId    String?        @unique
   error            String? // set when FAILED
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
-  requester User @relation(fields: [requesterUserId], references: [id])
+  requester   User   @relation(fields: [requesterUserId], references: [id])
+  resultMedia Media? @relation("VideoJobResult", fields: [resultMediaId], references: [id], onDelete: SetNull)
+
+  @@index([requesterUserId])
 }
 
 model Plan {

@@ -31,5 +31,8 @@ const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
   ],
   controllers: [MediaController],
   providers: [MediaService],
+  // VideoJobModule builds videos out of viewable photos through
+  // assertViewableBatch — the visibility rules stay homed here.
+  exports: [MediaService],
 })
 export class MediaModule {}

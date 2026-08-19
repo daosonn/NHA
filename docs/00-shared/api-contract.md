@@ -176,6 +176,20 @@ default 20) and `cursor` (echo back `nextCursor` for the next page;
 own private posts are **not** in the feed — it shows only what was
 shared to this family.
 
+The same route is the **Memories API** (task 2.1.2, added 2026-08-19 —
+Memories reuse `Post`, no separate model): three optional filters narrow
+the same posts. `?memberId` = one member's memories — posts they are
+tagged in (under **any** of their member rows when account-linked, the
+same identity rule as the gallery), plus posts they authored (404 if the
+member is not in this family). `?from` / `?to` = calendar days
+(`YYYY-MM-DD`, 400 for datetimes; 400 when from > to), bounding the
+**posted** date in **UTC** — the same grouping choice Omoide made,
+because the server has no capture metadata. (Known consequence, flagged
+as a team question: a JST evening post lands on the previous UTC day.)
+`?type` = `POST | EVENT`. Filters combine, and pagination works
+unchanged — but a `nextCursor` is **filter-bound**: reuse it only with
+the same filter set, or pagination may end early.
+
 `PostDetail` is `{ id, authorUserId, authorName, type, content, eventDate,
 eventTitle, place, familyIds, taggedMemberIds, media[], commentCount,
 reactionCount, myReaction, canEdit, canDelete, createdAt, updatedAt }` with
@@ -346,6 +360,109 @@ The schema grew `title` and `category` for this (migration
 line and a category chip, and the backend follows the built UI
 (same UI-leads principle as invitations).
 
+### Video jobs — `apps/api/src/video-job/` (task 2.2.2, added 2026-08-19)
+
+Generate a video from photos (WBS 2.2). Async: submit, poll, then stream
+the result. The render itself is the AI team's, behind the seam in
+`docs/03-ai/architecture.md` — the app only ever talks to NestJS.
+
+| Route                 | Returns            |
+| --------------------- | ------------------ |
+| `POST /video-jobs`    | `VideoJobDetail`   |
+| `GET /video-jobs`     | `VideoJobDetail[]` |
+| `GET /video-jobs/:id` | `VideoJobDetail`   |
+
+`VideoJobDetail` is `{ id, status, inputMediaIds, resultMediaId, error,
+createdAt, updatedAt }`; `status` is
+`PENDING | PROCESSING | DONE | FAILED`. Create body:
+`{ mediaIds (1–50, order preserved into the render), style? }`.
+
+Semantics:
+
+- Source photos are any **images the requester may view** — own or
+  family-shared, the same gate as media streaming (404 with no oracle
+  when any is missing/unviewable; 400 for non-images).
+- With the AI service unconfigured or **definitely refusing** (connection
+  error, non-2xx), create answers `503 { code: "AI_UNAVAILABLE" }` and
+  leaves no orphan job — retry is safe. A dispatch **timeout** instead
+  returns the job as `PENDING`: submission may have succeeded and the
+  callback can still complete it. Jobs and results are private to the
+  requester (others 404).
+- When `status` is `DONE`, stream the video via
+  `GET /media/:resultMediaId` (Range/206 works as usual); the result is
+  registered as the requester's own standalone media, so only they can
+  play it. `FAILED` carries `error`.
+
+### Gallery — `apps/api/src/gallery/` (task 1.6.4, added 2026-08-19)
+
+The Album tab (screen 8). **Derived, no table** (`database.md` § Profile
+gallery & timeline photos) — a different thing from the `Album` model
+(screen 11, task 1.6.7, unscheduled), which is a private, user-curated
+collection.
+
+| Route                                               | Returns              |
+| --------------------------------------------------- | -------------------- |
+| `GET /me/gallery`                                   | `GalleryMediaItem[]` |
+| `GET /families/:familyId/members/:memberId/gallery` | `GalleryMediaItem[]` |
+
+`GalleryMediaItem` is `{ id, mimeType, sizeBytes, createdAt, postId,
+lifeEventId }` — exactly one of `postId`/`lifeEventId` is set (the same
+one-parent shape `Media` itself uses), so a tap can open the moment or
+milestone a photo came from. Sources, newest first:
+
+- Media of posts **authored by** the member, or **tagged with** them
+  (`taggedMemberIds`) — filtered to what the viewer may actually see
+  (the same author/private/shared-family rule `PostService.canViewPost`
+  applies elsewhere, batched into one membership query here).
+- Media attached to the member's **life events** — no extra filter beyond
+  reaching the profile at all, since both routes already establish that
+  (self, or a family shared with the member via
+  `ProfileService.resolveForMember`/`canViewProfileContent`).
+
+Same profile resolution as the rest of the Life Profile (linked → global
+gallery across every family they are in, placeholder → family-local).
+**Not paginated** — one person's own history, the same choice already
+made for their life-event timeline (unlike the family feed, which is
+shared and high-volume).
+
+### Albums — `apps/api/src/album/` (task 1.6.7, added 2026-08-19)
+
+Personal, user-curated, **always private** collections (decided
+2026-08-14) — never shown on any profile. A different thing from the
+derived gallery above. No screen exists yet (screens.md #11 sketches only
+a "choose album" step inside Post a Moment); this ships from the spec.
+
+| Route                                       | Returns          |
+| ------------------------------------------- | ---------------- |
+| `GET /me/albums`                            | `AlbumSummary[]` |
+| `POST /me/albums`                           | `AlbumDetail`    |
+| `GET /me/albums/:albumId`                   | `AlbumDetail`    |
+| `PATCH /me/albums/:albumId`                 | `AlbumDetail`    |
+| `DELETE /me/albums/:albumId`                | `{ success }`    |
+| `POST /me/albums/:albumId/items`            | `AlbumDetail`    |
+| `DELETE /me/albums/:albumId/items/:mediaId` | `{ success }`    |
+
+`AlbumSummary` is `{ id, name, description, coverMediaId, itemCount,
+createdAt, updatedAt }`; `AlbumDetail` adds `items[]` of
+`{ mediaId, mimeType, sizeBytes, addedAt }`, newest-added first. Lists
+are most recently touched first (same convention as memos). Anything not
+yours 404s — existence is private, like a memo.
+
+Semantics:
+
+- **Items are your own uploads only** (database.md content rule): a
+  post's photo or a standalone upload; another member's shared photo must
+  be downloaded and re-uploaded. Unlike posts/memos/life-events, an
+  album is **not** an exclusive media parent — already-attached media can
+  be added, and one media can sit in many albums.
+- Adding an item already in the album is a **no-op**, not a 409; removing
+  an item not in the album is still a success (reaction-style
+  idempotency).
+- `coverMediaId` must be one of the album's items (400 otherwise), and is
+  cleared automatically when that item is removed. `null` clears it.
+- Deleting an album deletes only the organization — the underlying media
+  rows and files are untouched.
+
 ### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side)
 
 | Route                                   | Returns                |
@@ -405,11 +522,17 @@ an endpoint, so no amount of frontend work will connect these screens.
 | **Family tree** (`family.tsx`)       | ~~`GET` for relationships~~ — **resolved**: `GET /families/:familyId/tree` returns nodes + edges (task 1.4.1). Remaining: the kinship-label derivation below.                                                                                                                                 |
 | **Verify code** (`verify.tsx`)       | Send / confirm an email code for **sign-up**. Registration returns tokens immediately today, so that half of the screen has nothing to call. The reset half now has endpoints — see the row below.                                                                                            |
 | **Forgot + reset password**          | ~~WBS 1.1.7~~ — **resolved on the server**: `POST /auth/password-reset/{request,verify,confirm}` (email infrastructure decided 2026-08-18: SMTP/Gmail). **The app is not wired to them**: `endpoints.ts` has no password-reset group, and the three screens only navigate between themselves. |
+| <<<<<<< HEAD                         |
 | **Invitation** (`invite/[code].tsx`) | ~~A public read of an invite code~~ — **resolved** (task 1.4.4, PR #16) **and wired 2026-08-19**: preview, accept, create, list and resend. Nothing outstanding.                                                                                                                              |
 | **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~, ~~LifeEvent~~, ~~Memo~~ — all **resolved and wired 2026-08-19**. The gallery (1.6.4) is built from the family feed instead; see § Requests from the app below for what that costs and what two profile fields the design needs.                                              |
-| **New moment** (`(tabs)/new.tsx`)    | ~~Post + media upload~~ — **resolved**: `POST /media` then `POST /posts` (tasks 1.5.2–1.5.5, PR #5).                                                                                                                                                                                          |
-| **Home**                             | ~~moments feed~~ — **resolved and wired**. `GET .../special-dates` exists but the app does not call it, so the widget is still a fixture. Recommendations have no endpoint at all.                                                                                                            |
-| **AI tab + gift ideas**              | The whole of `apps/ai` — the FastAPI service does not exist.                                                                                                                                                                                                                                  |
+| =======                              |
+| **Invitation** (`invite/[code].tsx`) | ~~A public read of an invite code~~ — **resolved**: `GET /invitations/:code` previews and `POST /invitations/:code/accept` joins on the reserved spot (task 1.4.4, PR #16). The app is not wired to them yet.                                                                                 |
+| **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~ — **resolved** (task 1.6.2). ~~LifeEvent~~ — **resolved** (task 1.6.8). ~~Memo~~ — **resolved** (task 1.6.5). ~~Gallery~~ — **resolved** (task 1.6.4). All three tabs plus the header now have an endpoint; none of it is wired.                                              |
+
+> > > > > > > main
+> > > > > > > | **New moment** (`(tabs)/new.tsx`) | ~~Post + media upload~~ — **resolved**: `POST /media` then `POST /posts` (tasks 1.5.2–1.5.5, PR #5). |
+> > > > > > > | **Home** | ~~moments feed~~ — **resolved and wired**. `GET .../special-dates` exists but the app does not call it, so the widget is still a fixture. Recommendations have no endpoint at all. |
+> > > > > > > | **AI tab + gift ideas** | The whole of `apps/ai` — the FastAPI service does not exist. |
 
 ### Requests from the app (added 2026-08-19)
 
