@@ -17,23 +17,18 @@ photos, and get AI suggestions (gifts, messages, quality time).
 
 ### 2.1 Nav2 – 思い出 / Kỷ niệm — Trang Memories
 
-- [x] 2.1.1 DB Memory — **design note**: reuse the `Post` table from
-      Sprint 1 (filter by family/member/time) instead of a separate Memory
-      model — see `docs/02-backend/database.md`. Confirmed at
-      implementation 2026-08-19: không cần model mới.
-- [x] 2.1.2 API danh sách Memory (theo family) — done 2026-08-19: filter
-      `?memberId`/`?from`/`?to`/`?type` trên `GET /families/:id/posts`
-      (chi tiết: `api-contract.md`); UI chưa nối
+- [x] 2.1.1 DB Memory — reuse `Post`, no new model (design sprint 0; confirmed at implementation 2026-08-19)
+- [x] 2.1.2 API danh sách Memory (theo family) — done 2026-08-19 (chi tiết: `api-contract.md`); UI chưa nối
 - [ ] 2.1.3 UI danh sách Kỷ niệm (card/grid)
 - [ ] 2.1.4 Chi tiết Kỷ niệm (ảnh + bài viết)
 - [ ] 2.1.5 Kỷ niệm chung gia đình (shared memory)
 
 ### 2.2 Generate Video — MVP video generation
 
-- [ ] 2.2.1 Chọn ảnh làm video (multi-select)
-- [ ] 2.2.2 Gửi request generate (VideoJob — async)
-- [ ] 2.2.3 Hiển thị trạng thái (processing/done)
-- [ ] 2.2.4 Preview kết quả (xem video)
+- [ ] 2.2.1 Chọn ảnh làm video (multi-select) — UI; API sẵn (2.2.2)
+- [x] 2.2.2 Gửi request generate (VideoJob — async) — done 2026-08-19 (chi tiết: `api-contract.md`); render thuộc team AI
+- [ ] 2.2.3 Hiển thị trạng thái (processing/done) — UI; API poll sẵn
+- [ ] 2.2.4 Preview kết quả (xem video) — UI; stream qua `GET /media/:resultMediaId` sẵn
 
 ### 2.3 Nav3 – AI — AI Assistant
 

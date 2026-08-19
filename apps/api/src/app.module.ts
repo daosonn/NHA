@@ -13,6 +13,7 @@ import { MemoModule } from './memo/memo.module';
 import { PostModule } from './post/post.module';
 import { ProfileModule } from './profile/profile.module';
 import { SpecialDateModule } from './special-date/special-date.module';
+import { VideoJobModule } from './video-job/video-job.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { SpecialDateModule } from './special-date/special-date.module';
     PostModule,
     ProfileModule,
     SpecialDateModule,
+    VideoJobModule,
   ],
   controllers: [AppController],
   providers: [AppService],

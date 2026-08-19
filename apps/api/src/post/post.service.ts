@@ -169,28 +169,28 @@ export class PostService {
 
     const filters: Prisma.PostWhereInput[] = [];
     if (query.memberId) {
-      const member = await this.prisma.familyMember.findFirst({
-        where: { id: query.memberId, familyId },
-        select: { id: true, userId: true },
-      });
-      if (!member) {
-        throw new NotFoundException('Member not found in this family');
-      }
-      // "This member's memories": posts they are tagged in, plus posts
-      // they authored when the member is account-linked.
+      const member = await this.familyService.findMemberInFamily(
+        familyId,
+        query.memberId,
+      );
+      // "This member's memories": posts they are tagged in — under ANY of
+      // their member rows when account-linked, the same identity rule the
+      // gallery uses — plus posts they authored.
       filters.push({
-        OR: [
-          { memberTags: { some: { memberId: member.id } } },
-          ...(member.userId ? [{ authorUserId: member.userId }] : []),
-        ],
+        OR: member.userId
+          ? [
+              { memberTags: { some: { member: { userId: member.userId } } } },
+              { authorUserId: member.userId },
+            ]
+          : [{ memberTags: { some: { memberId: member.id } } }],
       });
     }
-    // Calendar-day bounds on the posted date (Omoide groups by posted
-    // day for the same reason: the server has no capture metadata).
-    const from = query.from ? new Date(query.from) : undefined;
+    // Calendar-day bounds on the posted date, in UTC (Omoide groups by
+    // the same UTC posted-day; capture metadata does not exist).
+    const from = query.from ? parseIsoDate(query.from, 'from') : undefined;
     // Inclusive end day: anything before the following midnight.
     const toExclusive = query.to
-      ? new Date(new Date(query.to).getTime() + 24 * 60 * 60 * 1000)
+      ? new Date(parseIsoDate(query.to, 'to').getTime() + 24 * 60 * 60 * 1000)
       : undefined;
     if (from && toExclusive && from >= toExclusive) {
       throw new BadRequestException('from must not be after to');

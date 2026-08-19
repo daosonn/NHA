@@ -160,15 +160,28 @@ no AI involvement in the save).
 ### `POST /videos` + status
 
 Video render (sprint 2.2) is **owned end-to-end by the AI team** behind
-this seam: NestJS creates the authoritative `VideoJob` row
-(PENDING) and calls `POST /videos` with `{ jobId, mediaPaths[], locale,
-style? }`; media travel as **paths in the shared storage volume**
-(`UPLOAD_DIR` — both services see the same disk in the MVP deployment).
-FastAPI processes async and reports completion to the NestJS internal
-callback `POST /api/internal/video-jobs/:jobId/complete` (same
-`X-AI-Service-Token`) with `{ resultPath }` or `{ error }`; NestJS
-updates the row and serves the file through the existing authorized
-Media streaming. The app only ever polls NestJS (`GET /api/video-jobs/:id`).
+this seam — **the NestJS side shipped 2026-08-19**: NestJS creates the
+authoritative `VideoJob` row and calls `POST /videos` with
+`{ jobId, mediaPaths[], locale, style? }` (10s dispatch timeout; a
+non-2xx or unreachable service = the job is rolled back and the app gets
+`503 AI_UNAVAILABLE`, so retries are clean). Media travel as **paths in
+the shared storage volume** (`UPLOAD_DIR` — both services see the same
+disk in the MVP deployment). FastAPI processes async and reports to
+`POST /api/internal/video-jobs/:jobId/complete` (same
+`X-AI-Service-Token`) with `{ resultPath, mimeType }` on success — the
+rendered file written under the shared volume — or `{ error }` on
+failure. Anything in between is a 400, as is a body carrying **both**
+shapes, an unsupported `mimeType`, or a `resultPath` that is not a
+readable file under the volume; the file's **size is measured from
+disk**, never taken from the payload. Duplicate or concurrent reports on
+a finished job are acknowledged and ignored (retry-safe: the job is
+claimed with a conditional update inside the registration transaction).
+A dispatch **timeout** leaves the job PENDING — the AI service may have
+accepted it, and its callback still completes the job late; only a
+definite refusal rolls the job back. NestJS registers the result as the
+requester's own Media row (FK `VideoJob.resultMediaId`, unique) and
+serves it through the existing authorized streaming; the app only ever
+polls NestJS (`GET /api/video-jobs/:id`).
 
 ## NestJS side (what backend implements — mobile-facing)
 

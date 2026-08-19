@@ -22,7 +22,7 @@ import {
   type CommentSummary,
 } from './comment.service';
 import { CommentBodyDto } from './dto/comment-body.dto';
-import { FeedQueryDto } from './dto/feed-query.dto';
+import { PaginationQueryDto } from './dto/pagination-query.dto';
 
 @ApiTags('posts')
 @ApiBearerAuth()
@@ -47,7 +47,7 @@ export class CommentController {
   list(
     @CurrentUser() user: AuthUser,
     @Param('postId', ParseUUIDPipe) postId: string,
-    @Query() query: FeedQueryDto,
+    @Query() query: PaginationQueryDto,
   ): Promise<CommentList> {
     return this.commentService.list(user.userId, postId, query);
   }
