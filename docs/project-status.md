@@ -387,6 +387,18 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   isolation, placeholder scoping, stranger 403) + full life-event (29) and
   memo (22) regression smoke. On branch `feature/gallery` (stacked on
   `feature/memo-api`).
+- Personal Album API (2026-08-19): `GET/POST/PATCH/DELETE /api/me/albums`
+  - `POST .../items` / `DELETE .../items/:mediaId`. No migration — `Album`
+  - `AlbumItem` shipped in the sprint-0 schema. Always private (never on a
+    profile), items are the owner's own uploads only, an album is a second
+    index onto media (not an exclusive parent — already-attached media can
+    be added, one media can sit in many albums), add/remove are idempotent,
+    cover must be an item and auto-clears when that item is removed,
+    deleting an album never touches the media. Task 1.6.7 done — **group
+    1.6 backend is now fully closed**. Verified by lint/build/test +
+    19-case live smoke test. No UI exists yet (screens.md #11 sketches only
+    a "choose album" step in Post a Moment). On branch `feature/album`
+    (stacked on `feature/gallery`).
 
 ### Planning Phase
 

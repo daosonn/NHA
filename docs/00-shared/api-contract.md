@@ -378,6 +378,44 @@ gallery across every family they are in, placeholder → family-local).
 made for their life-event timeline (unlike the family feed, which is
 shared and high-volume).
 
+### Albums — `apps/api/src/album/` (task 1.6.7, added 2026-08-19)
+
+Personal, user-curated, **always private** collections (decided
+2026-08-14) — never shown on any profile. A different thing from the
+derived gallery above. No screen exists yet (screens.md #11 sketches only
+a "choose album" step inside Post a Moment); this ships from the spec.
+
+| Route                                       | Returns          |
+| ------------------------------------------- | ---------------- |
+| `GET /me/albums`                            | `AlbumSummary[]` |
+| `POST /me/albums`                           | `AlbumDetail`    |
+| `GET /me/albums/:albumId`                   | `AlbumDetail`    |
+| `PATCH /me/albums/:albumId`                 | `AlbumDetail`    |
+| `DELETE /me/albums/:albumId`                | `{ success }`    |
+| `POST /me/albums/:albumId/items`            | `AlbumDetail`    |
+| `DELETE /me/albums/:albumId/items/:mediaId` | `{ success }`    |
+
+`AlbumSummary` is `{ id, name, description, coverMediaId, itemCount,
+createdAt, updatedAt }`; `AlbumDetail` adds `items[]` of
+`{ mediaId, mimeType, sizeBytes, addedAt }`, newest-added first. Lists
+are most recently touched first (same convention as memos). Anything not
+yours 404s — existence is private, like a memo.
+
+Semantics:
+
+- **Items are your own uploads only** (database.md content rule): a
+  post's photo or a standalone upload; another member's shared photo must
+  be downloaded and re-uploaded. Unlike posts/memos/life-events, an
+  album is **not** an exclusive media parent — already-attached media can
+  be added, and one media can sit in many albums.
+- Adding an item already in the album is a **no-op**, not a 409; removing
+  an item not in the album is still a success (reaction-style
+  idempotency).
+- `coverMediaId` must be one of the album's items (400 otherwise), and is
+  cleared automatically when that item is removed. `null` clears it.
+- Deleting an album deletes only the organization — the underlying media
+  rows and files are untouched.
+
 ### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side)
 
 | Route                                   | Returns                |

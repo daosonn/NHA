@@ -178,7 +178,7 @@ build the family tree, post content with photos, and view member profiles.
 - [x] 1.6.5 Memo cá nhân (tạo memo — ghi chú về một thành viên, xem `database.md`) — API done 2026-08-19 (schema thêm title/category theo UI; chi tiết: `api-contract.md`); UI xong 2026-08-18, chưa nối
 - ~~1.6.6 Quyền riêng tư Memo (private/shared)~~ — dropped 2026-08-14:
   memo luôn private, chỉ chủ xem/sửa (see `database.md`)
-- [ ] 1.6.7 Album cá nhân (private — tạo album, tự thêm ảnh; added 2026-08-14, see `database.md`)
+- [x] 1.6.7 Album cá nhân (private — tạo album, tự thêm ảnh; added 2026-08-14, see `database.md`) — API done 2026-08-19: `GET/POST/PATCH/DELETE /api/me/albums` + items (chi tiết: `api-contract.md`); chưa có UI
 - [x] 1.6.8 Life Timeline milestones (LifeEvent CRUD + hiển thị theo thời gian; added 2026-08-14, see `database.md`) — API done 2026-08-19 (chi tiết: `api-contract.md`); UI Timeline vẫn fixture, chưa nối
 
 ### 1.7 Test Sprint 1
