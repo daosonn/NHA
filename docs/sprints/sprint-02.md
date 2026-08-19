@@ -17,10 +17,13 @@ photos, and get AI suggestions (gifts, messages, quality time).
 
 ### 2.1 Nav2 – 思い出 / Kỷ niệm — Trang Memories
 
-- [ ] 2.1.1 DB Memory — **design note**: reuse the `Post` table from
+- [x] 2.1.1 DB Memory — **design note**: reuse the `Post` table from
       Sprint 1 (filter by family/member/time) instead of a separate Memory
-      model — see `docs/02-backend/database.md`
-- [ ] 2.1.2 API danh sách Memory (theo family)
+      model — see `docs/02-backend/database.md`. Confirmed at
+      implementation 2026-08-19: không cần model mới.
+- [x] 2.1.2 API danh sách Memory (theo family) — done 2026-08-19: filter
+      `?memberId`/`?from`/`?to`/`?type` trên `GET /families/:id/posts`
+      (chi tiết: `api-contract.md`); UI chưa nối
 - [ ] 2.1.3 UI danh sách Kỷ niệm (card/grid)
 - [ ] 2.1.4 Chi tiết Kỷ niệm (ảnh + bài viết)
 - [ ] 2.1.5 Kỷ niệm chung gia đình (shared memory)

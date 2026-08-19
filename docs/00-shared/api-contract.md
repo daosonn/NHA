@@ -176,6 +176,16 @@ default 20) and `cursor` (echo back `nextCursor` for the next page;
 own private posts are **not** in the feed — it shows only what was
 shared to this family.
 
+The same route is the **Memories API** (task 2.1.2, added 2026-08-19 —
+Memories reuse `Post`, no separate model): three optional filters narrow
+the same posts. `?memberId` = one member's memories — posts they are
+tagged in, plus posts they authored when the member is account-linked
+(404 if the member is not in this family). `?from` / `?to` = calendar
+days (`YYYY-MM-DD`, 400 for datetimes; 400 when from > to), bounding the
+**posted** date — the same grouping choice Omoide made, because the
+server has no capture metadata. `?type` = `POST | EVENT`. Filters
+combine, and pagination works unchanged.
+
 `PostDetail` is `{ id, authorUserId, authorName, type, content, eventDate,
 eventTitle, place, familyIds, taggedMemberIds, media[], commentCount,
 reactionCount, myReaction, canEdit, canDelete, createdAt, updatedAt }` with

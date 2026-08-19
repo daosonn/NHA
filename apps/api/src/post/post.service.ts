@@ -8,6 +8,7 @@ import { normalizeText, parseIsoDate } from '../common/input';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { FamilyService } from '../family/family.service';
 import { assertTaggedMembers, ownFamilyIds } from '../family/member-tags';
+import type { Prisma } from '../generated/prisma/client';
 import { PostType, ReactionType } from '../generated/prisma/enums';
 import { assertAttachableMedia, attachMediaInTx } from '../media/attach-media';
 import { StorageService } from '../storage/storage.service';
@@ -146,16 +147,68 @@ export class PostService {
    * Recent posts shared to one family, newest first (WBS 1.2.3). Within a
    * family all shared content is visible to every member (domain-model.md),
    * so membership is the only check — no per-post filtering needed.
+   *
+   * The optional filters are the Memories page (WBS 2.1.2) — same posts,
+   * narrowed by member, calendar day and type. Memories reuse Post
+   * (decided sprint 0); this filter extension is the whole "Memory API".
    */
   async listFamilyFeed(
     userId: string,
     familyId: string,
-    query: { limit?: number; cursor?: string },
+    query: {
+      limit?: number;
+      cursor?: string;
+      memberId?: string;
+      from?: string;
+      to?: string;
+      type?: PostType;
+    },
   ): Promise<FamilyFeed> {
     await this.familyService.requireMembership(familyId, userId);
     const limit = query.limit ?? FEED_DEFAULT_LIMIT;
+
+    const filters: Prisma.PostWhereInput[] = [];
+    if (query.memberId) {
+      const member = await this.prisma.familyMember.findFirst({
+        where: { id: query.memberId, familyId },
+        select: { id: true, userId: true },
+      });
+      if (!member) {
+        throw new NotFoundException('Member not found in this family');
+      }
+      // "This member's memories": posts they are tagged in, plus posts
+      // they authored when the member is account-linked.
+      filters.push({
+        OR: [
+          { memberTags: { some: { memberId: member.id } } },
+          ...(member.userId ? [{ authorUserId: member.userId }] : []),
+        ],
+      });
+    }
+    // Calendar-day bounds on the posted date (Omoide groups by posted
+    // day for the same reason: the server has no capture metadata).
+    const from = query.from ? new Date(query.from) : undefined;
+    // Inclusive end day: anything before the following midnight.
+    const toExclusive = query.to
+      ? new Date(new Date(query.to).getTime() + 24 * 60 * 60 * 1000)
+      : undefined;
+    if (from && toExclusive && from >= toExclusive) {
+      throw new BadRequestException('from must not be after to');
+    }
+    if (from || toExclusive) {
+      filters.push({
+        createdAt: {
+          ...(from && { gte: from }),
+          ...(toExclusive && { lt: toExclusive }),
+        },
+      });
+    }
+    if (query.type) {
+      filters.push({ type: query.type });
+    }
+
     const posts = await this.prisma.post.findMany({
-      where: { families: { some: { familyId } } },
+      where: { families: { some: { familyId } }, AND: filters },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       // One extra row tells us whether another page exists.
       take: limit + 1,
