@@ -166,7 +166,8 @@ export class ProfileService {
     });
   }
 
-  private async findMember(
+  /** Public because LifeEventService resolves members the same way. */
+  async findMember(
     userId: string,
     familyId: string,
     memberId: string,
@@ -192,8 +193,9 @@ export class ProfileService {
     return member;
   }
 
-  /** Every account gets a profile at registration; self-heal if missing. */
-  private ensureGlobalProfile(userId: string): Promise<ProfileRecord> {
+  /** Every account gets a profile at registration; self-heal if missing.
+   *  Public so LifeEventService resolves profiles the same way. */
+  ensureGlobalProfile(userId: string): Promise<ProfileRecord> {
     return this.prisma.lifeProfile.upsert({
       where: { userId },
       create: { userId },
@@ -202,8 +204,9 @@ export class ProfileService {
     });
   }
 
-  /** addMember creates one; self-heal for rows that predate that. */
-  private ensurePlaceholderProfile(memberId: string): Promise<ProfileRecord> {
+  /** addMember creates one; self-heal for rows that predate that.
+   *  Public so LifeEventService resolves profiles the same way. */
+  ensurePlaceholderProfile(memberId: string): Promise<ProfileRecord> {
     return this.prisma.lifeProfile.upsert({
       where: { memberId },
       create: { memberId },

@@ -162,6 +162,7 @@ build the family tree, post content with photos, and view member profiles.
 >
 > - About bây giờ sẽ cho ra một màn trung tâm với ba tab trống, nên frontend
 >   đợi. Thứ tự mở khoá đề xuất: `LifeEvent` → `Memo` → gallery.
+>   `LifeEvent` xong 2026-08-19 (1.6.8) — còn `Memo` rồi gallery.
 
 - [ ] 1.6.1 UI Profile (avatar + tên) — UI xong 2026-08-18 (mock data, chưa nối API)
 - [ ] 1.6.2 About (thông tin cá nhân) — API done 2026-08-18:
@@ -177,7 +178,7 @@ build the family tree, post content with photos, and view member profiles.
 - ~~1.6.6 Quyền riêng tư Memo (private/shared)~~ — dropped 2026-08-14:
   memo luôn private, chỉ chủ xem/sửa (see `database.md`)
 - [ ] 1.6.7 Album cá nhân (private — tạo album, tự thêm ảnh; added 2026-08-14, see `database.md`)
-- [ ] 1.6.8 Life Timeline milestones (LifeEvent CRUD + hiển thị theo thời gian; added 2026-08-14, see `database.md`)
+- [x] 1.6.8 Life Timeline milestones (LifeEvent CRUD + hiển thị theo thời gian; added 2026-08-14, see `database.md`) — API done 2026-08-19 (chi tiết: `api-contract.md`); UI Timeline vẫn fixture, chưa nối
 
 ### 1.7 Test Sprint 1
 

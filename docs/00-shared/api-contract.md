@@ -257,6 +257,49 @@ the bio, `interests` replaces the whole list. Dates are strict ISO 8601;
 the single source the special-date widgets (1.2.5) and Sprint-3 reminders
 will derive from.
 
+### Life Events — `apps/api/src/profile/` (task 1.6.8, added 2026-08-19)
+
+The Timeline tab's data: milestones hanging off a LifeProfile, so they
+follow the profile everywhere (a linked member's timeline is the same in
+every family; a placeholder's is family-local).
+
+| Route                                                               | Returns             |
+| ------------------------------------------------------------------- | ------------------- |
+| `GET /me/life-events`                                               | `LifeEventDetail[]` |
+| `POST /me/life-events`                                              | `LifeEventDetail`   |
+| `PATCH /me/life-events/:eventId`                                    | `LifeEventDetail`   |
+| `DELETE /me/life-events/:eventId`                                   | `{ success }`       |
+| `GET /families/:familyId/members/:memberId/life-events`             | `LifeEventDetail[]` |
+| `POST /families/:familyId/members/:memberId/life-events`            | `LifeEventDetail`   |
+| `PATCH /families/:familyId/members/:memberId/life-events/:eventId`  | `LifeEventDetail`   |
+| `DELETE /families/:familyId/members/:memberId/life-events/:eventId` | `{ success }`       |
+
+`LifeEventDetail` is `{ id, profileId, title, description, eventDate,
+place, type, taggedMemberIds, media[], createdById, updatedById,
+createdAt, updatedAt }` with `media[]` items `{ id, mimeType, sizeBytes }`.
+Lists are **oldest first** (a life timeline reads birth-to-now). `type` is
+free text — the taxonomy is still TBD (screen 9 filters). `eventDate` is
+**date-only `YYYY-MM-DD`** (400 otherwise): the column is a DATE, and a
+datetime with a timezone offset would shift the stored day — `08:00+09:00`
+is yesterday in UTC. Title and eventDate are required and not clearable;
+PATCHing either to `null` is a 400, and a PATCH that changes nothing
+writes no `EditHistory` row.
+
+Same rules as the profile it hangs off:
+
+- **Resolution**: linked member → global timeline (the one `/me` edits),
+  placeholder → family-local. Reading needs family membership; `/me`
+  works with no family at all.
+- **Editing**: placeholder events are wiki-editable by the whole family;
+  a linked member's events are theirs alone (403). Every PATCH writes an
+  `EditHistory` row; `updatedById` is the last editor.
+- **Media**: attach your own unattached uploads via `mediaIds` at
+  creation; fixed afterwards, exactly like posts. Deleting the event
+  deletes its media rows and files.
+- **Tags** (`taggedMemberIds`, "members involved" — screen 10): must be
+  members of families the editor belongs to; editable on PATCH (replaces
+  the list).
+
 ### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side)
 
 | Route                                   | Returns                |
@@ -300,7 +343,9 @@ as `mediaIds` when creating the post.
 Download requires a bearer token and the same visibility as the parent
 post (uploader always allowed; standalone media is uploader-only), and
 supports **HTTP Range / 206** — hand the URL plus the auth header to the
-video/audio player.
+video/audio player. Life-event media (2026-08-19) follows the profile it
+hangs off: the owner and anyone sharing a family with them for a global
+profile, the family's members for a placeholder.
 
 ## What does not exist yet
 
@@ -314,8 +359,8 @@ an endpoint, so no amount of frontend work will connect these screens.
 | **Family tree** (`family.tsx`)       | ~~`GET` for relationships~~ — **resolved**: `GET /families/:familyId/tree` returns nodes + edges (task 1.4.1). Remaining: the kinship-label derivation below.                                                                                                                                 |
 | **Verify code** (`verify.tsx`)       | Send / confirm an email code for **sign-up**. Registration returns tokens immediately today, so that half of the screen has nothing to call. The reset half now has endpoints — see the row below.                                                                                            |
 | **Forgot + reset password**          | ~~WBS 1.1.7~~ — **resolved on the server**: `POST /auth/password-reset/{request,verify,confirm}` (email infrastructure decided 2026-08-18: SMTP/Gmail). **The app is not wired to them**: `endpoints.ts` has no password-reset group, and the three screens only navigate between themselves. |
-| **Invitation** (`invite/[code].tsx`) | A public read of an invite code — who invited you, which family, which spot. `POST /families/join` both requires a token and joins immediately, so it cannot preview.                                                                                                                         |
-| **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~ — **resolved** (profile routes above, task 1.6.2). Still missing: LifeEvent (1.6.8), the derived gallery (1.6.4), Memo (1.6.5).                                                                                                                                               |
+| **Invitation** (`invite/[code].tsx`) | ~~A public read of an invite code~~ — **resolved**: `GET /invitations/:code` previews and `POST /invitations/:code/accept` joins on the reserved spot (task 1.4.4, PR #16). The app is not wired to them yet.                                                                                 |
+| **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~ — **resolved** (profile routes above, task 1.6.2). ~~LifeEvent~~ — **resolved** (life-event routes above, task 1.6.8). Still missing: the derived gallery (1.6.4) and Memo (1.6.5).                                                                                           |
 | **New moment** (`(tabs)/new.tsx`)    | ~~Post + media upload~~ — **resolved**: `POST /media` then `POST /posts` (tasks 1.5.2–1.5.5, PR #5).                                                                                                                                                                                          |
 | **Home**                             | ~~moments feed~~ — **resolved and wired**. `GET .../special-dates` exists but the app does not call it, so the widget is still a fixture. Recommendations have no endpoint at all.                                                                                                            |
 | **AI tab + gift ideas**              | The whole of `apps/ai` — the FastAPI service does not exist.                                                                                                                                                                                                                                  |
