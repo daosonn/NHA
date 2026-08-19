@@ -10,6 +10,20 @@ import type { Prisma, PrismaClient } from '../generated/prisma/client';
  * MediaModule (which already imports PostModule and ProfileModule).
  */
 
+/** The shape attached media takes in every parent's API response —
+ *  posts, life events and memos all render the same attachment. */
+export interface AttachedMediaSummary {
+  id: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
+/** The include block that produces AttachedMediaSummary[], everywhere. */
+export const attachedMediaInclude = {
+  select: { id: true, mimeType: true, sizeBytes: true },
+  orderBy: { createdAt: 'asc' as const },
+} as const;
+
 /** A media row nothing owns yet, uploaded by this user. */
 const attachableWhere = (userId: string, mediaIds: string[]) => ({
   id: { in: mediaIds },

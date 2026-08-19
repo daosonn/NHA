@@ -103,15 +103,84 @@ export class ProfileService {
     memberId: string,
     dto: UpdateProfileDto,
   ): Promise<ProfileDetail> {
+    const { profile } = await this.resolveForMember(
+      userId,
+      familyId,
+      memberId,
+      {
+        forEdit: true,
+      },
+    );
+    await this.applyUpdate(profile, userId, dto);
+    return this.getForMember(userId, familyId, memberId);
+  }
+
+  /**
+   * The one home of the member→profile resolution plus the wiki rule
+   * (domain-model.md): linked member → global profile, editable only by
+   * its owner; placeholder → family-local profile, wiki-editable by the
+   * whole family. Everything hanging off a profile (life events, memos,
+   * the coming gallery) resolves through here instead of re-assembling
+   * the rule from the primitives.
+   */
+  async resolveForMember(
+    userId: string,
+    familyId: string,
+    memberId: string,
+    options: { forEdit?: boolean } = {},
+  ): Promise<{
+    profile: ProfileRecord;
+    member: { id: string; userId: string | null; familyId: string };
+  }> {
     const member = await this.findMember(userId, familyId, memberId);
-    if (member.userId && member.userId !== userId) {
-      throw new ForbiddenException('Linked members manage their own profile');
+    if (options.forEdit && member.userId && member.userId !== userId) {
+      throw new ForbiddenException(
+        'Linked members manage their own profile content',
+      );
     }
     const profile = member.userId
       ? await this.ensureGlobalProfile(member.userId)
       : await this.ensurePlaceholderProfile(member.id);
-    await this.applyUpdate(profile, userId, dto);
-    return this.getForMember(userId, familyId, memberId);
+    return {
+      profile,
+      member: { id: member.id, userId: member.userId, familyId },
+    };
+  }
+
+  /**
+   * Who may see content hanging off a profile (life-event media today,
+   * the derived gallery next): the owner of a global profile and anyone
+   * sharing a family with them; a placeholder's family's members. One
+   * home for the rule — MediaService delegates, never copies.
+   */
+  async canViewProfileContent(
+    userId: string,
+    profile: { userId: string | null; memberId: string | null },
+  ): Promise<boolean> {
+    if (profile.userId === userId) {
+      return true;
+    }
+    if (profile.userId) {
+      const shared = await this.prisma.familyMember.findFirst({
+        where: {
+          userId: profile.userId,
+          family: { members: { some: { userId } } },
+        },
+        select: { id: true },
+      });
+      return shared !== null;
+    }
+    if (profile.memberId) {
+      const membership = await this.prisma.familyMember.findFirst({
+        where: {
+          userId,
+          family: { members: { some: { id: profile.memberId } } },
+        },
+        select: { id: true },
+      });
+      return membership !== null;
+    }
+    return false;
   }
 
   /** Applies the edit, stamps the editor, and logs an EditHistory row. */

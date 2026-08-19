@@ -331,6 +331,9 @@ model Media {
   memo      Memo?      @relation(fields: [memoId], references: [id], onDelete: Cascade)
   lifeEvent LifeEvent? @relation(fields: [lifeEventId], references: [id], onDelete: Cascade)
 
+  @@index([memoId])
+  @@index([lifeEventId])
+
   albumItems AlbumItem[]
   coverOf    Album[]     @relation("AlbumCover")
 

@@ -1,21 +1,17 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { normalizeText } from '../common/input';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { normalizeText, requireTrimmed } from '../common/input';
 import { PrismaService } from '../database/prisma/prisma.service';
-import { assertAttachableMedia, attachMediaInTx } from '../media/attach-media';
+import { Prisma } from '../generated/prisma/client';
+import {
+  assertAttachableMedia,
+  attachMediaInTx,
+  attachedMediaInclude,
+  type AttachedMediaSummary,
+} from '../media/attach-media';
 import { ProfileService } from '../profile/profile.service';
 import { StorageService } from '../storage/storage.service';
 import { CreateMemoDto } from './dto/create-memo.dto';
 import { UpdateMemoDto } from './dto/update-memo.dto';
-
-export interface MemoMediaSummary {
-  id: string;
-  mimeType: string;
-  sizeBytes: number;
-}
 
 export interface MemoDetail {
   id: string;
@@ -24,28 +20,16 @@ export interface MemoDetail {
   title: string;
   content: string | null;
   category: string | null;
-  media: MemoMediaSummary[];
+  media: AttachedMediaSummary[];
   createdAt: Date;
   updatedAt: Date;
 }
 
 const memoInclude = {
-  media: {
-    select: { id: true, mimeType: true, sizeBytes: true },
-    orderBy: { createdAt: 'asc' as const },
-  },
+  media: attachedMediaInclude,
 } as const;
 
-interface MemoRecord {
-  id: string;
-  aboutMemberId: string;
-  title: string;
-  content: string | null;
-  category: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  media: MemoMediaSummary[];
-}
+type MemoRecord = Prisma.MemoGetPayload<{ include: typeof memoInclude }>;
 
 /**
  * Private notes about a family member (database.md, WBS 1.6.5). Always
@@ -86,11 +70,7 @@ export class MemoService {
     dto: CreateMemoDto,
   ): Promise<MemoDetail> {
     await this.profileService.findMember(userId, familyId, memberId);
-    const title = dto.title.trim();
-    if (!title) {
-      // @IsNotEmpty() lets "   " through — it only rejects ''.
-      throw new BadRequestException('A memo needs a title');
-    }
+    const title = requireTrimmed(dto.title, 'A memo needs a title');
     const mediaIds = dto.mediaIds ?? [];
     await assertAttachableMedia(this.prisma, userId, mediaIds);
 
@@ -124,32 +104,40 @@ export class MemoService {
     memoId: string,
     dto: UpdateMemoDto,
   ): Promise<MemoDetail> {
-    await this.findOwn(userId, memoId);
+    const existing = await this.findOwn(userId, memoId);
     // PartialType admits explicit JSON null; the title is not clearable.
-    if (dto.title !== undefined && !dto.title?.trim()) {
-      throw new BadRequestException('A memo needs a title');
+    if (dto.title !== undefined) {
+      requireTrimmed(dto.title, 'A memo needs a title');
     }
-    // A no-op PATCH must not bump updatedAt — the list is ordered by it.
-    if (
-      dto.title === undefined &&
-      dto.content === undefined &&
-      dto.category === undefined
-    ) {
-      return this.get(userId, memoId);
+    // Write only values that actually differ: a PATCH that changes
+    // nothing (a retry, a save with no edits) must not bump updatedAt —
+    // the list is ordered by it and the memo would jump the queue.
+    const next = {
+      title: dto.title !== undefined ? dto.title.trim() : existing.title,
+      content:
+        dto.content !== undefined
+          ? normalizeText(dto.content)
+          : existing.content,
+      category:
+        dto.category !== undefined
+          ? normalizeText(dto.category)
+          : existing.category,
+    };
+    const data: Prisma.MemoUpdateInput = {
+      ...(next.title !== existing.title && { title: next.title }),
+      ...(next.content !== existing.content && { content: next.content }),
+      ...(next.category !== existing.category && { category: next.category }),
+    };
+    if (Object.keys(data).length === 0) {
+      return this.toDetail(existing);
     }
-    const updated = await this.prisma.memo.update({
-      where: { id: memoId },
-      data: {
-        ...(dto.title !== undefined && { title: dto.title.trim() }),
-        ...(dto.content !== undefined && {
-          content: normalizeText(dto.content),
-        }),
-        ...(dto.category !== undefined && {
-          category: normalizeText(dto.category),
-        }),
-      },
-      include: memoInclude,
-    });
+    const updated = await this.prisma.memo
+      .update({
+        where: { id: memoId },
+        data,
+        include: memoInclude,
+      })
+      .catch(rethrowMissingAs404);
     return this.toDetail(updated);
   }
 
@@ -159,8 +147,15 @@ export class MemoService {
       where: { memoId },
       select: { storageKey: true },
     });
-    // Cascade removes the media rows; files go best-effort after commit.
-    await this.prisma.memo.delete({ where: { id: memoId } });
+    // Scoped delete: a concurrent duplicate DELETE makes count 0 → 404,
+    // never a raw P2025 500. Cascade removes the media rows; files go
+    // best-effort after commit.
+    const deleted = await this.prisma.memo.deleteMany({
+      where: { id: memoId, ownerUserId: userId },
+    });
+    if (deleted.count === 0) {
+      throw new NotFoundException('Memo not found');
+    }
     await this.storage.removeAllBestEffort(media.map((m) => m.storageKey));
     return { success: true };
   }
@@ -190,4 +185,16 @@ export class MemoService {
       updatedAt: memo.updatedAt,
     };
   }
+}
+
+/** A row deleted between the ownership check and the write is a 404,
+ *  not a raw Prisma P2025 500. */
+function rethrowMissingAs404(error: unknown): never {
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2025'
+  ) {
+    throw new NotFoundException('Memo not found');
+  }
+  throw error;
 }

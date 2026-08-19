@@ -334,6 +334,21 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   ProfileService and MemoService all delegate. Task 1.6.5 done; verified
   by lint/build/test + 16-case memo smoke + 29-case life-event regression
   smoke. On branch `feature/memo-api` (stacked on `feature/life-events`).
+  Code-review round 2026-08-19 (8 agents) — fixes applied: life-event
+  tags scoped to the family being edited (were leaking cross-family
+  member ids), `removeMember` now cleans up cascaded memo/life-event
+  media files (were orphaned on disk), no-op PATCHes value-checked
+  (retries no longer spam EditHistory / reorder memos), concurrent
+  delete races return 404 not 500, profile `birthDate`/`deathDate`
+  restricted to date-only (same +09:00 day-shift as eventDate), Media
+  gained `memoId`/`lifeEventId` indexes (migration `20260819045211`),
+  and the wiki rule + profile-content visibility moved to one home on
+  `ProfileService` (`resolveForMember`/`canViewProfileContent`), tag
+  boundary to `family/member-tags.ts`, media summary shape to
+  `attach-media.ts`. **For the team**: deleting a member cascades every
+  author's private memos about them (schema as designed) — confirm that
+  is intended; the memo migration adds a required `title` with no
+  backfill, fine while Memo tables are empty everywhere.
   **main was broken** by a PR #15 conflict resolution leftover
   (`origin: origins` in `main.ts`) — `nest build` failed on main from
   merge `e33e8a8` until this branch's fix. Code-review round 2026-08-19

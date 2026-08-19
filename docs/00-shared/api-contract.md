@@ -252,7 +252,9 @@ otherwise). Every successful PATCH writes an `EditHistory` row (editor +
 snapshot) — no history UI yet, but the log exists from day one.
 
 PATCH semantics: omitted = unchanged, `null` clears a date, `''` clears
-the bio, `interests` replaces the whole list. Dates are strict ISO 8601;
+the bio, `interests` replaces the whole list. Dates are **date-only
+`YYYY-MM-DD`** (2026-08-19 — the columns are DATEs; an offset datetime
+shifted the stored day, same guard as `LifeEvent.eventDate`);
 `deathDate` before `birthDate` is a 400. `birthDate`/`deathDate` here are
 the single source the special-date widgets (1.2.5) and Sprint-3 reminders
 will derive from.
@@ -296,9 +298,13 @@ Same rules as the profile it hangs off:
 - **Media**: attach your own unattached uploads via `mediaIds` at
   creation; fixed afterwards, exactly like posts. Deleting the event
   deletes its media rows and files.
-- **Tags** (`taggedMemberIds`, "members involved" — screen 10): must be
-  members of families the editor belongs to; editable on PATCH (replaces
-  the list).
+- **Tags** (`taggedMemberIds`, "members involved" — screen 10): on the
+  member-scoped routes they must belong to **that family** (so every
+  viewer can resolve them — same principle as post tags); on `/me` routes,
+  any family the editor belongs to. Editable on PATCH (replaces the list).
+- **No-op PATCHes are value-checked**: a PATCH that changes nothing (a
+  retry, a save with no edits) stamps no editor and writes no EditHistory
+  row.
 
 ### Memos — `apps/api/src/memo/` (task 1.6.5, added 2026-08-19)
 

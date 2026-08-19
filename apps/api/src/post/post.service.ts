@@ -7,6 +7,7 @@ import {
 import { normalizeText, parseIsoDate } from '../common/input';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { FamilyService } from '../family/family.service';
+import { assertTaggedMembers, ownFamilyIds } from '../family/member-tags';
 import { PostType, ReactionType } from '../generated/prisma/enums';
 import { assertAttachableMedia, attachMediaInTx } from '../media/attach-media';
 import { StorageService } from '../storage/storage.service';
@@ -380,38 +381,23 @@ export class PostService {
     taggedMemberIds: string[],
     familyIds: string[],
   ): Promise<void> {
-    if (taggedMemberIds.length === 0) {
-      return;
-    }
-    const members = await this.prisma.familyMember.findMany({
-      where: { id: { in: taggedMemberIds } },
-      select: { id: true, familyId: true },
-    });
-    if (members.length !== taggedMemberIds.length) {
-      throw new NotFoundException('Some tagged members were not found');
-    }
     if (familyIds.length > 0) {
       // Everyone who can see the post must be able to see who is tagged.
-      const allowed = new Set(familyIds);
-      if (members.some((member) => !allowed.has(member.familyId))) {
-        throw new BadRequestException(
-          'Tagged members must belong to the families the post is shared to',
-        );
-      }
+      await assertTaggedMembers(
+        this.prisma,
+        taggedMemberIds,
+        familyIds,
+        'Tagged members must belong to the families the post is shared to',
+      );
       return;
     }
     // Private post: tags must still stay within the author's own families.
-    const memberFamilyIds = [
-      ...new Set(members.map((member) => member.familyId)),
-    ];
-    const myMemberships = await this.prisma.familyMember.count({
-      where: { userId, familyId: { in: memberFamilyIds } },
-    });
-    if (myMemberships !== memberFamilyIds.length) {
-      throw new BadRequestException(
-        'You can only tag members of your own families',
-      );
-    }
+    await assertTaggedMembers(
+      this.prisma,
+      taggedMemberIds,
+      await ownFamilyIds(this.prisma, userId),
+      'You can only tag members of your own families',
+    );
   }
 
   private toDetail(userId: string, post: PostRecord): PostDetail {

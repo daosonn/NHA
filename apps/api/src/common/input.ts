@@ -14,6 +14,21 @@ export function normalizeText(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
+/** Required trimmed text. Guards the two holes DTO validation leaves
+ *  open: @IsNotEmpty() accepts "   " (it only rejects ''), and PartialType
+ *  applies @IsOptional, which skips every validator for an explicit JSON
+ *  null — null.trim() would be a 500. */
+export function requireTrimmed(
+  value: string | null | undefined,
+  message: string,
+): string {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    throw new BadRequestException(message);
+  }
+  return trimmed;
+}
+
 /** @IsISO8601({ strict: true }) guards the format; this guards forms JS
  *  Date cannot parse (week dates, ordinal dates) from becoming an Invalid
  *  Date that Prisma turns into a 500. */
