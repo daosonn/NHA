@@ -370,7 +370,9 @@ model Memo {
   id            String   @id @default(uuid())
   ownerUserId   String // author — only they view/edit
   aboutMemberId String // who the note is about
-  content       String
+  title         String // the bold card line (UI-led, 2026-08-19)
+  content       String? // the longer body under it — optional since title arrived
+  category      String? // client taxonomy (hobbies/health/gift/memories/todo) — free text like LifeEvent.type
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
