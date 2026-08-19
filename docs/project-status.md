@@ -124,6 +124,9 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   **Asked for**: `canEdit` / `canDelete` on `CommentSummary` (and the same
   on `PostDetail` while the shape is being touched). The app then draws
   what it is told and never has to change when the rule does.
+  — done 2026-08-19 (branch `fix/backend-owner-requests`): both shapes
+  carry `canEdit`/`canDelete` (author-only today), see `api-contract.md`;
+  verified by live smoke test with two users.
 - **CORS is pinned to fixed ports and will break again (2026-08-18).** The
   allowlist in `apps/api/src/main.ts` names `http://localhost:8081` and
   `:19006`. Metro moves to the next free port whenever 8081 is taken, so a
@@ -135,6 +138,11 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   the CORS code itself was written by the frontend session and rode in on
   commit `e895259` on `ui-sprint2` — it has not been reviewed by whoever
   owns `apps/api`.
+  — done 2026-08-19 (branch `fix/backend-owner-requests`): dev now matches
+  any `http://localhost:<port>` / `127.0.0.1` origin (regex, equivalent to
+  the callback asked for); `CORS_ORIGINS` override and closed-by-default
+  production kept. Backend review of the frontend-written CORS code done in
+  the same pass — no other issues found. Verified by live preflight tests.
 
 ## Completed
 

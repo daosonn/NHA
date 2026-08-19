@@ -13,6 +13,10 @@ export interface CommentSummary {
   authorUserId: string;
   authorName: string;
   content: string;
+  /** Whether the requesting user may edit/delete — the client renders
+   *  these instead of re-deriving the permission rule from authorUserId. */
+  canEdit: boolean;
+  canDelete: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -57,7 +61,7 @@ export class CommentService {
       data: { postId, authorUserId: userId, content: dto.content.trim() },
       include: commentInclude,
     });
-    return this.toSummary(comment);
+    return this.toSummary(userId, comment);
   }
 
   /** Oldest first — a comment thread reads top-down. */
@@ -78,7 +82,7 @@ export class CommentService {
     });
     const page = comments.slice(0, limit);
     return {
-      items: page.map((comment) => this.toSummary(comment)),
+      items: page.map((comment) => this.toSummary(userId, comment)),
       nextCursor: comments.length > limit ? page[page.length - 1].id : null,
     };
   }
@@ -98,7 +102,7 @@ export class CommentService {
       data: { content: dto.content.trim() },
       include: commentInclude,
     });
-    return this.toSummary(updated);
+    return this.toSummary(userId, updated);
   }
 
   /**
@@ -134,13 +138,18 @@ export class CommentService {
     return comment;
   }
 
-  private toSummary(comment: CommentRecord): CommentSummary {
+  private toSummary(userId: string, comment: CommentRecord): CommentSummary {
+    // Author-only for MVP (see remove()) — kept in one place so a future
+    // rule change (e.g. post-author moderation) only touches the server.
+    const isAuthor = comment.authorUserId === userId;
     return {
       id: comment.id,
       postId: comment.postId,
       authorUserId: comment.authorUserId,
       authorName: comment.author.name,
       content: comment.content,
+      canEdit: isAuthor,
+      canDelete: isAuthor,
       createdAt: comment.createdAt,
       updatedAt: comment.updatedAt,
     };

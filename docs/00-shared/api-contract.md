@@ -120,9 +120,12 @@ shared to this family.
 
 `PostDetail` is `{ id, authorUserId, authorName, type, content, eventDate,
 eventTitle, place, familyIds, taggedMemberIds, media[], commentCount,
-reactionCount, myReaction, createdAt, updatedAt }` with `media[]` items
-`{ id, mimeType, sizeBytes }`. `myReaction` is the viewer's own reaction
-(`null` when they have not reacted) — it differs per viewer.
+reactionCount, myReaction, canEdit, canDelete, createdAt, updatedAt }` with
+`media[]` items `{ id, mimeType, sizeBytes }`. `myReaction` is the viewer's
+own reaction (`null` when they have not reacted) — it differs per viewer.
+`canEdit`/`canDelete` (added 2026-08-19) say whether the requesting user may
+edit/delete: the app renders these instead of comparing `authorUserId`
+against the session, so a future rule change stays server-side.
 
 Semantics the app must respect:
 
@@ -153,7 +156,9 @@ Semantics the app must respect:
 | `DELETE /posts/:postId/reactions/me`        | `ReactionState`  |
 
 `CommentSummary` is `{ id, postId, authorUserId, authorName, content,
-createdAt, updatedAt }`; `CommentList` is `{ items, nextCursor }` with the
+canEdit, canDelete, createdAt, updatedAt }` — `canEdit`/`canDelete` carry
+the server's permission verdict (author-only today), same rationale as on
+`PostDetail`; `CommentList` is `{ items, nextCursor }` with the
 same `limit`/`cursor` params as the feed, **oldest first** (a thread reads
 top-down). Anyone who can view the post can comment; only the comment's
 author edits or deletes it (post-author moderation is an open product
