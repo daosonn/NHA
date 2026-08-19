@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 
 import { edgeBetween, removalBlock } from '../../features/family/member-permissions';
-import { kinshipOptions, type KinshipOption } from '../../fixtures/invite';
+import { kinshipOptions, type KinshipOption } from '../../features/family/kinship';
 import type { FamilyMemberSummary, FamilyTree, Gender } from '../../lib/api';
 import { colors, elevation, radius } from '../../theme';
 import { Avatar } from '../ui/avatar';
@@ -268,7 +268,10 @@ function MemberSheetBody({
               label={t('family.member.relationshipLabel')}
               title={t('family.member.relationshipTitle', { name: member.displayName })}
               value={kinship ?? ''}
-              options={kinshipOptions}
+              options={kinshipOptions.map((option) => ({
+                value: option.value,
+                label: t(option.labelKey),
+              }))}
               onChange={setKinship}
             />
 

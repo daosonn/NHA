@@ -15,8 +15,9 @@ const COPIED_MS = 2000;
  * Splits the 8-character code down the middle: `K7M2QRXP` → `K7M2 QRXP`.
  *
  * Two groups of four is what makes a code survive being read down a phone
- * line. The alphabet already drops I, O, 0 and 1 for the same reason
- * (`src/fixtures/invite.ts`).
+ * line. The alphabet already drops I, O, 0 and 1 for the same reason —
+ * `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`, 32 symbols with every character that
+ * can be misread as another taken out (`apps/api`, invitation service).
  */
 function grouped(code: string): string {
   const half = Math.ceil(code.length / 2);
@@ -24,7 +25,11 @@ function grouped(code: string): string {
 }
 
 export type InviteCodeCardProps = {
-  /** `Family.inviteCode`, unspaced — exactly what the server stores. */
+  /**
+   * The code, unspaced — exactly what the server stores, and what `Copy`
+   * puts on the clipboard. Either kind fits: `Family.inviteCode` on the
+   * new-family screen, or an `Invitation.code` from the invite sheet.
+   */
   code: string;
   /** The line under it: which family, and that it does not expire. */
   subtitle: string;

@@ -15,6 +15,13 @@ export type TreeFromGraphOptions = {
   generationLabel: (index: number) => string;
   /** Turns a relationship key into a word. */
   translate: (key: string) => string;
+  /**
+   * Members holding a spot for somebody who has been invited and has not
+   * arrived. Passed in rather than read off the member row, because the
+   * tree payload has no such flag — a reserved spot is an ordinary
+   * placeholder, and only the invitation list knows it is being kept warm.
+   */
+  pendingMemberIds?: ReadonlySet<string>;
 };
 
 /**
@@ -30,13 +37,14 @@ export type TreeFromGraphOptions = {
  * deepest parent. Partners are then pulled level with each other, because a
  * couple drawn across two rows reads as a parent and a child.
  *
- * What this cannot produce: `empty` and `pending` nodes. Those describe a
- * spot reserved for someone who has been invited, and the server has no
- * per-spot invite — `Family.inviteCode` is one code for the whole family.
- * The component still supports both states; nothing feeds them yet.
+ * `pending` nodes come from `pendingMemberIds`: the invitation endpoints
+ * reserve a real placeholder member for each outstanding invite, so a spot
+ * that is being held for somebody is an ordinary node the caller has
+ * identified. `empty` is still never produced — an unreserved gap in a tree
+ * is a drawing idea, not a row in the database.
  */
 export function treeFromGraph(tree: FamilyTree, options: TreeFromGraphOptions): FamilyTreeData {
-  const { viewerUserId, generationLabel, translate } = options;
+  const { viewerUserId, generationLabel, translate, pendingMemberIds } = options;
 
   const ids = new Set(tree.members.map((member) => member.id));
 
@@ -83,7 +91,7 @@ export function treeFromGraph(tree: FamilyTree, options: TreeFromGraphOptions): 
       // No word for anyone more than one edge away — see relationship-label.ts.
       role: key === null ? undefined : translate(key),
       tone: row.length % 2 === 0 ? 'light' : 'dark',
-      state: 'active',
+      state: pendingMemberIds?.has(member.id) === true ? 'pending' : 'active',
       isViewer: member.id === viewerMemberId ? true : undefined,
     });
 
@@ -101,8 +109,7 @@ export function treeFromGraph(tree: FamilyTree, options: TreeFromGraphOptions): 
   return {
     name: tree.name,
     memberCount: tree.members.length,
-    // No per-spot invites on the server yet, so nothing is ever pending.
-    pendingCount: 0,
+    pendingCount: tree.members.filter((member) => pendingMemberIds?.has(member.id) === true).length,
     generations,
     couples: spousePairs.map((members) => ({ members })),
     descents: buildDescents(parentsOf, spousePairs),

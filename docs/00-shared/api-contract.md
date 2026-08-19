@@ -405,11 +405,47 @@ an endpoint, so no amount of frontend work will connect these screens.
 | **Family tree** (`family.tsx`)       | ~~`GET` for relationships~~ — **resolved**: `GET /families/:familyId/tree` returns nodes + edges (task 1.4.1). Remaining: the kinship-label derivation below.                                                                                                                                 |
 | **Verify code** (`verify.tsx`)       | Send / confirm an email code for **sign-up**. Registration returns tokens immediately today, so that half of the screen has nothing to call. The reset half now has endpoints — see the row below.                                                                                            |
 | **Forgot + reset password**          | ~~WBS 1.1.7~~ — **resolved on the server**: `POST /auth/password-reset/{request,verify,confirm}` (email infrastructure decided 2026-08-18: SMTP/Gmail). **The app is not wired to them**: `endpoints.ts` has no password-reset group, and the three screens only navigate between themselves. |
-| **Invitation** (`invite/[code].tsx`) | ~~A public read of an invite code~~ — **resolved**: `GET /invitations/:code` previews and `POST /invitations/:code/accept` joins on the reserved spot (task 1.4.4, PR #16). The app is not wired to them yet.                                                                                 |
-| **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~ — **resolved** (task 1.6.2). ~~LifeEvent~~ — **resolved** (task 1.6.8). ~~Memo~~ — **resolved** (task 1.6.5). Still missing: the derived gallery (1.6.4) — the last of the three tabs.                                                                                        |
+| **Invitation** (`invite/[code].tsx`) | ~~A public read of an invite code~~ — **resolved** (task 1.4.4, PR #16) **and wired 2026-08-19**: preview, accept, create, list and resend. Nothing outstanding.                                                                                                                              |
+| **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~, ~~LifeEvent~~, ~~Memo~~ — all **resolved and wired 2026-08-19**. The gallery (1.6.4) is built from the family feed instead; see § Requests from the app below for what that costs and what two profile fields the design needs.                                              |
 | **New moment** (`(tabs)/new.tsx`)    | ~~Post + media upload~~ — **resolved**: `POST /media` then `POST /posts` (tasks 1.5.2–1.5.5, PR #5).                                                                                                                                                                                          |
 | **Home**                             | ~~moments feed~~ — **resolved and wired**. `GET .../special-dates` exists but the app does not call it, so the widget is still a fixture. Recommendations have no endpoint at all.                                                                                                            |
 | **AI tab + gift ideas**              | The whole of `apps/ai` — the FastAPI service does not exist.                                                                                                                                                                                                                                  |
+
+### Requests from the app (added 2026-08-19)
+
+Three gaps found while building the Life Profile against mockup 7. None
+block a screen — the app ships without them and says on screen what it does
+not know — but each costs something visible.
+
+**1. A member's media has to be found by reading the whole feed.**
+There is no per-member media route and `FeedQueryDto` filters on nothing but
+a cursor, so the Album tab pages `GET /families/:id/posts` and filters on
+`taggedMemberIds` in the client. The scan is bounded at four pages of fifty —
+the two hundred most recent moments — because an unbounded one would fire an
+unknown number of requests every time a profile opens. Past that the grid
+tells the reader it is showing a partial album.
+
+Either shape would fix it: a `memberId` filter on the feed query, or
+`GET /families/:familyId/members/:memberId/media`. This is WBS 1.6.4, still
+open.
+
+**2. `LifeProfile` has no occupation and no birthplace.**
+Mockup 7 draws three fact rows: born _with a place_ ("Born 14 March 1964, Y
+Yen, Nam Dinh"), occupation ("Carpenter, retired since 2021"), and interests.
+Only the date and the interests have columns, so the app draws two rows and
+leaves the third out rather than inventing fields. Two nullable strings on
+`LifeProfile` — `birthPlace`, `occupation` — would complete the design.
+
+**3. `PostMediaSummary` has no duration.**
+The mockup puts a running time on a video cover ("0:24"). The summary is
+`{ id, mimeType, sizeBytes }`, so a video tile says "Video" instead. A
+`durationSeconds` on video media would let the tile say what the design says.
+
+Also still open from an earlier decision, and worth grouping here: **the
+profile PATCH is wider than the app.** `PATCH …/members/:memberId/profile`
+accepts an edit from any member of the family, while the app has offered
+self-only editing since 2026-08-19. The UI restriction is not a security
+boundary; narrowing the server is the real fix.
 
 ### The relationship-label question
 

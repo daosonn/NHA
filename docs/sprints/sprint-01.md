@@ -104,8 +104,7 @@ build the family tree, post content with photos, and view member profiles.
       `member/[id]` vẫn là fixture — chờ `LifeEvent` + `Memo`.
 - [x] 1.4.4 API invitation per-spot (`Invitation` model — added 2026-08-19,
       see `project-status.md` → "Invites are per-spot") — API done
-      2026-08-19 (chi tiết: `api-contract.md`); UI mời/nhận đã build từ
-      2026-08-18, chưa nối.
+      2026-08-19 (chi tiết: `api-contract.md`); FE nối xong 2026-08-19.
 
 ### 1.5 Nav2.5 – Bài viết / Ảnh / Sự kiện — Tạo nội dung
 
@@ -165,21 +164,21 @@ build the family tree, post content with photos, and view member profiles.
 >   `LifeEvent` xong 2026-08-19 (1.6.8), `Memo` xong 2026-08-19 (1.6.5) —
 >   còn gallery (1.6.4).
 
-- [ ] 1.6.1 UI Profile (avatar + tên) — UI xong 2026-08-18 (mock data, chưa nối API)
+- [x] 1.6.1 UI Profile (avatar + tên) — nối API xong 2026-08-19 (dựng lại theo mockup 7)
 - [ ] 1.6.2 About (thông tin cá nhân) — API done 2026-08-18:
       `GET/PATCH /api/me/profile` +
       `GET/PATCH /api/families/:familyId/members/:memberId/profile`
       (display rule linked→global / placeholder→wiki; placeholder
       wiki-editable bởi cả nhà, mọi edit ghi `EditHistory`; bio,
       interests, birthDate/deathDate — nguồn cho widget 1.2.5).
-      UI xong 2026-08-18 (mock data, chưa nối API)
-- [ ] 1.6.3 Timeline chung (bài viết/ảnh theo thời gian) — UI xong 2026-08-18 (mock data, chưa nối API)
-- [ ] 1.6.4 Album/Gallery (danh sách ảnh) — UI xong 2026-08-18 (mock data, chưa nối API)
-- [x] 1.6.5 Memo cá nhân (tạo memo — ghi chú về một thành viên, xem `database.md`) — API done 2026-08-19 (schema thêm title/category theo UI; chi tiết: `api-contract.md`); UI xong 2026-08-18, chưa nối
+      FE nối xong 2026-08-19; thiếu cột `occupation`/`birthPlace` mà mockup 7 vẽ
+- [x] 1.6.3 Timeline chung (bài viết/ảnh theo thời gian) — nối `LifeEvent` xong 2026-08-19
+- [ ] 1.6.4 Album/Gallery (danh sách ảnh) — FE dựng "Moments together" 2026-08-19 từ feed + `taggedMemberIds`, quét giới hạn 4×50; vẫn cần endpoint riêng (xem `api-contract.md` → Requests from the app)
+- [x] 1.6.5 Memo cá nhân (tạo memo — ghi chú về một thành viên, xem `database.md`) — API done 2026-08-19 (schema thêm title/category theo UI; chi tiết: `api-contract.md`); FE nối xong 2026-08-19
 - ~~1.6.6 Quyền riêng tư Memo (private/shared)~~ — dropped 2026-08-14:
   memo luôn private, chỉ chủ xem/sửa (see `database.md`)
 - [ ] 1.6.7 Album cá nhân (private — tạo album, tự thêm ảnh; added 2026-08-14, see `database.md`)
-- [x] 1.6.8 Life Timeline milestones (LifeEvent CRUD + hiển thị theo thời gian; added 2026-08-14, see `database.md`) — API done 2026-08-19 (chi tiết: `api-contract.md`); UI Timeline vẫn fixture, chưa nối
+- [x] 1.6.8 Life Timeline milestones (LifeEvent CRUD + hiển thị theo thời gian; added 2026-08-14, see `database.md`) — API done 2026-08-19 (chi tiết: `api-contract.md`); FE nối xong 2026-08-19
 
 ### 1.7 Test Sprint 1
 

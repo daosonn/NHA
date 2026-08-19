@@ -150,6 +150,18 @@
 
 Raised by the frontend, neither actionable from `apps/mobile`.
 
+- **Three gaps found building the Life Profile against mockup 7
+  (2026-08-19).** Written up in full in `docs/00-shared/api-contract.md`
+  § Requests from the app; in short: (1) a member's media can only be found
+  by paging the whole family feed and filtering on `taggedMemberIds`, so the
+  Album tab scans a bounded 200 moments and tells the reader when it stopped
+  short — a `memberId` filter on the feed, or WBS 1.6.4's own route, fixes
+  it; (2) `LifeProfile` has no `occupation` and no `birthPlace`, so one of
+  the mockup's three fact rows is not drawn and the first is missing its
+  place; (3) `PostMediaSummary` has no duration, so a video tile says
+  "Video" where the mockup shows a running time. None block a screen — the
+  app ships without them and says on screen what it does not know.
+
 - **Profile editing narrowed to self, and the server still disagrees
   (2026-08-19).** The app now draws the Edit affordance only on your own
   profile: a life story written about someone by someone else is a different
@@ -162,7 +174,8 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   the profile's owner, or say the wiki rule stands and the app should put the
   affordance back. Decision recorded in
   `docs/01-frontend/architecture.md` § Life Profile; reversing it on the
-  client is one function (`features/member/profile-overlay.ts`).
+  client is one function (`features/member/member-profile.ts` →
+  `editability`).
 
 - **Comment moderation is decided for now, but the permission is in the
   wrong place (2026-08-18).** Only a comment's author may edit or delete it;

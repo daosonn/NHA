@@ -78,6 +78,15 @@ export type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   size?: ButtonSize;
   loading?: boolean;
   fullWidth?: boolean;
+  /**
+   * Where a hugging button sits in its parent. Ignored when `fullWidth`.
+   *
+   * It has to be said here because the button sets its own `alignSelf`, and
+   * `alignSelf` beats the parent's `alignItems` every time: without this, a
+   * button dropped into a centred column silently jumped to the left edge —
+   * which is exactly what the empty states were doing.
+   */
+  align?: 'start' | 'center';
   /** Rendered left of the label. Receives the size-appropriate dimensions. */
   renderIcon?: (props: { size: number; color: string }) => React.ReactNode;
 };
@@ -94,6 +103,7 @@ export function Button({
   size = 'medium',
   loading = false,
   fullWidth = false,
+  align = 'start',
   renderIcon,
   disabled,
   ...rest
@@ -121,7 +131,7 @@ export function Button({
           alignItems: 'center',
           justifyContent: 'center',
           gap: 8,
-          alignSelf: fullWidth ? 'stretch' : 'flex-start',
+          alignSelf: fullWidth ? 'stretch' : align === 'center' ? 'center' : 'flex-start',
           backgroundColor: isBlocked ? DISABLED.bg : pressed ? v.bgPressed : v.bg,
         },
         borderColor !== undefined && { borderWidth: 1.5, borderColor },

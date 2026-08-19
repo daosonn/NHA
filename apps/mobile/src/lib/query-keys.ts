@@ -11,6 +11,13 @@ export const queryKeys = {
   family: (familyId: string) => ['families', familyId] as const,
   familyTree: (familyId: string) => ['families', familyId, 'tree'] as const,
   familyFeed: (familyId: string) => ['families', familyId, 'posts'] as const,
+  familyInvitations: (familyId: string) => ['families', familyId, 'invitations'] as const,
+  /**
+   * A preview read by code, not by family: the reader is usually not in that
+   * family yet, and often has no account at all, so this cannot hang under
+   * `families` — nothing would ever invalidate it.
+   */
+  invitation: (code: string) => ['invitations', code] as const,
   post: (postId: string) => ['posts', postId] as const,
   postComments: (postId: string) => ['posts', postId, 'comments'] as const,
   /**
@@ -21,4 +28,23 @@ export const queryKeys = {
   myProfile: () => ['me', 'profile'] as const,
   memberProfile: (familyId: string, memberId: string) =>
     ['families', familyId, 'members', memberId, 'profile'] as const,
+  /**
+   * The moments one member appears in. Under the family because it is built
+   * from that family's feed — posting a moment invalidates `['families', id]`
+   * and this goes stale with it, which is exactly right.
+   */
+  memberMoments: (familyId: string, memberId: string) =>
+    ['families', familyId, 'members', memberId, 'moments'] as const,
+  /**
+   * Notes the viewer wrote about one member. Under `families` so leaving a
+   * family drops them from the cache with everything else about it.
+   */
+  memberMemos: (familyId: string, memberId: string) =>
+    ['families', familyId, 'members', memberId, 'memos'] as const,
+  /** One note, reachable by id alone — including one whose member has gone. */
+  memo: (memoId: string) => ['memos', memoId] as const,
+  /** Your own timeline, which exists before you belong to any family. */
+  myLifeEvents: () => ['me', 'life-events'] as const,
+  memberLifeEvents: (familyId: string, memberId: string) =>
+    ['families', familyId, 'members', memberId, 'life-events'] as const,
 } as const;

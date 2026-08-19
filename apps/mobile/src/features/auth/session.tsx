@@ -37,6 +37,9 @@ type SessionValue = {
   signOut: () => Promise<void>;
 };
 
+/** How long to wait for the server to revoke the token before giving up. */
+const LOGOUT_TIMEOUT_MS = 5000;
+
 const SessionContext = createContext<SessionValue | null>(null);
 
 /**
@@ -72,22 +75,30 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(async () => {
     const existing = currentSession();
 
-    // Local state goes first. If the network call fails the person is still
-    // signed out on this device, which is what they asked for; a refresh
-    // token left behind on a phone is the worse outcome.
+    // The server call has to come first. `POST /auth/logout` is an
+    // authenticated endpoint — the controller reads `@CurrentUser()` — so
+    // clearing the tokens beforehand sent it with no Authorization header, it
+    // came back 401, and the refresh token was never revoked: a working
+    // credential left alive on the server every time somebody signed out.
+    if (existing !== null) {
+      await Promise.race([
+        auth.logout({ refreshToken: existing.refreshToken }),
+        // The API client has no timeout of its own, and a request that hangs
+        // must not strand somebody on a screen they asked to leave. Signing
+        // out locally is the part that actually belongs to them.
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, LOGOUT_TIMEOUT_MS);
+        }),
+      ]).catch(() => {
+        // Offline, or the token was already revoked. Nothing left to undo.
+      });
+    }
+
     await clearSession();
     resetRefreshState();
     // Otherwise the next account to sign in on this device reads the
     // previous one's families out of the cache before its own arrive.
     queryClient.clear();
-
-    if (existing !== null) {
-      try {
-        await auth.logout({ refreshToken: existing.refreshToken });
-      } catch {
-        // Offline, or the token was already revoked. Nothing left to undo.
-      }
-    }
   }, [queryClient]);
 
   const value = useMemo<SessionValue>(

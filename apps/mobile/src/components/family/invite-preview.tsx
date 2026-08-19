@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
+import type { InvitationPreview as InvitationPreviewData } from '../../lib/api';
 import { colors, radius } from '../../theme';
-import type { Invitation } from '../../fixtures/invite';
 import { Avatar } from '../ui/avatar';
 import { Text } from '../ui/text';
 
@@ -41,8 +41,15 @@ function NodeLabel({ x, y, children }: { x: number; y: number; children: React.R
  * Not the real tree: it is the argument for accepting, so it shows only the
  * people that explain the spot — the couple above it and the sibling beside
  * it — with the empty place drawn in the same dashed language the tree uses.
+ *
+ * The server sends names and nothing else for those neighbours, which is the
+ * right amount: this page is readable by anyone holding the code, so it says
+ * who is around the spot without opening the family up to a stranger.
+ *
+ * Returns nothing when the spot has no neighbours at all. A lone dashed
+ * circle in a coral box explains less than the sentence above it already did.
  */
-export function InvitePreview({ invitation }: { invitation: Invitation }) {
+export function InvitePreview({ invitation }: { invitation: InvitationPreviewData }) {
   const { t } = useTranslation();
 
   const [width, setWidth] = useState(DESIGN_WIDTH);
@@ -62,6 +69,9 @@ export function InvitePreview({ invitation }: { invitation: Invitation }) {
     `M${mx} ${jointY + 1} C${mx} ${PARENT_Y + 40} ${x} ${CHILD_Y - 28} ${x} ${CHILD_Y}`;
 
   const [first, second] = invitation.parents;
+  const [sibling] = invitation.siblings;
+
+  if (first === undefined && sibling === undefined) return null;
 
   return (
     <View
@@ -74,20 +84,29 @@ export function InvitePreview({ invitation }: { invitation: Invitation }) {
       }}
     >
       <Svg width={width} height={HEIGHT} style={StyleSheet.absoluteFill}>
-        <Path
-          d={couple}
-          stroke={colors.coral.borderLight}
-          strokeWidth={2.2}
-          strokeLinecap="round"
-          fill="none"
-        />
-        <Path
-          d={descent(lx)}
-          stroke={colors.coral.borderLight}
-          strokeWidth={2.2}
-          strokeLinecap="round"
-          fill="none"
-        />
+        {/* The arc *is* the marriage. With one parent known there is no
+            couple to draw, and inventing the second half would be inventing
+            a spouse. */}
+        {second !== undefined && (
+          <Path
+            d={couple}
+            stroke={colors.coral.borderLight}
+            strokeWidth={2.2}
+            strokeLinecap="round"
+            fill="none"
+          />
+        )}
+        {/* Only drawn to a node that exists — a solid thread ending in empty
+            space reads as a person the sketch forgot to render. */}
+        {sibling !== undefined && (
+          <Path
+            d={descent(lx)}
+            stroke={colors.coral.borderLight}
+            strokeWidth={2.2}
+            strokeLinecap="round"
+            fill="none"
+          />
+        )}
         {/* Dashed all the way to the empty spot — the same signal the tree
             uses for "someone is on the way". */}
         <Path
@@ -98,17 +117,17 @@ export function InvitePreview({ invitation }: { invitation: Invitation }) {
           strokeDasharray="3 7"
           fill="none"
         />
-        <Circle cx={mx} cy={jointY} r={3} fill={colors.coral.primary} />
+        {first !== undefined && <Circle cx={mx} cy={jointY} r={3} fill={colors.coral.primary} />}
       </Svg>
 
       {first !== undefined && (
         <>
           <View style={{ position: 'absolute', left: lx - NODE / 2, top: PARENT_Y - NODE / 2 }}>
-            <Avatar size={NODE} tone={first.tone} ring={RING} />
+            <Avatar size={NODE} tone="light" ring={RING} />
           </View>
           <NodeLabel x={lx} y={PARENT_Y + NODE / 2 + 6}>
             <Text variant="caption" weight="semibold" numberOfLines={1}>
-              {t('invite.preview.nodeLabel', { name: first.name, role: first.role })}
+              {first.name}
             </Text>
           </NodeLabel>
         </>
@@ -117,24 +136,28 @@ export function InvitePreview({ invitation }: { invitation: Invitation }) {
       {second !== undefined && (
         <>
           <View style={{ position: 'absolute', left: rx - NODE / 2, top: PARENT_Y - NODE / 2 }}>
-            <Avatar size={NODE} tone={second.tone} ring={RING} />
+            <Avatar size={NODE} tone="dark" ring={RING} />
           </View>
           <NodeLabel x={rx} y={PARENT_Y + NODE / 2 + 6}>
             <Text variant="caption" weight="semibold" numberOfLines={1}>
-              {t('invite.preview.nodeLabel', { name: second.name, role: second.role })}
+              {second.name}
             </Text>
           </NodeLabel>
         </>
       )}
 
-      <View style={{ position: 'absolute', left: lx - NODE / 2, top: CHILD_Y - NODE / 2 }}>
-        <Avatar size={NODE} tone={invitation.sibling.tone} ring={RING} />
-      </View>
-      <NodeLabel x={lx} y={CHILD_Y + NODE / 2 + 6}>
-        <Text variant="caption" weight="semibold" numberOfLines={1}>
-          {invitation.sibling.name}
-        </Text>
-      </NodeLabel>
+      {sibling !== undefined && (
+        <>
+          <View style={{ position: 'absolute', left: lx - NODE / 2, top: CHILD_Y - NODE / 2 }}>
+            <Avatar size={NODE} tone="dark" ring={RING} />
+          </View>
+          <NodeLabel x={lx} y={CHILD_Y + NODE / 2 + 6}>
+            <Text variant="caption" weight="semibold" numberOfLines={1}>
+              {sibling.name}
+            </Text>
+          </NodeLabel>
+        </>
+      )}
 
       <View
         style={{
