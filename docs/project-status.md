@@ -96,11 +96,14 @@
   than adding one.
 - **`expo-image-picker` added (2026-08-18)** — the last thing standing
   between New moment and a working end-to-end post.
-- **Sprint 1 stands at 24 of 38 tasks (2026-08-18).** Groups 1.1, 1.3, 1.4
-  and 1.5 are essentially closed. Group 1.2 waits on one endpoint
-  (`SpecialDate`, task 1.2.5). **Group 1.6 — the one containing "the
-  central screen of the product" — has one of seven done**, and it is the
-  API half; no Life Profile UI is wired.
+- **Sprint 1 stands at 30 of 39 tasks (2026-08-19; was 24/38 on
+  2026-08-18 — 1.4.4 was added since).** One more (1.6.7, personal
+  albums) lands with the open `feature/album` PR. **The backend side of
+  the sprint is finished**: every remaining unticked item is UI wiring
+  (1.1.7 reset screens, 1.2.5 widget, 1.6.1–1.6.3 Life Profile — all
+  their endpoints exist), finishing 1.2.4's empty states, verifying
+  Facebook E2E (1.1.9, needs the Meta tester-role invite accepted), and
+  the 1.7 stabilization pass.
 - **Two gaps in the sprint plan itself**, both worth a team decision rather
   than a silent fix:
   1. **Apple Sign In has no task.** It was decided on 2026-08-18 and is

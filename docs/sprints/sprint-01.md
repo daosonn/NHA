@@ -36,7 +36,12 @@ build the family tree, post content with photos, and view member profiles.
 
 ### 1.2 Nav1 – Trang chủ — Trang chính sau login
 
-- [ ] 1.2.1 Navigation chính (Nav1/Nav2/Nav3/Nav4)
+- [x] 1.2.1 Navigation chính (Nav1/Nav2/Nav3/Nav4) — done 2026-08-18 trong
+      first-pass screen set nhưng chưa từng được tick: custom `BottomNav`
+      5 mục (Home · Omoide · + · AI · Profile), auth guard một cổng ở
+      `(tabs)/_layout.tsx`, cây gia phả vào từ Home theo thiết kế. Xác
+      nhận lại theo code 2026-08-19. **Chưa chạy thử trên máy thật** —
+      cùng caveat với các task UI khác.
 - [x] 1.2.2 Layout Home (responsive, mobile-first 375–430px) — done
       2026-08-18: nối `GET /families` kèm loading / error / "chưa có gia
       đình nào". Widget dịp đặc biệt (1.2.5) và recommendations vẫn là
