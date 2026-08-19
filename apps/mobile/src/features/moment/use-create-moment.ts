@@ -1,50 +1,46 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type { DraftMedia } from '../../components/moment/media-strip';
-import { media as mediaApi, posts } from '../../lib/api';
+import { posts } from '../../lib/api';
 import type { PostDetail } from '../../lib/api';
 import { queryKeys } from '../../lib/query-keys';
+import { uploadDrafts } from './upload-drafts';
 
 export type CreateMomentInput = {
   content: string;
   media: DraftMedia[];
   /** Empty means private to the author — not "everyone" (`api-contract.md`). */
   familyIds: string[];
+  /**
+   * Who is in the moment, as `FamilyMember.id`s. This is what fills the
+   * Album on each of their Life Profiles; empty means the moment reaches the
+   * feed and nobody's page. The server refuses an id outside `familyIds`.
+   */
+  taggedMemberIds: string[];
 };
 
 /**
  * Upload the files, then post — in that order, because attachments are fixed
- * at creation and `mediaIds` cannot be added later.
- *
- * Uploads run **one at a time**. A moment can carry a dozen photos and the
- * ceiling is 100MB each; firing them all at once on a phone's connection
- * makes every one of them slower and turns a partial failure into a puzzle.
- * Sequential also means the first failure stops the rest, so nothing is left
- * orphaned on the server beyond what was already sent.
+ * at creation and `mediaIds` cannot be added later. The upload itself is
+ * `uploadDrafts`, shared with everything else that carries media.
  */
 export function useCreateMoment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ content, media, familyIds }: CreateMomentInput): Promise<PostDetail> => {
-      const mediaIds: string[] = [];
-
-      for (const item of media) {
-        if (item.uri === undefined) continue;
-
-        const uploaded = await mediaApi.upload({
-          uri: item.uri,
-          name: item.fileName ?? `${item.id}.jpg`,
-          type: item.mimeType ?? 'image/jpeg',
-        });
-
-        mediaIds.push(uploaded.id);
-      }
+    mutationFn: async ({
+      content,
+      media,
+      familyIds,
+      taggedMemberIds,
+    }: CreateMomentInput): Promise<PostDetail> => {
+      const mediaIds = await uploadDrafts(media);
 
       return posts.create({
         type: 'POST',
         content: content.trim() === '' ? undefined : content.trim(),
         familyIds,
+        taggedMemberIds: taggedMemberIds.length === 0 ? undefined : taggedMemberIds,
         mediaIds: mediaIds.length === 0 ? undefined : mediaIds,
       });
     },
@@ -55,6 +51,12 @@ export function useCreateMoment() {
       // feeds that cannot have changed.
       for (const familyId of post.familyIds) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.familyFeed(familyId) });
+
+        // Every Album under this family is built by scanning that same feed,
+        // so they go stale with it — including the pages of people who were
+        // just tagged. Invalidating the family subtree is blunt but right:
+        // the alternative is listing member ids the screen does not have.
+        void queryClient.invalidateQueries({ queryKey: queryKeys.family(familyId) });
       }
     },
   });

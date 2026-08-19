@@ -2,11 +2,11 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ArrayMaxSize,
   IsArray,
-  IsISO8601,
   IsOptional,
   IsString,
   MaxLength,
 } from 'class-validator';
+import { IsDateOnly } from '../../common/is-date-only';
 
 /** Omitted fields stay unchanged; `null` clears a date, `''` clears the bio. */
 export class UpdateProfileDto {
@@ -32,17 +32,18 @@ export class UpdateProfileDto {
 
   @ApiPropertyOptional({
     nullable: true,
-    description: 'ISO 8601 date; null clears it (one source per person)',
+    description:
+      'Date only, YYYY-MM-DD; null clears it (one source per person)',
   })
   @IsOptional()
-  @IsISO8601({ strict: true })
+  @IsDateOnly('birthDate')
   birthDate?: string | null;
 
   @ApiPropertyOptional({
     nullable: true,
-    description: 'ISO 8601 date; null clears it. Deceased members only',
+    description: 'Date only, YYYY-MM-DD; null clears it. Deceased members only',
   })
   @IsOptional()
-  @IsISO8601({ strict: true })
+  @IsDateOnly('deathDate')
   deathDate?: string | null;
 }

@@ -18,34 +18,89 @@ import path from 'path';
 import crypto from 'crypto';
 import sharp from 'sharp';
 import { FFMPEG, run } from './exec';
-import { dims, FPS, segCacheFile, tmpDir, type SegmentResult } from './videogen';
+import {
+  dims,
+  FPS,
+  segCacheFile,
+  tmpDir,
+  type SegmentResult,
+} from './videogen';
 import type { Aspect, IntroTemplateId, Palette } from './types';
 
 // 6 phong cách có hoạt cảnh; 'none' không nằm ở đây vì nó dùng card gradient tĩnh của videogen.
-export type IntroTemplate = { id: Exclude<IntroTemplateId, 'none'>; emoji: string; name_vi: string; desc_vi: string };
+export type IntroTemplate = {
+  id: Exclude<IntroTemplateId, 'none'>;
+  emoji: string;
+  name_vi: string;
+  desc_vi: string;
+};
 
 export const INTRO_TEMPLATES: IntroTemplate[] = [
-  { id: 'album', emoji: '📖', name_vi: 'Mở album cũ', desc_vi: 'Bìa album da mở ra, lộ trang giấy có ảnh dán băng dính' },
+  {
+    id: 'album',
+    emoji: '📖',
+    name_vi: 'Mở album cũ',
+    desc_vi: 'Bìa album da mở ra, lộ trang giấy có ảnh dán băng dính',
+  },
   // (bản NHA bật lại album — design màn 30 liệt kê nó là phong cách chính thức)
   // Ghi chú cũ của demo: 📖 'album' TẠM TẮT theo yêu cầu (Sơn sẽ thiết kế lại) — hoạt cảnh svgAlbum/svgOutroAlbum
   // vẫn còn nguyên bên dưới, chỉ bị comment. Bật lại: bỏ comment dòng này + 2 case trong
   // buildFrameSvg/buildOutroSvg + mục 'album' trong ALBUM_DISABLED và IntroPicker.
   // { id: 'album', emoji: '📖', name_vi: 'Mở album cũ', desc_vi: 'Bìa album da mở ra, lộ trang giấy có ảnh dán băng dính' },
-  { id: 'cinema', emoji: '🎬', name_vi: 'Điện ảnh', desc_vi: 'Nền đen letterbox, tiêu đề hiện dần, vệt sáng quét ngang' },
-  { id: 'film', emoji: '📽️', name_vi: 'Phim nhựa cũ', desc_vi: 'Đếm ngược 3-2-1, khung rung nhẹ và hạt phim' },
-  { id: 'letter', emoji: '✉️', name_vi: 'Thư tay', desc_vi: 'Giấy kẻ dòng, lời dẫn hiện ra từng ký tự như đang viết' },
-  { id: 'seasonal', emoji: '🌸', name_vi: 'Cánh hoa rơi', desc_vi: 'Cánh hoa bay theo gió, tiêu đề lớn hiện dần' },
-  { id: 'polaroid', emoji: '📸', name_vi: 'Ảnh polaroid', desc_vi: '3 ảnh polaroid lần lượt rơi xuống, xoay rồi ổn định' },
+  {
+    id: 'cinema',
+    emoji: '🎬',
+    name_vi: 'Điện ảnh',
+    desc_vi: 'Nền đen letterbox, tiêu đề hiện dần, vệt sáng quét ngang',
+  },
+  {
+    id: 'film',
+    emoji: '📽️',
+    name_vi: 'Phim nhựa cũ',
+    desc_vi: 'Đếm ngược 3-2-1, khung rung nhẹ và hạt phim',
+  },
+  {
+    id: 'letter',
+    emoji: '✉️',
+    name_vi: 'Thư tay',
+    desc_vi: 'Giấy kẻ dòng, lời dẫn hiện ra từng ký tự như đang viết',
+  },
+  {
+    id: 'seasonal',
+    emoji: '🌸',
+    name_vi: 'Cánh hoa rơi',
+    desc_vi: 'Cánh hoa bay theo gió, tiêu đề lớn hiện dần',
+  },
+  {
+    id: 'polaroid',
+    emoji: '📸',
+    name_vi: 'Ảnh polaroid',
+    desc_vi: '3 ảnh polaroid lần lượt rơi xuống, xoay rồi ổn định',
+  },
 ];
 
 /** Phong cách đang tạm tắt → pipeline coi như 'none' (card gradient) để record cũ vẫn render được */
 export const DISABLED_INTROS: readonly IntroTemplateId[] = [];
 export const isIntroEnabled = (v: IntroTemplateId): boolean =>
-  v !== 'none' && !DISABLED_INTROS.includes(v) && INTRO_TEMPLATES.some((t) => t.id === v);
+  v !== 'none' &&
+  !DISABLED_INTROS.includes(v) &&
+  INTRO_TEMPLATES.some((t) => t.id === v);
 
 // V9: giảm rung film (±0.09%, 15Hz — bản cũ ±0.22% 30Hz rung quá nhiều)
 const CACHE_V = 9;
-const ENC = ['-r', String(FPS), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-pix_fmt', 'yuv420p', '-an'];
+const ENC = [
+  '-r',
+  String(FPS),
+  '-c:v',
+  'libx264',
+  '-preset',
+  'veryfast',
+  '-crf',
+  '20',
+  '-pix_fmt',
+  'yuv420p',
+  '-an',
+];
 const FONT_STACK = 'Yu Gothic, Meiryo, Segoe UI, sans-serif';
 
 export type IntroCtx = {
@@ -86,7 +141,11 @@ function mulberry32(seed: number): () => number {
 }
 
 function esc(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 // Trộn màu để tạo biến thể sáng/tối từ palette (nền gỗ, giấy, bìa da…)
@@ -110,7 +169,8 @@ const CJK_RE = /[⺀-〿぀-ヿ㐀-䶿一-鿿豈-﫿＀-￯]/;
 const chUnits = (ch: string) => (CJK_RE.test(ch) ? 1 : 0.56);
 
 // Kinsoku: những ký tự KHÔNG được đứng đầu dòng (đã gặp: 「お誕生日おめでとう」 rồi dòng mới chỉ có 「。」)
-const NO_LINE_START = /[、。，．・：；！？」』）】〉》”’ゝゞ々ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮーヽヾ]/;
+const NO_LINE_START =
+  /[、。，．・：；！？」』）】〉》”’ゝゞ々ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮーヽヾ]/;
 // …và không được đứng cuối dòng
 const NO_LINE_END = /[「『（【〈《“‘]/;
 
@@ -119,19 +179,27 @@ function svgWrap(text: string, maxUnits: number, maxLines = 3): string[] {
   if (!src) return [];
   const lines: string[] = [];
   if (CJK_RE.test(src)) {
-    // Khoảng trắng TOÀN GIÁC (U+3000) là điểm ngắt tự nhiên của tiếng Nhật: 「おばあちゃんへ　家族一同より」
+    // Khoảng trắng TOÀN GIÁC (U+3000) là điểm ngắt tự nhiên của tiếng Nhật: 「おばあちゃんへ 家族一同より」
     // phải ngắt Ở ĐÓ. Nên tách thành khối trước rồi xếp khối vào dòng (như word-wrap), chỉ cắt theo
     // ký tự khi một khối dài hơn cả dòng — nếu cắt ký tự ngay từ đầu sẽ ra dòng mồ côi 「り」.
     // giữ lại chính khoảng trắng đó khi 2 khối nằm CÙNG dòng (mất U+3000 là mất nhịp câu tiếng Nhật)
-    const parts = src.split(/([　 ]+)/);
+    const parts = src.split(/([\u3000 ]+)/);
     const chunks: { sep: string; text: string }[] = [];
     for (let i = 0; i < parts.length; i += 2) {
-      if (parts[i]) chunks.push({ sep: i === 0 ? '' : parts[i - 1], text: parts[i] });
+      if (parts[i])
+        chunks.push({ sep: i === 0 ? '' : parts[i - 1], text: parts[i] });
     }
-    const width = (s: string) => Array.from(s).reduce((a, ch) => a + chUnits(ch), 0);
+    const width = (s: string) =>
+      Array.from(s).reduce((a, ch) => a + chUnits(ch), 0);
     let cur = '';
     let u = 0;
-    const flush = () => { if (cur) { lines.push(cur); cur = ''; u = 0; } };
+    const flush = () => {
+      if (cur) {
+        lines.push(cur);
+        cur = '';
+        u = 0;
+      }
+    };
     for (const { sep, text } of chunks) {
       const cu = width(text);
       const su = cur ? width(sep) : 0;
@@ -147,7 +215,10 @@ function svgWrap(text: string, maxUnits: number, maxLines = 3): string[] {
         continue;
       }
       // khối dài hơn 1 dòng → cắt theo ký tự
-      if (cur) { cur += sep; u += su; }
+      if (cur) {
+        cur += sep;
+        u += su;
+      }
       for (const ch of Array.from(text)) {
         const w = chUnits(ch);
         if (u + w > maxUnits && cur) flush();
@@ -162,7 +233,11 @@ function svgWrap(text: string, maxUnits: number, maxLines = 3): string[] {
         lines[i - 1] += lines[i][0];
         lines[i] = lines[i].slice(1);
       }
-      if (!lines[i]) { lines.splice(i, 1); i--; continue; }
+      if (!lines[i]) {
+        lines.splice(i, 1);
+        i--;
+        continue;
+      }
       const prev = lines[i - 1];
       if (prev.length > 1 && NO_LINE_END.test(prev[prev.length - 1])) {
         lines[i] = prev[prev.length - 1] + lines[i];
@@ -184,14 +259,21 @@ function svgWrap(text: string, maxUnits: number, maxLines = 3): string[] {
     }
     if (cur) lines.push(cur);
   }
-  return lines.length > maxLines ? [...lines.slice(0, maxLines - 1), lines[maxLines - 1] + '…'] : lines;
+  return lines.length > maxLines
+    ? [...lines.slice(0, maxLines - 1), lines[maxLines - 1] + '…']
+    : lines;
 }
 
 /**
  * Xuống dòng mà KHÔNG cắt chữ: co dần cỡ chữ tới khi vừa maxLines.
  * Lời dẫn giờ dài 70-140 ký tự nên cắt bằng 「…」 là mất nội dung — thà chữ nhỏ hơn.
  */
-function fitWrap(text: string, availPx: number, baseSize: number, maxLines: number): { lines: string[]; size: number } {
+function fitWrap(
+  text: string,
+  availPx: number,
+  baseSize: number,
+  maxLines: number,
+): { lines: string[]; size: number } {
   const src = (text ?? '').trim();
   if (!src) return { lines: [], size: baseSize };
   let size = baseSize;
@@ -203,37 +285,55 @@ function fitWrap(text: string, availPx: number, baseSize: number, maxLines: numb
     if (size <= baseSize * 0.55) break;
     size *= 0.92;
   }
-  return { lines: svgWrap(src, (availPx * 0.96) / size, maxLines), size: Math.round(size) };
+  return {
+    lines: svgWrap(src, (availPx * 0.96) / size, maxLines),
+    size: Math.round(size),
+  };
 }
 
 /**
  * Tiêu đề: ưu tiên VỪA 1 DÒNG (co tối đa −28%), chỉ xuống 2 dòng khi thật sự quá dài.
  * Tiêu đề 9 ký tự trước đây bị ép maxUnits=8 nên tách ra 「…の一」/「年」 — một chữ mồ côi.
  */
-function fitTitle(text: string, availPx: number, baseSize: number): { lines: string[]; size: number } {
+function fitTitle(
+  text: string,
+  availPx: number,
+  baseSize: number,
+): { lines: string[]; size: number } {
   const src = (text ?? '').trim();
   if (!src) return { lines: [], size: baseSize };
   const w = Array.from(src).reduce((a, ch) => a + chUnits(ch), 0);
   const onePx = (availPx * 0.98) / Math.max(1, w);
-  if (onePx >= baseSize * 0.72) return { lines: [src], size: Math.round(Math.min(baseSize, onePx)) };
+  if (onePx >= baseSize * 0.72)
+    return { lines: [src], size: Math.round(Math.min(baseSize, onePx)) };
   return fitWrap(src, availPx, baseSize, 2);
 }
 
 /** Như fitWrap nhưng giới hạn theo CHIỀU CAO khả dụng (px) — dùng khi khối chữ phải nằm trong một dải cố định. */
-function fitBox(text: string, availPx: number, availH: number, baseSize: number, lhRatio = 1.34): { lines: string[]; size: number; lh: number } {
+function fitBox(
+  text: string,
+  availPx: number,
+  availH: number,
+  baseSize: number,
+  lhRatio = 1.34,
+): { lines: string[]; size: number; lh: number } {
   const src = (text ?? '').trim();
   let size = baseSize;
   let lines: string[] = [];
   for (let i = 0; i < 16; i++) {
     lines = svgWrap(src, (availPx * 0.96) / size, 99);
-    if (lines.length * size * lhRatio <= availH || size <= baseSize * 0.5) break;
+    if (lines.length * size * lhRatio <= availH || size <= baseSize * 0.5)
+      break;
     size *= 0.93;
   }
   size = Math.round(size);
   const lh = Math.round(size * lhRatio);
   const fit = Math.max(1, Math.floor(availH / lh));
   // nếu vẫn quá dài (chạm sàn cỡ chữ) thì cắt CÓ DẤU 「…」 — không lặng lẽ bỏ dòng cuối
-  const kept = lines.length > fit ? [...lines.slice(0, fit - 1), lines[fit - 1] + '…'] : lines;
+  const kept =
+    lines.length > fit
+      ? [...lines.slice(0, fit - 1), lines[fit - 1] + '…']
+      : lines;
   return { lines: kept, size, lh };
 }
 
@@ -243,12 +343,22 @@ function fitBox(text: string, availPx: number, availH: number, baseSize: number,
  * NGẮN (1080) nên cùng một tỉ lệ sẽ ra chữ nhỏ hơn hẳn so với 16:9 (W=1920).
  * Đó là lý do 「誕生日に贈る私の毎日」 bị nhỏ: 0.024×1080 = 26px trên khung cao 1920.
  */
-const subSize = (W: number, portrait: boolean) => Math.round(W * (portrait ? 0.042 : 0.025));
-const narrSize = (W: number, portrait: boolean) => Math.round(W * (portrait ? 0.041 : 0.023));
+const subSize = (W: number, portrait: boolean) =>
+  Math.round(W * (portrait ? 0.042 : 0.025));
+const narrSize = (W: number, portrait: boolean) =>
+  Math.round(W * (portrait ? 0.041 : 0.023));
 
 function textBlock(opts: {
-  lines: string[]; cx: number; yStart: number; size: number; color: string; opacity?: number;
-  weight?: string; spacing?: number; anchor?: string; shadow?: boolean;
+  lines: string[];
+  cx: number;
+  yStart: number;
+  size: number;
+  color: string;
+  opacity?: number;
+  weight?: string;
+  spacing?: number;
+  anchor?: string;
+  shadow?: boolean;
   /** ghi đè khoảng dòng (dùng khi chữ phải nằm đúng lưới dòng kẻ của giấy thư) */
   lh?: number;
 }): string {
@@ -285,13 +395,27 @@ function safeBottomY(H: number, aspect: Aspect): number {
  */
 function narrationBlock(
   e: FrameEnv,
-  o: { k: number; topY: number; bottomY: number; padX: number; color: string; scrim?: string; scrimOpacity?: number; shadow?: boolean },
+  o: {
+    k: number;
+    topY: number;
+    bottomY: number;
+    padX: number;
+    color: string;
+    scrim?: string;
+    scrimOpacity?: number;
+    shadow?: boolean;
+  },
 ): string {
   const { W, ctx } = e;
   if (o.k <= 0) return '';
   const avail = W - o.padX * 2;
   const boxH = o.bottomY - o.topY;
-  const fit = fitBox(ctx.openingJa ?? '', avail, boxH, narrSize(W, e.aspect === 'portrait'));
+  const fit = fitBox(
+    ctx.openingJa ?? '',
+    avail,
+    boxH,
+    narrSize(W, e.aspect === 'portrait'),
+  );
   if (!fit.lines.length) return '';
   const h = fit.lines.length * fit.lh;
   const yStart = o.topY + Math.max(0, (boxH - h) / 2) + fit.size;
@@ -309,20 +433,37 @@ function narrationBlock(
     : '';
   return (
     scrim +
-    textBlock({ lines: fit.lines, cx: W / 2, yStart, size: fit.size, color: o.color, opacity: k * 0.96, weight: 'normal', shadow: o.shadow })
+    textBlock({
+      lines: fit.lines,
+      cx: W / 2,
+      yStart,
+      size: fit.size,
+      color: o.color,
+      opacity: k * 0.96,
+      weight: 'normal',
+      shadow: o.shadow,
+    })
   );
 }
 
 // ---- Ảnh: resize + base64 MỘT LẦN, nhúng lại vào mỗi frame SVG ----
 type PhotoBuf = { uri: string };
 
-async function preparePhotos(paths: string[], maxEdge: number): Promise<PhotoBuf[]> {
+async function preparePhotos(
+  paths: string[],
+  maxEdge: number,
+): Promise<PhotoBuf[]> {
   const out: PhotoBuf[] = [];
   for (const p of paths.slice(0, 3)) {
     try {
       const buf = await sharp(p)
         .rotate()
-        .resize({ width: maxEdge, height: maxEdge, fit: 'inside', withoutEnlargement: true })
+        .resize({
+          width: maxEdge,
+          height: maxEdge,
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
         .jpeg({ quality: 78 })
         .toBuffer();
       out.push({ uri: `data:image/jpeg;base64,${buf.toString('base64')}` });
@@ -335,7 +476,13 @@ async function preparePhotos(paths: string[], maxEdge: number): Promise<PhotoBuf
 
 // Ô ảnh: dùng photo nếu có, không thì ô màu palette (không bao giờ crash khi thiếu ảnh)
 function photoRect(opts: {
-  photo: PhotoBuf | undefined; x: number; y: number; w: number; h: number; palette: Palette; clipId: string;
+  photo: PhotoBuf | undefined;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  palette: Palette;
+  clipId: string;
 }): string {
   const { x, y, w, h, clipId } = opts;
   if (!opts.photo) {
@@ -353,7 +500,14 @@ function photoRect(opts: {
 // durS: thời lượng THẬT của segment (5-14s, giãn theo độ dài lời dẫn). Template cần nó để
 // quy đổi mốc theo GIÂY — ví dụ đếm ngược 3-2-1 của film phải luôn ~3.6s, không được
 // chiếm 56% timeline (14s × 0.56 = 7.8s đếm ngược thì quá chậm).
-type FrameEnv = { W: number; H: number; ctx: IntroCtx; photos: PhotoBuf[]; aspect: Aspect; durS: number };
+type FrameEnv = {
+  W: number;
+  H: number;
+  ctx: IntroCtx;
+  photos: PhotoBuf[];
+  aspect: Aspect;
+  durS: number;
+};
 /** đổi mốc giây → tỉ lệ t (0..1) của segment */
 const at = (e: FrameEnv, sec: number) => clamp01(sec / Math.max(0.1, e.durS));
 
@@ -387,7 +541,10 @@ function svgAlbum(t: number, e: FrameEnv): string {
         { x: bx + pad, y: by + pad * 2 + ph, rot: 1.8 },
       ];
   // Ít ảnh hơn số ô → chỉ vẽ số ô có ảnh (không hiện ô rỗng); không có ảnh nào → 1 ô placeholder
-  const slots = allSlots.slice(0, Math.max(1, Math.min(allSlots.length, photos.length || 1)));
+  const slots = allSlots.slice(
+    0,
+    Math.max(1, Math.min(allSlots.length, photos.length || 1)),
+  );
 
   const photoLayer = slots
     .map((s, i) => {
@@ -399,7 +556,15 @@ function svgAlbum(t: number, e: FrameEnv): string {
       return (
         `<g opacity="${k.toFixed(3)}" transform="translate(${s.x}, ${(s.y + dy).toFixed(1)}) rotate(${s.rot}, ${pw / 2}, ${ph / 2})">` +
         `<rect x="-6" y="-6" width="${pw + 12}" height="${ph + 12}" fill="#ffffff" opacity="0.96"/>` +
-        photoRect({ photo: photos[i], x: 0, y: 0, w: pw, h: ph, palette: pal, clipId: `ap${i}` }) +
+        photoRect({
+          photo: photos[i],
+          x: 0,
+          y: 0,
+          w: pw,
+          h: ph,
+          palette: pal,
+          clipId: `ap${i}`,
+        }) +
         `<rect x="${(pw - tapeW) / 2}" y="-18" width="${tapeW}" height="26" fill="${pal.accent}" opacity="0.42" transform="rotate(-3, ${pw / 2}, 0)"/>` +
         `</g>`
       );
@@ -416,20 +581,37 @@ function svgAlbum(t: number, e: FrameEnv): string {
         `<rect x="0" y="${by}" width="${bookW}" height="${bookH}" rx="${Math.round(bookW * 0.012)}" fill="${darken(pal.primary, 0.25)}"/>` +
         `<rect x="${Math.round(bookW * 0.035)}" y="${by + Math.round(bookH * 0.035)}" width="${bookW - Math.round(bookW * 0.07)}" height="${bookH - Math.round(bookH * 0.07)}" rx="${Math.round(bookW * 0.008)}" fill="none" stroke="${pal.accent}" stroke-opacity="0.75" stroke-width="${Math.max(2, bookW * 0.0045)}"/>` +
         `<rect x="${Math.round(bookW * 0.055)}" y="${by + Math.round(bookH * 0.055)}" width="${bookW - Math.round(bookW * 0.11)}" height="${bookH - Math.round(bookH * 0.11)}" rx="${Math.round(bookW * 0.006)}" fill="none" stroke="${pal.accent}" stroke-opacity="0.35" stroke-width="${Math.max(1, bookW * 0.002)}"/>` +
-        textBlock({ lines: titleLines, cx: bookW / 2, yStart: by + bookH / 2, size: tSize, color: pal.accent, opacity: Math.min(1, coverK * 1.6), shadow: true }) +
+        textBlock({
+          lines: titleLines,
+          cx: bookW / 2,
+          yStart: by + bookH / 2,
+          size: tSize,
+          color: pal.accent,
+          opacity: Math.min(1, coverK * 1.6),
+          shadow: true,
+        }) +
         `</g>`
       : '';
 
   const subK = easeIO((t - 0.74) / 0.22);
-  const subY = Math.min(by + bookH + Math.round(H * 0.055), safeBottomY(H, e.aspect));
+  const subY = Math.min(
+    by + bookH + Math.round(H * 0.055),
+    safeBottomY(H, e.aspect),
+  );
   // Bị kéo lên trong dải an toàn thì phụ đề rơi LÊN TRANG GIẤY sáng → phải đổi sang mực tối mới đọc được
   const subOnPage = subY < by + bookH;
-  const sub = subK > 0
-    ? textBlock({
-        lines: svgWrap(ctx.subtitleJa, 20, 1), cx: W / 2, yStart: subY, size: Math.round(W * 0.024),
-        color: subOnPage ? darken(pal.primary, 0.05) : pal.text_on_dark, opacity: subK, weight: 'normal',
-      })
-    : '';
+  const sub =
+    subK > 0
+      ? textBlock({
+          lines: svgWrap(ctx.subtitleJa, 20, 1),
+          cx: W / 2,
+          yStart: subY,
+          size: Math.round(W * 0.024),
+          color: subOnPage ? darken(pal.primary, 0.05) : pal.text_on_dark,
+          opacity: subK,
+          weight: 'normal',
+        })
+      : '';
 
   return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
     <defs><radialGradient id="vg" cx="0.5" cy="0.45" r="0.75">
@@ -448,23 +630,35 @@ function svgCinema(t: number, e: FrameEnv): string {
   const pal = ctx.palette;
   const bar = Math.round(H * 0.13);
   // Mốc theo GIÂY: lời dẫn (2-4 câu) phải hiện xong sớm để còn thời gian đọc.
-  const k = (sec: number, dur: number) => easeIO((t - at(e, sec)) / Math.max(0.02, at(e, dur)));
+  const k = (sec: number, dur: number) =>
+    easeIO((t - at(e, sec)) / Math.max(0.02, at(e, dur)));
   const tk = k(0.5, 1.2);
   const subK = k(1.9, 0.9);
   // vệt sáng quét ngang
   const sw = k(1, 1.8);
   const sweepX = lerp(-W * 0.6, W * 1.1, sw);
-  const sweepOp = Math.sin(clamp01((t - at(e, 1)) / Math.max(0.02, at(e, 1.8))) * Math.PI) * 0.14;
+  const sweepOp =
+    Math.sin(clamp01((t - at(e, 1)) / Math.max(0.02, at(e, 1.8))) * Math.PI) *
+    0.14;
 
   // Lời dẫn mở đầu (2-4 câu) — trước đây cinema chỉ hiện tiêu đề, phần kể chuyện bị mất.
   const portrait = e.aspect === 'portrait';
   const padX = Math.round(W * (portrait ? 0.1 : 0.16));
-  const open = fitWrap(ctx.openingJa ?? '', W - padX * 2, narrSize(W, portrait), portrait ? 7 : 4);
+  const open = fitWrap(
+    ctx.openingJa ?? '',
+    W - padX * 2,
+    narrSize(W, portrait),
+    portrait ? 7 : 4,
+  );
   const openK = k(2.8, 1.2);
 
   // Tiêu đề: co chữ cho vừa 1 dòng thay vì ép theo số ký tự (tiêu đề 9 chữ từng bị tách
   // thành 「おばあちゃんの一」 / 「年」 — một chữ mồ côi ở dòng 2).
-  const tFit = fitTitle(ctx.titleJa, W - padX * 2, Math.round(W * (portrait ? 0.088 : 0.062)));
+  const tFit = fitTitle(
+    ctx.titleJa,
+    W - padX * 2,
+    Math.round(W * (portrait ? 0.088 : 0.062)),
+  );
   const titleLines = tFit.lines;
   const tSize = tFit.size;
   const spacing = lerp(tSize * 0.34, tSize * 0.05, k(0.5, 2.2)); // giãn chữ thu dần
@@ -475,7 +669,8 @@ function svgCinema(t: number, e: FrameEnv): string {
   const titleH = titleLines.length * Math.round(tSize * 1.32);
   const subH = sFit.lines.length * Math.round(sFit.size * 1.32);
   const openH = open.lines.length * Math.round(open.size * 1.32);
-  const blockH = titleH + Math.round(H * 0.03) + subH + Math.round(H * 0.045) + openH;
+  const blockH =
+    titleH + Math.round(H * 0.03) + subH + Math.round(H * 0.045) + openH;
   // căn giữa vùng GIỮA HAI THANH letterbox (0.13H..0.87H), không phải giữa cả khung —
   // nếu không, khối chữ nằm cao và nửa dưới trống trơn
   const titleY = Math.round((bar + (H - bar)) / 2 - blockH / 2) + tSize;
@@ -527,19 +722,57 @@ function svgFilm(t: number, e: FrameEnv, frameIdx: number): string {
       `<text x="${cx}" y="${cy + R * 0.42}" font-family="${FONT_STACK}" font-size="${Math.round(R * 1.25)}" font-weight="bold" fill="${darken(pal.primary, 0.15)}" text-anchor="middle">${num}</text>`;
   } else {
     // các mốc tính theo giây SAU khi đếm ngược xong → nhịp không đổi khi segment dài ra
-    const after = (sec: number, dur: number) => easeIO((t - cdEnd - at(e, sec)) / Math.max(0.02, at(e, dur)));
+    const after = (sec: number, dur: number) =>
+      easeIO((t - cdEnd - at(e, sec)) / Math.max(0.02, at(e, dur)));
     const k = after(0.15, 0.6);
     core =
-      textBlock({ lines: ['♦ presents ♦'], cx, yStart: Math.round(H * 0.24), size: Math.round(W * 0.02), color: darken(pal.primary, 0.1), opacity: k * 0.8, weight: 'normal', spacing: Math.round(W * 0.006) }) +
-      ((tf) => textBlock({ lines: tf.lines, cx, yStart: Math.round(H * 0.36), size: tf.size, color: darken(pal.primary, 0.05), opacity: k }))(
-        fitTitle(ctx.titleJa, W - Math.round(W * 0.11) * 2, Math.round(W * (e.aspect === 'portrait' ? 0.082 : 0.06))),
+      textBlock({
+        lines: ['♦ presents ♦'],
+        cx,
+        yStart: Math.round(H * 0.24),
+        size: Math.round(W * 0.02),
+        color: darken(pal.primary, 0.1),
+        opacity: k * 0.8,
+        weight: 'normal',
+        spacing: Math.round(W * 0.006),
+      }) +
+      ((tf) =>
+        textBlock({
+          lines: tf.lines,
+          cx,
+          yStart: Math.round(H * 0.36),
+          size: tf.size,
+          color: darken(pal.primary, 0.05),
+          opacity: k,
+        }))(
+        fitTitle(
+          ctx.titleJa,
+          W - Math.round(W * 0.11) * 2,
+          Math.round(W * (e.aspect === 'portrait' ? 0.082 : 0.06)),
+        ),
       ) +
-      ((sf) => textBlock({ lines: sf.lines, cx, yStart: Math.round(H * 0.46), size: sf.size, color: hexMix(pal.primary, '#7a6a4a', 0.6), opacity: after(0.9, 0.6), weight: 'normal' }))(
-        fitTitle(ctx.subtitleJa, W - Math.round(W * 0.11) * 2, subSize(W, e.aspect === 'portrait')),
+      ((sf) =>
+        textBlock({
+          lines: sf.lines,
+          cx,
+          yStart: Math.round(H * 0.46),
+          size: sf.size,
+          color: hexMix(pal.primary, '#7a6a4a', 0.6),
+          opacity: after(0.9, 0.6),
+          weight: 'normal',
+        }))(
+        fitTitle(
+          ctx.subtitleJa,
+          W - Math.round(W * 0.11) * 2,
+          subSize(W, e.aspect === 'portrait'),
+        ),
       ) +
       narrationBlock(e, {
-        k: after(1.5, 0.8), topY: Math.round(H * 0.52), bottomY: safeBottomY(H, e.aspect),
-        padX: Math.round(W * 0.11), color: darken(pal.primary, 0.02),
+        k: after(1.5, 0.8),
+        topY: Math.round(H * 0.52),
+        bottomY: safeBottomY(H, e.aspect),
+        padX: Math.round(W * 0.11),
+        color: darken(pal.primary, 0.02),
       });
   }
 
@@ -549,8 +782,12 @@ function svgFilm(t: number, e: FrameEnv, frameIdx: number): string {
   const hh = Math.round(H * 0.045);
   const step = Math.round(H * 0.1);
   for (let y = Math.round(step * 0.4); y < H; y += step) {
-    holes.push(`<rect x="${Math.round(W * 0.014)}" y="${y}" width="${hw}" height="${hh}" rx="${Math.round(hw * 0.22)}" fill="${darken(pal.primary, 0.6)}" opacity="0.5"/>`);
-    holes.push(`<rect x="${W - Math.round(W * 0.014) - hw}" y="${y}" width="${hw}" height="${hh}" rx="${Math.round(hw * 0.22)}" fill="${darken(pal.primary, 0.6)}" opacity="0.5"/>`);
+    holes.push(
+      `<rect x="${Math.round(W * 0.014)}" y="${y}" width="${hw}" height="${hh}" rx="${Math.round(hw * 0.22)}" fill="${darken(pal.primary, 0.6)}" opacity="0.5"/>`,
+    );
+    holes.push(
+      `<rect x="${W - Math.round(W * 0.014) - hw}" y="${y}" width="${hw}" height="${hh}" rx="${Math.round(hw * 0.22)}" fill="${darken(pal.primary, 0.6)}" opacity="0.5"/>`,
+    );
   }
 
   return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
@@ -584,7 +821,8 @@ function svgLetter(t: number, e: FrameEnv, frameIdx: number): string {
   let lines: string[] = [];
   for (let i = 0; i < 16; i++) {
     lines = svgWrap(full, (pw * 0.86) / size, 99);
-    if ((lines.length - 1) * (size * 1.9) <= availV || size <= baseSize * 0.5) break;
+    if ((lines.length - 1) * (size * 1.9) <= availV || size <= baseSize * 0.5)
+      break;
     size *= 0.93;
   }
   size = Math.round(size);
@@ -597,7 +835,9 @@ function svgLetter(t: number, e: FrameEnv, frameIdx: number): string {
   const rules: string[] = [];
   for (let i = 0; i < Math.floor((ph - Math.round(H * 0.1)) / lineH); i++) {
     const y = textTop + i * lineH + Math.round(size * 0.35);
-    rules.push(`<line x1="${px + Math.round(pw * 0.06)}" y1="${y}" x2="${px + pw - Math.round(pw * 0.06)}" y2="${y}" stroke="${hexMix(pal.primary, paper, 0.72)}" stroke-width="1.5"/>`);
+    rules.push(
+      `<line x1="${px + Math.round(pw * 0.06)}" y1="${y}" x2="${px + pw - Math.round(pw * 0.06)}" y2="${y}" stroke="${hexMix(pal.primary, paper, 0.72)}" stroke-width="1.5"/>`,
+    );
   }
 
   // Chữ hiện dần + con trỏ nháy ở cuối chuỗi đang gõ
@@ -623,14 +863,25 @@ function svgLetter(t: number, e: FrameEnv, frameIdx: number): string {
   });
 
   const blink = Math.floor(frameIdx / 9) % 2 === 0 && shown < totalChars;
-  const caretSvg = caret && blink ? `<rect x="${(caret as { x: number; y: number }).x + 4}" y="${(caret as { x: number; y: number }).y - size * 0.82}" width="${Math.max(2, size * 0.06)}" height="${size}" fill="${darken(pal.primary, 0.1)}" opacity="0.8"/>` : '';
+  const caretSvg =
+    caret && blink
+      ? `<rect x="${(caret as { x: number; y: number }).x + 4}" y="${(caret as { x: number; y: number }).y - size * 0.82}" width="${Math.max(2, size * 0.06)}" height="${size}" fill="${darken(pal.primary, 0.1)}" opacity="0.8"/>`
+      : '';
 
   const sigK = easeIO((t - 0.78) / 0.2);
   const sig =
     sigK > 0
       ? `<g opacity="${sigK.toFixed(3)}" transform="rotate(-2.5, ${px + pw * 0.7}, ${py + ph * 0.86})">` +
         // chữ ký giữ cỡ gốc (baseSize) — không co theo thân chữ, để luôn đọc rõ
-        textBlock({ lines: svgWrap(ctx.titleJa, 16, 1), cx: px + pw * 0.72, yStart: py + ph * 0.86, size: Math.round(baseSize * 1.05), color: darken(pal.accent, 0.35), opacity: sigK, anchor: 'middle' }) +
+        textBlock({
+          lines: svgWrap(ctx.titleJa, 16, 1),
+          cx: px + pw * 0.72,
+          yStart: py + ph * 0.86,
+          size: Math.round(baseSize * 1.05),
+          color: darken(pal.accent, 0.35),
+          opacity: sigK,
+          anchor: 'middle',
+        }) +
         `<line x1="${px + pw * 0.5}" y1="${py + ph * 0.9}" x2="${px + pw * 0.92}" y2="${py + ph * 0.9}" stroke="${darken(pal.accent, 0.35)}" stroke-opacity="${(sigK * 0.6).toFixed(2)}" stroke-width="2"/></g>`
       : '';
 
@@ -658,9 +909,15 @@ function svgSeasonal(t: number, e: FrameEnv): string {
     const phase = rnd();
     const spin = 0.5 + rnd() * 2;
     const size = W * (0.008 + rnd() * 0.013);
-    const x = x0 + amp * Math.sin(2 * Math.PI * (t * (0.6 + rnd() * 0.8) + phase));
-    const y = (((y0 + t * speed) % (H + 160)) + H + 160) % (H + 160) - 80;
-    const col = i % 3 === 0 ? lighten(pal.accent, 0.25) : i % 3 === 1 ? lighten(pal.secondary, 0.5) : '#ffffff';
+    const x =
+      x0 + amp * Math.sin(2 * Math.PI * (t * (0.6 + rnd() * 0.8) + phase));
+    const y = ((((y0 + t * speed) % (H + 160)) + H + 160) % (H + 160)) - 80;
+    const col =
+      i % 3 === 0
+        ? lighten(pal.accent, 0.25)
+        : i % 3 === 1
+          ? lighten(pal.secondary, 0.5)
+          : '#ffffff';
     sprites.push(
       `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${size.toFixed(1)}" ry="${(size * 1.7).toFixed(1)}" fill="${col}" opacity="${(0.35 + (i % 5) * 0.12).toFixed(2)}" transform="rotate(${(t * 360 * spin).toFixed(1)}, ${x.toFixed(1)}, ${y.toFixed(1)})"/>`,
     );
@@ -668,12 +925,23 @@ function svgSeasonal(t: number, e: FrameEnv): string {
   const tk = easeIO((t - at(e, 0.6)) / Math.max(0.05, at(e, 1.4)));
   const scale = lerp(0.955, 1, tk);
   const padX = Math.round(W * 0.1);
-  const tFit = fitTitle(ctx.titleJa, W - padX * 2, Math.round(W * (e.aspect === 'portrait' ? 0.095 : 0.068)));
+  const tFit = fitTitle(
+    ctx.titleJa,
+    W - padX * 2,
+    Math.round(W * (e.aspect === 'portrait' ? 0.095 : 0.068)),
+  );
   const tSize = tFit.size;
   const subK = easeIO((t - at(e, 1.8)) / Math.max(0.05, at(e, 1)));
-  const sFit = fitTitle(ctx.subtitleJa, W - padX * 2, subSize(W, e.aspect === 'portrait'));
+  const sFit = fitTitle(
+    ctx.subtitleJa,
+    W - padX * 2,
+    subSize(W, e.aspect === 'portrait'),
+  );
   const titleY = Math.round(H * (e.aspect === 'portrait' ? 0.3 : 0.34));
-  const subY = titleY + tFit.lines.length * Math.round(tSize * 1.32) + Math.round(H * 0.02);
+  const subY =
+    titleY +
+    tFit.lines.length * Math.round(tSize * 1.32) +
+    Math.round(H * 0.02);
 
   return `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
     <defs>
@@ -693,9 +961,15 @@ function svgSeasonal(t: number, e: FrameEnv): string {
     ${subK > 0 ? textBlock({ lines: sFit.lines, cx: W / 2, yStart: subY, size: sFit.size, color: lighten(pal.accent, 0.15), opacity: subK, weight: 'normal' }) : ''}
     ${narrationBlock(e, {
       k: easeIO((t - at(e, 2.8)) / Math.max(0.05, at(e, 1.2))),
-      topY: subY + sFit.lines.length * Math.round(sFit.size * 1.32) + Math.round(H * 0.03),
-      bottomY: safeBottomY(H, e.aspect), padX,
-      color: pal.text_on_dark, scrim: darken(pal.primary, 0.6), shadow: true,
+      topY:
+        subY +
+        sFit.lines.length * Math.round(sFit.size * 1.32) +
+        Math.round(H * 0.03),
+      bottomY: safeBottomY(H, e.aspect),
+      padX,
+      color: pal.text_on_dark,
+      scrim: darken(pal.primary, 0.6),
+      shadow: true,
     })}
   </svg>`;
 }
@@ -707,14 +981,20 @@ function svgSeasonal(t: number, e: FrameEnv): string {
  * Vân gỗ: dải RẤT nhạt bề rộng ngẫu nhiên + sợi vân dọc — tránh trông như mã vạch.
  * (Trước đây card kết tự trộn màu riêng và thiếu sợi vân → hai card như hai cái bàn khác nhau.)
  */
-function woodDesk(W: number, H: number, pal: Palette): { wood: string; grain: string[] } {
+function woodDesk(
+  W: number,
+  H: number,
+  pal: Palette,
+): { wood: string; grain: string[] } {
   const wood = hexMix(darken(pal.primary, 0.35), '#5b3a22', 0.45);
   const grain: string[] = [];
   let gy = 0;
   for (let i = 0; gy < H; i++) {
     const rnd = mulberry32(i * 7919 + 17);
     const h = Math.round(H * (0.03 + rnd() * 0.05));
-    grain.push(`<rect x="0" y="${gy}" width="${W}" height="${h}" fill="${i % 2 === 0 ? lighten(wood, 0.02 + rnd() * 0.02) : darken(wood, 0.02 + rnd() * 0.025)}"/>`);
+    grain.push(
+      `<rect x="0" y="${gy}" width="${W}" height="${h}" fill="${i % 2 === 0 ? lighten(wood, 0.02 + rnd() * 0.02) : darken(wood, 0.02 + rnd() * 0.025)}"/>`,
+    );
     grain.push(
       `<rect x="0" y="${gy + Math.round(h * (0.3 + rnd() * 0.4))}" width="${W}" height="${Math.max(1, Math.round(H * 0.0016))}" fill="${darken(wood, 0.16)}" opacity="0.35"/>`,
     );
@@ -723,7 +1003,9 @@ function woodDesk(W: number, H: number, pal: Palette): { wood: string; grain: st
   for (let k = 0; k < 5; k++) {
     const rnd = mulberry32(k * 104729 + 5);
     const x = Math.round(rnd() * W);
-    grain.push(`<ellipse cx="${x}" cy="${Math.round(rnd() * H)}" rx="${Math.round(W * 0.004)}" ry="${Math.round(H * (0.06 + rnd() * 0.1))}" fill="${darken(wood, 0.2)}" opacity="0.22"/>`);
+    grain.push(
+      `<ellipse cx="${x}" cy="${Math.round(rnd() * H)}" rx="${Math.round(W * 0.004)}" ry="${Math.round(H * (0.06 + rnd() * 0.1))}" fill="${darken(wood, 0.2)}" opacity="0.22"/>`,
+    );
   }
   return { wood, grain };
 }
@@ -751,28 +1033,45 @@ function svgPolaroid(t: number, e: FrameEnv): string {
       ];
   // Ít ảnh hơn 3 → chỉ rơi đúng số ảnh có (khỏi lộ ô placeholder), căn lại cho cân khung
   const nCards = Math.max(1, Math.min(3, photos.length || 1));
-  const slots = allSlots.slice(0, nCards).map((s) => ({ ...s, x: nCards < 3 ? s.x + Math.round(W * 0.075 * (3 - nCards)) : s.x }));
+  const slots = allSlots.slice(0, nCards).map((s) => ({
+    ...s,
+    x: nCards < 3 ? s.x + Math.round(W * 0.075 * (3 - nCards)) : s.x,
+  }));
 
   const cards = slots
     .map((s, i) => {
       // rơi theo GIÂY: mỗi ảnh cách nhau 0.55s, rơi trong 0.85s — không giãn ra khi segment dài
-      const k = easeOut((t - at(e, 0.35 + i * 0.55)) / Math.max(0.03, at(e, 0.85)));
+      const k = easeOut(
+        (t - at(e, 0.35 + i * 0.55)) / Math.max(0.03, at(e, 0.85)),
+      );
       if (k <= 0) return '';
       const kk = Math.min(1, k);
-      const y = lerp(-frameH * 1.2, s.y, kk) + Math.sin(kk * Math.PI) * H * 0.012 * (1 - kk);
+      const y =
+        lerp(-frameH * 1.2, s.y, kk) +
+        Math.sin(kk * Math.PI) * H * 0.012 * (1 - kk);
       const rot = lerp(s.rot * 2.6, s.rot, kk);
       const pad = Math.round(pw * 0.055);
       return (
         `<g transform="translate(${s.x}, ${y.toFixed(1)}) rotate(${rot.toFixed(2)}, ${pw / 2}, ${frameH / 2})" opacity="${Math.min(1, kk * 1.4).toFixed(3)}">` +
         `<rect x="6" y="10" width="${pw}" height="${frameH}" fill="#000000" opacity="0.32"/>` +
         `<rect x="0" y="0" width="${pw}" height="${frameH}" fill="#fbfaf6"/>` +
-        photoRect({ photo: photos[i], x: pad, y: pad, w: pw - pad * 2, h: imgH, palette: pal, clipId: `pp${i}` }) +
+        photoRect({
+          photo: photos[i],
+          x: pad,
+          y: pad,
+          w: pw - pad * 2,
+          h: imgH,
+          palette: pal,
+          clipId: `pp${i}`,
+        }) +
         `</g>`
       );
     })
     .join('');
 
-  const tk = easeIO((t - at(e, 0.35 + nCards * 0.55)) / Math.max(0.03, at(e, 0.8)));
+  const tk = easeIO(
+    (t - at(e, 0.35 + nCards * 0.55)) / Math.max(0.03, at(e, 0.8)),
+  );
   const tapeW = Math.round(W * (portrait ? 0.7 : 0.4));
   const tapeH = Math.round(H * (portrait ? 0.07 : 0.08));
   const tapeX = Math.round((W - tapeW) / 2);
@@ -785,7 +1084,14 @@ function svgPolaroid(t: number, e: FrameEnv): string {
     tk > 0
       ? `<g opacity="${tk.toFixed(3)}" transform="rotate(-1.5, ${W / 2}, ${tapeY + tapeH / 2})">` +
         `<rect x="${tapeX}" y="${tapeY}" width="${tapeW}" height="${tapeH}" fill="${lighten(pal.accent, 0.55)}" opacity="0.92"/>` +
-        textBlock({ lines: svgWrap(ctx.titleJa, portrait ? 11 : 15, 1), cx: W / 2, yStart: tapeY + Math.round(tapeH * 0.68), size: Math.round(tapeH * 0.5), color: darken(pal.primary, 0.25), opacity: tk }) +
+        textBlock({
+          lines: svgWrap(ctx.titleJa, portrait ? 11 : 15, 1),
+          cx: W / 2,
+          yStart: tapeY + Math.round(tapeH * 0.68),
+          size: Math.round(tapeH * 0.5),
+          color: darken(pal.primary, 0.25),
+          opacity: tk,
+        }) +
         `</g>`
       : '';
 
@@ -816,8 +1122,8 @@ function svgPolaroid(t: number, e: FrameEnv): string {
 type OutroSkin = {
   /** nền + đạo cụ (đã bao trọn khung) */
   bg: string;
-  ink: string;        // màu chữ câu kết
-  inkStrong: string;  // màu lời đề tặng
+  ink: string; // màu chữ câu kết
+  inkStrong: string; // màu lời đề tặng
   accent: string;
   /** vùng an toàn cho chữ (tránh răng phim / thanh letterbox) */
   padX: number;
@@ -851,9 +1157,19 @@ function outroText(t: number, e: FrameEnv, s: OutroSkin): string {
 
   // Tự co chữ cho vừa khung thay vì cắt bằng 「…」 (lời dẫn dài 95-140 ký tự)
   const grid = s.ruleGrid;
-  const close = fitWrap(ctx.closingJa ?? '', avail, Math.round(W * (portrait ? 0.047 : 0.027)), portrait ? 8 : 5);
-  const dedBase = Math.round(W * (portrait ? 0.060 : 0.036));
-  const ded = fitWrap(ctx.dedicationJa ?? '', avail, grid ? Math.min(dedBase, Math.round(grid.pitch * 0.8)) : dedBase, 2);
+  const close = fitWrap(
+    ctx.closingJa ?? '',
+    avail,
+    Math.round(W * (portrait ? 0.047 : 0.027)),
+    portrait ? 8 : 5,
+  );
+  const dedBase = Math.round(W * (portrait ? 0.06 : 0.036));
+  const ded = fitWrap(
+    ctx.dedicationJa ?? '',
+    avail,
+    grid ? Math.min(dedBase, Math.round(grid.pitch * 0.8)) : dedBase,
+    2,
+  );
   const creditSize = Math.round(W * (portrait ? 0.027 : 0.016));
 
   // Bố cục: câu kết ở trên → vạch → lời đề tặng, căn quanh giữa khung.
@@ -866,13 +1182,20 @@ function outroText(t: number, e: FrameEnv, s: OutroSkin): string {
   if (grid) {
     const rows = close.lines.length + 1 + ded.lines.length; // +1 dòng trống cho vạch nhấn
     const wantTop = H * 0.44 - (rows * grid.pitch) / 2;
-    const startIdx = Math.max(1, Math.round((wantTop - grid.top) / grid.pitch) + 1);
+    const startIdx = Math.max(
+      1,
+      Math.round((wantTop - grid.top) / grid.pitch) + 1,
+    );
     const rowY = (k: number) => grid.top + (startIdx - 1 + k) * grid.pitch;
     gridLh = grid.pitch;
     topY = Math.round(rowY(0) - close.size * 0.35);
     ruleY = Math.round(rowY(close.lines.length) - grid.pitch * 0.45);
     dedY = Math.round(rowY(close.lines.length + 1) - ded.size * 0.35);
-    creditY = Math.round(grid.top + Math.round((H * 0.9 - grid.top) / grid.pitch) * grid.pitch - creditSize * 0.35);
+    creditY = Math.round(
+      grid.top +
+        Math.round((H * 0.9 - grid.top) / grid.pitch) * grid.pitch -
+        creditSize * 0.35,
+    );
     creditY = Math.min(creditY, (s.bottomSafeY ?? H * 0.93) - creditSize * 0.3);
   } else {
     const closeH = close.lines.length * Math.round(close.size * 1.42);
@@ -881,7 +1204,10 @@ function outroText(t: number, e: FrameEnv, s: OutroSkin): string {
     topY = Math.round(H * 0.46 - blockH / 2) + close.size;
     ruleY = topY + closeH + Math.round(H * 0.022);
     dedY = ruleY + Math.round(H * 0.038) + ded.size;
-    creditY = Math.min(Math.round(H * (portrait ? 0.9 : 0.88)), (s.bottomSafeY ?? H * 0.93) - creditSize * 0.3);
+    creditY = Math.min(
+      Math.round(H * (portrait ? 0.9 : 0.88)),
+      (s.bottomSafeY ?? H * 0.93) - creditSize * 0.3,
+    );
   }
 
   const kClose = easeIO((t - 0.12) / 0.3);
@@ -901,27 +1227,52 @@ function outroText(t: number, e: FrameEnv, s: OutroSkin): string {
   return (
     (kClose > 0
       ? textBlock({
-          lines: close.lines, cx, yStart: topY, size: close.size, color: s.ink, opacity: kClose,
-          weight: 'normal', shadow: s.shadow, lh: gridLh,
+          lines: close.lines,
+          cx,
+          yStart: topY,
+          size: close.size,
+          color: s.ink,
+          opacity: kClose,
+          weight: 'normal',
+          shadow: s.shadow,
+          lh: gridLh,
         })
       : '') +
     rule +
     (kDed > 0
-      ? textBlock({ lines: ded.lines, cx, yStart: dedY, size: ded.size, color: s.inkStrong, opacity: kDed, shadow: s.shadow, lh: gridLh })
+      ? textBlock({
+          lines: ded.lines,
+          cx,
+          yStart: dedY,
+          size: ded.size,
+          color: s.inkStrong,
+          opacity: kDed,
+          shadow: s.shadow,
+          lh: gridLh,
+        })
       : '') +
     // Dòng ghi công trước đây tô bằng s.accent (vàng nhạt) → gần như không đọc được trên giấy kem.
     // Dùng chính màu chữ câu kết, chỉ giảm độ đậm — vẫn khiêm tốn nhưng đọc rõ.
     (kCredit > 0 && ctx.creditLine
       ? textBlock({
-          lines: svgWrap(ctx.creditLine, (avail * 0.9) / creditSize, 2), cx, yStart: creditY,
-          size: creditSize, color: s.creditColor ?? s.ink, opacity: kCredit * 0.8, weight: 'normal',
+          lines: svgWrap(ctx.creditLine, (avail * 0.9) / creditSize, 2),
+          cx,
+          yStart: creditY,
+          size: creditSize,
+          color: s.creditColor ?? s.ink,
+          opacity: kCredit * 0.8,
+          weight: 'normal',
           spacing: Math.round(creditSize * 0.14),
         })
       : '')
   );
 }
 
-function outroSkin(tpl: IntroTemplate['id'], t: number, e: FrameEnv): OutroSkin {
+function outroSkin(
+  tpl: IntroTemplate['id'],
+  t: number,
+  e: FrameEnv,
+): OutroSkin {
   const { W, H, ctx } = e;
   const pal = ctx.palette;
   switch (tpl) {
@@ -946,8 +1297,12 @@ function outroSkin(tpl: IntroTemplate['id'], t: number, e: FrameEnv): OutroSkin 
       const step = Math.round(H * 0.1);
       const holes: string[] = [];
       for (let y = Math.round(step * 0.4); y < H; y += step) {
-        holes.push(`<rect x="${Math.round(W * 0.014)}" y="${y}" width="${hw}" height="${hh}" rx="${Math.round(hw * 0.22)}" fill="${darken(pal.primary, 0.6)}" opacity="0.5"/>`);
-        holes.push(`<rect x="${W - Math.round(W * 0.014) - hw}" y="${y}" width="${hw}" height="${hh}" rx="${Math.round(hw * 0.22)}" fill="${darken(pal.primary, 0.6)}" opacity="0.5"/>`);
+        holes.push(
+          `<rect x="${Math.round(W * 0.014)}" y="${y}" width="${hw}" height="${hh}" rx="${Math.round(hw * 0.22)}" fill="${darken(pal.primary, 0.6)}" opacity="0.5"/>`,
+        );
+        holes.push(
+          `<rect x="${W - Math.round(W * 0.014) - hw}" y="${y}" width="${hw}" height="${hh}" rx="${Math.round(hw * 0.22)}" fill="${darken(pal.primary, 0.6)}" opacity="0.5"/>`,
+        );
       }
       // 0.72→1: leader cháy sáng dần rồi giữ — khép lại đúng kiểu cuộn phim hết
       const burn = easeIO((t - 0.72) / 0.28) * 0.55;
@@ -970,7 +1325,9 @@ function outroSkin(tpl: IntroTemplate['id'], t: number, e: FrameEnv): OutroSkin 
       const lineH = Math.round(W * 0.055);
       const rules: string[] = [];
       for (let i = 1; i * lineH < ph - lineH; i++) {
-        rules.push(`<line x1="${px + pw * 0.06}" y1="${py + i * lineH}" x2="${px + pw * 0.94}" y2="${py + i * lineH}" stroke="${hexMix(pal.primary, paper, 0.76)}" stroke-width="1.4"/>`);
+        rules.push(
+          `<line x1="${px + pw * 0.06}" y1="${py + i * lineH}" x2="${px + pw * 0.94}" y2="${py + i * lineH}" stroke="${hexMix(pal.primary, paper, 0.76)}" stroke-width="1.4"/>`,
+        );
       }
       return {
         bg: `<rect width="${W}" height="${H}" fill="${darken(pal.primary, 0.45)}"/>
@@ -995,10 +1352,18 @@ function outroSkin(tpl: IntroTemplate['id'], t: number, e: FrameEnv): OutroSkin 
         const amp = W * (0.02 + rnd() * 0.04);
         const speed = H * (0.35 + rnd() * 0.5);
         const size = W * (0.007 + rnd() * 0.011);
-        const x = x0 + amp * Math.sin(2 * Math.PI * (t * (0.5 + rnd() * 0.6) + rnd()));
-        const y = (((y0 + t * speed) % (H + 160)) + H + 160) % (H + 160) - 80;
-        const col = i % 3 === 0 ? lighten(pal.accent, 0.3) : i % 3 === 1 ? lighten(pal.secondary, 0.5) : '#ffffff';
-        sprites.push(`<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${size.toFixed(1)}" ry="${(size * 1.7).toFixed(1)}" fill="${col}" opacity="${(0.3 + (i % 4) * 0.1).toFixed(2)}" transform="rotate(${(t * 300 * (0.5 + rnd())).toFixed(1)}, ${x.toFixed(1)}, ${y.toFixed(1)})"/>`);
+        const x =
+          x0 + amp * Math.sin(2 * Math.PI * (t * (0.5 + rnd() * 0.6) + rnd()));
+        const y = ((((y0 + t * speed) % (H + 160)) + H + 160) % (H + 160)) - 80;
+        const col =
+          i % 3 === 0
+            ? lighten(pal.accent, 0.3)
+            : i % 3 === 1
+              ? lighten(pal.secondary, 0.5)
+              : '#ffffff';
+        sprites.push(
+          `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${size.toFixed(1)}" ry="${(size * 1.7).toFixed(1)}" fill="${col}" opacity="${(0.3 + (i % 4) * 0.1).toFixed(2)}" transform="rotate(${(t * 300 * (0.5 + rnd())).toFixed(1)}, ${x.toFixed(1)}, ${y.toFixed(1)})"/>`,
+        );
       }
       return {
         bg: `<rect width="${W}" height="${H}" fill="url(#skyO)"/><rect width="${W}" height="${H}" fill="url(#haloO)"/>${sprites.join('')}`,
@@ -1064,7 +1429,11 @@ function outroSkin(tpl: IntroTemplate['id'], t: number, e: FrameEnv): OutroSkin 
   }
 }
 
-function buildOutroSvg(tpl: IntroTemplate['id'], t: number, e: FrameEnv): string {
+function buildOutroSvg(
+  tpl: IntroTemplate['id'],
+  t: number,
+  e: FrameEnv,
+): string {
   const { W, H, ctx } = e;
   const pal = ctx.palette;
   const s = outroSkin(tpl, t, e);
@@ -1087,21 +1456,34 @@ function buildOutroSvg(tpl: IntroTemplate['id'], t: number, e: FrameEnv): string
 }
 
 // ---- Điều phối: sinh frame → ffmpeg ----
-function buildFrameSvg(tpl: IntroTemplate['id'], t: number, env: FrameEnv, frameIdx: number): string {
+function buildFrameSvg(
+  tpl: IntroTemplate['id'],
+  t: number,
+  env: FrameEnv,
+  frameIdx: number,
+): string {
   switch (tpl) {
-    case 'album': return svgAlbum(t, env);
-    case 'cinema': return svgCinema(t, env);
-    case 'film': return svgFilm(t, env, frameIdx);
-    case 'letter': return svgLetter(t, env, frameIdx);
-    case 'seasonal': return svgSeasonal(t, env);
-    case 'polaroid': return svgPolaroid(t, env);
-    default: return svgCinema(t, env);
+    case 'album':
+      return svgAlbum(t, env);
+    case 'cinema':
+      return svgCinema(t, env);
+    case 'film':
+      return svgFilm(t, env, frameIdx);
+    case 'letter':
+      return svgLetter(t, env, frameIdx);
+    case 'seasonal':
+      return svgSeasonal(t, env);
+    case 'polaroid':
+      return svgPolaroid(t, env);
+    default:
+      return svgCinema(t, env);
   }
 }
 
 // Ảnh chỉ dùng ở template có khung ảnh — các template khác bỏ qua để SVG nhẹ
 const USES_PHOTOS: Partial<Record<IntroTemplateId, boolean>> = {
-  album: true, polaroid: true,
+  album: true,
+  polaroid: true,
 };
 
 /** Chuỗi frame SVG → segment mp4. Dùng chung cho cả mở đầu và card kết. */
@@ -1114,7 +1496,10 @@ async function renderSvgSequence(opts: {
   grain: boolean;
   buildSvg: (t: number, frameIdx: number) => string;
 }): Promise<void> {
-  const seqDir = path.join(tmpDir(), `svgseq_${crypto.randomBytes(5).toString('hex')}`);
+  const seqDir = path.join(
+    tmpDir(),
+    `svgseq_${crypto.randomBytes(5).toString('hex')}`,
+  );
   fs.mkdirSync(seqDir, { recursive: true });
   try {
     const POOL = 4; // sharp có thread pool riêng — 4 frame/lượt là điểm ngọt
@@ -1131,8 +1516,24 @@ async function renderSvgSequence(opts: {
         }
       }),
     );
-    const vf = [`scale=${opts.W}:${opts.H}`, ...(opts.grain ? ['noise=alls=8:allf=t'] : []), 'format=yuv420p'].join(',');
-    await run(FFMPEG, ['-y', '-framerate', String(FPS), '-i', path.join(seqDir, 'f_%05d.png'), '-vf', vf, '-t', String(opts.durationS), ...ENC, opts.out]);
+    const vf = [
+      `scale=${opts.W}:${opts.H}`,
+      ...(opts.grain ? ['noise=alls=8:allf=t'] : []),
+      'format=yuv420p',
+    ].join(',');
+    await run(FFMPEG, [
+      '-y',
+      '-framerate',
+      String(FPS),
+      '-i',
+      path.join(seqDir, 'f_%05d.png'),
+      '-vf',
+      vf,
+      '-t',
+      String(opts.durationS),
+      ...ENC,
+      opts.out,
+    ]);
   } finally {
     fs.rmSync(seqDir, { recursive: true, force: true });
   }
@@ -1151,15 +1552,32 @@ export async function renderOutro(opts: {
   const { W, H } = dims(opts.aspect);
   const dur = opts.durationS ?? 5;
   const out = segCacheFile({
-    v: CACHE_V, t: 'outro_styled', tpl: opts.template,
-    close: opts.ctx.closingJa ?? '', ded: opts.ctx.dedicationJa ?? '', credit: opts.ctx.creditLine ?? '',
-    pal: opts.ctx.palette, a: opts.aspect, d: dur,
+    v: CACHE_V,
+    t: 'outro_styled',
+    tpl: opts.template,
+    close: opts.ctx.closingJa ?? '',
+    ded: opts.ctx.dedicationJa ?? '',
+    credit: opts.ctx.creditLine ?? '',
+    pal: opts.ctx.palette,
+    a: opts.aspect,
+    d: dur,
   });
   if (fs.existsSync(out)) return { file: out, cached: true };
 
-  const env: FrameEnv = { W, H, ctx: opts.ctx, photos: [], aspect: opts.aspect, durS: dur };
+  const env: FrameEnv = {
+    W,
+    H,
+    ctx: opts.ctx,
+    photos: [],
+    aspect: opts.aspect,
+    durS: dur,
+  };
   await renderSvgSequence({
-    out, frames: Math.round(dur * FPS), W, H, durationS: dur,
+    out,
+    frames: Math.round(dur * FPS),
+    W,
+    H,
+    durationS: dur,
     grain: opts.template === 'film',
     buildSvg: (t) => buildOutroSvg(opts.template, t, env),
   });
@@ -1176,16 +1594,39 @@ export async function renderIntro(opts: {
   const dur = opts.durationS ?? 4;
   const usePhotos = !!USES_PHOTOS[opts.template];
   const out = segCacheFile({
-    v: CACHE_V, t: 'intro', tpl: opts.template, title: opts.ctx.titleJa, sub: opts.ctx.subtitleJa,
-    open: opts.ctx.openingJa, pal: opts.ctx.palette, photos: usePhotos ? opts.ctx.photoIds.slice(0, 3) : [],
-    a: opts.aspect, d: dur,
+    v: CACHE_V,
+    t: 'intro',
+    tpl: opts.template,
+    title: opts.ctx.titleJa,
+    sub: opts.ctx.subtitleJa,
+    open: opts.ctx.openingJa,
+    pal: opts.ctx.palette,
+    photos: usePhotos ? opts.ctx.photoIds.slice(0, 3) : [],
+    a: opts.aspect,
+    d: dur,
   });
   if (fs.existsSync(out)) return { file: out, cached: true };
 
-  const photos = usePhotos ? await preparePhotos(opts.ctx.photoAbs, opts.template === 'polaroid' ? 600 : 700) : [];
-  const env: FrameEnv = { W, H, ctx: opts.ctx, photos, aspect: opts.aspect, durS: dur };
+  const photos = usePhotos
+    ? await preparePhotos(
+        opts.ctx.photoAbs,
+        opts.template === 'polaroid' ? 600 : 700,
+      )
+    : [];
+  const env: FrameEnv = {
+    W,
+    H,
+    ctx: opts.ctx,
+    photos,
+    aspect: opts.aspect,
+    durS: dur,
+  };
   await renderSvgSequence({
-    out, frames: Math.round(dur * FPS), W, H, durationS: dur,
+    out,
+    frames: Math.round(dur * FPS),
+    W,
+    H,
+    durationS: dur,
     grain: opts.template === 'film',
     buildSvg: (t, i) => buildFrameSvg(opts.template, t, env, i),
   });

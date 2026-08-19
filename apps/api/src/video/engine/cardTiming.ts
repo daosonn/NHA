@@ -13,17 +13,27 @@ export const CARD_SEC = 3;
 
 /** Đếm "đơn vị chữ": 1 ký tự Nhật ≈ 1, ký tự Latin ≈ 0.55 (đọc nhanh hơn) */
 export function jaUnits(s: string): number {
-  return Array.from(s ?? '').reduce((a, ch) => a + (/[　-ヿ㐀-鿿＀-￯]/.test(ch) ? 1 : 0.55), 0);
+  return Array.from(s ?? '').reduce(
+    (a, ch) =>
+      a + (/[\u3000-\u30FF\u3400-\u9FFF\uFF00-\uFFEF]/.test(ch) ? 1 : 0.55),
+    0,
+  );
 }
 
 /** Mở đầu: hoạt cảnh ~2.6s + thời gian đọc lời dẫn; ✉️ letter gõ từng chữ nên cần dư hơn */
-export function introSecondsFor(openingJa: string, template: IntroTemplateId): number {
+export function introSecondsFor(
+  openingJa: string,
+  template: IntroTemplateId,
+): number {
   const read = jaUnits(openingJa) / (template === 'letter' ? 5.5 : 7);
   return Math.min(14, Math.max(5, Math.round((2.6 + read) * 10) / 10));
 }
 
 /** Card kết: câu kết + lời đề tặng + dòng ghi công hiện so le → cần đọc hết rồi mới tắt */
-export function outroSecondsFor(closingJa: string, dedicationJa: string): number {
+export function outroSecondsFor(
+  closingJa: string,
+  dedicationJa: string,
+): number {
   const read = (jaUnits(closingJa) + jaUnits(dedicationJa) * 0.6) / 7;
   return Math.min(13, Math.max(5, Math.round((2.4 + read) * 10) / 10));
 }

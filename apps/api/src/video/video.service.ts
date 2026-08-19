@@ -9,9 +9,12 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
-import { AiClientService, type StoryboardResult } from '../ai/ai-client.service';
+import {
+  AiClientService,
+  type StoryboardResult,
+} from '../ai/ai-client.service';
 import { AiContextService } from '../ai/ai-context.service';
-import type { CreateVideoJobDto, PlanDto, StoryboardRequestDto } from './dto/video.dto';
+import type { CreateVideoJobDto, StoryboardRequestDto } from './dto/video.dto';
 import { FFMPEG, probeMedia, run } from './engine/exec';
 import {
   concatWithTransitions,
@@ -24,7 +27,11 @@ import {
   renderVideoClip,
 } from './engine/videogen';
 import { isIntroEnabled, renderIntro, renderOutro } from './engine/introgen';
-import { CARD_SEC, introSecondsFor, outroSecondsFor } from './engine/cardTiming';
+import {
+  CARD_SEC,
+  introSecondsFor,
+  outroSecondsFor,
+} from './engine/cardTiming';
 import {
   assignEffects,
   bodyTiming,
@@ -35,7 +42,12 @@ import {
   seedFromIds,
   type Join,
 } from './engine/videoTiming';
-import { ensureTrack, isLibraryTrack, musicCatalog, trackBpm } from './engine/musiclib';
+import {
+  ensureTrack,
+  isLibraryTrack,
+  musicCatalog,
+  trackBpm,
+} from './engine/musiclib';
 import type { Aspect, IntroTemplateId, Palette, Scene } from './engine/types';
 
 /**
@@ -53,7 +65,13 @@ type PlanJson = {
   closing: string;
   dedication: string;
   palette: Record<string, string>;
-  scenes: { mediaId: string; kind: 'image' | 'video'; durationS: number; caption: string; reason?: string }[];
+  scenes: {
+    mediaId: string;
+    kind: 'image' | 'video';
+    durationS: number;
+    caption: string;
+    reason?: string;
+  }[];
 };
 
 type OptionsJson = {
@@ -97,13 +115,18 @@ export class VideoService {
 
   /** Màn 29 — stream preview track THƯ VIỆN (synth/asset dựng sẵn, không phải dữ liệu người dùng) */
   async musicFileFor(trackId: string): Promise<{ path: string; size: number }> {
-    if (!isLibraryTrack(trackId)) throw new NotFoundException('Không có track này trong thư viện');
+    if (!isLibraryTrack(trackId))
+      throw new NotFoundException('Không có track này trong thư viện');
     const p = await ensureTrack(trackId);
     return { path: p, size: fs.statSync(p).size };
   }
 
   /** Màn 27→31: xin storyboard (sync) để user duyệt/sửa TRƯỚC khi tạo job — 1 call AI (mock được) */
-  async storyboard(userId: string, familyId: string, dto: StoryboardRequestDto): Promise<StoryboardResult> {
+  async storyboard(
+    userId: string,
+    familyId: string,
+    dto: StoryboardRequestDto,
+  ): Promise<StoryboardResult> {
     const bundle = await this.context.buildFor(userId, familyId, dto.memberId);
     const media = await this.loadMedia(userId, familyId, dto.mediaIds);
     return this.ai.videoStoryboard({
@@ -124,7 +147,11 @@ export class VideoService {
   }
 
   /** Tạo job (PENDING). mode 'quick' = server tự dựng plan tối giản (0 AI, không caption, không card). */
-  async create(userId: string, familyId: string, dto: CreateVideoJobDto): Promise<VideoJobView> {
+  async create(
+    userId: string,
+    familyId: string,
+    dto: CreateVideoJobDto,
+  ): Promise<VideoJobView> {
     await this.context.assertMembership(userId, familyId);
     const media = await this.loadMedia(userId, familyId, dto.mediaIds);
     const musicId = await this.resolveMusicId(userId, dto.musicId);
@@ -149,7 +176,10 @@ export class VideoService {
         })),
       };
     } else {
-      if (!dto.plan) throw new BadRequestException('mode "ai" cần plan (storyboard đã duyệt ở màn Story & scenes)');
+      if (!dto.plan)
+        throw new BadRequestException(
+          'mode "ai" cần plan (storyboard đã duyệt ở màn Story & scenes)',
+        );
       const byId = new Map(media.map((m) => [m.id, m] as const));
       const scenes = dto.plan.scenes
         .filter((s) => byId.has(s.mediaId))
@@ -160,7 +190,8 @@ export class VideoService {
           caption: s.caption.trim(),
           reason: s.reason?.trim() || undefined,
         }));
-      if (scenes.length === 0) throw new BadRequestException('Plan không còn cảnh hợp lệ');
+      if (scenes.length === 0)
+        throw new BadRequestException('Plan không còn cảnh hợp lệ');
       plan = {
         title: dto.plan.title.trim(),
         subtitle: dto.plan.subtitle?.trim() ?? '',
@@ -188,8 +219,8 @@ export class VideoService {
         aboutMemberId: dto.memberId ?? null,
         title: plan.title || null,
         mode: dto.mode,
-        options: options as object,
-        plan: plan as object,
+        options: options,
+        plan: plan,
         inputMediaIds: dto.mediaIds,
       },
     });
@@ -202,13 +233,21 @@ export class VideoService {
     if (job.status === 'PROCESSING') return { ok: true };
     await this.prisma.videoJob.update({
       where: { id: jobId },
-      data: { status: 'PROCESSING', progress: 0, stage: 'opening', error: null },
+      data: {
+        status: 'PROCESSING',
+        progress: 0,
+        stage: 'opening',
+        error: null,
+      },
     });
     void this.renderWorker(jobId).catch(async (err) => {
       this.logger.error(`render ${jobId} failed: ${String(err)}`);
       await this.prisma.videoJob.update({
         where: { id: jobId },
-        data: { status: 'FAILED', error: String((err as Error)?.message ?? err).slice(0, 500) },
+        data: {
+          status: 'FAILED',
+          error: String((err as Error)?.message ?? err).slice(0, 500),
+        },
       });
     });
     return { ok: true };
@@ -229,18 +268,33 @@ export class VideoService {
   }
 
   /** Stream file kết quả (Range 206 để mobile seek được) */
-  async fileFor(userId: string, jobId: string): Promise<{ key: string; size: number }> {
+  async fileFor(
+    userId: string,
+    jobId: string,
+  ): Promise<{ key: string; size: number }> {
     const job = await this.ownJob(userId, jobId);
-    if (job.status !== 'DONE' || !job.resultStorageKey) throw new NotFoundException('Video chưa render xong');
-    return { key: job.resultStorageKey, size: await this.storage.sizeOf(job.resultStorageKey) };
+    if (job.status !== 'DONE' || !job.resultStorageKey)
+      throw new NotFoundException('Video chưa render xong');
+    return {
+      key: job.resultStorageKey,
+      size: await this.storage.sizeOf(job.resultStorageKey),
+    };
   }
 
-  stream(storageKey: string, start?: number, end?: number): ReturnType<StorageService['openRead']> {
+  stream(
+    storageKey: string,
+    start?: number,
+    end?: number,
+  ): ReturnType<StorageService['openRead']> {
     return this.storage.openRead(storageKey, start, end);
   }
 
   /** Màn 33 "Share with the family — Everyone sees it on Grandma's timeline" */
-  async share(userId: string, jobId: string, caption?: string): Promise<{ post_id: string }> {
+  async share(
+    userId: string,
+    jobId: string,
+    caption?: string,
+  ): Promise<{ post_id: string }> {
     const job = await this.ownJob(userId, jobId);
     if (job.status !== 'DONE' || !job.resultStorageKey || !job.familyId) {
       throw new BadRequestException('Video chưa render xong');
@@ -253,7 +307,9 @@ export class VideoService {
         type: 'POST',
         content: caption ?? plan?.title ?? 'Memory video',
         families: { create: [{ familyId: job.familyId }] },
-        ...(job.aboutMemberId ? { memberTags: { create: [{ memberId: job.aboutMemberId }] } } : {}),
+        ...(job.aboutMemberId
+          ? { memberTags: { create: [{ memberId: job.aboutMemberId }] } }
+          : {}),
         media: {
           create: [
             {
@@ -273,21 +329,30 @@ export class VideoService {
   // ---------------- worker ----------------
 
   private async renderWorker(jobId: string): Promise<void> {
-    const job = await this.prisma.videoJob.findUniqueOrThrow({ where: { id: jobId } });
+    const job = await this.prisma.videoJob.findUniqueOrThrow({
+      where: { id: jobId },
+    });
     const plan = job.plan as PlanJson;
     const options = job.options as OptionsJson;
     if (!plan || !options) throw new Error('Job thiếu plan/options');
 
     ensureDirs();
     const fonts = loadFonts();
-    const aspect: Aspect = options.aspect === 'landscape' ? 'landscape' : 'portrait';
+    const aspect: Aspect =
+      options.aspect === 'landscape' ? 'landscape' : 'portrait';
     const quick = job.mode === 'quick';
-    const styled = !quick && options.style !== 'none' && isIntroEnabled(options.style);
-    const styleTpl = styled ? (options.style as Exclude<IntroTemplateId, 'none'>) : null;
+    const styled =
+      !quick && options.style !== 'none' && isIntroEnabled(options.style);
+    const styleTpl = styled
+      ? (options.style as Exclude<IntroTemplateId, 'none'>)
+      : null;
     const palette = this.safePalette(plan.palette) as unknown as Palette;
 
     const setStage = async (stage: string, progress: number) =>
-      this.prisma.videoJob.update({ where: { id: jobId }, data: { stage, progress: Math.min(99, Math.round(progress)) } });
+      this.prisma.videoJob.update({
+        where: { id: jobId },
+        data: { stage, progress: Math.min(99, Math.round(progress)) },
+      });
 
     // --- media path + probe video clip (clamp thời lượng cảnh clip về độ dài thật) ---
     const mediaRows = await this.prisma.media.findMany({
@@ -295,7 +360,9 @@ export class VideoService {
       select: { id: true, storageKey: true, mimeType: true },
     });
     const byId = new Map(mediaRows.map((m) => [m.id, m] as const));
-    for (const s of plan.scenes) if (!byId.has(s.mediaId)) throw new Error(`Media ${s.mediaId} không còn tồn tại`);
+    for (const s of plan.scenes)
+      if (!byId.has(s.mediaId))
+        throw new Error(`Media ${s.mediaId} không còn tồn tại`);
 
     const musicId = options.musicId;
     const bpm = isLibraryTrack(musicId) ? trackBpm(musicId) : null;
@@ -303,27 +370,53 @@ export class VideoService {
 
     for (const s of plan.scenes) {
       if (s.kind === 'video') {
-        const abs = this.storage.absolutePathOf(byId.get(s.mediaId)!.storageKey);
+        const abs = this.storage.absolutePathOf(
+          byId.get(s.mediaId)!.storageKey,
+        );
         const probe = await probeMedia(abs).catch(() => null);
-        if (probe && probe.duration > 0.5) s.durationS = Math.max(2, Math.min(s.durationS, probe.duration));
+        if (probe && probe.duration > 0.5)
+          s.durationS = Math.max(2, Math.min(s.durationS, probe.duration));
       }
     }
 
     // --- timing kiểu memories (port memoryVideo.ts của demo) ---
     const effects = assignEffects(
-      plan.scenes.map((s) => ({ media_id: s.mediaId, type: s.kind === 'video' ? 'video_clip' : 'kenburns' })),
+      plan.scenes.map((s) => ({
+        media_id: s.mediaId,
+        type: s.kind === 'video' ? 'video_clip' : 'kenburns',
+      })),
       seedFromIds(plan.scenes.map((s) => s.mediaId)),
     );
-    const bodyJoins = planBodyJoins(plan.scenes.length, seedFromIds(plan.scenes.map((s) => s.mediaId)));
-    const edge = quick ? { head: 0, tail: 0 } : { head: JOIN_DUR.fade, tail: JOIN_DUR.fade };
-    const bt = bodyTiming(plan.scenes.map((s) => s.durationS), bodyJoins, bpm, edge);
+    const bodyJoins = planBodyJoins(
+      plan.scenes.length,
+      seedFromIds(plan.scenes.map((s) => s.mediaId)),
+    );
+    const edge = quick
+      ? { head: 0, tail: 0 }
+      : { head: JOIN_DUR.fade, tail: JOIN_DUR.fade };
+    const bt = bodyTiming(
+      plan.scenes.map((s) => s.durationS),
+      bodyJoins,
+      bpm,
+      edge,
+    );
     const fullJoins: Join[] = quick
       ? bodyJoins
-      : [{ type: 'fade', dur: JOIN_DUR.fade }, ...bodyJoins, { type: 'fade', dur: JOIN_DUR.fade }];
+      : [
+          { type: 'fade', dur: JOIN_DUR.fade },
+          ...bodyJoins,
+          { type: 'fade', dur: JOIN_DUR.fade },
+        ];
     const tailOf = (segIdx: number) => extraTailFor(fullJoins[segIdx]);
 
-    const introDur = quantizeUpToBeat(styled ? introSecondsFor(plan.opening, styleTpl!) : CARD_SEC, bpm);
-    const outroDur = quantizeUpToBeat(styled ? outroSecondsFor(plan.closing, plan.dedication) : CARD_SEC, bpm);
+    const introDur = quantizeUpToBeat(
+      styled ? introSecondsFor(plan.opening, styleTpl!) : CARD_SEC,
+      bpm,
+    );
+    const outroDur = quantizeUpToBeat(
+      styled ? outroSecondsFor(plan.closing, plan.dedication) : CARD_SEC,
+      bpm,
+    );
 
     const segs: { file: string; durationS: number }[] = [];
     const n = plan.scenes.length;
@@ -332,7 +425,9 @@ export class VideoService {
     // --- card mở đầu + kết (bỏ ở quick) ---
     if (!quick) {
       await setStage('opening', 3);
-      const photoScenes = plan.scenes.filter((s) => s.kind !== 'video').slice(0, 3);
+      const photoScenes = plan.scenes
+        .filter((s) => s.kind !== 'video')
+        .slice(0, 3);
       const introCtx = {
         titleJa: plan.title,
         subtitleJa: plan.subtitle,
@@ -341,18 +436,47 @@ export class VideoService {
         dedicationJa: plan.dedication,
         creditLine: `NHA · ${new Date().toISOString().slice(0, 10)}`,
         palette,
-        photoAbs: photoScenes.map((s) => this.storage.absolutePathOf(byId.get(s.mediaId)!.storageKey)),
+        photoAbs: photoScenes.map((s) =>
+          this.storage.absolutePathOf(byId.get(s.mediaId)!.storageKey),
+        ),
         photoIds: photoScenes.map((s) => s.mediaId),
       };
       const intro = styleTpl
-        ? await renderIntro({ template: styleTpl, aspect, durationS: introDur + tailOf(0), ctx: introCtx })
-        : await renderCard({ kind: 'title', title: plan.title, subtitle: plan.subtitle, palette, aspect, fonts, durationS: introDur + tailOf(0) });
+        ? await renderIntro({
+            template: styleTpl,
+            aspect,
+            durationS: introDur + tailOf(0),
+            ctx: introCtx,
+          })
+        : await renderCard({
+            kind: 'title',
+            title: plan.title,
+            subtitle: plan.subtitle,
+            palette,
+            aspect,
+            fonts,
+            durationS: introDur + tailOf(0),
+          });
       segs.push({ file: intro.file, durationS: introDur });
 
       await setStage('closing_prep', 8);
       outroSeg = styleTpl
-        ? await renderOutro({ template: styleTpl, aspect, durationS: outroDur, ctx: introCtx })
-        : await renderCard({ kind: 'outro', title: plan.closing || plan.title || 'NHA', subtitle: '', dedication: plan.dedication, palette, aspect, fonts, durationS: outroDur });
+        ? await renderOutro({
+            template: styleTpl,
+            aspect,
+            durationS: outroDur,
+            ctx: introCtx,
+          })
+        : await renderCard({
+            kind: 'outro',
+            title: plan.closing || plan.title || 'NHA',
+            subtitle: '',
+            dedication: plan.dedication,
+            palette,
+            aspect,
+            fonts,
+            durationS: outroDur,
+          });
     }
 
     // --- từng cảnh ---
@@ -375,8 +499,22 @@ export class VideoService {
       const abs = this.storage.absolutePathOf(byId.get(s.mediaId)!.storageKey);
       const seg =
         s.kind === 'video'
-          ? await renderVideoClip({ videoAbs: abs, scene, style: 'yasashii', profile: 'memories', aspect, fonts })
-          : await renderKenBurns({ imageAbs: abs, scene, style: 'yasashii', profile: 'memories', aspect, fonts });
+          ? await renderVideoClip({
+              videoAbs: abs,
+              scene,
+              style: 'yasashii',
+              profile: 'memories',
+              aspect,
+              fonts,
+            })
+          : await renderKenBurns({
+              imageAbs: abs,
+              scene,
+              style: 'yasashii',
+              profile: 'memories',
+              aspect,
+              fonts,
+            });
       segs.push({ file: seg.file, durationS: bt.durations[i] });
     }
     if (outroSeg) segs.push({ file: outroSeg.file, durationS: outroDur });
@@ -390,16 +528,45 @@ export class VideoService {
       const abs = this.storage.absolutePathOf(byId.get(s.mediaId)!.storageKey);
       const probe = await probeMedia(abs).catch(() => null);
       if (!probe?.hasAudio) continue;
-      const startS = (quick ? 0 : introDur) + bt.durations.slice(0, i).reduce((a, d) => a + d, 0);
-      const voiceFile = path.join(process.cwd(), 'uploads', 'video_out', 'tmp', `${jobId}_voice_${i}.m4a`);
+      const startS =
+        (quick ? 0 : introDur) +
+        bt.durations.slice(0, i).reduce((a, d) => a + d, 0);
+      const voiceFile = path.join(
+        process.cwd(),
+        'uploads',
+        'video_out',
+        'tmp',
+        `${jobId}_voice_${i}.m4a`,
+      );
       fs.mkdirSync(path.dirname(voiceFile), { recursive: true });
-      await run(FFMPEG, ['-y', '-ss', '0', '-t', String(bt.durations[i]), '-i', abs, '-vn', '-ac', '2', '-ar', '44100', '-c:a', 'aac', voiceFile]);
+      await run(FFMPEG, [
+        '-y',
+        '-ss',
+        '0',
+        '-t',
+        String(bt.durations[i]),
+        '-i',
+        abs,
+        '-vn',
+        '-ac',
+        '2',
+        '-ar',
+        '44100',
+        '-c:a',
+        'aac',
+        voiceFile,
+      ]);
       voiceTracks.push({ file: voiceFile, startS });
     }
 
     // --- ghép + nhạc ---
     await setStage('music', 85);
-    const outAbs = path.join(process.cwd(), 'uploads', 'video_out', `${jobId}.mp4`);
+    const outAbs = path.join(
+      process.cwd(),
+      'uploads',
+      'video_out',
+      `${jobId}.mp4`,
+    );
     const { totalDur } = await concatWithTransitions({
       segments: segs,
       profile: 'memories',
@@ -415,10 +582,18 @@ export class VideoService {
     const storageKey = await this.storage.promote(outAbs, 'video/mp4');
     await this.prisma.videoJob.update({
       where: { id: jobId },
-      data: { status: 'DONE', progress: 100, stage: null, resultStorageKey: storageKey, durationS: totalDur },
+      data: {
+        status: 'DONE',
+        progress: 100,
+        stage: null,
+        resultStorageKey: storageKey,
+        durationS: totalDur,
+      },
     });
     // "You can leave this screen — we will let you know" (màn 32)
-    const job2 = await this.prisma.videoJob.findUniqueOrThrow({ where: { id: jobId } });
+    const job2 = await this.prisma.videoJob.findUniqueOrThrow({
+      where: { id: jobId },
+    });
     await this.prisma.notification.create({
       data: {
         recipientUserId: job2.requesterUserId,
@@ -431,7 +606,10 @@ export class VideoService {
   // ---------------- helpers ----------------
 
   /** 'none' | track thư viện | 'media:<id>' = "Use your own song" (màn 29) — audio phải do chính user upload */
-  private async resolveMusicId(userId: string, raw: string | undefined): Promise<string> {
+  private async resolveMusicId(
+    userId: string,
+    raw: string | undefined,
+  ): Promise<string> {
     if (!raw || raw === 'none') return 'none';
     if (isLibraryTrack(raw)) return raw;
     if (raw.startsWith('media:')) {
@@ -439,8 +617,12 @@ export class VideoService {
         where: { id: raw.slice('media:'.length), uploaderUserId: userId },
         select: { id: true, mimeType: true },
       });
-      if (!row) throw new BadRequestException('Không truy cập được file nhạc đã upload');
-      if (!/^(audio|video)\//.test(row.mimeType)) throw new BadRequestException('File nhạc phải là audio');
+      if (!row)
+        throw new BadRequestException(
+          'Không truy cập được file nhạc đã upload',
+        );
+      if (!/^(audio|video)\//.test(row.mimeType))
+        throw new BadRequestException('File nhạc phải là audio');
       return raw;
     }
     return 'none';
@@ -459,24 +641,48 @@ export class VideoService {
     return null;
   }
 
-  private async loadMedia(userId: string, familyId: string, mediaIds: string[]) {
+  // Kiểu trả về khai tường minh: 'image' | 'video' phải giữ nguyên literal, nếu để
+  // TypeScript tự suy thì nó nới thành string và cả pipeline mất kiểu.
+  private async loadMedia(
+    userId: string,
+    familyId: string,
+    mediaIds: string[],
+  ): Promise<
+    {
+      id: string;
+      kind: 'image' | 'video';
+      caption: string | null;
+      createdAt: Date;
+    }[]
+  > {
     // Authorization: media thuộc bài đăng trong family này, HOẶC do chính requester upload
     const rows = await this.prisma.media.findMany({
       where: {
         id: { in: mediaIds },
-        OR: [{ post: { families: { some: { familyId } } } }, { uploaderUserId: userId }],
+        OR: [
+          { post: { families: { some: { familyId } } } },
+          { uploaderUserId: userId },
+        ],
       },
-      select: { id: true, mimeType: true, createdAt: true, post: { select: { content: true } } },
+      select: {
+        id: true,
+        mimeType: true,
+        createdAt: true,
+        post: { select: { content: true } },
+      },
     });
     const byId = new Map(rows.map((r) => [r.id, r] as const));
     const missing = mediaIds.filter((id) => !byId.has(id));
-    if (missing.length) throw new ForbiddenException(`Không truy cập được media: ${missing.join(', ')}`);
+    if (missing.length)
+      throw new ForbiddenException(
+        `Không truy cập được media: ${missing.join(', ')}`,
+      );
     // giữ đúng THỨ TỰ user chọn (màn 28 — "Numbers are the order they will appear")
     return mediaIds.map((id) => {
       const r = byId.get(id)!;
       return {
         id: r.id,
-        kind: (r.mimeType.startsWith('video/') ? 'video' : 'image') as 'image' | 'video',
+        kind: r.mimeType.startsWith('video/') ? 'video' : 'image',
         caption: r.post?.content ?? null,
         createdAt: r.createdAt,
       };
@@ -486,21 +692,34 @@ export class VideoService {
   private async ownJob(userId: string, jobId: string) {
     const job = await this.prisma.videoJob.findUnique({ where: { id: jobId } });
     if (!job) throw new NotFoundException('Không tìm thấy video job');
-    if (job.requesterUserId !== userId) throw new ForbiddenException('Không phải video của bạn');
+    if (job.requesterUserId !== userId)
+      throw new ForbiddenException('Không phải video của bạn');
     return job;
   }
 
   private safeStyle(v: string | undefined): IntroTemplateId {
-    const all: IntroTemplateId[] = ['album', 'cinema', 'film', 'letter', 'seasonal', 'polaroid', 'none'];
-    return all.includes(v as IntroTemplateId) && (v === 'none' || isIntroEnabled(v as IntroTemplateId))
+    const all: IntroTemplateId[] = [
+      'album',
+      'cinema',
+      'film',
+      'letter',
+      'seasonal',
+      'polaroid',
+      'none',
+    ];
+    return all.includes(v as IntroTemplateId) &&
+      (v === 'none' || isIntroEnabled(v as IntroTemplateId))
       ? (v as IntroTemplateId)
       : 'cinema';
   }
 
-  private safePalette(p: Record<string, string> | undefined): Record<string, string> {
+  private safePalette(
+    p: Record<string, string> | undefined,
+  ): Record<string, string> {
     const hex = /^#[0-9a-fA-F]{6}$/;
     const out: Record<string, string> = { ...DEFAULT_PALETTE };
-    for (const k of Object.keys(out)) if (p && hex.test(p[k] ?? '')) out[k] = p[k];
+    for (const k of Object.keys(out))
+      if (p && hex.test(p[k] ?? '')) out[k] = p[k];
     return out;
   }
 

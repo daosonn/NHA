@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../database/prisma/prisma.service';
+import type { Prisma } from '../generated/prisma/client';
 
 /**
  * Product resolver — biến Ý TƯỞNG của AI thành SẢN PHẨM CỤ THỂ (0 token).
@@ -48,7 +49,8 @@ export interface ResolveResult {
   info: ResolveInfo;
 }
 
-const ENDPOINT = 'https://shopping.yahooapis.jp/ShoppingWebService/V3/itemSearch';
+const ENDPOINT =
+  'https://shopping.yahooapis.jp/ShoppingWebService/V3/itemSearch';
 const TIMEOUT_MS = 12_000;
 const DEFAULT_LIMIT = 3;
 
@@ -66,8 +68,10 @@ const EXPERIENCE_KEYWORDS: Record<string, string> = {
   general: '体験ギフト カタログ 総合版',
 };
 
-export function experienceKeyword(kind: string | null | undefined): string | null {
-  return kind ? EXPERIENCE_KEYWORDS[kind] ?? null : null;
+export function experienceKeyword(
+  kind: string | null | undefined,
+): string | null {
+  return kind ? (EXPERIENCE_KEYWORDS[kind] ?? null) : null;
 }
 
 type YahooHit = {
@@ -81,13 +85,23 @@ type YahooHit = {
 };
 
 /** "3.000〜8.000円" | "〜20.000円+" → [min, max] JPY. Dùng cho ngân sách người dùng chọn. */
-export function parseJpyRange(label: string | null | undefined): { min: number; max: number } {
-  const nums = label ? [...label.matchAll(/[\d.,]+/g)].map((m) => Number(m[0].replace(/[.,]/g, ''))) : [];
+export function parseJpyRange(label: string | null | undefined): {
+  min: number;
+  max: number;
+} {
+  const nums = label
+    ? [...label.matchAll(/[\d.,]+/g)].map((m) =>
+        Number(m[0].replace(/[.,]/g, '')),
+      )
+    : [];
   const valid = nums.filter((n) => Number.isFinite(n) && n > 0);
-  if (valid.length >= 2) return { min: Math.min(...valid), max: Math.max(...valid) };
+  if (valid.length >= 2)
+    return { min: Math.min(...valid), max: Math.max(...valid) };
   if (valid.length === 1) {
     // "〜8.000円" = trần; "15.000円〜" = sàn
-    return /^[〜~]/.test(label!.trim()) ? { min: 500, max: valid[0] } : { min: Math.round(valid[0] * 0.5), max: valid[0] };
+    return /^[〜~]/.test(label!.trim())
+      ? { min: 500, max: valid[0] }
+      : { min: Math.round(valid[0] * 0.5), max: valid[0] };
   }
   return { min: 1000, max: 20000 };
 }
@@ -99,43 +113,82 @@ export function parseJpyRange(label: string | null | undefined): { min: number; 
  */
 function buildAvoidTokens(avoidItems: string[]): string[] {
   const map: [RegExp, string[]][] = [
-    [/ngọt|bánh kẹo|đường|kẹo|chè|sweet|sugar|candy|cake|dessert/i, ['スイーツ', 'お菓子', 'ケーキ', 'チョコ', '砂糖', '飴', '菓子', 'ドーナツ']],
-    [/rượu|bia|cồn|alcohol|wine|beer|sake/i, ['お酒', 'ワイン', 'ビール', '日本酒', '焼酎', 'ウイスキー']],
+    [
+      /ngọt|bánh kẹo|đường|kẹo|chè|sweet|sugar|candy|cake|dessert/i,
+      [
+        'スイーツ',
+        'お菓子',
+        'ケーキ',
+        'チョコ',
+        '砂糖',
+        '飴',
+        '菓子',
+        'ドーナツ',
+      ],
+    ],
+    [
+      /rượu|bia|cồn|alcohol|wine|beer|sake/i,
+      ['お酒', 'ワイン', 'ビール', '日本酒', '焼酎', 'ウイスキー'],
+    ],
     [/mặn|muối|natri|salt|sodium/i, ['塩分', '漬物', '塩辛']],
-    [/cúi|mang vác|nặng|lưng|khớp|heavy|bend|back|knee|joint/i, ['重量', 'ダンベル', '大型', '業務用']],
+    [
+      /cúi|mang vác|nặng|lưng|khớp|heavy|bend|back|knee|joint/i,
+      ['重量', 'ダンベル', '大型', '業務用'],
+    ],
     [/cay|spicy/i, ['激辛', '唐辛子']],
     [/thuốc lá|hút thuốc|smok|tobacco/i, ['タバコ', '喫煙']],
-    [/hoa|phấn hoa|dị ứng|allerg|pollen|flower/i, ['生花', '花束', 'アレルギー']],
+    [
+      /hoa|phấn hoa|dị ứng|allerg|pollen|flower/i,
+      ['生花', '花束', 'アレルギー'],
+    ],
   ];
   const out = new Set<string>();
   for (const item of avoidItems) {
-    for (const [re, tokens] of map) if (re.test(item)) tokens.forEach((t) => out.add(t));
+    for (const [re, tokens] of map)
+      if (re.test(item)) tokens.forEach((t) => out.add(t));
   }
   return [...out];
 }
 
 /** Giá hợp lý (0.35) + uy tín review (0.25) + khớp từ khoá (0.2) + có ảnh (0.1) + nền (0.05). */
-function scoreProduct(p: ShopProduct, min: number, max: number, keyword: string): number {
+function scoreProduct(
+  p: ShopProduct,
+  min: number,
+  max: number,
+  keyword: string,
+): number {
   const mid = (min + max) / 2;
   const half = Math.max(1, (max - min) / 2);
   const priceFit = Math.max(0, 1 - Math.abs(p.price - mid) / (half * 2));
 
   const avg = p.review_rate ?? 0;
   const cnt = p.review_count ?? 0;
-  const trust = cnt > 0 ? Math.min(1, (avg / 5) * (Math.log10(cnt + 1) / 2.5)) : 0.15;
+  const trust =
+    cnt > 0 ? Math.min(1, (avg / 5) * (Math.log10(cnt + 1) / 2.5)) : 0.15;
 
-  const tokens = keyword.split(/[\s　]+/).filter((t) => t.length >= 2);
+  const tokens = keyword.split(/[\s\u3000]+/).filter((t) => t.length >= 2);
   const title = p.name.toLowerCase();
-  const match = tokens.length ? tokens.filter((t) => title.includes(t.toLowerCase())).length / tokens.length : 0.5;
+  const match = tokens.length
+    ? tokens.filter((t) => title.includes(t.toLowerCase())).length /
+      tokens.length
+    : 0.5;
 
-  return 0.35 * priceFit + 0.25 * trust + 0.2 * match + 0.1 * (p.image ? 1 : 0) + 0.05;
+  return (
+    0.35 * priceFit +
+    0.25 * trust +
+    0.2 * match +
+    0.1 * (p.image ? 1 : 0) +
+    0.05
+  );
 }
 
 /** Tuần ISO thô — cache sản phẩm hết hạn theo tuần (giá sàn đổi chậm hơn thế). */
 function weekKey(): string {
   const d = new Date();
   const jan1 = new Date(d.getFullYear(), 0, 1);
-  const week = Math.ceil(((d.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7);
+  const week = Math.ceil(
+    ((d.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7,
+  );
   return `${d.getFullYear()}W${week}`;
 }
 
@@ -203,16 +256,44 @@ export class ShopsService {
     // Thang thử: nguyên trạng → nới ngân sách → rút gọn từ khoá → nới cả hai.
     // Từ khoá càng cụ thể càng dễ 0 kết quả, nên phải có đường xuống.
     const shorten = (kw: string): string | null => {
-      const parts = kw.split(/[\s　]+/).filter(Boolean);
+      const parts = kw.split(/[\s\u3000]+/).filter(Boolean);
       return parts.length >= 2 ? parts.slice(0, -1).join(' ') : null;
     };
     const short1 = shorten(opts.keyword);
     const short2 = short1 ? shorten(short1) : null;
     const plans = [
-      { kw: opts.keyword, min: opts.priceMin, max: opts.priceMax, label: 'exact' },
-      { kw: opts.keyword, min: opts.priceMin * 0.6, max: opts.priceMax * 1.8, label: 'wider_budget' },
-      ...(short1 ? [{ kw: short1, min: opts.priceMin * 0.6, max: opts.priceMax * 1.8, label: `shorter:${short1}` }] : []),
-      ...(short2 ? [{ kw: short2, min: opts.priceMin * 0.4, max: opts.priceMax * 2.5, label: `shorter:${short2}` }] : []),
+      {
+        kw: opts.keyword,
+        min: opts.priceMin,
+        max: opts.priceMax,
+        label: 'exact',
+      },
+      {
+        kw: opts.keyword,
+        min: opts.priceMin * 0.6,
+        max: opts.priceMax * 1.8,
+        label: 'wider_budget',
+      },
+      ...(short1
+        ? [
+            {
+              kw: short1,
+              min: opts.priceMin * 0.6,
+              max: opts.priceMax * 1.8,
+              label: `shorter:${short1}`,
+            },
+          ]
+        : []),
+      ...(short2
+        ? [
+            {
+              kw: short2,
+              min: opts.priceMin * 0.4,
+              max: opts.priceMax * 2.5,
+              label: `shorter:${short2}`,
+            },
+          ]
+        : []),
     ];
 
     const errors: string[] = [];
@@ -222,10 +303,12 @@ export class ShopsService {
     let usedKeyword = opts.keyword;
 
     for (const plan of plans) {
-      const items = await this.searchYahoo(plan.kw, plan.min, plan.max).catch((e: unknown) => {
-        errors.push(String((e as Error)?.message ?? e).slice(0, 120));
-        return [] as ShopProduct[];
-      });
+      const items = await this.searchYahoo(plan.kw, plan.min, plan.max).catch(
+        (e: unknown) => {
+          errors.push(String((e as Error)?.message ?? e).slice(0, 120));
+          return [] as ShopProduct[];
+        },
+      );
       info.attempts.push(`${plan.label}: ${items.length}`);
       if (items.length > 0) {
         all = items;
@@ -241,7 +324,9 @@ export class ShopsService {
     if (errors.length) info.error = errors.join(' · ');
 
     const avoidTokens = buildAvoidTokens(opts.avoidItems);
-    const coreTokens = usedKeyword.split(/[\s　]+/).filter((t) => t.length >= 2);
+    const coreTokens = usedKeyword
+      .split(/[\s\u3000]+/)
+      .filter((t) => t.length >= 2);
     // Khi đã phải nới/rút gọn, sàn trả nhiều hàng lạc đề → tên PHẢI chứa ít nhất
     // một từ khoá gốc; thà không hiện còn hơn hiện sai.
     const mustMatch = !!info.relaxed && coreTokens.length > 0;
@@ -259,7 +344,12 @@ export class ShopsService {
       if (seen.has(dedup)) continue;
       seen.add(dedup);
       // Lọc theo dải ĐÃ NỚI nhưng chấm điểm theo ngân sách GỐC → món sát túi tiền lên đầu.
-      filtered.push({ ...p, score: Number(scoreProduct(p, opts.priceMin, opts.priceMax, usedKeyword).toFixed(4)) });
+      filtered.push({
+        ...p,
+        score: Number(
+          scoreProduct(p, opts.priceMin, opts.priceMax, usedKeyword).toFixed(4),
+        ),
+      });
     }
     filtered.sort((a, b) => b.score - a.score);
     const top = filtered.slice(0, limit);
@@ -270,7 +360,11 @@ export class ShopsService {
     return { products: top, info };
   }
 
-  private async searchYahoo(keyword: string, priceMin: number, priceMax: number): Promise<ShopProduct[]> {
+  private async searchYahoo(
+    keyword: string,
+    priceMin: number,
+    priceMax: number,
+  ): Promise<ShopProduct[]> {
     const params = new URLSearchParams({
       appid: this.appId,
       query: keyword,
@@ -303,8 +397,10 @@ export class ShopsService {
           price: h.price!,
           url: h.url!,
           image: h.exImage?.url ?? h.image?.medium ?? h.image?.small ?? null,
-          review_rate: typeof h.review?.rate === 'number' ? h.review.rate : null,
-          review_count: typeof h.review?.count === 'number' ? h.review.count : null,
+          review_rate:
+            typeof h.review?.rate === 'number' ? h.review.rate : null,
+          review_count:
+            typeof h.review?.count === 'number' ? h.review.count : null,
           store: h.seller?.name ?? null,
           score: 0,
         }));
@@ -315,7 +411,10 @@ export class ShopsService {
 
   private async readCache(cacheKey: string): Promise<ShopProduct[] | null> {
     try {
-      const row = await this.prisma.productCache.findUnique({ where: { cacheKey }, select: { products: true } });
+      const row = await this.prisma.productCache.findUnique({
+        where: { cacheKey },
+        select: { products: true },
+      });
       return row ? (row.products as unknown as ShopProduct[]) : null;
     } catch (error) {
       this.logger.warn(`product cache read: ${String(error)}`);
@@ -323,12 +422,24 @@ export class ShopsService {
     }
   }
 
-  private async writeCache(cacheKey: string, keyword: string, products: ShopProduct[]): Promise<void> {
+  private async writeCache(
+    cacheKey: string,
+    keyword: string,
+    products: ShopProduct[],
+  ): Promise<void> {
     try {
       await this.prisma.productCache.upsert({
         where: { cacheKey },
-        create: { cacheKey, keyword, products: products as unknown as object },
-        update: { keyword, products: products as unknown as object },
+        // Cast sang kiểu Json của Prisma — mảng object thuần không tự khớp InputJsonValue
+        create: {
+          cacheKey,
+          keyword,
+          products: products as unknown as Prisma.InputJsonValue,
+        },
+        update: {
+          keyword,
+          products: products as unknown as Prisma.InputJsonValue,
+        },
       });
     } catch (error) {
       this.logger.warn(`product cache write: ${String(error)}`);

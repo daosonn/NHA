@@ -1,6 +1,14 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma/prisma.service';
-import type { AiEvidenceItem, AiMemberContext, AiProfileJson } from './ai-client.service';
+import type {
+  AiEvidenceItem,
+  AiMemberContext,
+  AiProfileJson,
+} from './ai-client.service';
 
 /**
  * Gom EVIDENCE thật từ DB cho một thành viên — đây là "grounding" của mọi gợi ý AI.
@@ -31,6 +39,24 @@ export interface MemberEvidenceBundle {
   profileVersion: number;
 }
 
+/**
+ * Một ghi chú thành một dòng bằng chứng.
+ *
+ * Memo có `title` (dòng đậm trên card), `content` (thân, có thể trống kể từ khi
+ * title xuất hiện) và `category` do client gán (hobbies/health/gift/…). Cả ba đều
+ * đi vào prompt: category `health` là tín hiệu cảnh báo mạnh nhất mà app có về một
+ * người, bỏ nó đi thì gợi ý quà mất đúng thứ quan trọng nhất.
+ */
+function memoText(memo: {
+  title: string;
+  content: string | null;
+  category: string | null;
+}): string {
+  const head = memo.category ? `[${memo.category}] ${memo.title}` : memo.title;
+  const body = memo.content?.trim();
+  return (body ? `${head} — ${body}` : head).slice(0, 300);
+}
+
 /** Nhãn quan hệ theo hướng from→to; dùng cho giọng văn, không phải để phân quyền. */
 const RELATION_LABEL: Record<string, { forward: string; backward: string }> = {
   PARENT: { forward: 'parent', backward: 'child' },
@@ -45,26 +71,41 @@ export class AiContextService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Membership check dùng chung cho mọi endpoint AI */
-  async assertMembership(userId: string, familyId: string): Promise<{ memberId: string; displayName: string }> {
+  async assertMembership(
+    userId: string,
+    familyId: string,
+  ): Promise<{ memberId: string; displayName: string }> {
     const me = await this.prisma.familyMember.findFirst({
       where: { familyId, userId },
       select: { id: true, displayName: true },
     });
-    if (!me) throw new ForbiddenException('You are not a member of this family');
+    if (!me)
+      throw new ForbiddenException('You are not a member of this family');
     return { memberId: me.id, displayName: me.displayName };
   }
 
   /** Hồ sơ đã chưng cất mới nhất; null khi người này chưa từng được rollup. */
-  async latestProfile(memberId: string): Promise<{ version: number; profile: AiProfileJson } | null> {
+  async latestProfile(
+    memberId: string,
+  ): Promise<{ version: number; profile: AiProfileJson } | null> {
     const row = await this.prisma.memberProfile.findFirst({
       where: { memberId },
       orderBy: { version: 'desc' },
       select: { version: true, profile: true },
     });
-    return row ? { version: row.version, profile: row.profile as unknown as AiProfileJson } : null;
+    return row
+      ? {
+          version: row.version,
+          profile: row.profile as unknown as AiProfileJson,
+        }
+      : null;
   }
 
-  async buildFor(userId: string, familyId: string, memberId: string): Promise<MemberEvidenceBundle> {
+  async buildFor(
+    userId: string,
+    familyId: string,
+    memberId: string,
+  ): Promise<MemberEvidenceBundle> {
     const me = await this.assertMembership(userId, familyId);
 
     const member = await this.prisma.familyMember.findFirst({
@@ -75,7 +116,9 @@ export class AiContextService {
 
     // Life profile (interests + birth date): linked member → profile theo userId, placeholder → theo memberId
     const lifeProfile = await this.prisma.lifeProfile.findFirst({
-      where: member.userId ? { userId: member.userId } : { memberId: member.id },
+      where: member.userId
+        ? { userId: member.userId }
+        : { memberId: member.id },
       select: { interests: true, birthDate: true },
     });
 
@@ -110,7 +153,7 @@ export class AiContextService {
     const evidence: AiEvidenceItem[] = memos.map((m) => ({
       id: `memo_${m.id}`,
       kind: 'memo' as const,
-      text: m.content.slice(0, 300),
+      text: memoText(m),
       author_name: m.owner.name,
       created_at: m.createdAt.toISOString(),
     }));
@@ -119,13 +162,17 @@ export class AiContextService {
       ? (lifeProfile?.interests as string[]).map(String)
       : [];
     // Quy ước cũ vẫn được tôn trọng: interest bắt đầu bằng "avoid:" là kiêng kỵ cứng
-    const legacyAvoid = rawInterests.filter((i) => i.toLowerCase().startsWith('avoid:')).map((i) => i.slice(6).trim());
+    const legacyAvoid = rawInterests
+      .filter((i) => i.toLowerCase().startsWith('avoid:'))
+      .map((i) => i.slice(6).trim());
 
     // Hồ sơ đã chưng cất — nguồn "hiểu người này" thật sự (interests có confidence/trend,
     // avoid có hard, wishes, ý tưởng đang chờ, lịch sử quà)
     const distilled = await this.latestProfile(memberId);
     const profileAvoid = (distilled?.profile.avoid ?? []).map((a) => a.item);
-    const profileInterests = (distilled?.profile.interests ?? []).map((i) => i.topic);
+    const profileInterests = (distilled?.profile.interests ?? []).map(
+      (i) => i.topic,
+    );
 
     // Đếm trên TOÀN BỘ dữ liệu, không phải trên danh sách đã cắt ở trên:
     // "12 photos and 4 notes about her" là lời hứa về những gì app đang có,
@@ -150,7 +197,9 @@ export class AiContextService {
     // lại ở danh sách phẳng chỉ làm prompt dài ra (đo được: input 2651 → chờ lâu hơn)
     // và tạo nguy cơ hai bản mâu thuẫn. Chỉ `avoid` được nhắc lại có chủ đích: nó là
     // ràng buộc tuyệt đối, prompt trỏ thẳng vào "HARD AVOID LIST".
-    const manualInterests = rawInterests.filter((i) => !i.toLowerCase().startsWith('avoid:'));
+    const manualInterests = rawInterests.filter(
+      (i) => !i.toLowerCase().startsWith('avoid:'),
+    );
     const hasProfile = distilled !== null;
 
     return {
@@ -158,9 +207,16 @@ export class AiContextService {
         member_id: member.id,
         display_name: member.displayName,
         role_label: null,
-        birth_date: lifeProfile?.birthDate ? lifeProfile.birthDate.toISOString().slice(0, 10) : null,
+        birth_date: lifeProfile?.birthDate
+          ? lifeProfile.birthDate.toISOString().slice(0, 10)
+          : null,
         interests: hasProfile
-          ? manualInterests.filter((i) => !profileInterests.some((t) => t.toLowerCase() === i.toLowerCase()))
+          ? manualInterests.filter(
+              (i) =>
+                !profileInterests.some(
+                  (t) => t.toLowerCase() === i.toLowerCase(),
+                ),
+            )
           : manualInterests,
         avoid: [...new Set([...profileAvoid, ...legacyAvoid])],
         evidence,
@@ -168,7 +224,11 @@ export class AiContextService {
         profile: distilled?.profile ?? null,
         profile_version: distilled?.version ?? 0,
       },
-      counts: { notes: notesTotal, photos: photoCount, pastGifts: pastGifts.length },
+      counts: {
+        notes: notesTotal,
+        photos: photoCount,
+        pastGifts: pastGifts.length,
+      },
       giverRelation: await this.relationLabel(familyId, me.memberId, member.id),
       profileVersion: distilled?.version ?? 0,
     };
@@ -179,7 +239,11 @@ export class AiContextService {
    * Chỉ dùng cạnh trực tiếp: đoán quan hệ bắc cầu (ông/cháu qua 2 cạnh) dễ sai
    * hơn là không nói gì, mà nói sai xưng hô trong một lá thiệp thì rất khó tha.
    */
-  private async relationLabel(familyId: string, fromMemberId: string, toMemberId: string): Promise<string | null> {
+  private async relationLabel(
+    familyId: string,
+    fromMemberId: string,
+    toMemberId: string,
+  ): Promise<string | null> {
     if (fromMemberId === toMemberId) return null;
     const edge = await this.prisma.relationship.findFirst({
       where: {

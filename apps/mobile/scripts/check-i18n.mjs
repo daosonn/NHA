@@ -43,6 +43,8 @@ const DYNAMIC = [
   'moment.errors.',
   // src/components/feed/reaction-bar.tsx picks one per reaction type.
   'post.reactions.',
+  // app/profile/edit.tsx picks one per failed field, and one per API status.
+  'profileEdit.errors.',
   // app/ai/card.tsx picks one per template id.
   'ai.card.template.',
   // app/video/setup.tsx picks one per video kind.

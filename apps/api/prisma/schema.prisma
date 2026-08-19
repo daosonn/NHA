@@ -89,6 +89,12 @@ enum OAuthProvider {
   FACEBOOK
 }
 
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  CANCELLED
+}
+
 // ─── Accounts & auth ────────────────────────────────────────────────────────
 
 model User {
@@ -122,6 +128,7 @@ model User {
   createdSpecialDates SpecialDate[]
   notifications       Notification[]
   videoJobs           VideoJob[]
+  sentInvitations     Invitation[]         @relation("InvitationInviter")
   plans               Plan[]
   planShares          PlanShare[]
 }
@@ -181,6 +188,7 @@ model Family {
   relationships Relationship[]
   postShares    PostFamily[]
   specialDates  SpecialDate[]
+  invitations   Invitation[]
 }
 
 model FamilyMember {
@@ -202,6 +210,7 @@ model FamilyMember {
   specialDateTags    SpecialDateMember[]
   memosAbout         Memo[]
   plansFor           Plan[]
+  invitations        Invitation[]
   interestSignals    InterestSignal[]
   profiles           MemberProfile[]
   counter            MemberCounter?
@@ -241,6 +250,31 @@ model Relationship {
   toMember   FamilyMember @relation("RelationTo", fields: [toMemberId], references: [id], onDelete: Cascade)
 
   @@unique([familyId, fromMemberId, toMemberId, type])
+}
+
+// Per-spot invite (Important Decisions 2026-08-18): a specific person is
+// invited to a specific reserved tree node. `code` is what the link
+// carries — Family.inviteCode stays as the open "anyone with the link"
+// path and cannot mark a spot Pending.
+model Invitation {
+  id               String            @id @default(uuid())
+  familyId         String
+  memberId         String // the reserved spot — a placeholder FamilyMember
+  inviterId        String
+  code             String            @unique
+  name             String // what the inviter calls the invitee
+  relationshipType RelationshipType
+  kinshipKey       String? // picker word ("sister") — display-only, client translates
+  status           InvitationStatus  @default(PENDING)
+  expiresAt        DateTime
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  family  Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  member  FamilyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  inviter User         @relation("InvitationInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([familyId, status])
 }
 
 // ─── Content ────────────────────────────────────────────────────────────────
@@ -300,10 +334,34 @@ model Media {
   memo      Memo?      @relation(fields: [memoId], references: [id], onDelete: Cascade)
   lifeEvent LifeEvent? @relation(fields: [lifeEventId], references: [id], onDelete: Cascade)
 
+  @@index([memoId])
+  @@index([lifeEventId])
+
   albumItems AlbumItem[]
-  coverOf    Album[]     @relation("AlbumCover")
+  coverOf    Album[]       @relation("AlbumCover")
+  insight    MediaInsight?
+  resultOf   VideoJob?     @relation("VideoJobResult")
 
   @@index([postId])
+}
+
+// The hidden store (decided 2026-08-19, docs/03-ai/architecture.md):
+// vision-extracted facts about a photo, written only through the internal
+// AI ingest endpoint and never exposed by any user-facing API. It exists
+// solely to be folded back into suggestion context — filtered at use time
+// by the requester's own visibility of the source media, so an insight can
+// never leak content its photo would not have.
+model MediaInsight {
+  id        String   @id @default(uuid())
+  mediaId   String   @unique // one insight per photo; re-analysis overwrites
+  insight   Json // labels/scene/activities — shape owned by the AI team
+  model     String // which model produced it, so a model change can re-run
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Cascade: deleting a photo withdraws its traces — the hidden store must
+  // not remember what the user removed.
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
 }
 
 model Comment {
@@ -338,13 +396,18 @@ model Reaction {
 model Memo {
   id            String   @id @default(uuid())
   ownerUserId   String // author — only they view/edit
-  aboutMemberId String // who the note is about
-  content       String
+  aboutMemberId String? // who the note is about; null = that member left/was removed
+  aboutName     String // name snapshot at write time — the note stays readable after the member is gone (decided 2026-08-19)
+  title         String // the bold card line (UI-led, 2026-08-19)
+  content       String? // the longer body under it — optional since title arrived
+  category      String? // client taxonomy (hobbies/health/gift/memories/todo) — free text like LifeEvent.type
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  owner       User         @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
-  aboutMember FamilyMember @relation(fields: [aboutMemberId], references: [id], onDelete: Cascade)
+  owner       User          @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  // SetNull, not Cascade: a memo is the author's private notebook — another
+  // person deleting a member (or leaving) must not burn it.
+  aboutMember FamilyMember? @relation(fields: [aboutMemberId], references: [id], onDelete: SetNull)
   media       Media[]
 
   @@index([ownerUserId, aboutMemberId])
@@ -480,14 +543,23 @@ model VideoJob {
   progress         Int            @default(0) // 0-100 — màn 32 "Almost there · 80%"
   stage            String? // "opening" | "scene:5" | "closing" | "music" — checklist màn 32
   inputMediaIds    Json
-  resultStorageKey String? // set when DONE
+  resultStorageKey String? // set when DONE — raw path of the rendered file (audit trail)
   durationS        Float? // thời lượng file kết quả
+  // The registered result row — written in the same transaction that
+  // creates it (review 2026-08-19: deriving it back from storageKey was
+  // an unindexed, non-unique lookup that could resolve to someone
+  // else's row). SetNull: deleting the media flips a DONE job's result
+  // to null rather than failing loudly — acceptable, it was the
+  // requester's own delete.
+  resultMediaId    String?        @unique
   error            String? // set when FAILED
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
-  requester User @relation(fields: [requesterUserId], references: [id])
+  requester   User   @relation(fields: [requesterUserId], references: [id])
+  resultMedia Media? @relation("VideoJobResult", fields: [resultMediaId], references: [id], onDelete: SetNull)
 
+  // Cả hai chiều đọc đều cần: "Your videos" lấy theo người + mới nhất trước.
   @@index([requesterUserId, createdAt])
 }
 

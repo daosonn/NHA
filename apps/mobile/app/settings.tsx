@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Mail, UserRound } from 'lucide-react-native';
+import { Mail } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
@@ -80,19 +80,6 @@ export default function SettingsScreen() {
             options={LANGUAGE_OPTIONS}
             onChange={(next) => void setLocale(next)}
           />
-        </Card>
-
-        <Card padding={16} style={{ flexDirection: 'row', alignItems: 'center', gap: 11 }}>
-          <IconBadge
-            size={26}
-            background={colors.background.subtle}
-            foreground={colors.text.muted}
-            renderIcon={(props) => <UserRound {...props} strokeWidth={2.2} />}
-          />
-
-          <Text variant="caption" color={colors.text.body} style={{ flex: 1 }}>
-            {t('settings.mockNotice')}
-          </Text>
         </Card>
 
         <Button

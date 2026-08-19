@@ -1,15 +1,17 @@
 import {
   BadRequestException,
-  ConflictException,
   ForbiddenException,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ProfileService } from '../ai/profile.service';
+import { normalizeText, parseIsoDate } from '../common/input';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { FamilyService } from '../family/family.service';
+import { assertTaggedMembers, ownFamilyIds } from '../family/member-tags';
+import type { Prisma } from '../generated/prisma/client';
 import { PostType, ReactionType } from '../generated/prisma/enums';
+import { assertAttachableMedia, attachMediaInTx } from '../media/attach-media';
 import { StorageService } from '../storage/storage.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -36,6 +38,10 @@ export interface PostDetail {
   reactionCount: number;
   /** The viewer's own reaction, null when they have not reacted. */
   myReaction: ReactionType | null;
+  /** Whether the requesting user may edit/delete — the client renders
+   *  these instead of re-deriving the permission rule from authorUserId. */
+  canEdit: boolean;
+  canDelete: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -69,8 +75,6 @@ const FEED_DEFAULT_LIMIT = 20;
 
 @Injectable()
 export class PostService {
-  private readonly logger = new Logger(PostService.name);
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
@@ -95,9 +99,11 @@ export class PostService {
   }
 
   async create(userId: string, dto: CreatePostDto): Promise<PostDetail> {
-    const content = this.normalizeText(dto.content);
-    const eventTitle = this.normalizeText(dto.eventTitle);
-    const eventDate = dto.eventDate ? this.parseDate(dto.eventDate) : null;
+    const content = normalizeText(dto.content);
+    const eventTitle = normalizeText(dto.eventTitle);
+    const eventDate = dto.eventDate
+      ? parseIsoDate(dto.eventDate, 'eventDate')
+      : null;
     this.validateEventFields(dto.type, eventTitle, eventDate);
 
     const mediaIds = dto.mediaIds ?? [];
@@ -115,9 +121,7 @@ export class PostService {
     const taggedMemberIds = dto.taggedMemberIds ?? [];
     await this.validateTags(userId, taggedMemberIds, familyIds);
 
-    if (mediaIds.length > 0) {
-      await this.validateAttachableMedia(userId, mediaIds);
-    }
+    await assertAttachableMedia(this.prisma, userId, mediaIds);
 
     const postId = await this.prisma.$transaction(async (tx) => {
       const post = await tx.post.create({
@@ -127,7 +131,7 @@ export class PostService {
           content,
           eventDate,
           eventTitle,
-          place: this.normalizeText(dto.place),
+          place: normalizeText(dto.place),
           families: { create: familyIds.map((familyId) => ({ familyId })) },
           memberTags: {
             create: taggedMemberIds.map((memberId) => ({ memberId })),
@@ -135,23 +139,7 @@ export class PostService {
         },
         select: { id: true },
       });
-      if (mediaIds.length > 0) {
-        const attached = await tx.media.updateMany({
-          where: {
-            id: { in: mediaIds },
-            uploaderUserId: userId,
-            postId: null,
-            memoId: null,
-            lifeEventId: null,
-          },
-          data: { postId: post.id },
-        });
-        if (attached.count !== mediaIds.length) {
-          // A concurrent request attached one of these media first;
-          // throwing rolls the whole transaction back.
-          throw new ConflictException('Some media are no longer attachable');
-        }
-      }
+      await attachMediaInTx(tx, userId, mediaIds, { postId: post.id });
       return post.id;
     });
 
@@ -166,16 +154,68 @@ export class PostService {
    * Recent posts shared to one family, newest first (WBS 1.2.3). Within a
    * family all shared content is visible to every member (domain-model.md),
    * so membership is the only check — no per-post filtering needed.
+   *
+   * The optional filters are the Memories page (WBS 2.1.2) — same posts,
+   * narrowed by member, calendar day and type. Memories reuse Post
+   * (decided sprint 0); this filter extension is the whole "Memory API".
    */
   async listFamilyFeed(
     userId: string,
     familyId: string,
-    query: { limit?: number; cursor?: string },
+    query: {
+      limit?: number;
+      cursor?: string;
+      memberId?: string;
+      from?: string;
+      to?: string;
+      type?: PostType;
+    },
   ): Promise<FamilyFeed> {
     await this.familyService.requireMembership(familyId, userId);
     const limit = query.limit ?? FEED_DEFAULT_LIMIT;
+
+    const filters: Prisma.PostWhereInput[] = [];
+    if (query.memberId) {
+      const member = await this.familyService.findMemberInFamily(
+        familyId,
+        query.memberId,
+      );
+      // "This member's memories": posts they are tagged in — under ANY of
+      // their member rows when account-linked, the same identity rule the
+      // gallery uses — plus posts they authored.
+      filters.push({
+        OR: member.userId
+          ? [
+              { memberTags: { some: { member: { userId: member.userId } } } },
+              { authorUserId: member.userId },
+            ]
+          : [{ memberTags: { some: { memberId: member.id } } }],
+      });
+    }
+    // Calendar-day bounds on the posted date, in UTC (Omoide groups by
+    // the same UTC posted-day; capture metadata does not exist).
+    const from = query.from ? parseIsoDate(query.from, 'from') : undefined;
+    // Inclusive end day: anything before the following midnight.
+    const toExclusive = query.to
+      ? new Date(parseIsoDate(query.to, 'to').getTime() + 24 * 60 * 60 * 1000)
+      : undefined;
+    if (from && toExclusive && from >= toExclusive) {
+      throw new BadRequestException('from must not be after to');
+    }
+    if (from || toExclusive) {
+      filters.push({
+        createdAt: {
+          ...(from && { gte: from }),
+          ...(toExclusive && { lt: toExclusive }),
+        },
+      });
+    }
+    if (query.type) {
+      filters.push({ type: query.type });
+    }
+
     const posts = await this.prisma.post.findMany({
-      where: { families: { some: { familyId } } },
+      where: { families: { some: { familyId } }, AND: filters },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       // One extra row tells us whether another page exists.
       take: limit + 1,
@@ -184,7 +224,7 @@ export class PostService {
     });
     const page = posts.slice(0, limit);
     return {
-      items: page.map((post) => this.toDetail(post)),
+      items: page.map((post) => this.toDetail(userId, post)),
       nextCursor: posts.length > limit ? page[page.length - 1].id : null,
     };
   }
@@ -199,7 +239,7 @@ export class PostService {
     if (!post || !(await this.canViewPost(userId, post))) {
       throw new NotFoundException('Post not found');
     }
-    return this.toDetail(post);
+    return this.toDetail(userId, post);
   }
 
   /**
@@ -252,7 +292,7 @@ export class PostService {
 
     const nextTitle =
       dto.eventTitle !== undefined
-        ? this.normalizeText(dto.eventTitle)
+        ? normalizeText(dto.eventTitle)
         : post.eventTitle;
     // `undefined` = unchanged; null/'' = clear (rejected below for EVENT).
     // Without the explicit null branch, new Date(null) would silently
@@ -261,14 +301,12 @@ export class PostService {
       dto.eventDate === undefined
         ? post.eventDate
         : dto.eventDate
-          ? this.parseDate(dto.eventDate)
+          ? parseIsoDate(dto.eventDate, 'eventDate')
           : null;
     this.validateEventFields(post.type, nextTitle, nextDate);
 
     const nextContent =
-      dto.content !== undefined
-        ? this.normalizeText(dto.content)
-        : post.content;
+      dto.content !== undefined ? normalizeText(dto.content) : post.content;
     if (
       !nextContent &&
       post._count.media === 0 &&
@@ -296,7 +334,7 @@ export class PostService {
         data: {
           ...(dto.content !== undefined && { content: nextContent }),
           ...(dto.place !== undefined && {
-            place: this.normalizeText(dto.place),
+            place: normalizeText(dto.place),
           }),
           ...(dto.eventTitle !== undefined && { eventTitle: nextTitle }),
           ...(dto.eventDate !== undefined && { eventDate: nextDate }),
@@ -337,21 +375,10 @@ export class PostService {
     if (post.authorUserId !== userId) {
       throw new ForbiddenException('Only the author can delete a post');
     }
-    // Cascades remove the media/family/tag/comment/reaction rows.
+    // Cascades remove the media/family/tag/comment/reaction rows; files
+    // go best-effort after the DB commit.
     await this.prisma.post.delete({ where: { id: postId } });
-    // Files go best-effort after the DB commit — an orphan file is
-    // recoverable noise, a dangling DB row is not.
-    await Promise.all(
-      post.media.map(async ({ storageKey }) => {
-        try {
-          await this.storage.remove(storageKey);
-        } catch (error) {
-          this.logger.warn(
-            `Could not delete stored file ${storageKey}: ${String(error)}`,
-          );
-        }
-      }),
-    );
+    await this.storage.removeAllBestEffort(post.media.map((m) => m.storageKey));
     return { success: true };
   }
 
@@ -414,61 +441,30 @@ export class PostService {
     taggedMemberIds: string[],
     familyIds: string[],
   ): Promise<void> {
-    if (taggedMemberIds.length === 0) {
-      return;
-    }
-    const members = await this.prisma.familyMember.findMany({
-      where: { id: { in: taggedMemberIds } },
-      select: { id: true, familyId: true },
-    });
-    if (members.length !== taggedMemberIds.length) {
-      throw new NotFoundException('Some tagged members were not found');
-    }
     if (familyIds.length > 0) {
       // Everyone who can see the post must be able to see who is tagged.
-      const allowed = new Set(familyIds);
-      if (members.some((member) => !allowed.has(member.familyId))) {
-        throw new BadRequestException(
-          'Tagged members must belong to the families the post is shared to',
-        );
-      }
+      await assertTaggedMembers(
+        this.prisma,
+        taggedMemberIds,
+        familyIds,
+        'Tagged members must belong to the families the post is shared to',
+      );
       return;
     }
     // Private post: tags must still stay within the author's own families.
-    const memberFamilyIds = [
-      ...new Set(members.map((member) => member.familyId)),
-    ];
-    const myMemberships = await this.prisma.familyMember.count({
-      where: { userId, familyId: { in: memberFamilyIds } },
-    });
-    if (myMemberships !== memberFamilyIds.length) {
-      throw new BadRequestException(
-        'You can only tag members of your own families',
-      );
-    }
+    await assertTaggedMembers(
+      this.prisma,
+      taggedMemberIds,
+      await ownFamilyIds(this.prisma, userId),
+      'You can only tag members of your own families',
+    );
   }
 
-  private async validateAttachableMedia(
-    userId: string,
-    mediaIds: string[],
-  ): Promise<void> {
-    const attachable = await this.prisma.media.count({
-      where: {
-        id: { in: mediaIds },
-        uploaderUserId: userId,
-        postId: null,
-        memoId: null,
-        lifeEventId: null,
-      },
-    });
-    if (attachable !== mediaIds.length) {
-      throw new BadRequestException(
-        'Media must be your own uploads and not attached elsewhere',
-      );
-    }
-  }
-
-  private toDetail(post: PostRecord): PostDetail {
+  private toDetail(userId: string, post: PostRecord): PostDetail {
+    // Author-only (see update()/remove()); the fine print — an ex-member
+    // author can still un-share but not keep sharing — stays enforced by
+    // the write paths themselves.
+    const isAuthor = post.authorUserId === userId;
     return {
       id: post.id,
       authorUserId: post.authorUserId,
@@ -484,24 +480,10 @@ export class PostService {
       commentCount: post._count.comments,
       reactionCount: post._count.reactions,
       myReaction: post.reactions[0]?.type ?? null,
+      canEdit: isAuthor,
+      canDelete: isAuthor,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
     };
-  }
-
-  private normalizeText(value: string | undefined): string | null {
-    const trimmed = value?.trim();
-    return trimmed ? trimmed : null;
-  }
-
-  /** @IsISO8601({ strict: true }) guards the format; this guards forms
-   *  JS Date cannot parse (week dates, ordinal dates) from becoming an
-   *  Invalid Date that Prisma turns into a 500. */
-  private parseDate(value: string): Date {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      throw new BadRequestException('eventDate is not a parsable date');
-    }
-    return date;
   }
 }

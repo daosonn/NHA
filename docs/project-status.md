@@ -4,15 +4,51 @@
 
 **Sprint 1 — Core Features** (in progress — PRs #1–#9 merged; the
 "pending team review before start" note was stale and is removed
-2026-08-18)
+2026-08-18). **Backend has moved on to Sprint 2 (2026-08-19)**: sprint 1's
+backend side is finished, so `apps/api` work now follows
+`docs/sprints/sprint-02.md` while frontend wires the remaining sprint-1
+screens.
 
-- Active sprint doc: `docs/sprints/sprint-01.md`
-- Later sprints: `docs/sprints/sprint-02.md` (Memories & AI),
-  `docs/sprints/sprint-03.md` (Notification / Settings / Release)
+- Active sprint docs: `docs/sprints/sprint-01.md` (frontend wiring),
+  `docs/sprints/sprint-02.md` (backend + AI team)
+- Later: `docs/sprints/sprint-03.md` (Notification / Settings / Release)
 - Setup record (completed): `docs/sprints/00-setup.md`
 
 ## Current Focus
 
+- **Frontend state re-verified against the code (2026-08-19).** Wired to the
+  API: sign in / sign up, Home (families + family feed), create-or-join
+  family, the family tree (read plus adding a member), New moment, post
+  detail with comments and reactions, and **Omoide** — the shared photo
+  shelf, wired 2026-08-18 but described as a placeholder in the docs until
+  today. Still reading `src/fixtures/`: **Life Profile** (both routes), the
+  AI tab and Gift ideas, the Invitation page, and Home's special-date widget
+  and recommendation grid. Per-screen detail:
+  `docs/01-frontend/architecture.md` § Wiring status.
+- **Two server routes the app's client mirror does not have (2026-08-19)**:
+  `POST /auth/password-reset/{request,verify,confirm}` (PR #12) and
+  `GET /families/:familyId/special-dates`. Neither is in
+  `apps/mobile/src/lib/api/endpoints.ts`, so Forgot / Verify / Reset still
+  only navigate between themselves and the Home widget still reads a
+  fixture. Nothing blocks either — this is the cheapest frontend work
+  available right now.
+- **Three dead ends found while re-verifying (2026-08-19)**, two of them in
+  the invite flow:
+  `components/family/pending-banner.tsx` is rendered nowhere, because
+  `tree-from-graph.ts` emits `state: 'active'` for every node and no pending
+  spot can exist; and the Join button on `app/invite/[code].tsx` has no
+  handler, which is the one place the app breaks its own "a button that
+  leads nowhere is not rendered" rule. Both trace back to the missing
+  per-spot invitation record, not to anything the frontend can fix alone.
+  A third sits on the Life Profile: `MemoList` accepts an `onAddMemo`
+  handler and `ProfileBody` never passes one, so the memo empty state draws
+  an "Add memo" button that does nothing. That one is ours to fix.
+- **The stack table listed three libraries that are not installed
+  (2026-08-19)** — `@gorhom/bottom-sheet`, `d3-hierarchy`, and
+  `react-hook-form`+`zod`. Sheets are a plain `Modal`, the tree layout is
+  authored by hand in `tree-layout.ts`, and the forms use `useState`; the
+  last one was a deliberate decision recorded below. `architecture.md` now
+  says so rather than reading as a list of things already present.
 - **Frontend platform switched to Expo (2026-08-17)** — see Important
   Decisions. Done: docs realigned, `packages/tokens` rebuilt,
   `apps/mobile` on Expo SDK 57, Inter/Lora, design-system primitives, app
@@ -33,8 +69,9 @@
   (`app/ai/gifts.tsx`). Profile hero reworked: "Add memory" removed and
   Edit moved to a badge on the avatar. Verified the same way — typecheck,
   prettier, 27-route static export grepped for content, and no nested or
-  interactive-in-`<button>` markup. Next: wire screens to the API —
-  nothing talks to the backend yet, everything reads `src/fixtures/`.
+  interactive-in-`<button>` markup. Those screens have since been wired one
+  at a time — see `docs/01-frontend/architecture.md` § Wiring status for
+  where that stands.
 - **Deferred on the mobile app**: pinch-to-zoom / drag-to-pan on the family
   tree (the zoom buttons cover the same ground for now; needs
   `react-native-gesture-handler`), the web invite-acceptance page for
@@ -62,11 +99,14 @@
   than adding one.
 - **`expo-image-picker` added (2026-08-18)** — the last thing standing
   between New moment and a working end-to-end post.
-- **Sprint 1 stands at 24 of 38 tasks (2026-08-18).** Groups 1.1, 1.3, 1.4
-  and 1.5 are essentially closed. Group 1.2 waits on one endpoint
-  (`SpecialDate`, task 1.2.5). **Group 1.6 — the one containing "the
-  central screen of the product" — has one of seven done**, and it is the
-  API half; no Life Profile UI is wired.
+- **Sprint 1 stands at 30 of 39 tasks (2026-08-19; was 24/38 on
+  2026-08-18 — 1.4.4 was added since).** One more (1.6.7, personal
+  albums) lands with the open `feature/album` PR. **The backend side of
+  the sprint is finished**: every remaining unticked item is UI wiring
+  (1.1.7 reset screens, 1.2.5 widget, 1.6.1–1.6.3 Life Profile — all
+  their endpoints exist), finishing 1.2.4's empty states, verifying
+  Facebook E2E (1.1.9, needs the Meta tester-role invite accepted), and
+  the 1.7 stabilization pass.
 - **Two gaps in the sprint plan itself**, both worth a team decision rather
   than a silent fix:
   1. **Apple Sign In has no task.** It was decided on 2026-08-18 and is
@@ -106,12 +146,42 @@
   node state therefore cannot be told apart from an ordinary placeholder.
   Decided 2026-08-17 that the UI leads and the backend follows.
   **Resolved on the UI side 2026-08-18** — the invite sheet now defines the
-  shape the backend has to grow into; see Important Decisions. The backend
-  change itself is still to schedule.
+  shape the backend has to grow into; see Important Decisions.
+  **Backend done 2026-08-19** as task 1.4.4 (branch
+  `feature/per-spot-invitations`) — `Invitation` model + endpoints, tree
+  nodes carry `pending`; see `api-contract.md` → Invitations. Wiring the
+  invite UI to it is the remaining half.
 
 ## For the backend owner
 
 Raised by the frontend, neither actionable from `apps/mobile`.
+
+- **Three gaps found building the Life Profile against mockup 7
+  (2026-08-19).** Written up in full in `docs/00-shared/api-contract.md`
+  § Requests from the app; in short: (1) a member's media can only be found
+  by paging the whole family feed and filtering on `taggedMemberIds`, so the
+  Album tab scans a bounded 200 moments and tells the reader when it stopped
+  short — a `memberId` filter on the feed, or WBS 1.6.4's own route, fixes
+  it; (2) `LifeProfile` has no `occupation` and no `birthPlace`, so one of
+  the mockup's three fact rows is not drawn and the first is missing its
+  place; (3) `PostMediaSummary` has no duration, so a video tile says
+  "Video" where the mockup shows a running time. None block a screen — the
+  app ships without them and says on screen what it does not know.
+
+- **Profile editing narrowed to self, and the server still disagrees
+  (2026-08-19).** The app now draws the Edit affordance only on your own
+  profile: a life story written about someone by someone else is a different
+  object from one they wrote themselves, and the screen could not tell the
+  reader which they were reading. What the family edits about another person
+  is their place in the tree, not their biography. **The server has not
+  changed** — `PATCH /families/:familyId/members/:memberId/profile` still
+  accepts an edit from any member of the family, so the rule is currently
+  enforced only by the UI not offering it. **Asked for**: narrow that route to
+  the profile's owner, or say the wiki rule stands and the app should put the
+  affordance back. Decision recorded in
+  `docs/01-frontend/architecture.md` § Life Profile; reversing it on the
+  client is one function (`features/member/member-profile.ts` →
+  `editability`).
 
 - **Comment moderation is decided for now, but the permission is in the
   wrong place (2026-08-18).** Only a comment's author may edit or delete it;
@@ -124,6 +194,9 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   **Asked for**: `canEdit` / `canDelete` on `CommentSummary` (and the same
   on `PostDetail` while the shape is being touched). The app then draws
   what it is told and never has to change when the rule does.
+  — done 2026-08-19 (branch `fix/backend-owner-requests`): both shapes
+  carry `canEdit`/`canDelete` (author-only today), see `api-contract.md`;
+  verified by live smoke test with two users.
 - **CORS is pinned to fixed ports and will break again (2026-08-18).** The
   allowlist in `apps/api/src/main.ts` names `http://localhost:8081` and
   `:19006`. Metro moves to the next free port whenever 8081 is taken, so a
@@ -135,6 +208,11 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   the CORS code itself was written by the frontend session and rode in on
   commit `e895259` on `ui-sprint2` — it has not been reviewed by whoever
   owns `apps/api`.
+  — done 2026-08-19 (branch `fix/backend-owner-requests`): dev now matches
+  any `http://localhost:<port>` / `127.0.0.1` origin (regex, equivalent to
+  the callback asked for); `CORS_ORIGINS` override and closed-by-default
+  production kept. Backend review of the frontend-written CORS code done in
+  the same pass — no other issues found. Verified by live preflight tests.
 
 ## Completed
 
@@ -162,8 +240,11 @@ Raised by the frontend, neither actionable from `apps/mobile`.
 - AuthModule: register / login / refresh (single-use rotation) / logout,
   global JWT guard + `@Public`, Swagger at `/api/docs` — merged to `main`
   in PR #2 (2026-08-17). Tasks 1.1.2 / 1.1.3 / 1.1.5 / 1.1.6 done.
-  Task 1.1.7 (password recovery) deferred: needs an email-infrastructure
-  decision.
+- Password reset API (2026-08-18): request/verify/confirm with an
+  emailed 6-digit code — 15-minute expiry, 5-guess cap (new `attempts`
+  column, migration `20260818073348`), single-use, revokes every
+  session on success. Task 1.1.7 done, merged to `main` in PR #12;
+  details in `api-contract.md`.
 - FamilyModule: create family + invite code, join via code (incl. linking
   an account to a placeholder member), placeholder member CRUD,
   relationships CRUD, membership-based authorization — merged to `main`
@@ -248,6 +329,161 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   API side done, UI not wired). Verified by lint/build + live smoke
   test (ordering, pagination, 403 non-member, 401, limit validation,
   new-member visibility). On branch `feature/post-feed`.
+- Per-spot invitation API (2026-08-19): `Invitation` model (migration
+  `20260819021946`) + `POST/GET /api/families/:familyId/invitations`,
+  resend, cancel, **public** `GET /api/invitations/:code` for the invite
+  page, and `POST /api/invitations/:code/accept` (joins on the reserved
+  spot via the same link operation as join-with-`linkMemberId`). Sending
+  reserves the spot in one transaction (placeholder + edge + invitation);
+  tree members now carry `pending`. 7-day expiry (derived `EXPIRED`, never
+  stored), one live invitation per spot, cancel deletes an untouched
+  placeholder so the node falls back to Empty. Task 1.4.4 done; verified
+  by lint/build/test + 28-case live smoke test. On branch
+  `feature/per-spot-invitations`. Details in `api-contract.md`.
+- Life Event API (2026-08-19): Timeline milestones for the Life Profile —
+  `GET/POST/PATCH/DELETE /api/me/life-events` +
+  `.../families/:familyId/members/:memberId/life-events` (no new tables:
+  `LifeEvent` shipped in the sprint-0 schema). Same rules as the profile
+  it hangs off: linked → global timeline, placeholder → family-local
+  wiki-editable, every PATCH logged to `EditHistory`. Media attach via
+  `mediaIds` at creation (fixed after, like posts) and **streaming now
+  follows profile visibility** — the MediaService "uploader-only until
+  1.6.8" gap is closed by delegating to LifeEventService. Lists oldest
+  first; tags replace on PATCH. Task 1.6.8 done — first of the three
+  Life Profile tab unlocks (next: Memo 1.6.5, then gallery 1.6.4).
+  Verified by lint/build/test + 29-case live smoke test incl. EditHistory
+  rows in the DB. On branch `feature/life-events`. Also rides along:
+  **main was broken** by a PR #15 conflict resolution leftover
+  (`origin: origins` in `main.ts`) — `nest build` failed on main from
+  merge `e33e8a8` until this branch's fix. Code-review round 2026-08-19
+  (8 review agents): fixes applied — PATCH `title`/`eventDate: null`
+  (were a 500 and a silent 1970-01-01), whitespace-only title, `eventDate`
+  restricted to date-only `YYYY-MM-DD` (a `+09:00` datetime shifted the
+  stored day), no-op PATCH no longer writes EditHistory. **Deferred to the
+  Memo branch (1.6.5), which would otherwise copy them a third time**:
+  extract shared media-attach + tag-validation + parseDate/normalizeText +
+  best-effort file cleanup + a `ProfileService.resolveForMember` for the
+  wiki rule; also known: a tag-write FK race returns 500 (same window
+  exists in PostService).
+- Memo API (2026-08-19): private notes about a member —
+  `GET/POST /api/families/:familyId/members/:memberId/memos` +
+  `GET/PATCH/DELETE /api/memos/:memoId`. Always author-only (decision
+  2026-08-14): everything not yours 404s, memo media streams to the owner
+  only. List is `updatedAt` desc (matching the memo UI), so a no-op PATCH
+  does not bump it. **Schema: Memo grew `title` + `category`, `content`
+  optional** (migration `20260819042417`, UI-led — see `database.md`
+  Decision Log). Ships with the deferred dedupe now that a third consumer
+  arrived: shared `attach-media` helpers (the one-parent rule's write
+  side), `common/input.ts` (`normalizeText`, `parseIsoDate`) and
+  `StorageService.removeAllBestEffort` — PostService, LifeEventService,
+  ProfileService and MemoService all delegate. Task 1.6.5 done; verified
+  by lint/build/test + 16-case memo smoke + 29-case life-event regression
+  smoke. On branch `feature/memo-api` (stacked on `feature/life-events`).
+  Code-review round 2026-08-19 (8 agents) — fixes applied: life-event
+  tags scoped to the family being edited (were leaking cross-family
+  member ids), `removeMember` now cleans up cascaded memo/life-event
+  media files (were orphaned on disk), no-op PATCHes value-checked
+  (retries no longer spam EditHistory / reorder memos), concurrent
+  delete races return 404 not 500, profile `birthDate`/`deathDate`
+  restricted to date-only (same +09:00 day-shift as eventDate), Media
+  gained `memoId`/`lifeEventId` indexes (migration `20260819045211`),
+  and the wiki rule + profile-content visibility moved to one home on
+  `ProfileService` (`resolveForMember`/`canViewProfileContent`), tag
+  boundary to `family/member-tags.ts`, media summary shape to
+  `attach-media.ts`. The memo-cascade question was then **decided
+  2026-08-19: memos survive member removal** — `aboutMemberId` SetNull +
+  `aboutName` snapshot (migration `20260819052340`, backfilled so it
+  deploys on non-empty tables), new `GET /me/memos` lists orphaned notes;
+  verified by 22-case memo smoke incl. the survival path. Remaining note
+  for the team: the earlier `title` migration (`20260819042417`) has no
+  backfill — fine while every Memo table predates the API.
+- Local DB backup/restore (2026-08-19): `pnpm db:backup` (pg_dump custom
+  format into gitignored `backups/`) and `pnpm db:restore <file> --force`
+  (mandatory flag — restore replaces the database). Deletes stay hard
+  deletes in the MVP; a dump before risky work is the way back. Verified
+  by a real backup→restore round-trip (row counts intact, API healthy
+  after). See `docs/04-devops/local-environment.md` § Backup & restore.
+- Video job API (2026-08-19, sprint 2, task 2.2.2): the backend half of
+  video generation — `POST/GET /api/video-jobs` (+ `GET /:id` to poll)
+  and the internal completion callback
+  `POST /api/internal/video-jobs/:jobId/complete` for the AI team.
+  Sources are any images the requester may view
+  (`MediaService.assertViewableBatch`, the same gate as streaming, now
+  exported and returning selection order — the frame order). A definite
+  dispatch refusal rolls the job back and answers 503 `AI_UNAVAILABLE`
+  (no orphan rows) while a **timeout leaves the job PENDING** — the AI
+  service may have accepted and its callback completes it late.
+  Code-review round 2026-08-19 (8 agents) — fixes applied same-day:
+  `resultMediaId` FK (unique, migration `20260819090000`) replaces the
+  unindexed non-unique storageKey lookup that was an N+1 and could
+  resolve to another user's row; every status transition is a
+  conditional `updateMany` so a fast callback can't be dragged back to
+  PROCESSING and concurrent callbacks settle exactly once; the callback
+  validates mimeType against the storage whitelist and **measures size
+  from disk** (path escapes and ghost files are 400s); `error` +
+  `resultPath` together is a 400; comments got their own
+  `PaginationQueryDto` (sharing FeedQueryDto had made Swagger advertise
+  Memories filters the comments route ignores); the Memories `?memberId`
+  filter now matches any of a linked member's rows (same identity rule
+  as the gallery) and reuses `findMemberInFamily` + `parseIsoDate`; and
+  the date-only guard became one `IsDateOnly()` decorator (was 4
+  copies). Known notes: `?from`/`?to` bucket by **UTC day**, consistent
+  with Omoide's grouping but off-by-one for JST evening posts — team
+  question; a feed `nextCursor` is filter-bound (reuse it only with the
+  same filters). The result is registered as the requester's own
+  standalone Media, so it streams privately with Range/206. Verified by
+  lint/build/test + 22-case live smoke against a **mock AI service**
+  (dispatch payload, failure
+  rollback, auth matrix, DONE/FAILED paths, result privacy). On branch
+  `feature/video-jobs` (stacked on `feature/memory-list`). Render itself
+  is the AI team's — seam in `docs/03-ai/architecture.md`.
+- Memory list API (2026-08-19, sprint 2, tasks 2.1.1–2.1.2): Memories
+  reuse `Post` as designed — no new model; `GET /families/:id/posts`
+  gained optional filters `?memberId` (tagged-in plus authored-by when
+  linked; 404 outside the family), `?from`/`?to` (calendar days on the
+  posted date, same grouping choice as Omoide) and `?type`. Filters
+  combine and pagination is unchanged, so the Home feed path is
+  untouched. Verified by lint/build/test + 13-case live smoke (filters,
+  combinations, cursor pagination under filter, 400/404 matrix). On
+  branch `feature/memory-list`. Details in `api-contract.md`.
+- AI insight pipe (2026-08-19, sprint 2): the backend half of the
+  two-phase photo pipeline — `MediaInsight` hidden store (migration
+  `20260819071710`, table 26) + internal routes
+  `GET /api/internal/ai/media/pending` and
+  `PUT /api/internal/ai/media/:mediaId/insight` behind
+  `X-AI-Service-Token` (timing-safe compare; user JWTs do not open them;
+  unset token = 503 `AI_UNAVAILABLE`, core unaffected). Env
+  `AI_SERVICE_TOKEN`/`AI_SERVICE_URL` added to `.env.example`. Verified
+  by lint/build/test + 13-case live smoke (503 unconfigured, 401 matrix,
+  pending→ingest→drop-out, upsert re-analysis, 404/400) + DB-level
+  cascade check (delete photo → insight gone). On branch
+  `feature/ai-insight-pipe`. Contract: `docs/03-ai/architecture.md`.
+- Gallery API (2026-08-19): the Album tab, derived — `GET /api/me/gallery` +
+  `GET /api/families/:familyId/members/:memberId/gallery`. No new
+  table: media from posts authored by or tagged with the member, plus
+  their life-event media, filtered to what the viewer may see (the same
+  author/private/shared-family rule `PostService.canViewPost` applies
+  elsewhere, batched into one membership query instead of one call per
+  post — a code-review finding, fixed same-day). Not paginated, same
+  choice as the life-event timeline. Task 1.6.4 done — **closes group
+  1.6's Life Profile blocker**: About + all three tabs now have an
+  endpoint; wiring is what remains. Verified by lint/build/test + 21-case
+  live smoke test (own/tagged/private/life-event sources, cross-family
+  isolation, placeholder scoping, stranger 403) + full life-event (29) and
+  memo (22) regression smoke. On branch `feature/gallery` (stacked on
+  `feature/memo-api`).
+- Personal Album API (2026-08-19): `GET/POST/PATCH/DELETE /api/me/albums`
+  - `POST .../items` / `DELETE .../items/:mediaId`. No migration — `Album`
+  - `AlbumItem` shipped in the sprint-0 schema. Always private (never on a
+    profile), items are the owner's own uploads only, an album is a second
+    index onto media (not an exclusive parent — already-attached media can
+    be added, one media can sit in many albums), add/remove are idempotent,
+    cover must be an item and auto-clears when that item is removed,
+    deleting an album never touches the media. Task 1.6.7 done — **group
+    1.6 backend is now fully closed**. Verified by lint/build/test +
+    19-case live smoke test. No UI exists yet (screens.md #11 sketches only
+    a "choose album" step in Post a Moment). On branch `feature/album`
+    (stacked on `feature/gallery`).
 
 ### Planning Phase
 
@@ -310,7 +546,8 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   `apps/mobile`, and a shared zod package would fight the API's
   class-validator DTOs. Revisit each when a second case appears.
 - **Invites are per-spot, not per-family (2026-08-18)** — UI-led decision,
-  backend to follow. The invite sheet sends a specific person to a specific
+  backend to follow. — backend done 2026-08-19 (task 1.4.4, see
+  `api-contract.md` → Invitations). The invite sheet sends a specific person to a specific
   tree node: it captures the spot id, a display name and a relationship, and
   only then produces a link. The receiver's page can therefore say who
   invited them, as what, and where they land, which is what makes a cold
@@ -340,12 +577,13 @@ relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
   `FeaturedOccasion` draws an action only when given a handler, so Plan a
   surprise and Video are absent until those screens exist. A dead control
   costs more trust than a visibly missing feature.
-- **Auth session is a stand-in (2026-08-18)** — `src/features/auth/session.tsx`
-  keeps the signed-in user in memory only: no request, no token, no
-  persistence, so every reload starts at Welcome. The guard lives on the
-  `(auth)` and `(tabs)` route groups, which is the one place to change when
-  the AuthModule is wired. Tokens then belong in `expo-secure-store`, never
-  `AsyncStorage`.
+- ~~**Auth session is a stand-in (2026-08-18)**~~ — **superseded the same
+  day; corrected here 2026-08-19.** The session is real: tokens live in
+  `expo-secure-store`, refresh-on-401 is collapsed onto one promise in
+  `src/lib/api/client.ts`, and `status` carries a third `loading` value for
+  the keychain read so a returning user is not bounced through Welcome on
+  every cold start. What survives from the original decision is where the
+  guard sits: on the `(auth)` and `(tabs)` route groups, one gate each way.
 - **Solar-only reaffirmed (2026-08-18)**: the Occasions mockups showing
   lunar dates are what changes, not the schema. See `domain-model.md`.
 - **Social login is Apple + Google + Facebook (2026-08-18)**: Apple is
@@ -374,7 +612,9 @@ relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
   memory shelf should have. Grouping is by _posted_ date, not capture date,
   because the server returns no capture metadata. Mockup 10a — albums by
   occasion — waits for an album endpoint and for the still-open question of
-  what an album is derived from.
+  what an album is derived from. **Built and wired the same day**
+  (`app/(tabs)/omoide.tsx`, `features/omoide/`); search and the sort menu
+  from the mockup are deliberately absent until something is behind them.
 - **Home is 3a then 2a (2026-08-18)** — the family strip, the special-date
   widget and the recommendations sit above the fold exactly as in mockup 3a;
   scrolling past the "swipe up for moments" cue continues into the feed of
@@ -419,6 +659,33 @@ relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
 - **Memories reuse Post (2026-08-13)**: Sprint 2 Memories page reads the
   Sprint 1 `Post` table — no separate Memory model — see
   `docs/02-backend/database.md`.
+- **Photo-insight pipeline is a two-phase design (2026-08-19)**: the AI
+  team's service analyses photos in the background (vision) and the
+  extracted facts live in **`MediaInsight`, a hidden store** no
+  user-facing API exposes; suggestion requests then combine those
+  insights with the requester's own memos. An insight inherits the
+  visibility of its source photo and is filtered per requester at bundle
+  time (anti-laundering rule), and it cascade-deletes with the photo.
+  **Comments are excluded** from AI context for now. This supersedes the
+  "manual context only" scope note **for photos**; consequence to
+  confirm with the customer: family photos leave the server for the
+  Claude API during analysis. See `docs/03-ai/architecture.md`.
+- **AI work is owned by a separate AI team (2026-08-19)**: `apps/ai`
+  (FastAPI), provider calls, prompts and the video render are theirs;
+  backend supplies the API side — the NestJS proxy, auth, context
+  gathering and the `docs/03-ai/architecture.md` contract both teams
+  build against (drafted 2026-08-19). Provider direction: **Claude API**
+  (AI team makes final model-level calls). Hard lines restated in the
+  contract: FastAPI stateless and never touches Postgres, app never
+  calls AI directly, core works when AI is down, every suggestion
+  carries `why`/`source`, and the context only ever contains the
+  requesting user's own private memos.
+- **Email infrastructure (2026-08-18)**: SMTP behind the `MailService`
+  seam — Gmail SMTP with an app password for the MVP (env
+  `SMTP_HOST/PORT/USER/PASS`, `MAIL_FROM`); with SMTP unconfigured
+  (local dev) the message is logged to the API console instead of sent.
+  Unblocked 1.1.7; the signup email-verification screen remains a
+  separate product decision.
 - **Social login (2026-08-17)**: customer requires social login for the
   Japanese market. Phase 1 **Google + Facebook**, scheduled into Sprint 1
   as tasks 1.1.8–1.1.9. **LINE deferred** (needs an email-permission

@@ -1,10 +1,28 @@
-import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma/prisma.service';
-import { AiClientService, type GiftIdeasResult, type MessageResult } from './ai-client.service';
+import {
+  AiClientService,
+  type GiftIdeasResult,
+  type MessageResult,
+} from './ai-client.service';
 import { AiContextService } from './ai-context.service';
 import { ProfileService } from './profile.service';
-import { experienceKeyword, parseJpyRange, ShopsService, type ResolveInfo, type ShopProduct } from './shops.service';
-import type { GiftIdeasRequestDto, SaveGiftIdeaDto } from './dto/gift-ideas.dto';
+import {
+  experienceKeyword,
+  parseJpyRange,
+  ShopsService,
+  type ResolveInfo,
+  type ShopProduct,
+} from './shops.service';
+import type {
+  GiftIdeasRequestDto,
+  SaveGiftIdeaDto,
+} from './dto/gift-ideas.dto';
 import type { MessageRequestDto } from './dto/message.dto';
 
 /**
@@ -69,13 +87,21 @@ export class AiService {
 
   /** Chỉ tác giả được yêu cầu phân tích lại bài của mình */
   async assertPostAuthor(userId: string, postId: string): Promise<void> {
-    const post = await this.prisma.post.findUnique({ where: { id: postId }, select: { authorUserId: true } });
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { authorUserId: true },
+    });
     if (!post) throw new NotFoundException('Post not found');
-    if (post.authorUserId !== userId) throw new ForbiddenException('Not your post');
+    if (post.authorUserId !== userId)
+      throw new ForbiddenException('Not your post');
   }
 
   /** Đếm evidence 0-token (không gọi AI) — grounding hint của màn Ask */
-  async evidenceStats(userId: string, familyId: string, memberId: string): Promise<EvidenceStats> {
+  async evidenceStats(
+    userId: string,
+    familyId: string,
+    memberId: string,
+  ): Promise<EvidenceStats> {
     const bundle = await this.context.buildFor(userId, familyId, memberId);
     const dates = bundle.context.evidence
       .map((e) => e.created_at)
@@ -141,7 +167,9 @@ export class AiService {
     // 429 thì mất hết sản phẩm, chậm còn hơn trắng.
     const budget = parseJpyRange(dto.budgetLabel);
     const avoidItems = bundle.context.avoid;
-    const ideas: GiftIdeasView['ideas'] = new Array(result.ideas.length);
+    const ideas = new Array<GiftIdeasView['ideas'][number]>(
+      result.ideas.length,
+    );
     const queue = result.ideas.map((idea, index) => ({ idea, index }));
     const worker = async (): Promise<void> => {
       for (;;) {
@@ -150,7 +178,8 @@ export class AiService {
         const { idea, index } = item;
         const keyword =
           idea.kind === 'together'
-            ? experienceKeyword(idea.experience_kind) ?? (idea.search_keywords_ja || experienceKeyword('general')!)
+            ? (experienceKeyword(idea.experience_kind) ??
+              (idea.search_keywords_ja || experienceKeyword('general')!))
             : idea.search_keywords_ja;
         const priced = parseJpyRange(idea.price_range ?? dto.budgetLabel);
         const { products, info } = await this.shops.resolve({
@@ -186,7 +215,13 @@ export class AiService {
       cached: false,
       profile_version: bundle.profileVersion,
     };
-    await this.writeSuggestionCache(cacheKey, memberId, 'gift', view, dto.occasionDate ?? null);
+    await this.writeSuggestionCache(
+      cacheKey,
+      memberId,
+      'gift',
+      view,
+      dto.occasionDate ?? null,
+    );
     return view;
   }
 
@@ -211,12 +246,22 @@ export class AiService {
     payload: unknown,
     occasionDate: string | null,
   ): Promise<void> {
-    const parsed = occasionDate ? new Date(`${occasionDate.slice(0, 10)}T23:59:59Z`) : null;
+    const parsed = occasionDate
+      ? new Date(`${occasionDate.slice(0, 10)}T23:59:59Z`)
+      : null;
     const expiresAt =
-      parsed && parsed.getTime() > Date.now() ? parsed : new Date(Date.now() + 7 * 24 * 3600 * 1000);
+      parsed && parsed.getTime() > Date.now()
+        ? parsed
+        : new Date(Date.now() + 7 * 24 * 3600 * 1000);
     await this.prisma.aiSuggestionCache.upsert({
       where: { cacheKey },
-      create: { cacheKey, memberId, kind, payload: payload as object, expiresAt },
+      create: {
+        cacheKey,
+        memberId,
+        kind,
+        payload: payload as object,
+        expiresAt,
+      },
       update: { payload: payload as object, expiresAt },
     });
   }
@@ -235,19 +280,33 @@ export class AiService {
         ownerUserId: userId,
         aboutMemberId: memberId,
         title: `gift:${dto.title}`,
-        content: { kind: 'gift_idea', why: dto.why ?? null, price_range: dto.priceRange ?? null },
+        content: {
+          kind: 'gift_idea',
+          why: dto.why ?? null,
+          price_range: dto.priceRange ?? null,
+        },
       },
     });
     // ♡ là FEEDBACK NGƯỜI THẬT (confidence 0.9): nó vào Signal Store và ở lần rollup
     // sau sẽ ghi đè các suy luận từ ảnh nếu mâu thuẫn.
-    await this.profiles.recordGiftFeedback(memberId, dto.title, dto.occasionLabel ?? null).catch(() => undefined);
+    await this.profiles
+      .recordGiftFeedback(memberId, dto.title, dto.occasionLabel ?? null)
+      .catch(() => undefined);
     return this.toSaved(plan);
   }
 
-  async savedGiftIdeas(userId: string, familyId: string, memberId: string): Promise<SavedGiftIdea[]> {
+  async savedGiftIdeas(
+    userId: string,
+    familyId: string,
+    memberId: string,
+  ): Promise<SavedGiftIdea[]> {
     await this.context.assertMembership(userId, familyId);
     const plans = await this.prisma.plan.findMany({
-      where: { ownerUserId: userId, aboutMemberId: memberId, title: { startsWith: 'gift:' } },
+      where: {
+        ownerUserId: userId,
+        aboutMemberId: memberId,
+        title: { startsWith: 'gift:' },
+      },
       orderBy: { createdAt: 'desc' },
       take: 10,
     });
@@ -282,8 +341,16 @@ export class AiService {
     });
   }
 
-  private toSaved(plan: { id: string; title: string; content: unknown; createdAt: Date }): SavedGiftIdea {
-    const c = (plan.content ?? {}) as { why?: string | null; price_range?: string | null };
+  private toSaved(plan: {
+    id: string;
+    title: string;
+    content: unknown;
+    createdAt: Date;
+  }): SavedGiftIdea {
+    const c = (plan.content ?? {}) as {
+      why?: string | null;
+      price_range?: string | null;
+    };
     return {
       id: plan.id,
       title: plan.title.slice('gift:'.length),

@@ -30,24 +30,29 @@ build the family tree, post content with photos, and view member profiles.
       — done 2026-08-17: merged in PR #2
 - [x] 1.1.6 Đăng xuất (revoke refresh token) — done 2026-08-17: single-use
       refresh rotation + revoke on logout, merged in PR #2
-- [ ] 1.1.7 Khôi phục mật khẩu (quên mật khẩu — `PasswordResetToken`; added 2026-08-14, see `database.md`)
+- [ ] 1.1.7 Khôi phục mật khẩu (quên mật khẩu — `PasswordResetToken`; added 2026-08-14, see `database.md`) — API done 2026-08-18 (PR #12); 3 màn UI đã có nhưng **chưa nối**
 - [x] 1.1.8 Google login (OAuth authorization code, `OAuthAccount` — customer requirement, added 2026-08-17; see `02-backend/architecture.md`) — done 2026-08-18: backend merged in PR #3, happy path verified end-to-end với credentials thật (consent screen External + test user)
 - [ ] 1.1.9 Facebook login (chung flow OAuth với 1.1.8 — added 2026-08-17; LINE deferred chờ quyền email, X phase 2) — backend merged in PR #3; chờ verify E2E (cần accept tester role trên Meta app)
 
 ### 1.2 Nav1 – Trang chủ — Trang chính sau login
 
-- [ ] 1.2.1 Navigation chính (Nav1/Nav2/Nav3/Nav4)
+- [x] 1.2.1 Navigation chính (Nav1/Nav2/Nav3/Nav4) — done 2026-08-18 trong
+      first-pass screen set nhưng chưa từng được tick: custom `BottomNav`
+      5 mục (Home · Omoide · + · AI · Profile), auth guard một cổng ở
+      `(tabs)/_layout.tsx`, cây gia phả vào từ Home theo thiết kế. Xác
+      nhận lại theo code 2026-08-19. **Chưa chạy thử trên máy thật** —
+      cùng caveat với các task UI khác.
 - [x] 1.2.2 Layout Home (responsive, mobile-first 375–430px) — done
       2026-08-18: nối `GET /families` kèm loading / error / "chưa có gia
       đình nào". Widget dịp đặc biệt (1.2.5) và recommendations vẫn là
       fixture vì chưa có endpoint. verify: typecheck + prettier + check:i18n + static export, và replay thật vào API đang chạy.
-- [ ] 1.2.3 Load bài viết gần đây (feed cơ bản) — API done 2026-08-18:
-      `GET /api/families/:familyId/posts`. UI **đã nối nhưng ở màn riêng**
-      (`app/moments.tsx`, vào từ dòng "Swipe up for moments" trên Home) —
-      chưa nhúng vào chính màn Home, nên chưa tick.
+- [x] 1.2.3 Load bài viết gần đây (feed cơ bản) — API done 2026-08-18:
+      `GET /api/families/:familyId/posts`. UI: feed giờ nằm ngay trong Home
+      (`app/moments.tsx` đã xoá khi gộp vào Home — xem
+      `docs/01-frontend/architecture.md` § Wiring status).
 - [ ] 1.2.4 Empty/loading state (UI đầy đủ) — done cho Home, cây gia phả,
-      moments và post detail (2026-08-18). Còn Life Profile, Omoide, AI —
-      các màn chưa nối API.
+      post detail và Omoide (2026-08-18). Còn Life Profile và AI — hai màn
+      chưa nối API.
 - [ ] 1.2.5 Widget dịp đặc biệt trên Home (countdown + theme — sinh nhật/ngày giỗ derived từ LifeProfile; added 2026-08-14, see `database.md`) — API done 2026-08-18 (PR #11: `GET /families/:familyId/special-dates`); UI chưa nối
 
 ### 1.3 Tạo nhóm gia đình — Family Group
@@ -74,7 +79,7 @@ build the family tree, post content with photos, and view member profiles.
 > Màn mời thành viên (invite sheet, pending spot, trang nhận lời mời) đã
 > code UI 2026-08-18 nhưng không nằm trong checklist sprint 1 — nó cần một
 > bản ghi invitation phía backend, xem `project-status.md` → Important
-> Decisions ("Invites are per-spot"). Cần thêm task backend trước khi nối.
+> Decisions ("Invites are per-spot"). Task backend thêm 2026-08-19 là 1.4.4.
 
 - [x] 1.4.1 API relationship (dữ liệu cây) — done 2026-08-18:
       `GET /api/families/:familyId/tree` trả member nodes + relationship
@@ -95,6 +100,9 @@ build the family tree, post content with photos, and view member profiles.
       sang member id; trả `null` khi người đó không thuộc family đang xem,
       lúc đó avatar để trơ thay vì dẫn tới chỗ không tồn tại. Màn
       `member/[id]` vẫn là fixture — chờ `LifeEvent` + `Memo`.
+- [x] 1.4.4 API invitation per-spot (`Invitation` model — added 2026-08-19,
+      see `project-status.md` → "Invites are per-spot") — API done
+      2026-08-19 (chi tiết: `api-contract.md`); FE nối xong 2026-08-19.
 
 ### 1.5 Nav2.5 – Bài viết / Ảnh / Sự kiện — Tạo nội dung
 
@@ -144,29 +152,30 @@ build the family tree, post content with photos, and view member profiles.
 
 ### 1.6 Nav4 – Hồ sơ đời cá nhân — Profile
 
-> **Nhóm chặn nhiều nhất tính đến 2026-08-18.** `GET/PATCH /me/profile` và
-> route profile theo member đã có (PR #9), nhưng màn Life Profile có ba tab
-> mà cả ba đều thiếu endpoint: Timeline cần `LifeEvent` (1.6.8), Memo cần
-> `Memo` (1.6.5), Album cần gallery derived (1.6.4). Nối riêng phần header
->
-> - About bây giờ sẽ cho ra một màn trung tâm với ba tab trống, nên frontend
->   đợi. Thứ tự mở khoá đề xuất: `LifeEvent` → `Memo` → gallery.
+> **Nhóm chặn nhiều nhất tính đến 2026-08-18 — hết chặn 2026-08-19.**
+> `GET/PATCH /me/profile` và route profile theo member đã có (PR #9), nhưng
+> màn Life Profile có ba tab mà cả ba đều thiếu endpoint: Timeline cần
+> `LifeEvent` (1.6.8), Memo cần `Memo` (1.6.5), Album cần gallery derived
+> (1.6.4). Cả ba xong trong ngày 2026-08-19, theo đúng thứ tự mở khoá đề
+> xuất `LifeEvent` → `Memo` → gallery — About + cả ba tab giờ đều có
+> endpoint; phần còn lại là nối UI (`docs/01-frontend/architecture.md`
+> § Wiring status).
 
-- [ ] 1.6.1 UI Profile (avatar + tên) — UI xong 2026-08-18 (mock data, chưa nối API)
+- [x] 1.6.1 UI Profile (avatar + tên) — nối API xong 2026-08-19 (dựng lại theo mockup 7)
 - [ ] 1.6.2 About (thông tin cá nhân) — API done 2026-08-18:
       `GET/PATCH /api/me/profile` +
       `GET/PATCH /api/families/:familyId/members/:memberId/profile`
       (display rule linked→global / placeholder→wiki; placeholder
       wiki-editable bởi cả nhà, mọi edit ghi `EditHistory`; bio,
       interests, birthDate/deathDate — nguồn cho widget 1.2.5).
-      UI xong 2026-08-18 (mock data, chưa nối API)
-- [ ] 1.6.3 Timeline chung (bài viết/ảnh theo thời gian) — UI xong 2026-08-18 (mock data, chưa nối API)
-- [ ] 1.6.4 Album/Gallery (danh sách ảnh) — UI xong 2026-08-18 (mock data, chưa nối API)
-- [ ] 1.6.5 Memo cá nhân (tạo memo — ghi chú về một thành viên, xem `database.md`) — UI xong 2026-08-18 (mock data, chưa nối API)
+      FE nối xong 2026-08-19; thiếu cột `occupation`/`birthPlace` mà mockup 7 vẽ
+- [x] 1.6.3 Timeline chung (bài viết/ảnh theo thời gian) — nối `LifeEvent` xong 2026-08-19
+- [ ] 1.6.4 Album/Gallery (danh sách ảnh) — FE dựng "Moments together" 2026-08-19 từ feed + `taggedMemberIds`, quét giới hạn 4×50; vẫn cần endpoint riêng (xem `api-contract.md` → Requests from the app)
+- [x] 1.6.5 Memo cá nhân (tạo memo — ghi chú về một thành viên, xem `database.md`) — API done 2026-08-19 (schema thêm title/category theo UI; chi tiết: `api-contract.md`); FE nối xong 2026-08-19
 - ~~1.6.6 Quyền riêng tư Memo (private/shared)~~ — dropped 2026-08-14:
   memo luôn private, chỉ chủ xem/sửa (see `database.md`)
 - [ ] 1.6.7 Album cá nhân (private — tạo album, tự thêm ảnh; added 2026-08-14, see `database.md`)
-- [ ] 1.6.8 Life Timeline milestones (LifeEvent CRUD + hiển thị theo thời gian; added 2026-08-14, see `database.md`)
+- [x] 1.6.8 Life Timeline milestones (LifeEvent CRUD + hiển thị theo thời gian; added 2026-08-14, see `database.md`) — API done 2026-08-19 (chi tiết: `api-contract.md`); FE nối xong 2026-08-19
 
 ### 1.7 Test Sprint 1
 

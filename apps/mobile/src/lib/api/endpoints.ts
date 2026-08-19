@@ -3,8 +3,8 @@
  *
  * These are the seam: a react-query hook calls one of these, and nothing
  * above this file knows about paths, verbs or the shape of an error body.
- * Nothing is called yet — the screens still read fixtures — so this file is
- * the contract, verified against `apps/api`, waiting to be wired.
+ * Each one is verified against `apps/api` — the shapes in `types.ts` mirror
+ * the service interfaces, not the Prisma models.
  */
 import { Platform } from 'react-native';
 
@@ -27,7 +27,10 @@ import type {
 import type {
   AddMemberRequest,
   AuthResult,
+  CancelInvitationResult,
   CreateFamilyRequest,
+  CreateInvitationRequest,
+  CreateMemoRequest,
   CommentBody,
   CommentList,
   CommentSummary,
@@ -39,10 +42,15 @@ import type {
   FamilySummary,
   FamilyTree,
   FeedQuery,
+  InvitationPreview,
+  InvitationSummary,
   JoinFamilyRequest,
   JoinFamilyResult,
   LoginRequest,
+  CreateLifeEventRequest,
+  LifeEventDetail,
   MediaSummary,
+  MemoDetail,
   OAuthProvider,
   PostDetail,
   ProfileDetail,
@@ -52,6 +60,8 @@ import type {
   RegisterRequest,
   RelationshipSummary,
   SuccessResult,
+  UpdateLifeEventRequest,
+  UpdateMemoRequest,
   UpdatePostRequest,
   UpdateProfileRequest,
 } from './types';
@@ -135,6 +145,53 @@ export const families = {
   removeRelationship: (familyId: string, relationshipId: string) =>
     apiRequest<SuccessResult>(`/families/${familyId}/relationships/${relationshipId}`, {
       method: 'DELETE',
+    }),
+};
+
+/**
+ * Inviting one person to one reserved spot.
+ *
+ * Distinct from `Family.inviteCode`, which is a standing door key for the
+ * whole family: an invitation names who is coming and where they land, and
+ * the server creates the placeholder plus its relationship edge as part of
+ * `create` — so the tree shows the reserved spot the moment it is sent.
+ */
+export const invitations = {
+  create: (familyId: string, body: CreateInvitationRequest) =>
+    apiRequest<InvitationSummary>(`/families/${familyId}/invitations`, { method: 'POST', body }),
+
+  /** Newest first. Includes accepted and cancelled ones, so filter by status. */
+  list: (familyId: string) => apiRequest<InvitationSummary[]>(`/families/${familyId}/invitations`),
+
+  /** Extends the expiry by a week. There is no email to re-send today. */
+  resend: (familyId: string, invitationId: string) =>
+    apiRequest<InvitationSummary>(`/families/${familyId}/invitations/${invitationId}/resend`, {
+      method: 'POST',
+    }),
+
+  /** An untouched reserved spot is removed with it; a written-to one stays. */
+  cancel: (familyId: string, invitationId: string) =>
+    apiRequest<CancelInvitationResult>(`/families/${familyId}/invitations/${invitationId}`, {
+      method: 'DELETE',
+    }),
+
+  /**
+   * The one public route in the API — `@Public()` on the controller.
+   *
+   * Sent unauthenticated on purpose. With `authenticated: true` a signed-out
+   * reader's missing token would turn a wrong code's 404 into a refresh
+   * attempt first, and the invitation page exists precisely for people who
+   * do not have an account yet.
+   */
+  preview: (code: string) =>
+    apiRequest<InvitationPreview>(`/invitations/${encodeURIComponent(code)}`, {
+      authenticated: false,
+    }),
+
+  /** Signed in only: joins the family on the spot the code reserved. */
+  accept: (code: string) =>
+    apiRequest<JoinFamilyResult>(`/invitations/${encodeURIComponent(code)}/accept`, {
+      method: 'POST',
     }),
 };
 
@@ -339,5 +396,81 @@ export const profiles = {
     apiRequest<ProfileDetail>(`/families/${familyId}/members/${memberId}/profile`, {
       method: 'PATCH',
       body,
+    }),
+};
+
+/**
+ * Private notes about a family member.
+ *
+ * Two shapes of route, because a memo belongs to its author but is *about*
+ * somebody: the member-scoped pair lists and creates within a family, and the
+ * flat `/memos/:id` routes work on one note wherever it came from — including
+ * one whose member has since left, which the member route can no longer reach.
+ */
+export const memos = {
+  /** Every note the caller wrote about this member. Newest touched first. */
+  forMember: (familyId: string, memberId: string) =>
+    apiRequest<MemoDetail[]>(`/families/${familyId}/members/${memberId}/memos`),
+
+  create: (familyId: string, memberId: string, body: CreateMemoRequest) =>
+    apiRequest<MemoDetail>(`/families/${familyId}/members/${memberId}/memos`, {
+      method: 'POST',
+      body,
+    }),
+
+  /** Everything the caller ever wrote, orphaned notes included. */
+  mine: () => apiRequest<MemoDetail[]>('/me/memos'),
+
+  detail: (memoId: string) => apiRequest<MemoDetail>(`/memos/${memoId}`),
+
+  update: (memoId: string, body: UpdateMemoRequest) =>
+    apiRequest<MemoDetail>(`/memos/${memoId}`, { method: 'PATCH', body }),
+
+  remove: (memoId: string) => apiRequest<SuccessResult>(`/memos/${memoId}`, { method: 'DELETE' }),
+};
+
+/**
+ * Milestones on a Life Profile — the Timeline tab.
+ *
+ * Two route families for the same rows, mirroring the profile they hang off:
+ * `/me` works with no family at all, and the member-scoped pair reads
+ * somebody through the family you are viewing them from. Lists come back
+ * oldest first, because a life reads forward.
+ */
+export const lifeEvents = {
+  mine: () => apiRequest<LifeEventDetail[]>('/me/life-events'),
+
+  createMine: (body: CreateLifeEventRequest) =>
+    apiRequest<LifeEventDetail>('/me/life-events', { method: 'POST', body }),
+
+  updateMine: (eventId: string, body: UpdateLifeEventRequest) =>
+    apiRequest<LifeEventDetail>(`/me/life-events/${eventId}`, { method: 'PATCH', body }),
+
+  removeMine: (eventId: string) =>
+    apiRequest<SuccessResult>(`/me/life-events/${eventId}`, { method: 'DELETE' }),
+
+  forMember: (familyId: string, memberId: string) =>
+    apiRequest<LifeEventDetail[]>(`/families/${familyId}/members/${memberId}/life-events`),
+
+  createForMember: (familyId: string, memberId: string, body: CreateLifeEventRequest) =>
+    apiRequest<LifeEventDetail>(`/families/${familyId}/members/${memberId}/life-events`, {
+      method: 'POST',
+      body,
+    }),
+
+  updateForMember: (
+    familyId: string,
+    memberId: string,
+    eventId: string,
+    body: UpdateLifeEventRequest,
+  ) =>
+    apiRequest<LifeEventDetail>(
+      `/families/${familyId}/members/${memberId}/life-events/${eventId}`,
+      { method: 'PATCH', body },
+    ),
+
+  removeForMember: (familyId: string, memberId: string, eventId: string) =>
+    apiRequest<SuccessResult>(`/families/${familyId}/members/${memberId}/life-events/${eventId}`, {
+      method: 'DELETE',
     }),
 };

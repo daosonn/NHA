@@ -47,14 +47,14 @@ This document defines what is actually being built for the first release
 
 ## AI-Assisted
 
-| Capability                     | IN / OUT | Notes                                                                                                 |
-| ------------------------------ | -------- | ----------------------------------------------------------------------------------------------------- |
-| Interest/preference analysis   | IN       | Spec #7. MVP (WBS): user enters context manually; automatic analysis **not scheduled in Sprints 1–3** |
-| Greeting suggestions           | IN       | Spec #9                                                                                               |
-| Gift suggestions               | IN       | Spec #9                                                                                               |
-| Story assistance               | OUT      | Not among the original spec's 12 features — re-confirm if wanted                                      |
-| Automatic albums               | IN       | Spec #8. **Not scheduled in Sprints 1–3** (only video generation is) — revisit                        |
-| Automatic commemorative videos | IN       | Spec #8                                                                                               |
+| Capability                     | IN / OUT | Notes                                                                                                                                                                                                                                           |
+| ------------------------------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Interest/preference analysis   | IN       | Spec #7. MVP (WBS): user enters context manually. **Updated 2026-08-19**: automatic **photo** analysis is now scheduled — the AI team's phase-1 vision pipeline (see `docs/03-ai/architecture.md`); other behavioral analysis stays unscheduled |
+| Greeting suggestions           | IN       | Spec #9                                                                                                                                                                                                                                         |
+| Gift suggestions               | IN       | Spec #9                                                                                                                                                                                                                                         |
+| Story assistance               | OUT      | Not among the original spec's 12 features — re-confirm if wanted                                                                                                                                                                                |
+| Automatic albums               | IN       | Spec #8. **Not scheduled in Sprints 1–3** (only video generation is) — revisit                                                                                                                                                                  |
+| Automatic commemorative videos | IN       | Spec #8                                                                                                                                                                                                                                         |
 
 ---
 

@@ -7,7 +7,12 @@ import sharp from 'sharp';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { FFMPEG, run } from '../video/engine/exec';
-import { loadFonts, maxUnitsFor, stripLatinDiacritics, wrapLines } from '../video/engine/videogen';
+import {
+  loadFonts,
+  maxUnitsFor,
+  stripLatinDiacritics,
+  wrapLines,
+} from '../video/engine/videogen';
 import { AiContextService } from './ai-context.service';
 
 /**
@@ -17,18 +22,29 @@ import { AiContextService } from './ai-context.service';
  * còn "share với family" thì tạo post đính media này như mọi post khác.
  */
 
-export type CardTemplateId = 'marigold' | 'birthday' | 'tulip' | 'tet' | 'kraft';
+export type CardTemplateId =
+  'marigold' | 'birthday' | 'tulip' | 'tet' | 'kraft';
 
 const W = 1080;
 const H = 1520;
 
-type Theme = { bg: string; frame: string; accent: string; ink: string; sub: string; deco: (t: Theme) => string };
-
-const esc = (s: string) =>
-  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+type Theme = {
+  bg: string;
+  frame: string;
+  accent: string;
+  ink: string;
+  sub: string;
+  deco: (t: Theme) => string;
+};
 
 /** Hoa cúc vạn thọ — vòng cánh hoa đơn giản quanh 1 nhụy */
-function flower(cx: number, cy: number, r: number, petal: string, core: string): string {
+function flower(
+  cx: number,
+  cy: number,
+  r: number,
+  petal: string,
+  core: string,
+): string {
   const petals = Array.from({ length: 8 }, (_, i) => {
     const a = (i / 8) * Math.PI * 2;
     return `<ellipse cx="${cx + Math.cos(a) * r}" cy="${cy + Math.sin(a) * r}" rx="${r * 0.62}" ry="${r * 0.38}" fill="${petal}" transform="rotate(${(a * 180) / Math.PI}, ${cx + Math.cos(a) * r}, ${cy + Math.sin(a) * r})"/>`;
@@ -43,7 +59,14 @@ function flower(cx: number, cy: number, r: number, petal: string, core: string):
 function corners(color: string, inset: number, len: number): string {
   const a = inset;
   const b = inset + len;
-  const one = (x1: number, y1: number, x2: number, y2: number, cx: number, cy: number) =>
+  const one = (
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    cx: number,
+    cy: number,
+  ) =>
     `<path d="M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}" fill="none" stroke="${color}" stroke-width="2.5" opacity="0.75"/>`;
   return [
     one(a, b, b, a, a, a),
@@ -59,32 +82,71 @@ function corners(color: string, inset: number, len: number): string {
  */
 const THEMES: Record<CardTemplateId, Theme> = {
   marigold: {
-    bg: '#F7DE8B', frame: '#B98A1F', accent: '#8A6B14', ink: '#4A3B22', sub: '#8A6B14',
-    deco: (t) => flower(W - 150, 170, 46, t.frame, t.accent) + flower(150, H - 170, 34, t.frame, t.accent),
+    bg: '#F7DE8B',
+    frame: '#B98A1F',
+    accent: '#8A6B14',
+    ink: '#4A3B22',
+    sub: '#8A6B14',
+    deco: (t) =>
+      flower(W - 150, 170, 46, t.frame, t.accent) +
+      flower(150, H - 170, 34, t.frame, t.accent),
   },
   birthday: {
-    bg: '#F9C89B', frame: '#C2652F', accent: '#A9531F', ink: '#43302C', sub: '#8C4F26',
+    bg: '#F9C89B',
+    frame: '#C2652F',
+    accent: '#A9531F',
+    ink: '#43302C',
+    sub: '#8C4F26',
     deco: (t) =>
-      [0, 1, 2, 3, 4].map((i) => `<circle cx="${140 + i * 200}" cy="${i % 2 ? 150 : 190}" r="${14 + (i % 3) * 6}" fill="${i % 2 ? t.frame : t.accent}" opacity="0.65"/>`).join('') +
+      [0, 1, 2, 3, 4]
+        .map(
+          (i) =>
+            `<circle cx="${140 + i * 200}" cy="${i % 2 ? 150 : 190}" r="${14 + (i % 3) * 6}" fill="${i % 2 ? t.frame : t.accent}" opacity="0.65"/>`,
+        )
+        .join('') +
       `<rect x="${W / 2 - 3}" y="120" width="6" height="70" fill="${t.accent}"/><path d="M ${W / 2 - 40} 120 q 40 -50 80 0 z" fill="${t.frame}"/>`,
   },
   tulip: {
-    bg: '#F6C9DC', frame: '#B7548E', accent: '#8E3E6C', ink: '#5A2C44', sub: '#96477A',
+    bg: '#F6C9DC',
+    frame: '#B7548E',
+    accent: '#8E3E6C',
+    ink: '#5A2C44',
+    sub: '#96477A',
     deco: (t) =>
-      [0, 1, 2].map((i) => {
-        const x = 170 + i * 90;
-        return `<path d="M ${x} 200 q -22 -44 0 -66 q 22 22 0 66" fill="${t.frame}"/><path d="M ${x} 200 v 62" stroke="${t.accent}" stroke-width="6" fill="none"/>`;
-      }).join(''),
+      [0, 1, 2]
+        .map((i) => {
+          const x = 170 + i * 90;
+          return `<path d="M ${x} 200 q -22 -44 0 -66 q 22 22 0 66" fill="${t.frame}"/><path d="M ${x} 200 v 62" stroke="${t.accent}" stroke-width="6" fill="none"/>`;
+        })
+        .join(''),
   },
   tet: {
-    bg: '#A62B22', frame: '#E8B84B', accent: '#F6D77E', ink: '#FFF4DC', sub: '#F0CFA0',
+    bg: '#A62B22',
+    frame: '#E8B84B',
+    accent: '#F6D77E',
+    ink: '#FFF4DC',
+    sub: '#F0CFA0',
     deco: (t) =>
       `<circle cx="${W - 160}" cy="170" r="60" fill="none" stroke="${t.frame}" stroke-width="5"/>` +
       `<circle cx="${W - 160}" cy="170" r="40" fill="${t.frame}" opacity="0.3"/>` +
-      [0, 1, 2, 3, 4].map((i) => flower(120 + i * 30, H - 150 + (i % 2) * 20, 12, '#F6D77E', '#E8B84B')).join(''),
+      [0, 1, 2, 3, 4]
+        .map((i) =>
+          flower(
+            120 + i * 30,
+            H - 150 + (i % 2) * 20,
+            12,
+            '#F6D77E',
+            '#E8B84B',
+          ),
+        )
+        .join(''),
   },
   kraft: {
-    bg: '#E7DCC8', frame: '#8A744C', accent: '#6B5B3E', ink: '#463A26', sub: '#7C6C50',
+    bg: '#E7DCC8',
+    frame: '#8A744C',
+    accent: '#6B5B3E',
+    ink: '#463A26',
+    sub: '#7C6C50',
     deco: (t) =>
       `<line x1="120" y1="150" x2="${W - 120}" y2="150" stroke="${t.frame}" stroke-width="3" stroke-dasharray="2 10"/>` +
       `<line x1="120" y1="${H - 150}" x2="${W - 120}" y2="${H - 150}" stroke="${t.frame}" stroke-width="3" stroke-dasharray="2 10"/>`,
@@ -96,13 +158,17 @@ function ffPath(p: string): string {
   return p.replace(/\\/g, '/').replace(/:/g, '\\:');
 }
 
-const CJK_RE = /[\u2E80-\u303F\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF]/;
+const CJK_RE =
+  /[\u2E80-\u303F\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF]/;
 
 /**
  * Thiệp dùng font CÓ CHÂN (mincho/serif), không phải font UI của video.
  * Thiệp là giấy in — Yu Gothic/Segoe UI làm nó trông như một cái form.
  */
-function cardFont(text: string, fallback: { vn: string | null; jp: string | null }): string | null {
+function cardFont(
+  text: string,
+  fallback: { vn: string | null; jp: string | null },
+): string | null {
   const dir = 'C:\\Windows\\Fonts';
   const cands = CJK_RE.test(text)
     ? ['yumindb.ttf', 'yumin.ttf', 'YuMincho.ttc']
@@ -111,7 +177,9 @@ function cardFont(text: string, fallback: { vn: string | null; jp: string | null
     const p = path.join(dir, f);
     if (existsSync(p)) return p;
   }
-  return CJK_RE.test(text) ? (fallback.jp ?? fallback.vn) : (fallback.vn ?? fallback.jp);
+  return CJK_RE.test(text)
+    ? (fallback.jp ?? fallback.vn)
+    : (fallback.vn ?? fallback.jp);
 }
 
 /** "BIRTHDAY" → "B I R T H D A Y" — drawtext không có letter-spacing. */
@@ -130,7 +198,13 @@ export class CardService {
   async render(
     userId: string,
     familyId: string,
-    input: { template: CardTemplateId; message: string; toName: string; fromName: string; heading?: string },
+    input: {
+      template: CardTemplateId;
+      message: string;
+      toName: string;
+      fromName: string;
+      heading?: string;
+    },
   ): Promise<{ media_id: string }> {
     await this.context.assertMembership(userId, familyId);
     const t = THEMES[input.template] ?? THEMES.marigold;
@@ -159,7 +233,10 @@ export class CardService {
       <circle cx="${W / 2 + 108}" cy="446" r="4" fill="${t.accent}"/>
     </svg>`;
 
-    const base = path.join(this.storage.tempDir, `card_base_${randomUUID()}.png`);
+    const base = path.join(
+      this.storage.tempDir,
+      `card_base_${randomUUID()}.png`,
+    );
     await mkdir(path.dirname(base), { recursive: true });
     await writeFile(base, await sharp(Buffer.from(svg)).png().toBuffer());
 
@@ -171,14 +248,22 @@ export class CardService {
     const tmp = path.join(this.storage.tempDir, `card_${randomUUID()}.png`);
     const layers: string[] = [];
 
-    const draw = async (text: string, size: number, color: string, y: number) => {
+    const draw = async (
+      text: string,
+      size: number,
+      color: string,
+      y: number,
+    ) => {
       const raw = text.trim();
       if (!raw) return;
       const font = cardFont(raw, fonts);
       if (!font) return;
       // Font Nhật không có glyph dấu Latin → bỏ dấu để không ra tofu
       const body = CJK_RE.test(raw) ? stripLatinDiacritics(raw) : raw;
-      const tf = path.join(this.storage.tempDir, `card_txt_${randomUUID()}.txt`);
+      const tf = path.join(
+        this.storage.tempDir,
+        `card_txt_${randomUUID()}.txt`,
+      );
       await writeFile(tf, body, 'utf8');
       layers.push(
         `drawtext=fontfile='${ffPath(font)}':textfile='${ffPath(tf)}'` +
@@ -189,8 +274,13 @@ export class CardService {
     const heading = (input.heading ?? '').trim();
     if (heading) {
       // Latin thì giãn chữ cho ra dáng "BIRTHDAY"; tiếng Nhật đã đủ thoáng
-      const isLatin = !/[^ -ɏ\s]/.test(heading);
-      await draw(isLatin ? spaced(heading.toUpperCase()) : heading, 34, t.sub, 272);
+      const isLatin = /^[\u0020-\u024F]+$/.test(heading);
+      await draw(
+        isLatin ? spaced(heading.toUpperCase()) : heading,
+        34,
+        t.sub,
+        272,
+      );
     }
     await draw(`Dear ${input.toName}`, 62, t.ink, 344);
 
@@ -202,19 +292,37 @@ export class CardService {
     // theo cả trang thì lời nhắn tụt xuống và chừa một khoảng trống lớn ở đáy.
     const bandTop = 520;
     const bandBottom = H - 300;
-    const startY = (bandTop + bandBottom) / 2 - ((lines.length - 1) * lineH) / 2;
-    for (const [i, line] of lines.entries()) await draw(line, size, t.ink, startY + i * lineH);
+    const startY =
+      (bandTop + bandBottom) / 2 - ((lines.length - 1) * lineH) / 2;
+    for (const [i, line] of lines.entries())
+      await draw(line, size, t.ink, startY + i * lineH);
 
     // Ký tên có gạch HAI ĐẦU — một đầu trông như bị cắt mất (Sơn nhặt ra 19/08)
     await draw(`— ${input.fromName} —`, 42, t.accent, H - 262);
 
-    await run(FFMPEG, ['-y', '-i', base, '-vf', layers.join(','), '-frames:v', '1', tmp]);
+    await run(FFMPEG, [
+      '-y',
+      '-i',
+      base,
+      '-vf',
+      layers.join(','),
+      '-frames:v',
+      '1',
+      tmp,
+    ]);
 
     const storageKey = await this.storage.promote(tmp, 'image/png');
-    const png = await sharp(storageKey ? this.storage.absolutePathOf(storageKey) : tmp).toBuffer();
+    const png = await sharp(
+      storageKey ? this.storage.absolutePathOf(storageKey) : tmp,
+    ).toBuffer();
 
     const media = await this.prisma.media.create({
-      data: { uploaderUserId: userId, storageKey, mimeType: 'image/png', sizeBytes: png.length },
+      data: {
+        uploaderUserId: userId,
+        storageKey,
+        mimeType: 'image/png',
+        sizeBytes: png.length,
+      },
       select: { id: true },
     });
     return { media_id: media.id };

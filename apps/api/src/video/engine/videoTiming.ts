@@ -72,21 +72,32 @@ export function seedFromIds(ids: string[]): number {
 // ---- Phân bổ chuyển động trong ảnh (Ken Burns) ----
 // Nguồn đo: có shot zoom in, có shot zoom out, có shot CHỈ pan ngang, có shot gần như tĩnh.
 // "Không phải công thức luôn-zoom-vào — biến thể được gán theo shot."
-const KB_POOL: SceneEffect[] = ['zoom_in', 'pan_lr', 'zoom_out', 'pan_rl', 'static'];
+const KB_POOL: SceneEffect[] = [
+  'zoom_in',
+  'pan_lr',
+  'zoom_out',
+  'pan_rl',
+  'static',
+];
 
 /**
  * Gán hiệu ứng cho từng cảnh: deterministic theo seed, không lặp 2 shot liền kề,
  * ~1/5 shot là tĩnh. video_clip vẫn được gán nhưng renderer bỏ qua.
  */
-export function assignEffects(scenes: Pick<Scene, 'media_id' | 'type'>[], seed: number): SceneEffect[] {
+export function assignEffects(
+  scenes: Pick<Scene, 'media_id' | 'type'>[],
+  seed: number,
+): SceneEffect[] {
   const rnd = mulberry32(seed);
   const out: SceneEffect[] = [];
   let prev: SceneEffect | null = null;
   for (let i = 0; i < scenes.length; i++) {
     let pick: SceneEffect = KB_POOL[Math.floor(rnd() * KB_POOL.length)];
     // tránh lặp liền kề (thử lại tối đa 4 lần — deterministic vì rnd deterministic)
-    for (let k = 0; k < 4 && pick === prev; k++) pick = KB_POOL[Math.floor(rnd() * KB_POOL.length)];
-    if (pick === prev) pick = KB_POOL[(KB_POOL.indexOf(pick) + 1) % KB_POOL.length];
+    for (let k = 0; k < 4 && pick === prev; k++)
+      pick = KB_POOL[Math.floor(rnd() * KB_POOL.length)];
+    if (pick === prev)
+      pick = KB_POOL[(KB_POOL.indexOf(pick) + 1) % KB_POOL.length];
     out.push(pick);
     prev = pick;
   }
@@ -101,7 +112,10 @@ export function assignEffects(scenes: Pick<Scene, 'media_id' | 'type'>[], seed: 
  */
 export function planBodyJoins(nBody: number, seed: number): Join[] {
   const m = Math.max(0, nBody - 1);
-  const joins: Join[] = Array.from({ length: m }, () => ({ type: 'cut' as JoinType, dur: 0 }));
+  const joins: Join[] = Array.from({ length: m }, () => ({
+    type: 'cut',
+    dur: 0,
+  }));
   if (m === 0) return joins;
   const rnd = mulberry32(seed ^ 0x9e3779b9);
   const dir: 1 | -1 = rnd() < 0.5 ? 1 : -1;
@@ -112,14 +126,20 @@ export function planBodyJoins(nBody: number, seed: number): Join[] {
   }
   // cụm counter-slide 2 mối liên tiếp quanh giữa (m ≥ 4), m = 2-3 thì 1 mối
   const cLen = m >= 4 ? 2 : 1;
-  const cStart = Math.max(0, Math.min(m - cLen - (nBody >= 3 ? 1 : 0), Math.floor(m / 2) - 1));
-  for (let i = cStart; i < cStart + cLen; i++) joins[i] = { type: 'counterslide', dur: JOIN_DUR.counterslide, dir };
+  const cStart = Math.max(
+    0,
+    Math.min(m - cLen - (nBody >= 3 ? 1 : 0), Math.floor(m / 2) - 1),
+  );
+  for (let i = cStart; i < cStart + cLen; i++)
+    joins[i] = { type: 'counterslide', dur: JOIN_DUR.counterslide, dir };
   // bloom trắng: mối nối VÀO cảnh cuối (nguồn đặt bloom ở 48.87/54s)
-  if (nBody >= 3 && joins[m - 1].type === 'cut') joins[m - 1] = { type: 'fadewhite', dur: JOIN_DUR.fadewhite };
+  if (nBody >= 3 && joins[m - 1].type === 'cut')
+    joins[m - 1] = { type: 'fadewhite', dur: JOIN_DUR.fadewhite };
   // whip-blur: ~1/3, chỉ khi video đủ dài và không đè lên mối đã gán
   if (nBody >= 5) {
     const w = Math.max(0, Math.round(m / 3) - 1);
-    if (joins[w].type === 'cut') joins[w] = { type: 'hblur', dur: JOIN_DUR.hblur };
+    if (joins[w].type === 'cut')
+      joins[w] = { type: 'hblur', dur: JOIN_DUR.hblur };
   }
   return joins;
 }
@@ -148,11 +168,16 @@ export function bodyTiming(
   const durations = rawDurations.map((d) => quantizeToBeat(d, bpm));
   for (let i = 0; i < durations.length; i++) {
     const left = (i === 0 ? edgeOverlap.head : joinOverlap(joins[i - 1])) ?? 0;
-    const right = (i === durations.length - 1 ? edgeOverlap.tail : joinOverlap(joins[i])) ?? 0;
+    const right =
+      (i === durations.length - 1 ? edgeOverlap.tail : joinOverlap(joins[i])) ??
+      0;
     const need = left + right + 0.8; // còn ít nhất 0.8s "đứng yên" giữa 2 chuyển cảnh
-    while (durations[i] < need) durations[i] = b ? Math.round((durations[i] + b) * 1000) / 1000 : need;
+    while (durations[i] < need)
+      durations[i] = b ? Math.round((durations[i] + b) * 1000) / 1000 : need;
   }
-  const bodyTotal = durations.reduce((a, d) => a + d, 0) - joins.reduce((a, j) => a + joinOverlap(j), 0);
+  const bodyTotal =
+    durations.reduce((a, d) => a + d, 0) -
+    joins.reduce((a, j) => a + joinOverlap(j), 0);
   return { durations, joins, bodyTotal: Math.round(bodyTotal * 1000) / 1000 };
 }
 

@@ -25,6 +25,9 @@ venv/
 __pycache__/
 *.py[cod]
 
+# Database dumps — real family data, never commit (pnpm db:backup)
+backups/
+
 # Environment
 .env
 .env.local

@@ -27,7 +27,14 @@ import crypto from 'crypto';
 import sharp from 'sharp';
 import { FFMPEG, run } from './exec';
 import type { Join } from './videoTiming';
-import type { Aspect, EffectProfile, Palette, Scene, SceneEffect, VideoStyle } from './types';
+import type {
+  Aspect,
+  EffectProfile,
+  Palette,
+  Scene,
+  SceneEffect,
+  VideoStyle,
+} from './types';
 
 const CWD = () => process.cwd();
 const OUT_DIR = () => path.join(CWD(), 'uploads', 'video_out');
@@ -43,7 +50,8 @@ const SS = 3; // hệ số supersample cho zoompan (hạ xuống 2 nếu máy y�
 const CACHE_V = 5; // bump khi đổi thuật toán render → cache cũ tự bỏ
 
 export function ensureDirs() {
-  for (const d of [OUT_DIR(), SEG_DIR(), TMP_DIR(), MUSIC_DIR()]) fs.mkdirSync(d, { recursive: true });
+  for (const d of [OUT_DIR(), SEG_DIR(), TMP_DIR(), MUSIC_DIR()])
+    fs.mkdirSync(d, { recursive: true });
 }
 
 export function dims(aspect: Aspect): { W: number; H: number } {
@@ -71,7 +79,14 @@ export function findFont(kind: 'vn' | 'jp'): string | null {
   const dir = 'C:\\Windows\\Fonts';
   const cands =
     kind === 'jp'
-      ? ['YuGothB.ttc', 'yugothb.ttc', 'meiryob.ttc', 'meiryo.ttc', 'YuGothM.ttc', 'msgothic.ttc']
+      ? [
+          'YuGothB.ttc',
+          'yugothb.ttc',
+          'meiryob.ttc',
+          'meiryo.ttc',
+          'YuGothM.ttc',
+          'msgothic.ttc',
+        ]
       : ['segoeuib.ttf', 'arialbd.ttf', 'segoeui.ttf', 'arial.ttf'];
   for (const f of cands) {
     const p = path.join(dir, f);
@@ -85,7 +100,8 @@ export function loadFonts(): FontSet {
 }
 
 // Chuỗi có ký tự CJK → phải dùng font Nhật (Segoe UI không có glyph kanji/kana)
-const CJK_RE = /[\u2E80-\u303F\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF]/;
+const CJK_RE =
+  /[\u2E80-\u303F\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF]/;
 
 export function pickFont(text: string, fonts: FontSet): string | null {
   return CJK_RE.test(text) ? (fonts.jp ?? fonts.vn) : (fonts.vn ?? fonts.jp);
@@ -94,21 +110,27 @@ export function pickFont(text: string, fonts: FontSet): string | null {
 /**
  * Bỏ dấu phần chữ Latin (Sơn → Son, Nguyễn → Nguyen).
  * VÌ SAO CẦN: chuỗi lẫn CJK sẽ được vẽ bằng font Nhật (Yu Gothic), mà font Nhật KHÔNG có
- * glyph cho ơ/ư/đ… → hiện ra ô vuông tofu (đã gặp thật: 「Sơnへ　家族より」 ra 「S□nへ」).
+ * glyph cho ơ/ư/đ… → hiện ra ô vuông tofu (đã gặp thật: 「Sơnへ 家族より」 ra 「S□nへ」).
  * Chỉ áp khi thực sự vẽ bằng font Nhật, nên caption tiếng Việt (vẽ bằng font VN) vẫn còn dấu.
  */
 export function stripLatinDiacritics(s: string): string {
-  return s
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D')
-    .normalize('NFD')
-    // chỉ xoá dấu kết hợp của Latin (U+0300–U+036F); dakuten của kana nằm ở U+3099 nên không bị ảnh hưởng
-    .replace(/[̀-ͯ]/g, '')
-    .normalize('NFC');
+  return (
+    s
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D')
+      .normalize('NFD')
+      // chỉ xoá dấu kết hợp của Latin (U+0300–U+036F); dakuten của kana nằm ở U+3099 nên không bị ảnh hưởng
+      .replace(/[̀-ͯ]/g, '')
+      .normalize('NFC')
+  );
 }
 
 /** Chuỗi sắp vẽ bằng font Nhật thì phải bỏ dấu Latin để không ra tofu */
-function safeForFont(text: string, font: string | null, fonts: FontSet): string {
+function safeForFont(
+  text: string,
+  font: string | null,
+  fonts: FontSet,
+): string {
   return font && font === fonts.jp ? stripLatinDiacritics(text) : text;
 }
 
@@ -119,12 +141,23 @@ function ffPath(p: string): string {
 
 // drawtext dùng TEXTFILE (UTF-8) để né toàn bộ vấn đề escape tiếng Việt/Nhật
 function writeTextFile(content: string): string {
-  const p = path.join(TMP_DIR(), `txt_${crypto.randomBytes(4).toString('hex')}.txt`);
+  const p = path.join(
+    TMP_DIR(),
+    `txt_${crypto.randomBytes(4).toString('hex')}.txt`,
+  );
   fs.writeFileSync(p, content.replace(/\r?\n/g, ' '), 'utf8');
   return p;
 }
 
-function drawText(opts: { font: string; text: string; fontsize: number; color: string; y: string; box?: boolean; borderw?: number }): string {
+function drawText(opts: {
+  font: string;
+  text: string;
+  fontsize: number;
+  color: string;
+  y: string;
+  box?: boolean;
+  borderw?: number;
+}): string {
   const tf = writeTextFile(opts.text);
   return (
     `drawtext=fontfile='${ffPath(opts.font)}':textfile='${ffPath(tf)}'` +
@@ -152,7 +185,8 @@ export function maxUnitsFor(W: number, fontsize: number): number {
 }
 
 // Kinsoku shori: các ký tự KHÔNG được đứng đầu dòng / KHÔNG được đứng cuối dòng
-const KINSOKU_HEAD = '、。，．！？：；・ー〜…）」』】〕ぁぃぅぇぉっゃゅょゎゝゞ々!?,.)]';
+const KINSOKU_HEAD =
+  '、。，．！？：；・ー〜…）」』】〕ぁぃぅぇぉっゃゅょゎゝゞ々!?,.)]';
 const KINSOKU_TAIL = '（「『【〔([';
 
 /**
@@ -160,7 +194,11 @@ const KINSOKU_TAIL = '（「『【〔([';
  * Export vì thiệp (src/ai/card.service.ts) cần đúng luật này: tiếng Nhật không có
  * dấu cách nên cắt theo từ sẽ ra một dòng dài tràn khỏi trang.
  */
-export function wrapLines(text: string, maxUnits: number, maxLines = 3): string[] {
+export function wrapLines(
+  text: string,
+  maxUnits: number,
+  maxLines = 3,
+): string[] {
   const src = text.trim();
   if (!src) return [];
   const lines: string[] = [];
@@ -217,23 +255,47 @@ export function wrapLines(text: string, maxUnits: number, maxLines = 3): string[
 
 // Vẽ text nhiều dòng, căn giữa quanh yCenterPx (hoặc neo đáy yBottomPx)
 function drawTextBlock(opts: {
-  fonts: FontSet; text: string; fontsize: number; color: string; W: number;
-  yCenterPx?: number; yBottomPx?: number; box?: boolean; borderw?: number; maxLines?: number;
+  fonts: FontSet;
+  text: string;
+  fontsize: number;
+  color: string;
+  W: number;
+  yCenterPx?: number;
+  yBottomPx?: number;
+  box?: boolean;
+  borderw?: number;
+  maxLines?: number;
 }): string[] {
   const font = pickFont(opts.text, opts.fonts);
   if (!font || !opts.text.trim()) return [];
   const text = safeForFont(opts.text, font, opts.fonts);
-  const lines = wrapLines(text, maxUnitsFor(opts.W, opts.fontsize), opts.maxLines ?? 3);
+  const lines = wrapLines(
+    text,
+    maxUnitsFor(opts.W, opts.fontsize),
+    opts.maxLines ?? 3,
+  );
   const lineH = Math.round(opts.fontsize * 1.3);
   return lines.map((line, i) => {
     let y: string;
     if (opts.yBottomPx !== undefined) {
-      y = String(opts.yBottomPx - (lines.length - 1 - i) * lineH - opts.fontsize);
+      y = String(
+        opts.yBottomPx - (lines.length - 1 - i) * lineH - opts.fontsize,
+      );
     } else {
-      const startY = Math.round((opts.yCenterPx ?? 0) - (lines.length * lineH) / 2);
+      const startY = Math.round(
+        (opts.yCenterPx ?? 0) - (lines.length * lineH) / 2,
+      );
       y = String(startY + i * lineH);
     }
-    return drawText({ font, text: line, fontsize: opts.fontsize, color: opts.color, y, box: opts.box, borderw: opts.borderw });
+    return drawText({
+      font,
+      text: line,
+      fontsize: opts.fontsize,
+      color: opts.color,
+      y,
+      box: opts.box,
+      borderw: opts.borderw,
+    });
   });
 }
 
@@ -275,13 +337,42 @@ function holdStatic(frames: number): string {
 
 // crf 18 cho SEGMENT (bị encode lần 2 khi ghép — chất lượng nguồn quyết định ảnh có mờ hay không),
 // crf 19 cho file cuối. Preset giữ veryfast để cân bằng thời gian render.
-const ENC = ['-r', String(FPS), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-pix_fmt', 'yuv420p', '-an'];
-const FINAL_ENC = ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '19', '-pix_fmt', 'yuv420p', '-r', String(FPS), '-movflags', '+faststart'];
+const ENC = [
+  '-r',
+  String(FPS),
+  '-c:v',
+  'libx264',
+  '-preset',
+  'veryfast',
+  '-crf',
+  '18',
+  '-pix_fmt',
+  'yuv420p',
+  '-an',
+];
+const FINAL_ENC = [
+  '-c:v',
+  'libx264',
+  '-preset',
+  'veryfast',
+  '-crf',
+  '19',
+  '-pix_fmt',
+  'yuv420p',
+  '-r',
+  String(FPS),
+  '-movflags',
+  '+faststart',
+];
 
 export type SegmentResult = { file: string; cached: boolean };
 
 export function segCacheFile(key: Record<string, unknown>): string {
-  const hash = crypto.createHash('sha1').update(JSON.stringify(key)).digest('hex').slice(0, 16);
+  const hash = crypto
+    .createHash('sha1')
+    .update(JSON.stringify(key))
+    .digest('hex')
+    .slice(0, 16);
   return path.join(SEG_DIR(), `${hash}.mp4`);
 }
 
@@ -312,7 +403,10 @@ function letterboxH(H: number): number {
 }
 
 // grade = áp TRƯỚC caption (không làm mờ chữ) · finish = áp SAU caption (vignette/grain trùm cả chữ)
-function profileOverlays(profile: EffectProfile, H: number): { grade: string[]; finish: string[] } {
+function profileOverlays(
+  profile: EffectProfile,
+  H: number,
+): { grade: string[]; finish: string[] } {
   switch (profile) {
     case 'cinematic': {
       const bar = letterboxH(H);
@@ -338,7 +432,9 @@ function profileOverlays(profile: EffectProfile, H: number): { grade: string[]; 
 
 // Caption phải nằm TRÊN thanh letterbox của profile điện ảnh
 function captionBottom(profile: EffectProfile, H: number): number {
-  return profile === 'cinematic' ? H - letterboxH(H) - 28 : Math.round(H * 0.92);
+  return profile === 'cinematic'
+    ? H - letterboxH(H) - 28
+    : Math.round(H * 0.92);
 }
 
 // ---- Chuyển động trong ảnh ----
@@ -348,7 +444,12 @@ function captionBottom(profile: EffectProfile, H: number): number {
 //    ease chỉ dành cho chuyển cảnh. Biên độ nhỏ (≈1%/s trên canvas SS=3) nên không giật bậc.
 // Lia dùng zoom HẰNG SỐ (chỉ dịch khung) — mượt hơn hẳn vừa zoom vừa dịch.
 function zoompanExpr(
-  motion: SceneEffect, frames: number, W: number, H: number, amp: Amp, ease: 'smooth' | 'linear' = 'smooth',
+  motion: SceneEffect,
+  frames: number,
+  W: number,
+  H: number,
+  amp: Amp,
+  ease: 'smooth' | 'linear' = 'smooth',
 ): string {
   const D = Math.max(2, frames);
   const p = `(on/${D - 1})`;
@@ -377,21 +478,39 @@ function zoompanExpr(
 
 // ---- Cảnh ảnh tĩnh: Ken Burns eased (hoặc khung tĩnh nếu profile = off) ----
 export async function renderKenBurns(opts: {
-  imageAbs: string; scene: Scene; style: VideoStyle; profile: EffectProfile; aspect: Aspect; fonts: FontSet;
+  imageAbs: string;
+  scene: Scene;
+  style: VideoStyle;
+  profile: EffectProfile;
+  aspect: Aspect;
+  fonts: FontSet;
 }): Promise<SegmentResult> {
   const { W, H } = dims(opts.aspect);
   const dur = opts.scene.duration_s;
   const out = segCacheFile({
-    v: CACHE_V, t: 'kb', img: opts.scene.media_id, d: dur, c: opts.scene.caption_ja,
-    e: opts.scene.effect, s: opts.style, p: opts.profile, a: opts.aspect,
+    v: CACHE_V,
+    t: 'kb',
+    img: opts.scene.media_id,
+    d: dur,
+    c: opts.scene.caption_ja,
+    e: opts.scene.effect,
+    s: opts.style,
+    p: opts.profile,
+    a: opts.aspect,
   });
   if (fs.existsSync(out)) return { file: out, cached: true };
 
   const frames = Math.round(dur * FPS);
   const { grade, finish } = profileOverlays(opts.profile, H);
   const captions = drawTextBlock({
-    fonts: opts.fonts, text: opts.scene.caption_ja, fontsize: captionSize(opts.aspect), color: 'white',
-    W, yBottomPx: captionBottom(opts.profile, H), box: true, maxLines: 2,
+    fonts: opts.fonts,
+    text: opts.scene.caption_ja,
+    fontsize: captionSize(opts.aspect),
+    color: 'white',
+    W,
+    yBottomPx: captionBottom(opts.profile, H),
+    box: true,
+    maxLines: 2,
   });
 
   let graph: string;
@@ -401,7 +520,14 @@ export async function renderKenBurns(opts: {
     graph =
       imageComposite(W, H) +
       `;[comp]` +
-      [holdStatic(frames), STYLE_FILTER[opts.style], ...grade, ...captions, ...finish, 'format=yuv420p'].join(',') +
+      [
+        holdStatic(frames),
+        STYLE_FILTER[opts.style],
+        ...grade,
+        ...captions,
+        ...finish,
+        'format=yuv420p',
+      ].join(',') +
       `[v]`;
   } else {
     const SW = Math.round((W * SS) / 2) * 2;
@@ -411,23 +537,61 @@ export async function renderKenBurns(opts: {
     graph =
       imageComposite(SW, SH) +
       `;[comp]` +
-      [zoompanExpr(opts.scene.effect, frames, W, H, amp, memories ? 'linear' : 'smooth'), STYLE_FILTER[opts.style], ...grade, ...captions, ...finish, 'format=yuv420p'].join(',') +
+      [
+        zoompanExpr(
+          opts.scene.effect,
+          frames,
+          W,
+          H,
+          amp,
+          memories ? 'linear' : 'smooth',
+        ),
+        STYLE_FILTER[opts.style],
+        ...grade,
+        ...captions,
+        ...finish,
+        'format=yuv420p',
+      ].join(',') +
       `[v]`;
   }
 
-  await run(FFMPEG, ['-y', '-i', opts.imageAbs, '-filter_complex', graph, '-map', '[v]', '-t', String(dur), ...ENC, out]);
+  await run(FFMPEG, [
+    '-y',
+    '-i',
+    opts.imageAbs,
+    '-filter_complex',
+    graph,
+    '-map',
+    '[v]',
+    '-t',
+    String(dur),
+    ...ENC,
+    out,
+  ]);
   return { file: out, cached: false };
 }
 
 // ---- Cảnh "AI animate" — PLACEHOLDER chờ API image-to-video ----
 // Prompt EN cho cảnh này đã có sẵn trong plan.videogen.scenes[].prompt_en (xem lib/videoai.ts)
 export async function renderAiPlaceholder(opts: {
-  imageAbs: string; scene: Scene; style: VideoStyle; profile: EffectProfile; aspect: Aspect; fonts: FontSet;
+  imageAbs: string;
+  scene: Scene;
+  style: VideoStyle;
+  profile: EffectProfile;
+  aspect: Aspect;
+  fonts: FontSet;
 }): Promise<SegmentResult> {
   const { W, H } = dims(opts.aspect);
   const dur = opts.scene.duration_s;
   const out = segCacheFile({
-    v: CACHE_V, t: 'ai', img: opts.scene.media_id, d: dur, c: opts.scene.caption_ja, s: opts.style, p: opts.profile, a: opts.aspect,
+    v: CACHE_V,
+    t: 'ai',
+    img: opts.scene.media_id,
+    d: dur,
+    c: opts.scene.caption_ja,
+    s: opts.style,
+    p: opts.profile,
+    a: opts.aspect,
   });
   if (fs.existsSync(out)) return { file: out, cached: true };
 
@@ -444,32 +608,85 @@ export async function renderAiPlaceholder(opts: {
     `drawbox=y=(ih-${bandH})/2:h=${bandH}:color=black@0.55:t=fill`,
     ...(jp
       ? [
-          drawText({ font: jp, text: 'API待ち', fontsize: mainSize, color: '#ffd23f', y: `(h-${bandH})/2+${Math.round(bandH * 0.12)}`, borderw: 5 }),
-          drawText({ font: jp, text: 'AIアニメーション生成準備中…', fontsize: subSize, color: 'white', y: `(h+${bandH})/2-${Math.round(subSize * 1.6)}`, borderw: 3 }),
+          drawText({
+            font: jp,
+            text: 'API待ち',
+            fontsize: mainSize,
+            color: '#ffd23f',
+            y: `(h-${bandH})/2+${Math.round(bandH * 0.12)}`,
+            borderw: 5,
+          }),
+          drawText({
+            font: jp,
+            text: 'AIアニメーション生成準備中…',
+            fontsize: subSize,
+            color: 'white',
+            y: `(h+${bandH})/2-${Math.round(subSize * 1.6)}`,
+            borderw: 3,
+          }),
         ]
       : opts.fonts.vn
-        ? [drawText({ font: opts.fonts.vn, text: 'DANG CHO API (AI animate)', fontsize: subSize, color: '#ffd23f', y: '(h-text_h)/2', borderw: 4 })]
+        ? [
+            drawText({
+              font: opts.fonts.vn,
+              text: 'DANG CHO API (AI animate)',
+              fontsize: subSize,
+              color: '#ffd23f',
+              y: '(h-text_h)/2',
+              borderw: 4,
+            }),
+          ]
         : []),
     ...drawTextBlock({
-      fonts: opts.fonts, text: opts.scene.caption_ja, fontsize: captionSize(opts.aspect), color: 'white',
-      W, yBottomPx: captionBottom(opts.profile, H), box: true, maxLines: 2,
+      fonts: opts.fonts,
+      text: opts.scene.caption_ja,
+      fontsize: captionSize(opts.aspect),
+      color: 'white',
+      W,
+      yBottomPx: captionBottom(opts.profile, H),
+      box: true,
+      maxLines: 2,
     }),
     ...finish,
     'format=yuv420p',
   ].join(',');
   const graph = imageComposite(W, H) + `;[comp]${overlays}[v]`;
-  await run(FFMPEG, ['-y', '-i', opts.imageAbs, '-filter_complex', graph, '-map', '[v]', '-t', String(dur), ...ENC, out]);
+  await run(FFMPEG, [
+    '-y',
+    '-i',
+    opts.imageAbs,
+    '-filter_complex',
+    graph,
+    '-map',
+    '[v]',
+    '-t',
+    String(dur),
+    ...ENC,
+    out,
+  ]);
   return { file: out, cached: false };
 }
 
 // ---- Cảnh cắt từ VIDEO GỐC (cảm xúc thật, 0 token) ----
 export async function renderVideoClip(opts: {
-  videoAbs: string; scene: Scene; style: VideoStyle; profile: EffectProfile; aspect: Aspect; fonts: FontSet;
+  videoAbs: string;
+  scene: Scene;
+  style: VideoStyle;
+  profile: EffectProfile;
+  aspect: Aspect;
+  fonts: FontSet;
 }): Promise<SegmentResult> {
   const { W, H } = dims(opts.aspect);
   const dur = opts.scene.duration_s;
   const out = segCacheFile({
-    v: CACHE_V, t: 'clip', img: opts.scene.media_id, d: dur, c: opts.scene.caption_ja, s: opts.style, p: opts.profile, a: opts.aspect,
+    v: CACHE_V,
+    t: 'clip',
+    img: opts.scene.media_id,
+    d: dur,
+    c: opts.scene.caption_ja,
+    s: opts.style,
+    p: opts.profile,
+    a: opts.aspect,
   });
   if (fs.existsSync(out)) return { file: out, cached: true };
 
@@ -478,8 +695,14 @@ export async function renderVideoClip(opts: {
     STYLE_FILTER[opts.style],
     ...grade,
     ...drawTextBlock({
-      fonts: opts.fonts, text: opts.scene.caption_ja, fontsize: captionSize(opts.aspect), color: 'white',
-      W, yBottomPx: captionBottom(opts.profile, H), box: true, maxLines: 2,
+      fonts: opts.fonts,
+      text: opts.scene.caption_ja,
+      fontsize: captionSize(opts.aspect),
+      color: 'white',
+      W,
+      yBottomPx: captionBottom(opts.profile, H),
+      box: true,
+      maxLines: 2,
     }),
     ...finish,
     // video gốc NGẮN hơn duration_s khai báo → giữ frame cuối cho đủ (tpad), rồi -t cắt đúng.
@@ -488,14 +711,41 @@ export async function renderVideoClip(opts: {
     'format=yuv420p',
   ].join(',');
   const graph = videoComposite(W, H) + `;[comp]${overlays}[v]`;
-  await run(FFMPEG, ['-y', '-ss', '0', '-t', String(dur), '-i', opts.videoAbs, '-filter_complex', graph, '-map', '[v]', '-t', String(dur), ...ENC, out]);
+  await run(FFMPEG, [
+    '-y',
+    '-ss',
+    '0',
+    '-t',
+    String(dur),
+    '-i',
+    opts.videoAbs,
+    '-filter_complex',
+    graph,
+    '-map',
+    '[v]',
+    '-t',
+    String(dur),
+    ...ENC,
+    out,
+  ]);
   return { file: out, cached: false };
 }
 
 // ---- Title / outro card (nền gradient theo PALETTE của AI, KHÔNG ảnh ngoài) ----
-export async function paletteBgPng(W: number, H: number, palette: Palette, kind: 'title' | 'outro'): Promise<string> {
-  const p = path.join(TMP_DIR(), `bg_${crypto.randomBytes(4).toString('hex')}.png`);
-  const [from, to] = kind === 'title' ? [palette.primary, palette.secondary] : [palette.secondary, palette.primary];
+export async function paletteBgPng(
+  W: number,
+  H: number,
+  palette: Palette,
+  kind: 'title' | 'outro',
+): Promise<string> {
+  const p = path.join(
+    TMP_DIR(),
+    `bg_${crypto.randomBytes(4).toString('hex')}.png`,
+  );
+  const [from, to] =
+    kind === 'title'
+      ? [palette.primary, palette.secondary]
+      : [palette.secondary, palette.primary];
   const cx = W / 2;
   const ruleW = Math.round(W * 0.18);
   const ruleY = kind === 'title' ? Math.round(H * 0.56) : Math.round(H * 0.58);
@@ -521,14 +771,27 @@ export async function paletteBgPng(W: number, H: number, palette: Palette, kind:
 }
 
 export async function renderCard(opts: {
-  kind: 'title' | 'outro'; title: string; subtitle: string; dedication?: string;
-  palette: Palette; aspect: Aspect; fonts: FontSet; durationS?: number;
+  kind: 'title' | 'outro';
+  title: string;
+  subtitle: string;
+  dedication?: string;
+  palette: Palette;
+  aspect: Aspect;
+  fonts: FontSet;
+  durationS?: number;
 }): Promise<SegmentResult> {
   const { W, H } = dims(opts.aspect);
   const dur = opts.durationS ?? 3;
   const ded = opts.dedication ?? '';
   const out = segCacheFile({
-    v: CACHE_V, t: opts.kind, title: opts.title, sub: opts.subtitle, ded, pal: opts.palette, a: opts.aspect, d: dur,
+    v: CACHE_V,
+    t: opts.kind,
+    title: opts.title,
+    sub: opts.subtitle,
+    ded,
+    pal: opts.palette,
+    a: opts.aspect,
+    d: dur,
   });
   if (fs.existsSync(out)) return { file: out, cached: true };
 
@@ -541,14 +804,51 @@ export async function renderCard(opts: {
   const subSize = Math.round(W * 0.026);
   const filters = [
     holdStatic(frames),
-    ...drawTextBlock({ fonts: opts.fonts, text: opts.title, fontsize: titleSize, color: opts.palette.text_on_dark, W, yCenterPx: Math.round(H * 0.44), borderw: 3, maxLines: 3 }),
+    ...drawTextBlock({
+      fonts: opts.fonts,
+      text: opts.title,
+      fontsize: titleSize,
+      color: opts.palette.text_on_dark,
+      W,
+      yCenterPx: Math.round(H * 0.44),
+      borderw: 3,
+      maxLines: 3,
+    }),
     ...(ded
-      ? drawTextBlock({ fonts: opts.fonts, text: ded, fontsize: Math.round(subSize * 1.15), color: opts.palette.accent, W, yCenterPx: Math.round(H * 0.66), borderw: 2, maxLines: 2 })
+      ? drawTextBlock({
+          fonts: opts.fonts,
+          text: ded,
+          fontsize: Math.round(subSize * 1.15),
+          color: opts.palette.accent,
+          W,
+          yCenterPx: Math.round(H * 0.66),
+          borderw: 2,
+          maxLines: 2,
+        })
       : []),
-    ...drawTextBlock({ fonts: opts.fonts, text: opts.subtitle, fontsize: subSize, color: opts.palette.accent, W, yCenterPx: Math.round(H * (ded ? 0.78 : 0.66)), borderw: 2, maxLines: 2 }),
+    ...drawTextBlock({
+      fonts: opts.fonts,
+      text: opts.subtitle,
+      fontsize: subSize,
+      color: opts.palette.accent,
+      W,
+      yCenterPx: Math.round(H * (ded ? 0.78 : 0.66)),
+      borderw: 2,
+      maxLines: 2,
+    }),
     'format=yuv420p',
   ].join(',');
-  await run(FFMPEG, ['-y', '-i', bg, '-vf', filters, '-t', String(dur), ...ENC, out]);
+  await run(FFMPEG, [
+    '-y',
+    '-i',
+    bg,
+    '-vf',
+    filters,
+    '-t',
+    String(dur),
+    ...ENC,
+    out,
+  ]);
   fs.rmSync(bg, { force: true });
   return { file: out, cached: false };
 }
@@ -557,7 +857,10 @@ export async function renderCard(opts: {
 // profile 'memories' → concatMemories (cut mặc định + counter-slide/bloom/whip theo joins[])
 // profile 'off'      → cắt thẳng (concat demuxer), chỉ fade đen ở đầu/cuối cả video
 // profile cũ khác    → CROSSFADE xfade giữa các cảnh (đường legacy, giữ nguyên)
-const XFADE_SETS: Record<Exclude<EffectProfile, 'off' | 'memories'>, string[]> = {
+const XFADE_SETS: Record<
+  Exclude<EffectProfile, 'off' | 'memories'>,
+  string[]
+> = {
   soft: ['fade'],
   cinematic: ['fade', 'smoothleft', 'circleopen'],
   vintage: ['fade', 'dissolve'],
@@ -583,11 +886,18 @@ export async function concatWithTransitions(opts: {
 
   if (opts.profile === 'memories' && segs.length > 1) {
     if (!opts.joins || opts.joins.length !== segs.length - 1) {
-      throw new Error(`memories cần joins[] dài ${segs.length - 1}, nhận ${opts.joins?.length ?? 0}`);
+      throw new Error(
+        `memories cần joins[] dài ${segs.length - 1}, nhận ${opts.joins?.length ?? 0}`,
+      );
     }
     const { W, H } = dims(opts.aspect);
     return concatMemories({
-      segs, joins: opts.joins, musicPath: opts.musicPath, outAbs: opts.outAbs, W, H,
+      segs,
+      joins: opts.joins,
+      musicPath: opts.musicPath,
+      outAbs: opts.outAbs,
+      W,
+      H,
       voiceTracks: opts.voiceTracks,
     });
   }
@@ -595,15 +905,28 @@ export async function concatWithTransitions(opts: {
   // ----- Cắt thẳng: concat demuxer (nhanh nhất) -----
   if (opts.profile === 'off' || segs.length === 1) {
     const totalDur = segs.reduce((s, x) => s + x.durationS, 0);
-    const listFile = path.join(TMP_DIR(), `list_${crypto.randomBytes(4).toString('hex')}.txt`);
-    fs.writeFileSync(listFile, segs.map((s) => `file '${s.file.replace(/\\/g, '/')}'`).join('\n'), 'utf8');
+    const listFile = path.join(
+      TMP_DIR(),
+      `list_${crypto.randomBytes(4).toString('hex')}.txt`,
+    );
+    fs.writeFileSync(
+      listFile,
+      segs.map((s) => `file '${s.file.replace(/\\/g, '/')}'`).join('\n'),
+      'utf8',
+    );
     const args = ['-y', '-f', 'concat', '-safe', '0', '-i', listFile];
     if (opts.musicPath) args.push('-stream_loop', '-1', '-i', opts.musicPath);
-    args.push('-vf', `fade=t=in:st=0:d=0.4,fade=t=out:st=${Math.max(0, totalDur - 0.5).toFixed(2)}:d=0.5`);
+    args.push(
+      '-vf',
+      `fade=t=in:st=0:d=0.4,fade=t=out:st=${Math.max(0, totalDur - 0.5).toFixed(2)}:d=0.5`,
+    );
     args.push('-map', '0:v');
     if (opts.musicPath) {
       args.push('-map', '1:a');
-      args.push('-af', `volume=1.0,afade=t=in:st=0:d=0.8,afade=t=out:st=${Math.max(0, totalDur - 2.5).toFixed(2)}:d=2.5`);
+      args.push(
+        '-af',
+        `volume=1.0,afade=t=in:st=0:d=0.8,afade=t=out:st=${Math.max(0, totalDur - 2.5).toFixed(2)}:d=2.5`,
+      );
       args.push('-c:a', 'aac', '-b:a', '128k', '-shortest');
     }
     args.push('-t', totalDur.toFixed(2), ...FINAL_ENC, opts.outAbs);
@@ -615,10 +938,13 @@ export async function concatWithTransitions(opts: {
   // offset_i = (thời lượng tích luỹ hiện tại) − XFADE_D ; tích luỹ += d_i − XFADE_D
   // VD: 3s + 5s + 4s, overlap 0.6 → offset 2.4 rồi 6.8 ; tổng = 10.8s
   // tới đây chỉ còn 3 profile cũ có crossfade (memories + off + 1-segment đã rẽ nhánh ở trên)
-  const set = XFADE_SETS[opts.profile as Exclude<EffectProfile, 'off' | 'memories'>];
+  const set =
+    XFADE_SETS[opts.profile as Exclude<EffectProfile, 'off' | 'memories'>];
   const parts: string[] = [];
   const transitions: string[] = [];
-  segs.forEach((_, i) => parts.push(`[${i}:v]fps=${FPS},settb=AVTB,format=yuv420p[s${i}]`));
+  segs.forEach((_, i) =>
+    parts.push(`[${i}:v]fps=${FPS},settb=AVTB,format=yuv420p[s${i}]`),
+  );
   let cum = segs[0].durationS;
   let prev = '[s0]';
   for (let i = 1; i < segs.length; i++) {
@@ -626,12 +952,16 @@ export async function concatWithTransitions(opts: {
     transitions.push(tr);
     const offset = Math.max(0, cum - XFADE_D);
     const label = i === segs.length - 1 ? '[vx]' : `[x${i}]`;
-    parts.push(`${prev}[s${i}]xfade=transition=${tr}:duration=${XFADE_D}:offset=${offset.toFixed(3)}${label}`);
+    parts.push(
+      `${prev}[s${i}]xfade=transition=${tr}:duration=${XFADE_D}:offset=${offset.toFixed(3)}${label}`,
+    );
     cum = cum + segs[i].durationS - XFADE_D;
     prev = label;
   }
   const totalDur = cum;
-  parts.push(`[vx]fade=t=in:st=0:d=0.5,fade=t=out:st=${Math.max(0, totalDur - 0.8).toFixed(2)}:d=0.8[v]`);
+  parts.push(
+    `[vx]fade=t=in:st=0:d=0.5,fade=t=out:st=${Math.max(0, totalDur - 0.8).toFixed(2)}:d=0.8[v]`,
+  );
 
   const args = ['-y'];
   for (const s of segs) args.push('-i', s.file);
@@ -639,7 +969,10 @@ export async function concatWithTransitions(opts: {
   args.push('-filter_complex', parts.join(';'), '-map', '[v]');
   if (opts.musicPath) {
     args.push('-map', `${segs.length}:a`);
-    args.push('-af', `volume=1.0,afade=t=in:st=0:d=0.8,afade=t=out:st=${Math.max(0, totalDur - 2.5).toFixed(2)}:d=2.5`);
+    args.push(
+      '-af',
+      `volume=1.0,afade=t=in:st=0:d=0.8,afade=t=out:st=${Math.max(0, totalDur - 2.5).toFixed(2)}:d=2.5`,
+    );
     args.push('-c:a', 'aac', '-b:a', '128k', '-shortest');
   }
   args.push('-t', totalDur.toFixed(2), ...FINAL_ENC, opts.outAbs);
@@ -687,7 +1020,9 @@ async function concatMemories(opts: {
   const transitions: string[] = [];
   // setsar=1 BẮT BUỘC: filter `concat` đòi SAR khớp tuyệt đối giữa các nhánh — segment cắt từ
   // video gốc có thể mang SAR lẻ kiểu 4907:4906 (scale giữ tỉ lệ), còn color source là 1:1.
-  segs.forEach((_, i) => parts.push(`[${i}:v]fps=${FPS},settb=AVTB,setsar=1,format=yuv420p[s${i}]`));
+  segs.forEach((_, i) =>
+    parts.push(`[${i}:v]fps=${FPS},settb=AVTB,setsar=1,format=yuv420p[s${i}]`),
+  );
 
   let uid = 0;
   const lbl = (p: string) => `[${p}${uid++}]`;
@@ -707,7 +1042,12 @@ async function concatMemories(opts: {
       const dir = j.dir ?? 1;
       // Hiệu ứng chiếm [T, T+D]: đuôi dư của chuỗi cũ + đầu cảnh mới cùng trượt
       const [pa, pb, na, nb] = [lbl('p'), lbl('p'), lbl('n'), lbl('n')];
-      const [Lmain, Ltail, Rhead, Rmain] = [lbl('lm'), lbl('lt'), lbl('rh'), lbl('rm')];
+      const [Lmain, Ltail, Rhead, Rmain] = [
+        lbl('lm'),
+        lbl('lt'),
+        lbl('rh'),
+        lbl('rm'),
+      ];
       parts.push(`${prev}split${pa}${pb}`);
       parts.push(`${pa}trim=end=${T.toFixed(3)},setpts=PTS-STARTPTS${Lmain}`);
       parts.push(`${pb}trim=start=${T.toFixed(3)},setpts=PTS-STARTPTS${Ltail}`);
@@ -725,14 +1065,18 @@ async function concatMemories(opts: {
     } else {
       // fade / fadewhite / hblur — xfade bắt đầu ĐÚNG tại ranh giới nhịp T
       const outL = lbl('x');
-      parts.push(`${prev}[s${i}]xfade=transition=${j.type}:duration=${j.dur}:offset=${T.toFixed(3)}${outL}`);
+      parts.push(
+        `${prev}[s${i}]xfade=transition=${j.type}:duration=${j.dur}:offset=${T.toFixed(3)}${outL}`,
+      );
       prev = outL;
     }
     transitions.push(j.type === 'cut' ? 'cut' : j.type);
     T += d;
   }
   const totalDur = Math.round(T * 1000) / 1000;
-  parts.push(`${prev}fade=t=in:st=0:d=0.5,fade=t=out:st=${Math.max(0, totalDur - 0.8).toFixed(2)}:d=0.8[v]`);
+  parts.push(
+    `${prev}fade=t=in:st=0:d=0.5,fade=t=out:st=${Math.max(0, totalDur - 0.8).toFixed(2)}:d=0.8[v]`,
+  );
 
   const args = ['-y'];
   for (const s of segs) args.push('-i', s.file);
@@ -756,7 +1100,9 @@ async function concatMemories(opts: {
     });
     const vAll = voices.map((_, k) => `[vc${k}]`).join('');
     audioParts.push(
-      voices.length > 1 ? `${vAll}amix=inputs=${voices.length}:normalize=0[voice]` : `${vAll}anull[voice]`,
+      voices.length > 1
+        ? `${vAll}amix=inputs=${voices.length}:normalize=0[voice]`
+        : `${vAll}anull[voice]`,
     );
     if (opts.musicPath) {
       audioParts.push(`[voice]asplit[voiceMix][voiceKey]`);
@@ -764,7 +1110,9 @@ async function concatMemories(opts: {
         `[${musicIdx}:a]aresample=44100,volume=1.0,afade=t=in:st=0:d=0.8,afade=t=out:st=${Math.max(0, totalDur - 2.5).toFixed(2)}:d=2.5[mus]`,
       );
       // nhạc cúi xuống dưới tiếng nói: threshold thấp + ratio mạnh + release dài cho tự nhiên
-      audioParts.push(`[mus][voiceKey]sidechaincompress=threshold=0.03:ratio=12:attack=80:release=600[duck]`);
+      audioParts.push(
+        `[mus][voiceKey]sidechaincompress=threshold=0.03:ratio=12:attack=80:release=600[duck]`,
+      );
       audioParts.push(`[duck][voiceMix]amix=inputs=2:normalize=0[aout]`);
     } else {
       audioParts.push(`[voice]anull[aout]`);
@@ -779,7 +1127,12 @@ async function concatMemories(opts: {
 
   if (opts.musicPath) args.push('-stream_loop', '-1', '-i', opts.musicPath);
   for (const v of voices) args.push('-i', v.file);
-  args.push('-filter_complex', [...parts, ...audioParts].join(';'), '-map', '[v]');
+  args.push(
+    '-filter_complex',
+    [...parts, ...audioParts].join(';'),
+    '-map',
+    '[v]',
+  );
   if (audioOut) {
     args.push('-map', audioOut, '-c:a', 'aac', '-b:a', '128k');
   }
@@ -797,7 +1150,13 @@ async function concatMemories(opts: {
  * Trả về label của clip; các dòng filter được push thẳng vào `parts`.
  */
 function counterSlideGraph(
-  parts: string[], Ltail: string, Rhead: string, D: number, dir: 1 | -1, W: number, H: number,
+  parts: string[],
+  Ltail: string,
+  Rhead: string,
+  D: number,
+  dir: 1 | -1,
+  W: number,
+  H: number,
   lbl: (p: string) => string,
 ): string {
   // Chiều cao dải chẵn (yuv420); khe = phần còn lại ở giữa (≈0.39%H, tối thiểu 4px)

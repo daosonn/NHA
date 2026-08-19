@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { PostService } from '../post/post.service';
+import { ProfileService } from '../profile/profile.service';
 import { StorageService } from '../storage/storage.service';
 
 /** Multer file injected by FileInterceptor (streamed to a temp file). */
@@ -82,6 +83,7 @@ export class MediaService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly postService: PostService,
+    private readonly profileService: ProfileService,
   ) {}
 
   /** Stores the file and creates a standalone Media row (no parent yet). */
@@ -125,6 +127,56 @@ export class MediaService {
     }
   }
 
+  /**
+   * The batch form of the streaming gate: 404 unless every media exists
+   * and the viewer may see it (same per-parent rules as openForViewer,
+   * one message — no oracle about which failed). For building things out
+   * of shared photos, e.g. video jobs. Returns the rows so the caller
+   * needs no second read.
+   */
+  async assertViewableBatch(
+    userId: string,
+    mediaIds: string[],
+  ): Promise<{ id: string; storageKey: string; mimeType: string }[]> {
+    const media = await this.prisma.media.findMany({
+      where: { id: { in: mediaIds } },
+      select: {
+        id: true,
+        storageKey: true,
+        mimeType: true,
+        uploaderUserId: true,
+        memo: { select: { ownerUserId: true } },
+        post: {
+          select: {
+            authorUserId: true,
+            families: { select: { familyId: true } },
+          },
+        },
+        lifeEvent: {
+          select: {
+            profile: { select: { userId: true, memberId: true } },
+          },
+        },
+      },
+    });
+    const visibility = await Promise.all(
+      media.map((item) => this.canView(userId, item)),
+    );
+    if (media.length !== mediaIds.length || visibility.includes(false)) {
+      throw new NotFoundException('Some media were not found');
+    }
+    // Return in the caller's order — for a video render, frame order is
+    // the order the user tapped the photos, not DB insertion order. The
+    // completeness check above proves every id resolves.
+    const byId = new Map(
+      media.map(({ id, storageKey, mimeType }) => [
+        id,
+        { id, storageKey, mimeType },
+      ]),
+    );
+    return mediaIds.map((id) => byId.get(id)!);
+  }
+
   /** Streams a media file (optionally a byte range) to an allowed viewer. */
   async openForViewer(
     userId: string,
@@ -142,6 +194,11 @@ export class MediaService {
           select: {
             authorUserId: true,
             families: { select: { familyId: true } },
+          },
+        },
+        lifeEvent: {
+          select: {
+            profile: { select: { userId: true, memberId: true } },
           },
         },
       },
@@ -179,6 +236,9 @@ export class MediaService {
       uploaderUserId: string;
       memo: { ownerUserId: string } | null;
       post: { authorUserId: string; families: { familyId: string }[] } | null;
+      lifeEvent: {
+        profile: { userId: string | null; memberId: string | null };
+      } | null;
     },
   ): Promise<boolean> {
     if (media.uploaderUserId === userId) {
@@ -192,8 +252,15 @@ export class MediaService {
       // One home for the post-visibility rule — never a second copy here.
       return this.postService.canViewPost(userId, media.post);
     }
-    // Standalone or life-event media stays uploader-only until the
-    // life-event flows land (WBS 1.6.8).
+    if (media.lifeEvent) {
+      // Profile-attached content shares one visibility rule, homed on
+      // ProfileService (the gallery task 1.6.4 will use the same one).
+      return this.profileService.canViewProfileContent(
+        userId,
+        media.lifeEvent.profile,
+      );
+    }
+    // Standalone media stays uploader-only.
     return false;
   }
 }

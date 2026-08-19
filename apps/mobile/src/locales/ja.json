@@ -108,7 +108,9 @@
     "noFamilyBody": "家族を作って一緒に残したい人を招待するか、受け取ったコードで参加してください。",
     "startFamily": "家族を作る・参加する",
     "loadFailed": "家族の一覧を読み込めませんでした。",
-    "retry": "もう一度"
+    "retry": "もう一度",
+    "switchToGroup": "{{name}}に切り替える",
+    "newGroup": "新しい家族グループを作る"
   },
   "family": {
     "title": "家系図",
@@ -140,34 +142,112 @@
     },
     "loadFailed": "家系図を読み込めませんでした。",
     "emptyTitle": "まだ誰もいません",
-    "emptyBody": "この家族の人を追加すると、家系図が自動で描かれます。"
+    "emptyBody": "この家族の人を追加すると、家系図が自動で描かれます。",
+    "new": {
+      "title": "新しい家族グループ",
+      "markTitle": "ひとつの独立したグループ",
+      "markBody": "家系図も、思い出も、コードもこのグループだけのもの。",
+      "nameLabel": "グループ名",
+      "namePlaceholder": "家族での呼び名",
+      "suggestions": {
+        "momsSide": "母方",
+        "dadsSide": "父方",
+        "grandparents": "祖父母"
+      },
+      "useSuggestion": "グループ名を「{{name}}」にする",
+      "youLabel": "あなたの立ち位置",
+      "youName": "{{name}}・あなた",
+      "youFallback": "あなた",
+      "youHint": "あなたがこのグループの管理者です。続柄は人が増えたときに設定します。",
+      "submit": "グループを作成",
+      "doneTitle": "グループを作成しました",
+      "doneBody": "家族ストリップに追加されました。コードを渡せば家系図は自然に埋まっていきます。",
+      "codeLabel": "家族コード",
+      "codeMeta": "このグループ専用・期限なし",
+      "codeHint": "このコードを持っている人は誰でも参加できます。家系図の枠はあとから追加できます。",
+      "done": "完了"
+    },
+    "nodeHint": "長押しすると家系図での位置を変更できます。",
+    "member": {
+      "title": "家系図での位置",
+      "closeScrim": "閉じる",
+      "nameLabel": "名前",
+      "namePlaceholder": "家族での呼び名",
+      "genderLabel": "性別",
+      "genderTitle": "家系図での表記は？",
+      "gender": {
+        "female": "女性",
+        "male": "男性",
+        "other": "回答しない"
+      },
+      "relationshipLabel": "あなたとの続柄",
+      "relationshipTitle": "{{name}}さんはあなたから見てどんな関係ですか？",
+      "noRelationYet": "まだ続柄が登録されていません。選ぶと線が引かれます。",
+      "theirsToEdit": "{{name}}さんはご自身のアカウントをお持ちです。名前や情報はご本人だけが変更できます。",
+      "save": "変更を保存",
+      "remove": "家系図から外す",
+      "blocked": {
+        "hasChildren": "下に枝がある人は外せません。",
+        "notYours": "家族から抜けられるのはご本人だけです。"
+      },
+      "errors": {
+        "forbidden": "これを変更できるのはご本人だけです。",
+        "duplicate": "その続柄はすでに登録されています。"
+      }
+    },
+    "waitingForMore_other": "{{name}}さんほか{{count}}人を待っています",
+    "invitedExpires_other": "あと{{count}}日",
+    "resendFor": "{{name}}さんの期限をもう1週間のばす",
+    "kinship": {
+      "sister": "姉妹",
+      "brother": "兄弟",
+      "mother": "母",
+      "father": "父",
+      "daughter": "娘",
+      "son": "息子",
+      "partner": "パートナー",
+      "stepParent": "継親",
+      "other": "その他",
+      "hint": {
+        "sameGeneration": "あなたと同じ世代",
+        "above": "あなたの一つ上の世代",
+        "below": "あなたの一つ下の世代",
+        "beside": "あなたの隣",
+        "custom": "関係は自由に書けます"
+      }
+    }
   },
   "invite": {
     "sheet": {
       "title": "家族を招待する",
-      "subtitle": "タップした場所にその人が入ります",
+      "subtitle": "選んだ場所にそのまま入れるコードを渡します",
       "closeScrim": "招待画面を閉じる",
-      "spot": "家系図の場所・{{id}}",
       "nameLabel": "呼び名",
       "namePlaceholder": "お名前",
       "relationship": "続柄",
       "relationshipTitle": "あなたから見た続柄は？",
-      "methodHeading": "どのように招待しますか",
-      "methodLabel": "招待方法",
-      "methodLink": "招待リンク",
-      "methodContact": "電話番号かメール",
-      "contactLabel": "送り先",
-      "contactPlaceholder": "電話番号またはメールアドレス",
-      "carries": "招待には場所と「{{kinship}}」が含まれるので、登録するとそのまま正しい場所に入ります。",
       "copy": "コピー",
       "copied": "コピーしました",
       "share": "招待を共有",
-      "shareMessage": "{{name}}さん、NHAで家族に参加しませんか：{{link}}",
-      "shareFallbackName": "あなた",
-      "send": "招待を送る"
+      "shareMessage": "{{name}}さん、このコードでNHAの{{family}}に参加してください：{{code}}",
+      "codeHeading": "その人の招待コード",
+      "codeLabel": "家族コード {{code}}",
+      "codeMeta": "{{family}}・期限なし",
+      "codeHint": "このコードを{{name}}さんに送ってください。登録のときに入力すると、{{family}}であなたが空けておいた場所に入ります。",
+      "spotEmpty": "家系図の新しい場所",
+      "spotUnset": "あなたから見た続柄を選んでください",
+      "codeMeta_other": "{{family}}・あと{{count}}日で期限切れ",
+      "codeMetaPlain": "{{family}}",
+      "send": "招待を送る",
+      "done": "完了",
+      "sentTitle": "{{name}}さんの場所を確保しました",
+      "sentSubtitle": "1週間だけ空けておきます。下のコードを送ってください。",
+      "errors": {
+        "noAnchor": "あなたがまだこの家系図にいないため、続柄をたどる相手がいません。",
+        "forbidden": "この家族のメンバーだけが招待できます。"
+      }
     },
     "preview": {
-      "nodeLabel": "{{name}}・{{role}}",
       "yourSpot": "あなたの場所"
     },
     "page": {
@@ -180,7 +260,14 @@
       "privacy": "投稿はこの家族だけが見られます",
       "join": "家族に参加する",
       "notNow": "あとで",
-      "finePrint": "アカウントがなくても大丈夫です。次の画面で作れます。コード {{code}}"
+      "finePrint": "アカウントがなくても大丈夫です。次の画面で作れます。コード {{code}}",
+      "joinSignedOut": "アカウントを作って参加",
+      "dead": "この招待はもう使えません",
+      "deadBody": "取り消されたか、すでに使われたか、期限が切れています。送ってくれた人に新しいコードをもらってください。",
+      "finePrintExpiry_other": "コード {{code}}・あと{{count}}日で期限切れ",
+      "errors": {
+        "alreadyMember": "すでにこの家族に参加しています。"
+      }
     }
   },
   "member": {
@@ -189,19 +276,11 @@
     "album": "アルバム",
     "memo": "メモ",
     "editSelf": "プロフィールを編集",
-    "addDetails": "{{name}}さんの情報を追加",
-    "bornYear": "{{year}}年生まれ",
-    "lifespan": "{{born}}年 – {{died}}年",
-    "noBio": "まだ何も書かれていません。家族の誰でも書き始められます。",
+    "noBio": "まだ何も書かれていません。写真の鉛筆から書き始められます。",
     "photos_other": "写真{{count}}枚",
     "timelineEmpty": "まだ出来事がありません",
     "timelineEmptyBody": "誕生、引っ越し、結婚 — 人生の節目になった日を。",
     "timelineEmptyAction": "出来事を追加",
-    "albumCaption": "家族が共有した思い出から",
-    "albumEmpty": "まだ写真がありません",
-    "albumEmptyBody": "この人がタグ付けされた思い出が投稿されると、ここに集まります。",
-    "albumEmptyAction": "思い出を投稿",
-    "openPhoto": "写真を開く",
     "memoEmpty": "まだメモがありません",
     "memoEmptyBody": "{{name}}さんについて覚えておきたいこと — アレルギー、贈り物のヒント、聞いてみたい話。あなただけが見られます。",
     "memoEmptyAction": "メモを書く",
@@ -211,7 +290,66 @@
       "health": "健康",
       "gift": "贈り物のヒント",
       "memories": "聞いてみたい話",
-      "todo": "やること"
+      "todo": "やること",
+      "none": "メモ"
+    },
+    "memoHeading": "{{name}}さんについてのメモ",
+    "memoOpenHint": "メモを開きます。長押しでその他の操作。",
+    "memoDetail": {
+      "title": "メモ",
+      "actions": "このメモの操作",
+      "edit": "このメモを編集",
+      "metaEdited": "{{written}}・{{edited}}に編集",
+      "photos_other": "写真・{{count}}枚",
+      "gone": "このメモはもうありません",
+      "goneBody": "削除されました。戻って新しく書けます。",
+      "about": "{{name}}さんについて",
+      "aboutWhen": "{{name}}さんについて・{{when}}"
+    },
+    "memoEditor": {
+      "titleNew": "新しいメモ",
+      "titleEdit": "メモを編集",
+      "cancel": "キャンセル",
+      "save": "保存",
+      "titleLabel": "何について",
+      "titlePlaceholder": "覚えておきたいこと",
+      "bodyLabel": "そのほか",
+      "bodyPlaceholder": "場所、値段、誰が言ったか…",
+      "private": "このメモはあなただけが見られます。",
+      "photosFixed_other": "写真{{count}}枚。書いたときに確定しています。"
+    },
+    "memoActions": {
+      "closeScrim": "メモの操作を閉じる",
+      "meta_other": "{{category}}・写真{{count}}枚",
+      "edit": "メモを編集",
+      "delete": "メモを削除",
+      "cancel": "キャンセル"
+    },
+    "memoDelete": {
+      "dismiss": "メモを残す",
+      "title": "このメモを削除しますか？",
+      "body_other": "このメモと写真{{count}}枚が完全になくなります。",
+      "confirm": "メモを削除",
+      "cancel": "やめておく"
+    },
+    "memoFailed": "メモを読み込めませんでした。",
+    "timelineFailed": "年表を読み込めませんでした。",
+    "moments": {
+      "heading": "一緒の思い出",
+      "counts_other": "写真{{photos}}枚・{{count}}件の思い出",
+      "partial": "この家族に共有された最近の思い出から表示しています。",
+      "empty": "まだ思い出がありません",
+      "emptyBody": "{{name}}さんがタグ付けされた思い出が投稿されると、ここに表示されます。",
+      "failed": "思い出を読み込めませんでした",
+      "video": "動画",
+      "openMoment_other": "{{title}}を開く・{{count}}件",
+      "headingOwn": "あなたの思い出",
+      "emptyBodyOwn": "思い出を投稿するか、誰かにタグ付けされると、ここに表示されます。",
+      "noFamily": "まず家族に参加するか作成してください。思い出は家族と共有するものです。"
+    },
+    "facts": {
+      "born": "{{date}}生まれ",
+      "lifespan": "{{born}}生まれ・{{died}}没"
     }
   },
   "moment": {
@@ -236,7 +374,11 @@
       "tooLarge": "ファイルが 100MB の上限を超えています。",
       "unsupported": "この形式のファイルには対応していません。",
       "empty": "写真を追加するか、何か書いてください。"
-    }
+    },
+    "tagHeading": "この思い出に写っているのは？",
+    "tagYou": "あなた",
+    "tagMember": "{{name}}さんをタグ付け",
+    "tagHint": "タグ付けされた人のプロフィールにこの思い出が並びます。"
   },
   "ai": {
     "daysAway_other": "あと{{count}}日",
@@ -372,7 +514,6 @@
     "title": "アカウントと設定",
     "signedOut": "ログインしていません",
     "noEmail": "—",
-    "mockNotice": "このアカウントはまだ本当のログインではありません。ここでの操作はAPIに届きません。",
     "signOut": "ログアウト",
     "language": "言語",
     "languageTitle": "言語を選ぶ"
@@ -393,6 +534,14 @@
       "10": "10月",
       "11": "11月",
       "12": "12月"
+    },
+    "relative": {
+      "today": "今日",
+      "yesterday": "昨日",
+      "daysAgo_other": "{{count}}日前",
+      "weeksAgo_other": "{{count}}週間前",
+      "monthsAgo_other": "{{count}}か月前",
+      "yearsAgo_other": "{{count}}年前"
     },
     "weekdays": {
       "0": "日曜日",
@@ -457,6 +606,31 @@
     "loadFailed": "写真を読み込めませんでした。",
     "emptyTitle": "まだ写真がありません",
     "emptyBody": "家族が写真や動画を共有すると、ここに集まります。"
+  },
+  "profileEdit": {
+    "title": "プロフィールを編集",
+    "save": "保存",
+    "loadFailed": "プロフィールを読み込めませんでした。",
+    "nameLabel": "名前",
+    "nameFromAccount": "アカウントの名前です。アカウント設定から変更できます。",
+    "bioLabel": "あなたの物語",
+    "bioPlaceholder": "育った場所、してきたこと、どんな人か…",
+    "interestsLabel": "あなたの好きなもの",
+    "addInterestLabel": "好きなものを追加",
+    "addInterestPlaceholder": "園芸、フエ料理…",
+    "addInterest": "追加",
+    "removeInterest": "{{interest}}を削除",
+    "birthLabel": "生年月日",
+    "deathLabel": "没年月日",
+    "datePlaceholder": "YYYY-MM-DD",
+    "dateHint": "年・月・日 — 1968-04-12",
+    "errors": {
+      "date": "日付はYYYY-MM-DDの形式で入力してください。",
+      "noSuchDay": "その日付は存在しません。",
+      "forbidden": "このプロフィールを変更できるのは本人だけです。",
+      "birthAfterDeath": "記録されている没年月日より後の日付です。"
+    },
+    "deathReadOnly": "別の場所に記録されています。この画面では変更できません。"
   },
   "video": {
     "title": "思い出ムービー",

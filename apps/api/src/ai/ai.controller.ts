@@ -1,8 +1,25 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { CurrentUser, type AuthUser } from '../auth/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
-import { AiService, type EvidenceStats, type GiftIdeasView, type MessageView, type SavedGiftIdea } from './ai.service';
+import {
+  AiService,
+  type EvidenceStats,
+  type GiftIdeasView,
+  type MessageView,
+  type SavedGiftIdea,
+} from './ai.service';
 import { CardService } from './card.service';
 import { ProfileService } from './profile.service';
 import { CardRenderDto } from './dto/card.dto';
@@ -47,11 +64,19 @@ export class AiController {
       .split(',')
       .map((r) => r.trim())
       .filter(Boolean);
-    return this.profileService.resolveEvidence(user.userId, familyId, memberId, list);
+    return this.profileService.resolveEvidence(
+      user.userId,
+      familyId,
+      memberId,
+      list,
+    );
   }
 
   @Post('families/:familyId/members/:memberId/profile-rollup')
-  @ApiOperation({ summary: 'Merge every pending signal about this person into a new profile version (1 AI call)' })
+  @ApiOperation({
+    summary:
+      'Merge every pending signal about this person into a new profile version (1 AI call)',
+  })
   async rollup(
     @CurrentUser() user: AuthUser,
     @Param('familyId', ParseUUIDPipe) familyId: string,
@@ -66,7 +91,10 @@ export class AiController {
     summary:
       'Read one post for durable facts about its AUTHOR (0–4 interest signals). Runs automatically when a post is created; this is the manual re-run.',
   })
-  async analyzePost(@CurrentUser() user: AuthUser, @Param('postId', ParseUUIDPipe) postId: string) {
+  async analyzePost(
+    @CurrentUser() user: AuthUser,
+    @Param('postId', ParseUUIDPipe) postId: string,
+  ) {
     await this.aiService.assertPostAuthor(user.userId, postId);
     return this.profileService.analyzePost(postId);
   }
@@ -86,7 +114,10 @@ export class AiController {
 
   @Public()
   @Get('ai/health')
-  @ApiOperation({ summary: 'AI service reachability + mock mode (core app must keep working when this is down)' })
+  @ApiOperation({
+    summary:
+      'AI service reachability + mock mode (core app must keep working when this is down)',
+  })
   health(): Promise<{ ok: boolean; mock: boolean; has_key: boolean }> {
     return this.aiService.health();
   }
@@ -106,7 +137,10 @@ export class AiController {
   }
 
   @Post('families/:familyId/members/:memberId/gift-ideas/save')
-  @ApiOperation({ summary: 'Screen 22 — Save one idea ("Two ideas you saved last year", never re-suggested)' })
+  @ApiOperation({
+    summary:
+      'Screen 22 — Save one idea ("Two ideas you saved last year", never re-suggested)',
+  })
   saveGiftIdea(
     @CurrentUser() user: AuthUser,
     @Param('familyId', ParseUUIDPipe) familyId: string,
@@ -117,7 +151,10 @@ export class AiController {
   }
 
   @Get('families/:familyId/members/:memberId/evidence-stats')
-  @ApiOperation({ summary: 'Screen 21 — "12 photos and 4 notes about her · shared since January" (0 tokens, before asking AI)' })
+  @ApiOperation({
+    summary:
+      'Screen 21 — "12 photos and 4 notes about her · shared since January" (0 tokens, before asking AI)',
+  })
   evidenceStats(
     @CurrentUser() user: AuthUser,
     @Param('familyId', ParseUUIDPipe) familyId: string,
@@ -127,7 +164,9 @@ export class AiController {
   }
 
   @Get('families/:familyId/members/:memberId/gift-ideas/saved')
-  @ApiOperation({ summary: 'Screen 21 — ideas you saved before (shown under the Ask form)' })
+  @ApiOperation({
+    summary: 'Screen 21 — ideas you saved before (shown under the Ask form)',
+  })
   savedGiftIdeas(
     @CurrentUser() user: AuthUser,
     @Param('familyId', ParseUUIDPipe) familyId: string,
@@ -137,13 +176,21 @@ export class AiController {
   }
 
   @Post('families/:familyId/members/:memberId/message-suggestions')
-  @ApiOperation({ summary: 'Screens 24-25 — three message variants (short/standard/heartfelt), regenerate with a tone' })
+  @ApiOperation({
+    summary:
+      'Screens 24-25 — three message variants (short/standard/heartfelt), regenerate with a tone',
+  })
   message(
     @CurrentUser() user: AuthUser,
     @Param('familyId', ParseUUIDPipe) familyId: string,
     @Param('memberId', ParseUUIDPipe) memberId: string,
     @Body() dto: MessageRequestDto,
   ): Promise<MessageView> {
-    return this.aiService.messageSuggestions(user.userId, familyId, memberId, dto);
+    return this.aiService.messageSuggestions(
+      user.userId,
+      familyId,
+      memberId,
+      dto,
+    );
   }
 }

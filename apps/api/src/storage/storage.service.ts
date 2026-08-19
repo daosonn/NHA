@@ -103,8 +103,30 @@ export class StorageService {
   }
 
   /**
-   * Absolute path cho pipeline render video (ffmpeg cần đường dẫn file thật).
-   * Vẫn đi qua resolvePath nên không thoát khỏi rootDir.
+   * Best-effort removal of many stored files, for after a DB commit that
+   * orphaned them: an orphan file is recoverable noise, a dangling DB row
+   * is not — so failures are logged, never thrown. One home for the
+   * cleanup policy (extracted 2026-08-19; post/life-event/memo deletes
+   * all use it).
+   */
+  async removeAllBestEffort(storageKeys: string[]): Promise<void> {
+    await Promise.all(
+      storageKeys.map(async (storageKey) => {
+        try {
+          await this.remove(storageKey);
+        } catch (error) {
+          this.logger.warn(
+            `Could not delete stored file ${storageKey}: ${String(error)}`,
+          );
+        }
+      }),
+    );
+  }
+
+  /**
+   * Absolute path cho pipeline render video và cho bước phân tích ảnh (ffmpeg và
+   * sharp cần đường dẫn file thật, không dùng được stream). Vẫn đi qua
+   * resolvePath nên không thoát khỏi rootDir.
    */
   absolutePathOf(storageKey: string): string {
     return this.resolvePath(storageKey);

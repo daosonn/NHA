@@ -147,7 +147,8 @@ export class CreateVideoJobDto {
   /** 1 trong 6 phong cách card mở đầu/kết (màn 30) hoặc 'none' */
   @IsOptional()
   @IsIn(['album', 'cinema', 'film', 'letter', 'seasonal', 'polaroid', 'none'])
-  style?: 'album' | 'cinema' | 'film' | 'letter' | 'seasonal' | 'polaroid' | 'none';
+  style?:
+    'album' | 'cinema' | 'film' | 'letter' | 'seasonal' | 'polaroid' | 'none';
 
   /** id track thư viện (màn 29) | 'none' | 'media:<mediaId>' = "Use your own song" (upload qua /media) */
   @IsOptional()

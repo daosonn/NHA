@@ -8,10 +8,13 @@ import { ScrollView, View } from 'react-native';
 import { AppHeader } from '../../src/components/layout/app-header';
 import { AudiencePicker, type AudienceGroup } from '../../src/components/moment/audience-picker';
 import { MediaStrip, type DraftMedia } from '../../src/components/moment/media-strip';
+import { MemberTagPicker } from '../../src/components/moment/member-tag-picker';
 import { Button } from '../../src/components/ui/button';
 import { Text } from '../../src/components/ui/text';
 import { TextField } from '../../src/components/ui/text-field';
+import { useSession } from '../../src/features/auth/session';
 import { useFamilies } from '../../src/features/family/use-families';
+import { useTaggableMembers } from '../../src/features/family/use-taggable-members';
 import { momentErrorKey } from '../../src/features/moment/moment-error';
 import { useCreateMoment } from '../../src/features/moment/use-create-moment';
 import type { FamilySummary } from '../../src/lib/api';
@@ -60,11 +63,13 @@ export default function NewMomentScreen() {
   const { t } = useTranslation();
   const router = useRouter();
 
+  const { user } = useSession();
   const { data: families } = useFamilies();
   const create = useCreateMoment();
 
   const [caption, setCaption] = useState('');
   const [media, setMedia] = useState<DraftMedia[]>([]);
+  const [taggedIds, setTaggedIds] = useState<string[]>([]);
   // Excluded rather than selected: everything starts lit, and the
   // destructive direction is the one that needs a deliberate tap.
   const [excludedIds, setExcludedIds] = useState<string[]>([]);
@@ -74,9 +79,28 @@ export default function NewMomentScreen() {
   const selected = audience.filter((group) => !excludedIds.includes(group.id));
   const excluded = audience.filter((group) => excludedIds.includes(group.id));
 
+  const taggable = useTaggableMembers(
+    selected.map((group) => group.id),
+    user?.id ?? null,
+  );
+
+  /**
+   * Dropping a family drops the people who were only in it.
+   *
+   * The server refuses a tag whose member is not in the post's audience, so
+   * leaving them selected would turn an ordinary "actually, not that family"
+   * into a 400 on the way out — with nothing on screen to explain it.
+   */
+  const tagged = taggedIds.filter((id) => taggable.some((member) => member.id === id));
+
   const toggle = (group: AudienceGroup) =>
     setExcludedIds((current) =>
       current.includes(group.id) ? current.filter((id) => id !== group.id) : [...current, group.id],
+    );
+
+  const toggleTag = (memberId: string) =>
+    setTaggedIds((current) =>
+      current.includes(memberId) ? current.filter((id) => id !== memberId) : [...current, memberId],
     );
 
   const pick = async () => {
@@ -103,12 +127,18 @@ export default function NewMomentScreen() {
 
   const submit = () => {
     create.mutate(
-      { content: caption, media, familyIds: selected.map((group) => group.id) },
+      {
+        content: caption,
+        media,
+        familyIds: selected.map((group) => group.id),
+        taggedMemberIds: tagged,
+      },
       {
         onSuccess: () => {
           setCaption('');
           setMedia([]);
           setExcludedIds([]);
+          setTaggedIds([]);
           router.replace('/');
         },
       },
@@ -184,6 +214,10 @@ export default function NewMomentScreen() {
             />
           )}
         </View>
+
+        {/* Below the audience, because who can be named depends on who the
+            moment is going to. */}
+        <MemberTagPicker members={taggable} selected={tagged} onToggle={toggleTag} />
 
         <View style={{ gap: 10 }}>
           {create.error !== null && (

@@ -32,7 +32,12 @@ export interface AiProfileJson {
     last_evidence: string | null;
     notes: string;
   }[];
-  avoid: { item: string; reason: string; hard: boolean; overrides: string | null }[];
+  avoid: {
+    item: string;
+    reason: string;
+    hard: boolean;
+    overrides: string | null;
+  }[];
   wishes: { wish: string; source: string }[];
   gift_ideas_pending: { idea: string; occasion: string; source: string }[];
   gift_history: { date: string; gift: string; reaction: string }[];
@@ -140,7 +145,8 @@ export class AiClientService {
   private readonly token: string;
 
   constructor(config: ConfigService) {
-    this.baseUrl = config.get<string>('AI_SERVICE_URL') ?? 'http://127.0.0.1:8000';
+    this.baseUrl =
+      config.get<string>('AI_SERVICE_URL') ?? 'http://127.0.0.1:8000';
     this.token = config.get<string>('AI_INTERNAL_TOKEN') ?? '';
   }
 
@@ -180,7 +186,11 @@ export class AiClientService {
     author_name?: string | null;
     author_role?: string | null;
     author_relations?: string[];
-    tagged?: { label: string; display_name: string; relation_to_author?: string | null }[];
+    tagged?: {
+      label: string;
+      display_name: string;
+      relation_to_author?: string | null;
+    }[];
     taken_at?: string | null;
     place?: string | null;
     transcript?: string | null;
@@ -218,7 +228,13 @@ export class AiClientService {
     member: AiMemberContext;
     title_hint?: string | null;
     kind_label?: string | null;
-    media: { media_id: string; kind: 'image' | 'video'; caption?: string | null; taken_at?: string | null; duration_s?: number | null }[];
+    media: {
+      media_id: string;
+      kind: 'image' | 'video';
+      caption?: string | null;
+      taken_at?: string | null;
+      duration_s?: number | null;
+    }[];
     target_sec?: 30 | 60 | 90 | 120 | 180;
     mood?: 'warm' | 'nostalgic' | 'playful' | 'quiet';
     locale?: string;
@@ -226,7 +242,11 @@ export class AiClientService {
     return this.request('POST', '/v1/video-storyboard', body);
   }
 
-  private async request<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
+  private async request<T>(
+    method: 'GET' | 'POST',
+    path: string,
+    body?: unknown,
+  ): Promise<T> {
     let rsp: Response;
     try {
       rsp = await fetch(`${this.baseUrl}${path}`, {
@@ -245,7 +265,9 @@ export class AiClientService {
     }
     if (!rsp.ok) {
       const detail = await rsp.text().catch(() => '');
-      throw new ServiceUnavailableException(`AI service error ${rsp.status}: ${detail.slice(0, 300)}`);
+      throw new ServiceUnavailableException(
+        `AI service error ${rsp.status}: ${detail.slice(0, 300)}`,
+      );
     }
     return (await rsp.json()) as T;
   }

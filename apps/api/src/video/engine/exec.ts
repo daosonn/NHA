@@ -23,7 +23,12 @@ export function run(
     child.on('error', reject);
     child.on('close', (code) => {
       if (code === 0 || opts?.okNonZero) resolve({ stdout, stderr });
-      else reject(new Error(`${path.basename(bin)} exit ${code}: ${stderr.slice(-500)}`));
+      else
+        reject(
+          new Error(
+            `${path.basename(bin)} exit ${code}: ${stderr.slice(-500)}`,
+          ),
+        );
     });
   });
 }
@@ -32,13 +37,20 @@ export type MediaProbe = { duration: number; hasAudio: boolean };
 
 export async function probeMedia(absPath: string): Promise<MediaProbe> {
   const { stdout } = await run(FFPROBE, [
-    '-v', 'error',
-    '-show_entries', 'format=duration',
-    '-show_entries', 'stream=codec_type',
-    '-of', 'json',
+    '-v',
+    'error',
+    '-show_entries',
+    'format=duration',
+    '-show_entries',
+    'stream=codec_type',
+    '-of',
+    'json',
     absPath,
   ]);
-  const j = JSON.parse(stdout) as { format?: { duration?: string }; streams?: { codec_type?: string }[] };
+  const j = JSON.parse(stdout) as {
+    format?: { duration?: string };
+    streams?: { codec_type?: string }[];
+  };
   return {
     duration: Number(j.format?.duration ?? 0),
     hasAudio: (j.streams ?? []).some((s) => s.codec_type === 'audio'),

@@ -1,179 +1,319 @@
-# AI Architecture
+﻿# AI Architecture
 
-Sprint 2 · viết 19/08/2026. Đây là kiến trúc AI ĐANG CHẠY (không phải đề xuất) — đã verify bằng
-`pnpm verify` (pytest 7/7 + Jest e2e 8/8, gồm render video thật) và các lượt E2E với key thật.
+> Status: **contract draft** (2026-08-19, backend-authored at sprint-2
+> start per `sprint-02.md` Notes). The AI team owns `apps/ai` and
+> everything model-side; this document is the seam both teams build
+> against. Change it by agreement, not silently — the NestJS proxy and
+> the FastAPI service move together.
 
-## Sơ đồ
+## Ownership
 
-    Expo (apps/mobile)                 ← 13 màn design 21-33 (11a→11l) + hub "Present"
-        │ REST (bearer)
-        ▼
-    NestJS (apps/api)                  ← authorization + gom evidence + orchestrate + RENDER
-        │  src/ai (gift/message/card) ─┬─→ apps/ai (FastAPI)  → OpenAI (json_schema strict)
-        │  src/ai/profile.service    ──┤
-        │  src/video (VideoJob async) ─┘        │
-        │  src/ai/shops.service        ────────→ Yahoo!ショッピング API (sản phẩm thật)
-        ▼
-    PostgreSQL (Prisma)                ← InterestSignal / MemberProfile / VideoJob / Plan / Memo / …
+| Piece                                                         | Owner       |
+| ------------------------------------------------------------- | ----------- |
+| `apps/api` — mobile-facing endpoints, auth, context gathering | Backend     |
+| `apps/ai` — FastAPI service, providers, prompts, video render | **AI team** |
+| This contract                                                 | Both, by PR |
 
-- **apps/ai (FastAPI, Python 3.12)** — nơi DUY NHẤT gọi AI provider. 5 endpoint:
-  `/v1/gift-ideas`, `/v1/message-suggestions`, `/v1/video-storyboard`, `/v1/analyze-post`,
-  `/v1/profile-rollup` (+`/health`). Không đọc DB, không giữ dữ liệu nghiệp vụ; NestJS gửi
-  context đã lọc quyền kèm request.
-  `.env`: `AI_MOCK`, `OPENAI_API_KEY`, `MODEL_ANALYSIS`, `MODEL_SUGGEST`, `INTERNAL_TOKEN`.
-- **NestJS `src/ai`** — gom EVIDENCE thật (memo về member + post có tag, membership-check),
-  gift ideas + save/saved, message 3 biến thể, card PNG server-side (sharp, 5 mẫu, 0 token),
-  tra sản phẩm Yahoo per-idea, và TẦNG HIỂU NGƯỜI DÙNG (`profile.service.ts`, mục dưới).
-- **NestJS `src/video`** — render là media-processing 0-token nên nằm ở đây, KHÔNG ở FastAPI.
-  Engine port nguyên từ demo `onemoretime-demo` (đã qua 92 smoke checks bên đó) vào
-  `src/video/engine/`: cut đúng nhịp nhạc (BPM), Ken Burns tuyến tính 2-4%/shot,
-  counter-slide/bloom/whip, 6 phong cách card mở đầu/kết, audio ducking (tiếng trong clip giữ
-  nguyên, nhạc nén xuống bằng sidechaincompress). Thư viện nhạc: 45 track thật trong
-  `apps/api/assets/music` (5 chủ đề) + 6 track synth tự tổng hợp; nhạc riêng của user đi qua
-  `musicId = "media:<mediaId>"`. `VideoJob` async: PENDING → PROCESSING (progress + stage cho
-  màn 32) → DONE (+Notification `AI_SUGGESTION`) / FAILED. Share = tạo Post đính media kết quả.
+Provider direction: **Claude API** (chosen 2026-08-19; the AI team makes
+the final model-level calls — e.g. a small model for suggestions, a
+larger one where quality demands it — and records them here).
 
-## Hiểu một người là ai, thích gì — hai tầng
+## Non-negotiables (from `CLAUDE.md` § 3 and product decisions)
 
-Nếu mỗi lần gợi ý lại đọc lại toàn bộ bài đăng thì vừa tốn token vừa KHÔNG có ký ức: mâu thuẫn
-theo thời gian không ai xử lý, và "bà đã bỏ ngọt từ tháng Tư" không bao giờ thắng nổi một bức ảnh
-bánh kem năm ngoái. Nên có hai tầng (port từ demo `onemoretime-demo`, đã chạy thật):
+1. The Expo app **never** calls `apps/ai` or an AI provider directly —
+   everything goes through NestJS, which owns auth.
+2. FastAPI is **stateless and never touches PostgreSQL**. NestJS gathers
+   every piece of context and sends it in the request; FastAPI must not
+   become an authoritative owner of core data. (`VideoJob` rows live in
+   Postgres and are written by NestJS only.)
+3. **The core product works when AI is down** (`product-overview.md`
+   § 14): if FastAPI is unreachable or times out, NestJS answers
+   `503 { code: "AI_UNAVAILABLE" }` and the app hides/degrades the AI
+   surfaces. No cached fakes, no retry storms.
+4. **Every suggestion shows its working** (decision 2026-08-18): the
+   response carries `why` and `source` per suggestion, and the evidence
+   counts are stated in the response envelope — a recommendation nobody
+   can trace to a memo, a photo or the timeline is a guess wearing the
+   family's clothes.
+5. **Privacy boundary in the context**: memos are private to their
+   author. The context NestJS sends contains only the _requesting
+   user's own_ memos about the subject, plus shared content (profile
+   interests, life events, shared posts). FastAPI never sees another
+   member's private notes.
 
-    bài đăng mới ──analyze (1 call, nhiều ảnh)──►  InterestSignal
-                                                  bằng chứng NGUYÊN TỬ, append-only
-                                                          │
-                             đủ ROLLUP_EVERY_N_POSTS bài, │ rollup (1 call)
-                             hoặc ngay trước khi gợi ý    ▼
-                                                  MemberProfile v+1
-                                                  bản chưng cất ~1k token, version hoá
+## Request flow
 
-**Chưng cất NGAY sau mỗi bài** (`ROLLUP_EVERY_N_POSTS` mặc định **1**). Lý do: rollup lúc
-gợi ý là thứ người dùng phải ngồi chờ, còn rollup lúc đăng bài chạy nền không ai thấy. Dồn 5 bài
-chỉ tiết kiệm vài call nhưng đánh đổi đúng chỗ đau nhất.
+    Expo app ── REST (bearer) ──► NestJS  ── HTTP + X-AI-Service-Token ──► FastAPI ──► Claude API
+                                   │  gathers context from Postgres          │ stateless
+                                   ◄──────────── suggestions + provenance ───┘
 
-**Tầng 1 — `InterestSignal`** (`ProfileService.analyzePost`, chạy nền khi tạo bài):
-- Một bài = ĐÚNG một call AI, kể cả 6 ảnh (ảnh 768px, `detail: "low"`, EXIF/GPS bị strip).
-- Prompt ép `context_analysis` điền TRƯỚC: ai làm gì với ai, tác giả là ACTOR / RECIPIENT /
-  OBSERVER. Đây là thứ tránh bug tốn công nhất của demo: caption "Con trai về quê thăm mẹ" do
-  người mẹ đăng nói lên rằng MẸ ĐƯỢC con về thăm, không phải mẹ thích đi thăm ai.
-- Signal LUÔN thuộc về NGƯỜI ĐĂNG (không phải người trong ảnh), 0-4 cái/bài, mỗi cái là một sự
-  thật BỀN ("còn đúng và còn dùng được sau ba tháng không?").
-- Code (không tin model) quyết: `sourceType` suy từ `basis`, trần confidence theo nguồn
-  (caption 0.75 · ảnh 0.85 · người dùng ♡ 0.9), `observedAt` = ngày sự việc.
-- Append-only: không bao giờ sửa nội dung, chỉ set `processed` / `revoked`.
-- Lỗi tạm của provider (429/5xx) được **thử lại một lần sau 8s**: không có gì kích hoạt lần hai
-  nên bỏ luôn là mất vĩnh viễn hiểu biết từ bài đó. Vẫn lỗi → log + `POST /posts/:id/analyze` tay.
+Service-to-service auth: shared secret in `X-AI-Service-Token`
+(env `AI_SERVICE_TOKEN` on both sides; requests without it are 401).
+NestJS reads `AI_SERVICE_URL` (unset in local dev = AI features answer
+503 cleanly). Suggestion calls time out at 30s NestJS-side.
 
-**Tầng 2 — `MemberProfile`** (`ProfileService.rollupMember`, 6 quy tắc trong `ROLLUP_SYSTEM`):
-1. Không bịa — mọi interest phải trỏ signal id thật.
-2. Nguồn NGƯỜI ghi đè nguồn MÁY (♡ conf 0.9 thắng suy luận từ ảnh khi mâu thuẫn).
-3. Mới thắng cũ — cái cũ chuyển `trend: fading`; nếu là sức khoẻ → `avoid` với `hard: true`.
-4. Gộp topic gần nghĩa, evidence cộng dồn.
-5. Trần 12 interests / ~1k token (cắt bằng CODE sau khi model trả về).
-6. `trend` rising/stable/fading theo mật độ bằng chứng 6 tháng gần nhất.
-- `gift_history` được ghép lại bằng CODE (chỉ thêm, không xoá) — không tin model giữ hộ.
-- Mỗi rollup tạo VERSION MỚI, version cũ không bao giờ bị ghi đè → xem lại được hồ sơ tại thời
-  điểm bất kỳ, và một gợi ý luôn truy được về đúng hồ sơ đã sinh ra nó.
+## Two-phase pipeline (decided 2026-08-19)
 
-**Memo cố tình KHÔNG vào profile.** Ghi chú người thân viết tay là nguồn tin cậy CAO NHẤT nên
-được đưa tới model NGUYÊN VĂN từng chữ ở mỗi lượt gợi ý (khối riêng trong prompt), thay vì bị
-chưng cất mất chi tiết. Kiêng kỵ sức khoẻ trong memo được tôn trọng như `avoid hard`.
+Suggestions are not computed from raw photos at request time. The design
+the team chose is two phases:
 
-**Gợi ý quà/lời nhắn chỉ đọc HỒ SƠ + MEMO — không đọc lại caption bài đăng.** Mỗi bài đã được
-phân tích một lần khi đăng; nhồi caption vào prompt lần nữa là phân tích hai lần cùng một dữ liệu
-(chậm hơn, tốn token hơn, không biết thêm gì). Provenance vẫn nguyên: model trích `sig_…` có trong
-hồ sơ, và `GET /families/:id/members/:id/evidence?refs=sig_…,memo_…` lần về đúng signal → bài gốc →
-tấm ảnh, nên sheet "Where this came from" (màn 23) vẫn mở được ảnh thật và "Open the post".
-Bài gốc bị xoá thì trả lại chi tiết signal, không câm lặng.
+**Phase 1 — background analysis.** The AI team's service polls
+`GET /api/internal/ai/media/pending` (photos not yet analysed, oldest
+first, `storageKey` resolving under the shared `UPLOAD_DIR` volume), runs
+vision on them, and pushes the extracted facts back through
+`PUT /api/internal/ai/media/:mediaId/insight` — e.g. `{ scene: "outing",
+labels: ["beach", "family"] }`; the JSON shape is the AI team's to define.
+NestJS stores them in **`MediaInsight`, the hidden store** (migration
+`20260819071710`): written only through that internal route, exposed by
+**no user-facing API**, and cascade-deleted with its photo — deleting a
+picture withdraws its traces. Images only for the MVP; video analysis is
+a later conversation.
 
-**Hai tầng cache, độc lập:**
-- `AiSuggestionCache` — cả lượt gợi ý, khoá `gift|member|dịp|v<profileVersion>|ngân sách|locale`,
-  hết hạn cuối ngày diễn ra dịp (không rõ ngày → 7 ngày). Có bằng chứng mới → version tăng → tự
-  miss. Nút ↻ trên màn Ideas gửi `force: true` để bỏ qua.
-- `ProductCache` — sản phẩm sàn theo `(tuần, từ khoá, dải giá)`, không chứa dữ liệu gia đình.
+**Phase 2 — suggestion requests.** The context bundle combines the
+hidden insights with the requester's own memos, the subject's profile,
+timeline and visible posts. **Comments are excluded** (decided
+2026-08-19).
 
-Endpoint để nhìn vào tầng này: `GET /families/:id/members/:id/profile-understanding`
-(trả version + profile + số signal đã gộp/chờ gộp), `POST …/profile-rollup` (gộp tay),
-`POST /posts/:id/analyze` (đọc lại một bài).
+**The anti-laundering rule.** An insight inherits the visibility of the
+photo it came from. When NestJS assembles a bundle it filters insights
+through the requester's own view of the source media (the same
+`canViewPost` rule as everywhere else) — an insight derived from a photo
+the requester cannot see never enters their bundle, so the hidden store
+can never leak content across family or privacy boundaries.
 
-## Tra sản phẩm thật (0 token)
+Two consequences stated plainly:
 
-`shops.service.ts` port đầy đủ resolver của demo: AI chỉ đưa Ý TƯỞNG + `search_keywords_ja`;
-tầng này gọi Yahoo!ショッピング `itemSearch V3` (`sort=-review_count`, `in_stock`, `condition=new`).
-- Quà "together" dùng bảng từ khoá `体験ギフト` hard-code theo `experience_kind` (ở Nhật quà trải
-  nghiệm bán dưới dạng catalog gift có thật → vẫn ra link cụ thể).
-- Thang thử khi 0 kết quả: nguyên trạng → nới ngân sách (×0.6/×1.8) → rút gọn từ khoá → nới cả
-  hai. Đã nới thì tên sản phẩm BẮT BUỘC chứa ≥1 từ khoá gốc (thà không hiện còn hơn hiện sai).
-- Lọc giá ±10% theo dải đã dùng, loại token vi phạm `avoid` (bản đồ VI/EN → token JP), bỏ trùng
-  theo 40 ký tự đầu của tên, chấm điểm `0.35×giá hợp lý + 0.25×uy tín review + 0.2×khớp từ khoá
-  + 0.1×có ảnh`, giữ TOP 3. Lọc theo dải đã nới nhưng CHẤM ĐIỂM theo ngân sách gốc.
-- `resolve` trả về UI: `cached` / `relaxed` / `dropped_by_avoid` / `attempts` — để giá lệch ngân
-  sách luôn có lời giải thích.
+- This _is_ automatic analysis — `mvp-scope.md`'s "manual context only"
+  note is superseded for photos by this team decision (2026-08-19).
+- In phase 1 **family photos leave the server for the Claude API**. That
+  is inherent to vision analysis and should be confirmed with the
+  customer (Japanese market, privacy-sensitive).
 
-## Độ trễ — đo 19/08, và vì sao nó từng chậm
+## FastAPI contract (what the AI team implements)
 
-| Chặng | Trước (gpt-5) | Sau | Demo cùng model |
-|---|---|---|---|
-| Gợi ý quà (cả tra sàn) | 100.3s | **15.5s** | 14.0s |
-| Gợi ý quà — chỉ call AI | 77.9s | 13-16s | 14.0s |
-| Gợi ý quà — chỉ tra sàn | ~22s | **0.4s** | — |
-| Lời nhắn | 63.7s | **~6s** | 5.7s |
-| Mở lại đúng dịp đó (cache) | — | **0.1s** | — |
+Base: internal only, JSON in/out, `Accept-Language`-free — locale is an
+explicit field because copy must follow the requesting user's app
+language (`vi` / `ja` / `en`).
 
-Bốn nguyên nhân, theo thứ tự tác động:
+### `GET /health`
 
-1. **Model.** `gpt-5` là model reasoning: một lượt gợi ý quà mất 78 giây, chiếm ~78% tổng thời gian.
-   Demo onemoretime chạy `gpt-5.6-luna` cho MỌI việc. Nay NHA dùng đúng model đó
-   (`MODEL_ANALYSIS` = `MODEL_SUGGEST` = `gpt-5.6-luna`) kèm `max_completion_tokens: 8192`.
-   **Đừng đổi lại `gpt-5` mà không đo lại.**
-2. **Số TOKEN ĐẦU RA quyết định độ trễ** — quan hệ gần như tuyến tính, đo được trong `ai.log`:
-   out 1420 → 13.4s · out 1733 → 20.7s · out 2359 → 24.3s. Nên prompt đặt trần ký tự cho từng
-   trường (title ≤ 40, why một câu ≤ 140, tag ≤ 12, insight ≤ 110, note ≤ 220) và yêu cầu ĐÚNG 5
-   ý tưởng. Muốn nhanh hơn nữa thì cắt bớt trường, không phải "nhắc model nhanh lên".
-3. **Prompt phình vì lặp.** Từng gửi 24 caption bài đăng (rồi 6) SONG SONG với hồ sơ — mà hồ sơ
-   chính là bản chưng cất của những bài đó. Nay **không gửi caption nào**: mỗi bài chỉ được đọc
-   một lần ở `analyzePost`. Cũng bỏ luôn việc gửi hai lần cùng một sự thật (`interests` phẳng +
-   `profile.interests`): input 2651 → 2362 token.
-4. **Tra sàn tuần tự.** 5 ý tưởng × tối đa 4 lần thử = ~22s. Giờ 3 luồng song song + cache tuần
-   → 0.4s (không mở rộng hơn 3: Yahoo ~1 req/s, bị 429 là trắng sản phẩm).
+`{ status: "ok", provider: "claude", model: "<current>" }` — what the
+NestJS proxy pings.
 
-Log để đo lại bất cứ lúc nào: FastAPI ghi `suggest_gift gpt-5.6-luna 15.0s in=2439 out=1520`,
-NestJS ghi `gift ideas: AI 15.0s · shops 0.4s · 5 ý tưởng, 3 lượt gọi sàn`.
+### `POST /suggestions/gifts` · `POST /suggestions/messages` · `POST /suggestions/quality-time`
 
-## Nguyên tắc bắt buộc (đã encode trong code + test)
+Request (built entirely by NestJS):
 
-1. **Provenance**: mọi gợi ý mang `why` + `sources[]`; service LỌC source về evidence thật
-   (id lạ bị vứt — cả mock lẫn real). Số evidence đã đọc trả về TRƯỚC danh sách ý tưởng.
-2. **Kiêng kỵ cứng**: `MemberProfile.avoid` (hard) + phần tử `"avoid:<...>"` trong
-   `LifeProfile.interests` là ràng buộc tuyệt đối; `note_to_giver` LUÔN được viết — không có gì
-   cần tránh thì phải nói ra như vậy, không được để trống (UI khối "Worth knowing").
-3. **Core sống khi AI chết**: `AI_MOCK=1` trả dữ liệu giả lập đúng schema 0 token; AI service sập
-   → NestJS trả 503 rõ ràng; đăng bài KHÔNG bao giờ fail vì analyze lỗi (chạy nền, chỉ log);
-   video quick-mode ("stitch in my order") không đụng AI.
-4. **AI sinh Ý TƯỞNG, không sinh sản phẩm** — tên/giá/★/shop luôn từ API sàn.
-5. **Trả lời bằng ngôn ngữ người dùng đang xem** — mobile gửi `locale` từ i18n; không có nó thì
-   màn hình tiếng Nhật nhận về ý tưởng tiếng Anh (đã dính 19/08).
-6. **Strict Structured Outputs**: mọi call OpenAI dùng `json_schema strict` sinh từ pydantic;
-   ⚠ strict mode KHÔNG nhận dict tự do — palette và mọi field con của profile phải là model
-   tường minh (đã dính 1 lần ở palette).
+```jsonc
+{
+  "locale": "ja",
+  "kind": "gifts", // matches the route; present for logging symmetry
+  "subject": {
+    // who the suggestion is about — no ids the model could leak, names only
+    "name": "Dad",
+    "birthDate": "1964-03-14", // nullable
+    "interests": ["Bonsai", "Bát Tràng pottery"],
+    "lifeEvents": [{ "title": "Opened the shop", "date": "1975-06-01", "place": "Huế" }],
+  },
+  "occasion": { "title": "62nd birthday", "date": "2026-03-14" }, // nullable
+  "userContext": "He mentioned his shears are getting dull", // free text from the form, nullable
+  "constraints": { "budget": "under 1,500,000₫", "count": 3 }, // per-feature, nullable fields
+  "evidence": {
+    // the requesting user's own private notes about the subject + shared content
+    "memos": [
+      { "title": "Likes chrysanthemums", "content": "…", "category": "gift", "updatedAt": "…" },
+    ],
+    "recentPosts": [{ "content": "…", "place": "…", "createdAt": "…" }],
+    // phase-1 facts, already filtered by the requester's visibility of
+    // the source photos (anti-laundering rule above)
+    "photoInsights": [{ "scene": "outing", "labels": ["beach", "family"], "photoDate": "…" }],
+    "counts": { "notes": 12, "photos": 248, "gifts": 3 }, // echoed back verbatim
+  },
+}
+```
 
-## Chạy & test
+Response — the envelope states the evidence **before** the ideas, and
+every idea carries its provenance (shape mirrors the shipped UI,
+`apps/mobile/src/fixtures/ai.ts`):
 
-    pnpm dev:ai        # FastAPI :8000 (tự tạo venv lần đầu)
-    pnpm dev:api       # NestJS :3000 (Postgres portable: C:\NHA\pgsql\bin\pg_ctl -D C:\NHA\pgdata start)
-    pnpm test:ai       # pytest, mock mode, 0 token
-    pnpm test:e2e      # Jest e2e apps/api — auth→media→post→gift→message→card→storyboard→render THẬT→share
-    pnpm verify        # tokens + tsc api/mobile + i18n + pytest + jest e2e
+```jsonc
+{
+  "evidence": { "notes": 12, "photos": 248, "gifts": 3 },
+  "suggestions": [
+    {
+      "title": "Clay teapot from Bát Tràng",
+      "price": "800,000 – 1,200,000₫", // gifts only; messages return "text", quality-time returns "steps"
+      "tags": ["Bát Tràng", "In his taste"],
+      "why": "He stopped at the shop near the ferry twice…",
+      "source": "From Lan's note · 2 weeks ago", // human-readable; MUST trace to a sent evidence item
+    },
+  ],
+  "model": "claude-haiku-4-5", // for logging/debugging, not shown to users
+}
+```
 
-`ROLLUP_EVERY_N_POSTS` (env, mặc định **1** = chưng cất ngay sau mỗi bài). Đặt >1 chỉ khi cần
-tiết kiệm token và chấp nhận rollup nổ ra lúc người dùng đang chờ gợi ý.
+`messages` adds nothing structural (regenerate = the same call again);
+`quality-time` returns `steps: string[]` per suggestion — the app may
+save one as a `Plan` via the NestJS Plan endpoints (2.6.4, pure NestJS,
+no AI involvement in the save).
 
-## Chưa làm / biết trước
+### `POST /videos` + status
 
-- Video storyboard chưa đọc `MemberProfile` (chỉ đọc caption + metadata media) — nối vào là bước
-  sau nếu muốn video "hiểu người".
-- Chưa có RAG vector cho kỷ niệm (demo dùng embedding + cosine để chọn top-3 kỷ niệm liên quan);
-  hiện gửi memo + caption mới nhất theo thứ tự thời gian.
-- Chưa trích keyframe video khi analyze (chỉ ảnh); tiếng nói trong clip chưa chuyển thành text.
-- Time-decay `eff_conf = conf × 0.5^(tháng/half-life)` chưa cài — hiện dùng confidence thô + trend.
-- Provider/model đặt qua env (`gpt-5`/`gpt-5-mini` mặc định) — quyết định chính thức của team vẫn mở.
+Video render (sprint 2.2) is **owned end-to-end by the AI team** behind
+this seam — **the NestJS side shipped 2026-08-19**: NestJS creates the
+authoritative `VideoJob` row and calls `POST /videos` with
+`{ jobId, mediaPaths[], locale, style? }` (10s dispatch timeout; a
+non-2xx or unreachable service = the job is rolled back and the app gets
+`503 AI_UNAVAILABLE`, so retries are clean). Media travel as **paths in
+the shared storage volume** (`UPLOAD_DIR` — both services see the same
+disk in the MVP deployment). FastAPI processes async and reports to
+`POST /api/internal/video-jobs/:jobId/complete` (same
+`X-AI-Service-Token`) with `{ resultPath, mimeType }` on success — the
+rendered file written under the shared volume — or `{ error }` on
+failure. Anything in between is a 400, as is a body carrying **both**
+shapes, an unsupported `mimeType`, or a `resultPath` that is not a
+readable file under the volume; the file's **size is measured from
+disk**, never taken from the payload. Duplicate or concurrent reports on
+a finished job are acknowledged and ignored (retry-safe: the job is
+claimed with a conditional update inside the registration transaction).
+A dispatch **timeout** leaves the job PENDING — the AI service may have
+accepted it, and its callback still completes the job late; only a
+definite refusal rolls the job back. NestJS registers the result as the
+requester's own Media row (FK `VideoJob.resultMediaId`, unique) and
+serves it through the existing authorized streaming; the app only ever
+polls NestJS (`GET /api/video-jobs/:id`).
+
+## NestJS side (what backend implements — mobile-facing)
+
+Documented in `docs/00-shared/api-contract.md` as each lands:
+
+- `POST /api/ai/gifts` · `/api/ai/messages` · `/api/ai/quality-time` —
+  auth'd; NestJS resolves the member, checks family membership, gathers
+  the context above (own memos only), forwards, returns the envelope.
+- `GET/POST/PATCH/DELETE /api/me/plans` + share endpoints (2.6.4) —
+  `Plan`/`PlanShare` tables from sprint 0; owner edits, shares are
+  view-only.
+- `POST /api/video-jobs` · `GET /api/video-jobs/:id` (2.2) + the
+  internal completion callback.
+- Memory list (2.1.2) reuses `Post` — a filter extension on the family
+  feed, no AI involvement.
+- **Shipped 2026-08-19** — the phase-1 pipe:
+  `GET /api/internal/ai/media/pending` (`?limit` 1–200, default 50) and
+  `PUT /api/internal/ai/media/:mediaId/insight`
+  (`{ insight: object, model: string }`, upsert). Both under
+  `X-AI-Service-Token`; a user bearer token does not open them, and with
+  `AI_SERVICE_TOKEN` unset they answer `503 { code: "AI_UNAVAILABLE" }`.
+
+## What the AI team built (answers the open items above)
+
+Written by the AI team 2026-08-19, after the contract draft above. Everything here
+is running and covered by `pnpm verify`; the contract's non-negotiables (1-5) hold.
+
+### Models
+
+`gpt-5.6-luna` for every call 窶・analysis, rollup, gift, message, storyboard 窶・set through `MODEL_ANALYSIS` / `MODEL_SUGGEST` in `apps/ai/.env`, plus
+`max_completion_tokens: 8192`. Measured 2026-08-19: `gpt-5` (reasoning) needed
+77.9s for one gift round against luna's 14-16s, and that call is ~80% of the
+latency the family feels. Do not switch models without re-measuring.
+
+Latency is roughly linear in OUTPUT tokens (out 1420 竊・13.4s ﾂｷ out 2359 竊・24.3s),
+so the prompts carry hard length caps per field and ask for exactly 5 ideas.
+Both services log it: FastAPI writes `suggest_gift gpt-5.6-luna 15.0s in=2439
+out=1520`, NestJS writes `gift ideas: AI 15.0s ﾂｷ shops 0.4s`.
+
+### FastAPI surface (`apps/ai`, stateless, never touches Postgres)
+
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /v1/gift-ideas` | 5 ideas + insights + `note_to_giver`, each idea with `why`, sources, JP search keywords |
+| `POST /v1/message-suggestions` | three variants (short/standard/heartfelt) |
+| `POST /v1/video-storyboard` | title/subtitle/opening/closing/dedication + scenes (caption, duration, reason) + palette |
+| `POST /v1/analyze-post` | one post (caption + up to 6 photos) 竊・0-4 interest signals about its AUTHOR |
+| `POST /v1/profile-rollup` | pending signals + current profile 竊・the next profile version |
+| `GET /health` | reachability + whether a key is configured |
+
+Every call uses OpenAI Structured Outputs (`json_schema`, `strict: true`) generated
+from pydantic. `AI_MOCK=1` answers all of them with schema-correct data for 0 tokens,
+which is how `pnpm test:ai` runs in CI.
+
+### Understanding a person 窶・two layers
+
+    post created 笏笏analyze (1 call, 竕､6 photos)笏笏笆ｺ  InterestSignal
+                                                   atomic evidence, append-only
+                                                          笏・rollup (1 call)
+                                                          笆ｼ
+                                                   MemberProfile v+1
+                                                   distilled ~1k tokens, versioned
+
+- `analyzePost` runs in the background when a post is created (retried once after
+  8s on a provider error), and the rollup follows immediately 窶・  `ROLLUP_EVERY_N_POSTS` defaults to **1**. Rolling up at suggestion time is the
+  one moment the user is actually waiting.
+- The analysis prompt fills `context_analysis` FIRST: who did what to whom, and
+  whether the author was ACTOR / RECIPIENT / OBSERVER. "Con trai v盻・quﾃｪ thﾄノ m蘯ｹ"
+  posted by the mother means the MOTHER was visited 窶・not that she likes visiting.
+- Signals belong to the post's AUTHOR, never to a tagged person. Code (not the
+  model) decides `sourceType`, caps confidence (caption 0.75 ﾂｷ photo 0.85 ﾂｷ a
+  human's 笙｡ 0.9) and stamps `observedAt` with the day it happened.
+- The rollup follows six rules (never invent ﾂｷ human sources override machine
+  ones ﾂｷ newer beats older, health goes to `avoid hard` ﾂｷ merge near-synonyms ﾂｷ
+  竕､12 interests ﾂｷ set trend). `gift_history` is re-merged in code, not trusted to
+  the model. Old versions are never overwritten, so a suggestion is always
+  traceable to the profile that produced it.
+
+### Gift and message read the profile, not the captions again
+
+Each post is analysed once. Suggestion prompts carry the distilled profile plus
+relatives' notes **verbatim** 窶・no captions a second time, which is both faster
+and cheaper. Provenance survives because the model cites `sig_窶ｦ` ids from the
+profile: `GET /families/:familyId/members/:memberId/evidence?refs=sig_窶ｦ,memo_窶ｦ`
+resolves each one back to its signal 竊・original post 竊・photo, so screen 23
+("Where this came from") still opens the real picture. If the post was deleted,
+the signal's own detail is returned rather than silence.
+
+Two independent caches: `AiSuggestionCache` (a whole round, keyed with the profile
+version so new evidence invalidates it; the 竊ｻ button sends `force`) and
+`ProductCache` (marketplace results by week + keyword + price band).
+
+### Real products, 0 tokens
+
+`src/ai/shops.service.ts` calls Yahoo!繧ｷ繝ｧ繝・ヴ繝ｳ繧ｰ `itemSearch V3`. The model only
+supplies `search_keywords_ja`; "together" ideas map to a hard-coded 菴馴ｨ薙ぐ繝輔ヨ
+keyword per `experience_kind`. When a query returns nothing the service widens in
+steps (as-is 竊・wider budget 竊・shorter keyword 竊・both), then filters price ﾂｱ10%,
+drops titles hitting the avoid list, dedupes and scores (price fit, review trust,
+keyword match, has-image) and keeps the top 3. Three lookups run in parallel 窶・no
+more, Yahoo rate-limits around 1 req/s. `resolve` returns `cached` / `relaxed` /
+`dropped_by_avoid` / `attempts` so a price outside the budget can always be explained.
+
+### Video render lives in NestJS, not in `apps/ai`
+
+Rendering is ffmpeg work with no model call, so it sits in `src/video` beside the
+data it needs (`VideoJob`, media on the shared volume) instead of crossing the
+service boundary for every frame: cut on the music's beat, linear Ken Burns,
+counter-slide/bloom/whip punctuation, six opening styles, and audio ducking that
+keeps the voices in a family clip above the music. `apps/ai` only writes the
+storyboard. The engine was ported from the `onemoretime` prototype after 92 smoke
+checks there.
+
+### Where the implementation differs from the draft above 窶・needs a team decision
+
+1. **Analysis direction.** The draft has `apps/ai` polling
+   `GET /internal/ai/media/pending` and pushing `MediaInsight` back. What runs is
+   the opposite: NestJS calls `POST /v1/analyze-post` when a post is created, and
+   stores `InterestSignal` + `MemberProfile`. The internal routes and
+   `MediaInsight` are kept intact and still guarded; they simply have no caller
+   yet. One of the two should eventually be retired.
+2. **Provider.** The draft records Claude API as the direction; the implementation
+   runs OpenAI (`gpt-5.6-luna`) because that is what the prototype was validated
+   against. Provider choice is one constant in `apps/ai/app/config.py`.
+3. **Memo scope.** Non-negotiable 5 says the context carries only the requesting
+   user's own memos. The implementation currently sends every family member's
+   memos about the subject, because design screen 22 shows "From Lan's note" as a
+   source chip. This is a privacy boundary, so it is called out here rather than
+   changed quietly 窶・see the PR description.
+4. **Service token.** The draft's seam is `X-AI-Service-Token` / `AI_SERVICE_TOKEN`
+   (AI 竊・NestJS). NestJS 竊・FastAPI uses `x-internal-token` / `AI_INTERNAL_TOKEN`.
+   Both exist because they guard opposite directions; worth unifying the naming.
+5. **`/video-jobs` namespace.** `src/video-job` (backend, WBS 2.2.3) and
+   `src/video` (AI, screens 27-33) both answer `GET /video-jobs`. Only `src/video`
+   is registered in `AppModule`; the other is left in the tree untouched.

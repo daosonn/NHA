@@ -4,37 +4,84 @@ import { ScrollView, View } from 'react-native';
 import { AppHeader } from '../../src/components/layout/app-header';
 import { BackButton } from '../../src/components/layout/header-slots';
 import { ProfileBody } from '../../src/components/member/profile-body';
+import { BrandMark } from '../../src/components/ui/brand-mark';
 import { Text } from '../../src/components/ui/text';
-import { getMemberProfile } from '../../src/fixtures/member';
+import { useSession } from '../../src/features/auth/session';
+import { useActiveFamily } from '../../src/features/family/active-family';
+import { useFamilies } from '../../src/features/family/use-families';
+import { useFamilyTree } from '../../src/features/family/use-family-tree';
+import { toMemberProfile } from '../../src/features/member/member-profile';
+import { useMemberProfile } from '../../src/features/member/use-profile';
+import { spacing } from '../../src/theme';
 
 /**
  * The Life Profile — the centre of the product.
  *
- * One profile per person, global across every family they belong to; only the
- * relation shown in the hero is scoped to the family you arrived from.
+ * One profile per person, global across every family they belong to; the
+ * relation word and the name a placeholder goes by are the two things scoped
+ * to the family you arrived from, and both come out of the tree rather than
+ * out of the profile.
  */
 export default function MemberScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useSession();
+  const { familyId } = useActiveFamily();
 
-  const profile = getMemberProfile(id);
+  const { data: detail } = useMemberProfile(familyId, id);
+  const { data: tree } = useFamilyTree(familyId);
+  const { data: families } = useFamilies();
+
+  const profile = toMemberProfile({
+    detail,
+    member: tree?.members.find((row) => row.id === id),
+    tree,
+    viewerMemberId: tree?.members.find((row) => row.userId === user?.id)?.id ?? null,
+    viewerUserId: user?.id ?? null,
+    familyName: families?.find((family) => family.id === familyId)?.name ?? null,
+  });
 
   return (
     <View className="flex-1 bg-page">
       <AppHeader
         left={<BackButton onPress={() => router.back()} />}
         center={
-          <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-            {profile.displayName}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <BrandMark size={22} />
+            <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
+              {profile.displayName}
+            </Text>
+          </View>
         }
       />
 
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+        contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
-        <ProfileBody profile={profile} />
+        <ProfileBody
+          profile={profile}
+          familyId={familyId}
+          memberId={id}
+          onEdit={() =>
+            familyId === null
+              ? undefined
+              : router.push({
+                  pathname: '/profile/edit',
+                  params: { familyId, memberId: id },
+                })
+          }
+          onAddMemo={() =>
+            familyId === null
+              ? undefined
+              : router.push({ pathname: '/memo/edit', params: { familyId, memberId: id } })
+          }
+          onOpenMemo={(memo) => router.push({ pathname: '/memo/[id]', params: { id: memo.id } })}
+          onEditMemo={(memo) => router.push({ pathname: '/memo/edit', params: { id: memo.id } })}
+          onOpenMoment={(moment) =>
+            router.push({ pathname: '/post/[id]', params: { id: moment.id } })
+          }
+        />
       </ScrollView>
     </View>
   );
