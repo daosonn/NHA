@@ -4,11 +4,14 @@
 
 **Sprint 1 — Core Features** (in progress — PRs #1–#9 merged; the
 "pending team review before start" note was stale and is removed
-2026-08-18)
+2026-08-18). **Backend has moved on to Sprint 2 (2026-08-19)**: sprint 1's
+backend side is finished, so `apps/api` work now follows
+`docs/sprints/sprint-02.md` while frontend wires the remaining sprint-1
+screens.
 
-- Active sprint doc: `docs/sprints/sprint-01.md`
-- Later sprints: `docs/sprints/sprint-02.md` (Memories & AI),
-  `docs/sprints/sprint-03.md` (Notification / Settings / Release)
+- Active sprint docs: `docs/sprints/sprint-01.md` (frontend wiring),
+  `docs/sprints/sprint-02.md` (backend + AI team)
+- Later: `docs/sprints/sprint-03.md` (Notification / Settings / Release)
 - Setup record (completed): `docs/sprints/00-setup.md`
 
 ## Current Focus
@@ -574,6 +577,16 @@ relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
 - **Memories reuse Post (2026-08-13)**: Sprint 2 Memories page reads the
   Sprint 1 `Post` table — no separate Memory model — see
   `docs/02-backend/database.md`.
+- **AI work is owned by a separate AI team (2026-08-19)**: `apps/ai`
+  (FastAPI), provider calls, prompts and the video render are theirs;
+  backend supplies the API side — the NestJS proxy, auth, context
+  gathering and the `docs/03-ai/architecture.md` contract both teams
+  build against (drafted 2026-08-19). Provider direction: **Claude API**
+  (AI team makes final model-level calls). Hard lines restated in the
+  contract: FastAPI stateless and never touches Postgres, app never
+  calls AI directly, core works when AI is down, every suggestion
+  carries `why`/`source`, and the context only ever contains the
+  requesting user's own private memos.
 - **Email infrastructure (2026-08-18)**: SMTP behind the `MailService`
   seam — Gmail SMTP with an app password for the MVP (env
   `SMTP_HOST/PORT/USER/PASS`, `MAIL_FROM`); with SMTP unconfigured

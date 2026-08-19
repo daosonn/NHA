@@ -1,6 +1,11 @@
 # Sprint 2 — Kỷ niệm & AI
 
-> Status: planned (defined 2026-08-13). Starts after Sprint 1.
+> Status: **backend started 2026-08-19** (sprint 1's backend side is
+> finished; frontend is still wiring sprint-1 screens in parallel).
+> Ownership: the **AI team owns `apps/ai`** and everything model-side
+> (incl. the 2.2 video render); backend owns the NestJS API side. The
+> seam both build against: `docs/03-ai/architecture.md` (drafted
+> 2026-08-19; provider direction Claude API).
 > Source: team WBS. IDs kept from the WBS for traceability.
 
 ## Sprint Goal
