@@ -32,7 +32,7 @@ async function bootstrap() {
   const origin = corsOrigin();
   if (origin !== null) {
     app.enableCors({
-      origin: origins,
+      origin,
       // PUT is here for `PUT /posts/:postId/reactions/me`, the one upsert in
       // the API. Leaving it out failed the preflight rather than the request,
       // so reacting to a post died in the browser with no server log at all.

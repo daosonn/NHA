@@ -257,6 +257,44 @@ the bio, `interests` replaces the whole list. Dates are strict ISO 8601;
 the single source the special-date widgets (1.2.5) and Sprint-3 reminders
 will derive from.
 
+### Life Events — `apps/api/src/profile/` (task 1.6.8, added 2026-08-19)
+
+The Timeline tab's data: milestones hanging off a LifeProfile, so they
+follow the profile everywhere (a linked member's timeline is the same in
+every family; a placeholder's is family-local).
+
+| Route                                                               | Returns             |
+| ------------------------------------------------------------------- | ------------------- |
+| `GET /me/life-events`                                               | `LifeEventDetail[]` |
+| `POST /me/life-events`                                              | `LifeEventDetail`   |
+| `PATCH /me/life-events/:eventId`                                    | `LifeEventDetail`   |
+| `DELETE /me/life-events/:eventId`                                   | `{ success }`       |
+| `GET /families/:familyId/members/:memberId/life-events`             | `LifeEventDetail[]` |
+| `POST /families/:familyId/members/:memberId/life-events`            | `LifeEventDetail`   |
+| `PATCH /families/:familyId/members/:memberId/life-events/:eventId`  | `LifeEventDetail`   |
+| `DELETE /families/:familyId/members/:memberId/life-events/:eventId` | `{ success }`       |
+
+`LifeEventDetail` is `{ id, profileId, title, description, eventDate,
+place, type, taggedMemberIds, media[], createdById, updatedById,
+createdAt, updatedAt }` with `media[]` items `{ id, mimeType, sizeBytes }`.
+Lists are **oldest first** (a life timeline reads birth-to-now). `type` is
+free text — the taxonomy is still TBD (screen 9 filters).
+
+Same rules as the profile it hangs off:
+
+- **Resolution**: linked member → global timeline (the one `/me` edits),
+  placeholder → family-local. Reading needs family membership; `/me`
+  works with no family at all.
+- **Editing**: placeholder events are wiki-editable by the whole family;
+  a linked member's events are theirs alone (403). Every PATCH writes an
+  `EditHistory` row; `updatedById` is the last editor.
+- **Media**: attach your own unattached uploads via `mediaIds` at
+  creation; fixed afterwards, exactly like posts. Deleting the event
+  deletes its media rows and files.
+- **Tags** (`taggedMemberIds`, "members involved" — screen 10): must be
+  members of families the editor belongs to; editable on PATCH (replaces
+  the list).
+
 ### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side)
 
 | Route                                   | Returns                |
@@ -300,7 +338,9 @@ as `mediaIds` when creating the post.
 Download requires a bearer token and the same visibility as the parent
 post (uploader always allowed; standalone media is uploader-only), and
 supports **HTTP Range / 206** — hand the URL plus the auth header to the
-video/audio player.
+video/audio player. Life-event media (2026-08-19) follows the profile it
+hangs off: the owner and anyone sharing a family with them for a global
+profile, the family's members for a placeholder.
 
 ## What does not exist yet
 

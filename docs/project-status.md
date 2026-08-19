@@ -307,6 +307,22 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   placeholder so the node falls back to Empty. Task 1.4.4 done; verified
   by lint/build/test + 28-case live smoke test. On branch
   `feature/per-spot-invitations`. Details in `api-contract.md`.
+- Life Event API (2026-08-19): Timeline milestones for the Life Profile —
+  `GET/POST/PATCH/DELETE /api/me/life-events` +
+  `.../families/:familyId/members/:memberId/life-events` (no new tables:
+  `LifeEvent` shipped in the sprint-0 schema). Same rules as the profile
+  it hangs off: linked → global timeline, placeholder → family-local
+  wiki-editable, every PATCH logged to `EditHistory`. Media attach via
+  `mediaIds` at creation (fixed after, like posts) and **streaming now
+  follows profile visibility** — the MediaService "uploader-only until
+  1.6.8" gap is closed by delegating to LifeEventService. Lists oldest
+  first; tags replace on PATCH. Task 1.6.8 done — first of the three
+  Life Profile tab unlocks (next: Memo 1.6.5, then gallery 1.6.4).
+  Verified by lint/build/test + 23-case live smoke test incl. EditHistory
+  rows in the DB. On branch `feature/life-events`. Also rides along:
+  **main was broken** by a PR #15 conflict resolution leftover
+  (`origin: origins` in `main.ts`) — `nest build` failed on main from
+  merge `e33e8a8` until this branch's fix.
 
 ### Planning Phase
 

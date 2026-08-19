@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { PostService } from '../post/post.service';
+import { LifeEventService } from '../profile/life-event.service';
 import { StorageService } from '../storage/storage.service';
 
 /** Multer file injected by FileInterceptor (streamed to a temp file). */
@@ -82,6 +83,7 @@ export class MediaService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly postService: PostService,
+    private readonly lifeEventService: LifeEventService,
   ) {}
 
   /** Stores the file and creates a standalone Media row (no parent yet). */
@@ -144,6 +146,11 @@ export class MediaService {
             families: { select: { familyId: true } },
           },
         },
+        lifeEvent: {
+          select: {
+            profile: { select: { userId: true, memberId: true } },
+          },
+        },
       },
     });
     // 404 in both cases — do not confirm that private content exists.
@@ -179,6 +186,9 @@ export class MediaService {
       uploaderUserId: string;
       memo: { ownerUserId: string } | null;
       post: { authorUserId: string; families: { familyId: string }[] } | null;
+      lifeEvent: {
+        profile: { userId: string | null; memberId: string | null };
+      } | null;
     },
   ): Promise<boolean> {
     if (media.uploaderUserId === userId) {
@@ -192,8 +202,14 @@ export class MediaService {
       // One home for the post-visibility rule — never a second copy here.
       return this.postService.canViewPost(userId, media.post);
     }
-    // Standalone or life-event media stays uploader-only until the
-    // life-event flows land (WBS 1.6.8).
+    if (media.lifeEvent) {
+      // Same delegation for the life-event rule (WBS 1.6.8).
+      return this.lifeEventService.canViewProfileMedia(
+        userId,
+        media.lifeEvent.profile,
+      );
+    }
+    // Standalone media stays uploader-only.
     return false;
   }
 }
