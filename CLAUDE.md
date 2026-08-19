@@ -298,21 +298,26 @@ Branch naming should follow the project Git workflow, for example:
     fix/login-redirect
     refactor/memory-service
 
-## Shared status docs stay out of feature branches
+## Shared status docs — update in-branch, merge with care
 
 `docs/project-status.md` and `docs/sprints/*.md` are shared mutable
-state: every parallel branch that edits them will merge-conflict with
-every other (decided 2026-08-18 after two such conflicts corrupted the
-sprint checklist).
+state: parallel branches often edit them at the same time. Update them
+**together with the change, in the same branch/PR** (so reviewers see
+code and status side by side), and keep merges safe with these rules
+(decided 2026-08-18 after careless conflict resolutions corrupted the
+sprint checklist three times in one day):
 
-- Feature branches/PRs MUST NOT modify `docs/project-status.md` or
-  `docs/sprints/*.md`. Contract/design docs that belong to the change
-  (e.g. `docs/00-shared/api-contract.md`) ride with the PR as usual.
-- After the PR merges, update those files in a small docs-only commit
-  made directly on `main` (allowed by team decision).
 - Keep sprint checklist notes to ONE line, e.g.
   `— done 2026-08-18 (PR #12)`. Details belong in the PR description
-  and the relevant contract/design doc, not in the checklist.
+  and the relevant contract/design doc. Small notes = small conflicts.
+- On any merge conflict in these files the resolution is ALWAYS
+  **keep both sides** — every branch's ticks, notes, and entries
+  survive. Never pick one side wholesale; that is how ticks get lost.
+- After resolving (or after any merge that touched these files),
+  re-read them and check that nothing was dropped or duplicated
+  before committing the merge.
+- When Claude is driving a pull/merge, it reads the incoming changes
+  and applies the keep-both-sides rule itself.
 
 Before committing, inspect the staged diff.
 
@@ -427,9 +432,9 @@ After completing an implementation task:
   (`docs/sprints/sprint-N.md`, referenced from `docs/project-status.md`).
 - Update `docs/project-status.md` if the change moves something between
   Completed / In Progress / Not Started, or adds a new Important Decision.
-- Make these updates as a docs-only commit directly on `main` **after**
-  the feature PR merges — never on the feature branch (§ 6, "Shared
-  status docs"). Keep sprint notes to one line.
+- Make these updates in the same branch/PR as the change. Keep sprint
+  notes to one line; on merge conflicts keep both sides (§ 6, "Shared
+  status docs").
 - Do not mark a task complete in these documents unless it actually passed
   verification (see § 7 Execution & Verification).
 - Skip this step only for pure documentation/discussion tasks that don't

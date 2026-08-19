@@ -46,9 +46,16 @@ build the family tree, post content with photos, and view member profiles.
       (`app/moments.tsx`, vào từ dòng "Swipe up for moments" trên Home) —
       chưa nhúng vào chính màn Home, nên chưa tick.
 - [ ] 1.2.4 Empty/loading state (UI đầy đủ) — done cho Home, cây gia phả,
+      <<<<<<< HEAD
       post detail và Omoide (2026-08-18). Còn Life Profile và AI — hai màn
       chưa nối API.
 - [ ] 1.2.5 Widget dịp đặc biệt trên Home (countdown + theme — sinh nhật/ngày giỗ derived từ LifeProfile; added 2026-08-14, see `database.md`)
+      \=======
+      moments và post detail (2026-08-18). Còn Life Profile, Omoide, AI —
+      các màn chưa nối API.
+- [ ] 1.2.5 Widget dịp đặc biệt trên Home (countdown + theme — sinh nhật/ngày giỗ derived từ LifeProfile; added 2026-08-14, see `database.md`) — API done 2026-08-18 (PR #11: `GET /families/:familyId/special-dates`); UI chưa nối
+
+> > > > > > > main
 
 ### 1.3 Tạo nhóm gia đình — Family Group
 

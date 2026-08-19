@@ -196,8 +196,11 @@ Raised by the frontend, neither actionable from `apps/mobile`.
 - AuthModule: register / login / refresh (single-use rotation) / logout,
   global JWT guard + `@Public`, Swagger at `/api/docs` — merged to `main`
   in PR #2 (2026-08-17). Tasks 1.1.2 / 1.1.3 / 1.1.5 / 1.1.6 done.
-  Task 1.1.7 (password recovery) deferred: needs an email-infrastructure
-  decision.
+- Password reset API (2026-08-18): request/verify/confirm with an
+  emailed 6-digit code — 15-minute expiry, 5-guess cap (new `attempts`
+  column, migration `20260818073348`), single-use, revokes every
+  session on success. Task 1.1.7 done, merged to `main` in PR #12;
+  details in `api-contract.md`.
 - FamilyModule: create family + invite code, join via code (incl. linking
   an account to a placeholder member), placeholder member CRUD,
   relationships CRUD, membership-based authorization — merged to `main`
@@ -456,6 +459,12 @@ relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
 - **Memories reuse Post (2026-08-13)**: Sprint 2 Memories page reads the
   Sprint 1 `Post` table — no separate Memory model — see
   `docs/02-backend/database.md`.
+- **Email infrastructure (2026-08-18)**: SMTP behind the `MailService`
+  seam — Gmail SMTP with an app password for the MVP (env
+  `SMTP_HOST/PORT/USER/PASS`, `MAIL_FROM`); with SMTP unconfigured
+  (local dev) the message is logged to the API console instead of sent.
+  Unblocked 1.1.7; the signup email-verification screen remains a
+  separate product decision.
 - **Social login (2026-08-17)**: customer requires social login for the
   Japanese market. Phase 1 **Google + Facebook**, scheduled into Sprint 1
   as tasks 1.1.8–1.1.9. **LINE deferred** (needs an email-permission
