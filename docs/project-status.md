@@ -320,6 +320,18 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   Life Profile tab unlocks (next: Memo 1.6.5, then gallery 1.6.4).
   Verified by lint/build/test + 29-case live smoke test incl. EditHistory
   rows in the DB. On branch `feature/life-events`. Also rides along:
+  **main was broken** by a PR #15 conflict resolution leftover
+  (`origin: origins` in `main.ts`) — `nest build` failed on main from
+  merge `e33e8a8` until this branch's fix. Code-review round 2026-08-19
+  (8 review agents): fixes applied — PATCH `title`/`eventDate: null`
+  (were a 500 and a silent 1970-01-01), whitespace-only title, `eventDate`
+  restricted to date-only `YYYY-MM-DD` (a `+09:00` datetime shifted the
+  stored day), no-op PATCH no longer writes EditHistory. **Deferred to the
+  Memo branch (1.6.5), which would otherwise copy them a third time**:
+  extract shared media-attach + tag-validation + parseDate/normalizeText +
+  best-effort file cleanup + a `ProfileService.resolveForMember` for the
+  wiki rule; also known: a tag-write FK race returns 500 (same window
+  exists in PostService).
 - Memo API (2026-08-19): private notes about a member —
   `GET/POST /api/families/:familyId/members/:memberId/memos` +
   `GET/PATCH/DELETE /api/memos/:memoId`. Always author-only (decision
@@ -358,18 +370,20 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   deletes in the MVP; a dump before risky work is the way back. Verified
   by a real backup→restore round-trip (row counts intact, API healthy
   after). See `docs/04-devops/local-environment.md` § Backup & restore.
-  **main was broken** by a PR #15 conflict resolution leftover
-  (`origin: origins` in `main.ts`) — `nest build` failed on main from
-  merge `e33e8a8` until this branch's fix. Code-review round 2026-08-19
-  (8 review agents): fixes applied — PATCH `title`/`eventDate: null`
-  (were a 500 and a silent 1970-01-01), whitespace-only title, `eventDate`
-  restricted to date-only `YYYY-MM-DD` (a `+09:00` datetime shifted the
-  stored day), no-op PATCH no longer writes EditHistory. **Deferred to the
-  Memo branch (1.6.5), which would otherwise copy them a third time**:
-  extract shared media-attach + tag-validation + parseDate/normalizeText +
-  best-effort file cleanup + a `ProfileService.resolveForMember` for the
-  wiki rule; also known: a tag-write FK race returns 500 (same window
-  exists in PostService).
+- Gallery API (2026-08-19): the Album tab, derived — `GET /api/me/gallery` +
+  `GET /api/families/:familyId/members/:memberId/gallery`. No new
+  table: media from posts authored by or tagged with the member, plus
+  their life-event media, filtered to what the viewer may see (the same
+  author/private/shared-family rule `PostService.canViewPost` applies
+  elsewhere, batched into one membership query instead of one call per
+  post — a code-review finding, fixed same-day). Not paginated, same
+  choice as the life-event timeline. Task 1.6.4 done — **closes group
+  1.6's Life Profile blocker**: About + all three tabs now have an
+  endpoint; wiring is what remains. Verified by lint/build/test + 21-case
+  live smoke test (own/tagged/private/life-event sources, cross-family
+  isolation, placeholder scoping, stranger 403) + full life-event (29) and
+  memo (22) regression smoke. On branch `feature/gallery` (stacked on
+  `feature/memo-api`).
 
 ### Planning Phase
 

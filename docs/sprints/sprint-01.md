@@ -148,15 +148,14 @@ build the family tree, post content with photos, and view member profiles.
 
 ### 1.6 Nav4 – Hồ sơ đời cá nhân — Profile
 
-> **Nhóm chặn nhiều nhất tính đến 2026-08-18.** `GET/PATCH /me/profile` và
-> route profile theo member đã có (PR #9), nhưng màn Life Profile có ba tab
-> mà cả ba đều thiếu endpoint: Timeline cần `LifeEvent` (1.6.8), Memo cần
-> `Memo` (1.6.5), Album cần gallery derived (1.6.4). Nối riêng phần header
->
-> - About bây giờ sẽ cho ra một màn trung tâm với ba tab trống, nên frontend
->   đợi. Thứ tự mở khoá đề xuất: `LifeEvent` → `Memo` → gallery.
->   `LifeEvent` xong 2026-08-19 (1.6.8), `Memo` xong 2026-08-19 (1.6.5) —
->   còn gallery (1.6.4).
+> **Nhóm chặn nhiều nhất tính đến 2026-08-18 — hết chặn 2026-08-19.**
+> `GET/PATCH /me/profile` và route profile theo member đã có (PR #9), nhưng
+> màn Life Profile có ba tab mà cả ba đều thiếu endpoint: Timeline cần
+> `LifeEvent` (1.6.8), Memo cần `Memo` (1.6.5), Album cần gallery derived
+> (1.6.4). Cả ba xong trong ngày 2026-08-19, theo đúng thứ tự mở khoá đề
+> xuất `LifeEvent` → `Memo` → gallery — About + cả ba tab giờ đều có
+> endpoint; phần còn lại là nối UI (`docs/01-frontend/architecture.md`
+> § Wiring status).
 
 - [ ] 1.6.1 UI Profile (avatar + tên) — UI xong 2026-08-18 (mock data, chưa nối API)
 - [ ] 1.6.2 About (thông tin cá nhân) — API done 2026-08-18:
@@ -167,7 +166,10 @@ build the family tree, post content with photos, and view member profiles.
       interests, birthDate/deathDate — nguồn cho widget 1.2.5).
       UI xong 2026-08-18 (mock data, chưa nối API)
 - [ ] 1.6.3 Timeline chung (bài viết/ảnh theo thời gian) — UI xong 2026-08-18 (mock data, chưa nối API)
-- [ ] 1.6.4 Album/Gallery (danh sách ảnh) — UI xong 2026-08-18 (mock data, chưa nối API)
+- [x] 1.6.4 Album/Gallery (danh sách ảnh — derived, xem `database.md`) —
+      API done 2026-08-19: `GET /api/me/gallery` +
+      `GET /api/families/:familyId/members/:memberId/gallery` (chi tiết:
+      `api-contract.md`); UI xong 2026-08-18, chưa nối
 - [x] 1.6.5 Memo cá nhân (tạo memo — ghi chú về một thành viên, xem `database.md`) — API done 2026-08-19 (schema thêm title/category theo UI; chi tiết: `api-contract.md`); UI xong 2026-08-18, chưa nối
 - ~~1.6.6 Quyền riêng tư Memo (private/shared)~~ — dropped 2026-08-14:
   memo luôn private, chỉ chủ xem/sửa (see `database.md`)

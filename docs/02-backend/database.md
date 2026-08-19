@@ -561,6 +561,12 @@ or tagged with the member, plus life-event media — filtered by the
 families the viewer shares with that member (enforced in the service
 layer). No table.
 
+**Done 2026-08-19** (`GalleryService`): `GET /me/gallery` and
+`GET /families/:familyId/members/:memberId/gallery`, same profile
+resolution as the rest of the Life Profile (linked → global, placeholder →
+local). Not paginated — one person's own history, same choice already
+made for the life-event timeline. See `api-contract.md` § Gallery.
+
 ### LifeEvent — life milestone (screens 9–10; core domain term)
 
 | Field                 | Type     | Notes                                                    |
