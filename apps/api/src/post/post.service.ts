@@ -35,6 +35,10 @@ export interface PostDetail {
   reactionCount: number;
   /** The viewer's own reaction, null when they have not reacted. */
   myReaction: ReactionType | null;
+  /** Whether the requesting user may edit/delete — the client renders
+   *  these instead of re-deriving the permission rule from authorUserId. */
+  canEdit: boolean;
+  canDelete: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -177,7 +181,7 @@ export class PostService {
     });
     const page = posts.slice(0, limit);
     return {
-      items: page.map((post) => this.toDetail(post)),
+      items: page.map((post) => this.toDetail(userId, post)),
       nextCursor: posts.length > limit ? page[page.length - 1].id : null,
     };
   }
@@ -192,7 +196,7 @@ export class PostService {
     if (!post || !(await this.canViewPost(userId, post))) {
       throw new NotFoundException('Post not found');
     }
-    return this.toDetail(post);
+    return this.toDetail(userId, post);
   }
 
   /**
@@ -461,7 +465,11 @@ export class PostService {
     }
   }
 
-  private toDetail(post: PostRecord): PostDetail {
+  private toDetail(userId: string, post: PostRecord): PostDetail {
+    // Author-only (see update()/remove()); the fine print — an ex-member
+    // author can still un-share but not keep sharing — stays enforced by
+    // the write paths themselves.
+    const isAuthor = post.authorUserId === userId;
     return {
       id: post.id,
       authorUserId: post.authorUserId,
@@ -477,6 +485,8 @@ export class PostService {
       commentCount: post._count.comments,
       reactionCount: post._count.reactions,
       myReaction: post.reactions[0]?.type ?? null,
+      canEdit: isAuthor,
+      canDelete: isAuthor,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
     };
