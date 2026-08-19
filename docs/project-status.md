@@ -13,6 +13,39 @@
 
 ## Current Focus
 
+- **Frontend state re-verified against the code (2026-08-19).** Wired to the
+  API: sign in / sign up, Home (families + family feed), create-or-join
+  family, the family tree (read plus adding a member), New moment, post
+  detail with comments and reactions, and **Omoide** — the shared photo
+  shelf, wired 2026-08-18 but described as a placeholder in the docs until
+  today. Still reading `src/fixtures/`: **Life Profile** (both routes), the
+  AI tab and Gift ideas, the Invitation page, and Home's special-date widget
+  and recommendation grid. Per-screen detail:
+  `docs/01-frontend/architecture.md` § Wiring status.
+- **Two server routes the app's client mirror does not have (2026-08-19)**:
+  `POST /auth/password-reset/{request,verify,confirm}` (PR #12) and
+  `GET /families/:familyId/special-dates`. Neither is in
+  `apps/mobile/src/lib/api/endpoints.ts`, so Forgot / Verify / Reset still
+  only navigate between themselves and the Home widget still reads a
+  fixture. Nothing blocks either — this is the cheapest frontend work
+  available right now.
+- **Three dead ends found while re-verifying (2026-08-19)**, two of them in
+  the invite flow:
+  `components/family/pending-banner.tsx` is rendered nowhere, because
+  `tree-from-graph.ts` emits `state: 'active'` for every node and no pending
+  spot can exist; and the Join button on `app/invite/[code].tsx` has no
+  handler, which is the one place the app breaks its own "a button that
+  leads nowhere is not rendered" rule. Both trace back to the missing
+  per-spot invitation record, not to anything the frontend can fix alone.
+  A third sits on the Life Profile: `MemoList` accepts an `onAddMemo`
+  handler and `ProfileBody` never passes one, so the memo empty state draws
+  an "Add memo" button that does nothing. That one is ours to fix.
+- **The stack table listed three libraries that are not installed
+  (2026-08-19)** — `@gorhom/bottom-sheet`, `d3-hierarchy`, and
+  `react-hook-form`+`zod`. Sheets are a plain `Modal`, the tree layout is
+  authored by hand in `tree-layout.ts`, and the forms use `useState`; the
+  last one was a deliberate decision recorded below. `architecture.md` now
+  says so rather than reading as a list of things already present.
 - **Frontend platform switched to Expo (2026-08-17)** — see Important
   Decisions. Done: docs realigned, `packages/tokens` rebuilt,
   `apps/mobile` on Expo SDK 57, Inter/Lora, design-system primitives, app
@@ -33,8 +66,9 @@
   (`app/ai/gifts.tsx`). Profile hero reworked: "Add memory" removed and
   Edit moved to a badge on the avatar. Verified the same way — typecheck,
   prettier, 27-route static export grepped for content, and no nested or
-  interactive-in-`<button>` markup. Next: wire screens to the API —
-  nothing talks to the backend yet, everything reads `src/fixtures/`.
+  interactive-in-`<button>` markup. Those screens have since been wired one
+  at a time — see `docs/01-frontend/architecture.md` § Wiring status for
+  where that stands.
 - **Deferred on the mobile app**: pinch-to-zoom / drag-to-pan on the family
   tree (the zoom buttons cover the same ground for now; needs
   `react-native-gesture-handler`), the web invite-acceptance page for
@@ -351,12 +385,13 @@ relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
   `FeaturedOccasion` draws an action only when given a handler, so Plan a
   surprise and Video are absent until those screens exist. A dead control
   costs more trust than a visibly missing feature.
-- **Auth session is a stand-in (2026-08-18)** — `src/features/auth/session.tsx`
-  keeps the signed-in user in memory only: no request, no token, no
-  persistence, so every reload starts at Welcome. The guard lives on the
-  `(auth)` and `(tabs)` route groups, which is the one place to change when
-  the AuthModule is wired. Tokens then belong in `expo-secure-store`, never
-  `AsyncStorage`.
+- ~~**Auth session is a stand-in (2026-08-18)**~~ — **superseded the same
+  day; corrected here 2026-08-19.** The session is real: tokens live in
+  `expo-secure-store`, refresh-on-401 is collapsed onto one promise in
+  `src/lib/api/client.ts`, and `status` carries a third `loading` value for
+  the keychain read so a returning user is not bounced through Welcome on
+  every cold start. What survives from the original decision is where the
+  guard sits: on the `(auth)` and `(tabs)` route groups, one gate each way.
 - **Solar-only reaffirmed (2026-08-18)**: the Occasions mockups showing
   lunar dates are what changes, not the schema. See `domain-model.md`.
 - **Social login is Apple + Google + Facebook (2026-08-18)**: Apple is
@@ -385,7 +420,9 @@ relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
   memory shelf should have. Grouping is by _posted_ date, not capture date,
   because the server returns no capture metadata. Mockup 10a — albums by
   occasion — waits for an album endpoint and for the still-open question of
-  what an album is derived from.
+  what an album is derived from. **Built and wired the same day**
+  (`app/(tabs)/omoide.tsx`, `features/omoide/`); search and the sort menu
+  from the mockup are deliberately absent until something is behind them.
 - **Home is 3a then 2a (2026-08-18)** — the family strip, the special-date
   widget and the recommendations sit above the fold exactly as in mockup 3a;
   scrolling past the "swipe up for moments" cue continues into the feed of

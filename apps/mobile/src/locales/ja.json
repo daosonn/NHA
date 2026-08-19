@@ -149,19 +149,16 @@
       "namePlaceholder": "お名前",
       "relationship": "続柄",
       "relationshipTitle": "あなたから見た続柄は？",
-      "methodHeading": "どのように招待しますか",
-      "methodLabel": "招待方法",
-      "methodLink": "招待リンク",
-      "methodContact": "電話番号かメール",
-      "contactLabel": "送り先",
-      "contactPlaceholder": "電話番号またはメールアドレス",
-      "carries": "招待には場所と「{{kinship}}」が含まれるので、登録するとそのまま正しい場所に入ります。",
       "copy": "コピー",
       "copied": "コピーしました",
       "share": "招待を共有",
-      "shareMessage": "{{name}}さん、NHAで家族に参加しませんか：{{link}}",
+      "shareMessage": "{{name}}さん、このコードでNHAの{{family}}に参加してください：{{code}}",
       "shareFallbackName": "あなた",
-      "send": "招待を送る"
+      "codeHeading": "家族コード",
+      "codeLabel": "家族コード {{code}}",
+      "codeMeta": "{{family}}・期限なし",
+      "codeHint": "このコードを送ってください。登録のときに入力すると{{family}}に参加できます。",
+      "save": "場所を確保"
     },
     "preview": {
       "nodeLabel": "{{name}}・{{role}}",
@@ -209,6 +206,46 @@
       "gift": "贈り物のヒント",
       "memories": "聞いてみたい話",
       "todo": "やること"
+    },
+    "memoHeading": "{{name}}さんについてのメモ",
+    "memoOpenHint": "メモを開きます。長押しでその他の操作。",
+    "memoDetail": {
+      "title": "メモ",
+      "actions": "このメモの操作",
+      "edit": "このメモを編集",
+      "metaEdited": "{{written}}・{{edited}}に編集",
+      "photos_other": "写真・{{count}}枚",
+      "addPhoto": "写真を追加",
+      "gone": "このメモはもうありません",
+      "goneBody": "削除されました。戻って新しく書けます。"
+    },
+    "memoEditor": {
+      "titleNew": "新しいメモ",
+      "titleEdit": "メモを編集",
+      "cancel": "キャンセル",
+      "save": "保存",
+      "titleLabel": "何について",
+      "titlePlaceholder": "覚えておきたいこと",
+      "bodyLabel": "そのほか",
+      "bodyPlaceholder": "場所、値段、誰が言ったか…",
+      "photosLabel": "写真",
+      "private": "このメモはあなただけが見られます。"
+    },
+    "memoActions": {
+      "closeScrim": "メモの操作を閉じる",
+      "meta_other": "{{category}}・写真{{count}}枚",
+      "edit": "メモを編集",
+      "delete": "メモを削除",
+      "cancel": "キャンセル"
+    },
+    "memoDelete": {
+      "dismiss": "メモを残す",
+      "title": "このメモを削除しますか？",
+      "body_other": "このメモと写真{{count}}枚が完全になくなります。",
+      "confirm": "メモを削除",
+      "cancel": "やめておく",
+      "done": "メモを削除しました",
+      "undo": "元に戻す"
     }
   },
   "moment": {
@@ -286,6 +323,14 @@
       "10": "10月",
       "11": "11月",
       "12": "12月"
+    },
+    "relative": {
+      "today": "今日",
+      "yesterday": "昨日",
+      "daysAgo_other": "{{count}}日前",
+      "weeksAgo_other": "{{count}}週間前",
+      "monthsAgo_other": "{{count}}か月前",
+      "yearsAgo_other": "{{count}}年前"
     }
   },
   "errors": {

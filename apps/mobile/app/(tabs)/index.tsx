@@ -78,8 +78,9 @@ export default function HomeScreen() {
         onAddPress={() => router.push('/create-family')}
       />
 
-      {/* Both still read fixtures: special dates and recommendations have no
-          endpoint yet (`docs/00-shared/api-contract.md`). */}
+      {/* Both still read fixtures. Recommendations have no endpoint at all;
+          `GET /families/:id/special-dates` does exist, but it is not in
+          `src/lib/api/endpoints.ts` yet (`docs/00-shared/api-contract.md`). */}
       <EventWidget event={upcomingEvent} />
 
       <SectionHeader title={t('home.recommendations')} actionLabel={t('home.seeAll')} />
