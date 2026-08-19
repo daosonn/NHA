@@ -71,11 +71,14 @@ export default function HomeScreen() {
    */
   const intro = (
     <View style={{ gap: 14, paddingBottom: 14 }}>
+      {/* The + starts another group. Someone with no family at all lands on
+          `/create-family` from the empty state below, which offers joining
+          too — by the time this strip exists, they already have one. */}
       <GroupStrip
         groups={toStripGroups(families ?? [])}
         remainingCount={Math.max(0, (families?.length ?? 0) - VISIBLE_GROUPS)}
         onPress={() => router.push('/family')}
-        onAddPress={() => router.push('/create-family')}
+        onAddPress={() => router.push('/family/new')}
       />
 
       {/* Both still read fixtures. Recommendations have no endpoint at all;

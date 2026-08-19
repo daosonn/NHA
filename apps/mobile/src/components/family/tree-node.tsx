@@ -16,8 +16,10 @@ const RING_VIEWER = `0 0 0 3px ${colors.background.card}, 0 0 0 5.5px ${colors.c
 const LABEL_WIDTH = 104;
 
 export type TreeNodeProps = {
+  /** Long press opens what can be changed about this person. */
   node: PositionedNode;
   onPress?: (node: PositionedNode) => void;
+  onLongPress?: (node: PositionedNode) => void;
 };
 
 function NodeBody({ node }: { node: PositionedNode }) {
@@ -134,7 +136,7 @@ function NodeLabel({ node }: { node: PositionedNode }) {
  * One person in the tree: the avatar, its state ring, and the name block
  * underneath. Positioned absolutely from the computed layout.
  */
-export function TreeNode({ node, onPress }: TreeNodeProps) {
+export function TreeNode({ node, onPress, onLongPress }: TreeNodeProps) {
   const { t } = useTranslation();
 
   const label =
@@ -145,8 +147,10 @@ export function TreeNode({ node, onPress }: TreeNodeProps) {
   return (
     <Pressable
       onPress={() => onPress?.(node)}
+      onLongPress={() => onLongPress?.(node)}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityHint={onLongPress === undefined ? undefined : t('family.nodeHint')}
       className="absolute items-center"
       style={{
         left: node.x - LABEL_WIDTH / 2,

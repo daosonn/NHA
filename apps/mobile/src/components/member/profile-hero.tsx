@@ -100,7 +100,10 @@ export function ProfileHero({ profile, onEdit }: ProfileHeroProps) {
           {profile.bio}
         </Text>
       ) : (
-        profile.editability === 'wiki' && (
+        // Only on your own profile. On somebody else's, an empty story is
+        // not a gap the reader can close — saying so would only point at a
+        // door that is not theirs to open.
+        profile.editability === 'self' && (
           <Text variant="body2" color={colors.text.subtle} style={{ textAlign: 'center' }}>
             {t('member.noBio')}
           </Text>

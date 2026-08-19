@@ -4,28 +4,36 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
-import { FamilyTree } from '../src/components/family/family-tree';
-import { InviteSheet } from '../src/components/family/invite-sheet';
-import type { PositionedNode } from '../src/components/family/tree-layout';
-import { GroupStrip, type FamilyGroupSummary } from '../src/components/home/group-strip';
-import { AppHeader } from '../src/components/layout/app-header';
-import { BackButton } from '../src/components/layout/header-slots';
-import { EmptyState } from '../src/components/ui/empty-state';
-import { SectionHeader } from '../src/components/ui/section-header';
-import { Text } from '../src/components/ui/text';
-import { useSession } from '../src/features/auth/session';
-import { useActiveFamily } from '../src/features/family/active-family';
-import { treeFromGraph } from '../src/features/family/tree-from-graph';
-import { useAddMember } from '../src/features/family/use-add-member';
-import { useFamilies } from '../src/features/family/use-families';
-import { useFamilyTree } from '../src/features/family/use-family-tree';
-import { ApiError, type FamilySummary, type FamilyTree as FamilyTreePayload } from '../src/lib/api';
-import { defaultSpot, type TreeSpot } from '../src/fixtures/invite';
+import { FamilyTree } from '../../src/components/family/family-tree';
+import { InviteSheet } from '../../src/components/family/invite-sheet';
+import { MemberSheet } from '../../src/components/family/member-sheet';
+import type { PositionedNode } from '../../src/components/family/tree-layout';
+import { GroupStrip, type FamilyGroupSummary } from '../../src/components/home/group-strip';
+import { AppHeader } from '../../src/components/layout/app-header';
+import { BackButton } from '../../src/components/layout/header-slots';
+import { EmptyState } from '../../src/components/ui/empty-state';
+import { SectionHeader } from '../../src/components/ui/section-header';
+import { Text } from '../../src/components/ui/text';
+import { useSession } from '../../src/features/auth/session';
+import { useActiveFamily } from '../../src/features/family/active-family';
+import { treeFromGraph } from '../../src/features/family/tree-from-graph';
+import { useAddMember } from '../../src/features/family/use-add-member';
+import { useFamilies } from '../../src/features/family/use-families';
+import { useRemoveMember, useSaveMember } from '../../src/features/family/use-member-mutations';
+import { useFamilyTree } from '../../src/features/family/use-family-tree';
+import {
+  ApiError,
+  type FamilySummary,
+  type FamilyTree as FamilyTreePayload,
+} from '../../src/lib/api';
+import { defaultSpot, type TreeSpot } from '../../src/fixtures/invite';
 
-const VISIBLE_GROUPS = 3;
-
+/**
+ * Every group, not the first three: on this screen the strip is the switch
+ * between trees, and a switch that hides half its positions is not one.
+ */
 function toStripGroups(families: FamilySummary[]): FamilyGroupSummary[] {
-  return families.slice(0, VISIBLE_GROUPS).map((family, index) => ({
+  return families.map((family, index) => ({
     id: family.id,
     name: family.name,
     tone: index % 2 === 0 ? 'light' : 'dark',
@@ -41,13 +49,17 @@ export default function FamilyTreeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { user } = useSession();
-  const { familyId } = useActiveFamily();
+  const { familyId, setFamilyId } = useActiveFamily();
 
   const { data: families } = useFamilies();
   const { data: payload, isPending, isError, refetch } = useFamilyTree(familyId);
   const addMember = useAddMember(familyId);
+  const saveMember = useSaveMember(familyId);
+  const removeMember = useRemoveMember(familyId);
 
   const [spot, setSpot] = useState<TreeSpot | null>(null);
+  /** Which node is being managed, by id — the payload is the source of truth. */
+  const [managingId, setManagingId] = useState<string | null>(null);
 
   // The invite sheet names the family whose code it is handing out, so the
   // sender can see which door they are opening.
@@ -116,8 +128,11 @@ export default function FamilyTreeScreen() {
         {families !== undefined && families.length > 0 && (
           <GroupStrip
             groups={toStripGroups(families)}
-            remainingCount={Math.max(0, families.length - VISIBLE_GROUPS)}
+            remainingCount={0}
             showTreeLink={false}
+            activeId={familyId ?? undefined}
+            onSelectGroup={setFamilyId}
+            onAddPress={() => router.push('/family/new')}
           />
         )}
 
@@ -148,12 +163,37 @@ export default function FamilyTreeScreen() {
               <FamilyTree
                 data={tree}
                 onSelectNode={openNode}
+                onManageNode={(node) => setManagingId(node.id)}
                 onAddMember={() => setSpot(defaultSpot)}
               />
             </View>
           </>
         )}
       </View>
+
+      {payload !== undefined && (
+        <MemberSheet
+          member={payload.members.find((member) => member.id === managingId) ?? null}
+          tree={payload}
+          anchorMemberId={viewerMemberId}
+          viewerUserId={user?.id ?? null}
+          onClose={() => setManagingId(null)}
+          onSave={(edits) => {
+            if (managingId === null) return;
+            saveMember.mutate(
+              { memberId: managingId, ...edits },
+              { onSuccess: () => setManagingId(null) },
+            );
+          }}
+          onRemove={() => {
+            if (managingId === null) return;
+            removeMember.mutate(managingId, { onSuccess: () => setManagingId(null) });
+          }}
+          saving={saveMember.isPending}
+          removing={removeMember.isPending}
+          errorKey={memberErrorKey(saveMember.error ?? removeMember.error)}
+        />
+      )}
 
       <InviteSheet
         visible={spot !== null}
@@ -173,6 +213,17 @@ export default function FamilyTreeScreen() {
       />
     </View>
   );
+}
+
+/** Turns whatever the member routes threw into a line the sheet can show. */
+function memberErrorKey(error: unknown): string | null {
+  if (error === null || error === undefined) return null;
+  if (!(error instanceof ApiError)) return 'errors.generic';
+  if (error.isOffline) return 'errors.offline';
+  // The server refuses edits to an account holder who is not you.
+  if (error.status === 403) return 'family.member.errors.forbidden';
+  if (error.status === 409) return 'family.member.errors.duplicate';
+  return 'errors.generic';
 }
 
 /**

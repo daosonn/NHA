@@ -101,6 +101,16 @@ function TimelineRow({ event, showYear, isLatest, isLast }: RowProps) {
 
 export type TimelineListProps = {
   events: LifeEventItem[];
+  /**
+   * Adds a milestone. Nothing passes it yet — `LifeEvent` has no endpoint
+   * (task 1.6.8), so the button is simply not drawn.
+   *
+   * When it does arrive it is gated the same way the profile is, because a
+   * life event is part of that profile: your own timeline and a placeholder's
+   * are editable, a linked member's is theirs alone
+   * (`docs/00-shared/domain-model.md` → wiki-style). `ProfileBody` already
+   * holds the `editability` that decides it.
+   */
   onAddEvent?: () => void;
 };
 

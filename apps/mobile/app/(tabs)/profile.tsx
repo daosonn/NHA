@@ -7,6 +7,9 @@ import { SettingsButton } from '../../src/components/layout/header-slots';
 import { MemoUndoToast } from '../../src/components/member/memo-undo-toast';
 import { ProfileBody } from '../../src/components/member/profile-body';
 import { Text } from '../../src/components/ui/text';
+import { useSession } from '../../src/features/auth/session';
+import { withProfileDetail } from '../../src/features/member/profile-overlay';
+import { useMyProfile } from '../../src/features/member/use-profile';
 import { viewerProfile } from '../../src/fixtures/member';
 import { colors, spacing } from '../../src/theme';
 
@@ -23,6 +26,12 @@ const BOTTOM_INSET = 120;
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { user } = useSession();
+
+  // Name, bio, interests and dates come from the server; the timeline and the
+  // gallery are still fixtures, so the two are merged rather than swapped.
+  const { data } = useMyProfile();
+  const profile = withProfileDetail(viewerProfile, data, user?.id ?? null, 'self');
 
   return (
     <View className="flex-1 bg-page">
@@ -45,7 +54,8 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <ProfileBody
-          profile={viewerProfile}
+          profile={profile}
+          onEdit={() => router.push('/profile/edit')}
           onAddMemo={() =>
             router.push({ pathname: '/memo/edit', params: { memberId: viewerProfile.id } })
           }

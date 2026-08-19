@@ -13,4 +13,12 @@ export const queryKeys = {
   familyFeed: (familyId: string) => ['families', familyId, 'posts'] as const,
   post: (postId: string) => ['posts', postId] as const,
   postComments: (postId: string) => ['posts', postId, 'comments'] as const,
+  /**
+   * The signed-in account's Life Profile. Kept outside the `families` tree
+   * because it is global — one profile per person, shown in every family
+   * they belong to (`docs/00-shared/domain-model.md`).
+   */
+  myProfile: () => ['me', 'profile'] as const,
+  memberProfile: (familyId: string, memberId: string) =>
+    ['families', familyId, 'members', memberId, 'profile'] as const,
 } as const;

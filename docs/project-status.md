@@ -147,6 +147,20 @@
 
 Raised by the frontend, neither actionable from `apps/mobile`.
 
+- **Profile editing narrowed to self, and the server still disagrees
+  (2026-08-19).** The app now draws the Edit affordance only on your own
+  profile: a life story written about someone by someone else is a different
+  object from one they wrote themselves, and the screen could not tell the
+  reader which they were reading. What the family edits about another person
+  is their place in the tree, not their biography. **The server has not
+  changed** — `PATCH /families/:familyId/members/:memberId/profile` still
+  accepts an edit from any member of the family, so the rule is currently
+  enforced only by the UI not offering it. **Asked for**: narrow that route to
+  the profile's owner, or say the wiki rule stands and the app should put the
+  affordance back. Decision recorded in
+  `docs/01-frontend/architecture.md` § Life Profile; reversing it on the
+  client is one function (`features/member/profile-overlay.ts`).
+
 - **Comment moderation is decided for now, but the permission is in the
   wrong place (2026-08-18).** Only a comment's author may edit or delete it;
   the post's author has no moderation power. That is accepted for the MVP —

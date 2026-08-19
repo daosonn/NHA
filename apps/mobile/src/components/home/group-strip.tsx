@@ -26,6 +26,14 @@ export type GroupStripProps = {
   onAddPress?: () => void;
   /** Hidden on the family tree screen itself, where it would go nowhere. */
   showTreeLink?: boolean;
+  /** Which group is being looked at. Falls back to the first face. */
+  activeId?: string;
+  /**
+   * Makes each face its own target, so the strip switches groups instead of
+   * only opening the tree. Given on the tree screen, where switching is the
+   * whole point of the strip; omitted on Home, where the strip is a way in.
+   */
+  onSelectGroup?: (id: string) => void;
 };
 
 /**
@@ -44,8 +52,41 @@ export function GroupStrip({
   onPress,
   onAddPress,
   showTreeLink = true,
+  activeId,
+  onSelectGroup,
 }: GroupStripProps) {
   const { t } = useTranslation();
+
+  const isActive = (group: FamilyGroupSummary, index: number) =>
+    activeId === undefined ? index === 0 : group.id === activeId;
+
+  /**
+   * Selectable faces have to be siblings of the strip press target, not
+   * children of it: `react-native-web` turns every `accessibilityRole`
+   * button into a real `<button>`, and a button inside a button is invalid
+   * markup that swallows the inner press.
+   */
+  const faces = groups.map((group, index) => {
+    const ring = isActive(group, index) ? RING_ACTIVE : RING;
+    const style = { marginLeft: index === 0 ? 0 : OVERLAP };
+
+    if (onSelectGroup === undefined) {
+      return <Avatar key={group.id} size={AVATAR} tone={group.tone} ring={ring} style={style} />;
+    }
+
+    return (
+      <Pressable
+        key={group.id}
+        onPress={() => onSelectGroup(group.id)}
+        accessibilityRole="button"
+        accessibilityState={{ selected: isActive(group, index) }}
+        accessibilityLabel={t('home.switchToGroup', { name: group.name })}
+        style={style}
+      >
+        <Avatar size={AVATAR} tone={group.tone} ring={ring} />
+      </Pressable>
+    );
+  });
 
   return (
     <View
@@ -62,21 +103,17 @@ export function GroupStrip({
         gap: 10,
       }}
     >
+      {onSelectGroup !== undefined && (
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>{faces}</View>
+      )}
+
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={t('home.openFamilyTree')}
         style={{ flexDirection: 'row', alignItems: 'center' }}
       >
-        {groups.map((group, i) => (
-          <Avatar
-            key={group.id}
-            size={AVATAR}
-            tone={group.tone}
-            ring={i === 0 ? RING_ACTIVE : RING}
-            style={{ marginLeft: i === 0 ? 0 : OVERLAP }}
-          />
-        ))}
+        {onSelectGroup === undefined && faces}
 
         {remainingCount > 0 && (
           <View
@@ -98,22 +135,26 @@ export function GroupStrip({
         )}
       </Pressable>
 
+      {/* Coral, like every other "there is room here" mark in the app — the
+          empty tree node and the invite sheet's spot both use this dashed
+          circle. Grey read as disabled next to faces that are not. */}
       <Pressable
         onPress={onAddPress}
         accessibilityRole="button"
-        accessibilityLabel={t('family.addMember')}
+        accessibilityLabel={t('home.newGroup')}
         style={{
           width: AVATAR,
           height: AVATAR,
           borderRadius: radius.full,
           borderWidth: 1.5,
           borderStyle: 'dashed',
-          borderColor: colors.state.borderDashed,
+          borderColor: colors.coral.borderSoft,
+          backgroundColor: colors.coral.subtle,
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <Plus size={15} color={colors.text.muted} strokeWidth={2} />
+        <Plus size={15} color={colors.coral.deep} strokeWidth={2.2} />
       </Pressable>
 
       <Pressable

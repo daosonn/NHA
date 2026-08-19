@@ -58,11 +58,15 @@ export function treeFromGraph(tree: FamilyTree, options: TreeFromGraphOptions): 
     .filter((edge) => edge.type === 'SPOUSE')
     .map((edge): [string, string] => [edge.fromMemberId, edge.toMemberId]);
 
+  const siblingPairs = edges
+    .filter((edge) => edge.type === 'SIBLING')
+    .map((edge): [string, string] => [edge.fromMemberId, edge.toMemberId]);
+
   const depths = computeDepths(
     tree.members.map((m) => m.id),
     parentsOf,
   );
-  levelPartners(depths, spousePairs);
+  levelSideways(depths, spousePairs, siblingPairs);
 
   const viewerMemberId = tree.members.find((member) => member.userId === viewerUserId)?.id ?? null;
 
@@ -133,14 +137,29 @@ function computeDepths(ids: string[], parentsOf: Map<string, string[]>): Map<str
 }
 
 /**
- * Pulls each partner down to the deeper of the two.
+ * Pulls everyone who belongs on the same row onto it.
  *
- * Someone who married into the family has no parent here, so they would
- * otherwise land in the top row while their spouse sits three rows down.
- * Repeated because moving one partner can unbalance another pair; bounded by
- * the number of pairs, since each pass can only ever move people downward.
+ * Depth only counts parent edges, so the two relationships that run
+ * *sideways* both break it:
+ *
+ * - A partner who married in has no parent here, and would sit in the top row
+ *   while their spouse sits three rows down.
+ * - A sibling added without their own parent edges is, to the depth pass,
+ *   parentless — so a brother lands one row *above* his sister, reading as
+ *   her father. That is what the tree was drawing.
+ *
+ * Both are fixed the same way: pull the shallower end down to the deeper one.
+ * Down, never up, so the pass can only ever push people away from the root
+ * and is guaranteed to settle. One list rather than two passes, because
+ * moving a sibling can unbalance a couple and vice versa.
  */
-function levelPartners(depths: Map<string, number>, pairs: [string, string][]): void {
+function levelSideways(
+  depths: Map<string, number>,
+  spousePairs: [string, string][],
+  siblingPairs: [string, string][],
+): void {
+  const pairs = [...spousePairs, ...siblingPairs];
+
   for (let pass = 0; pass < pairs.length + 1; pass++) {
     let moved = false;
 
@@ -160,11 +179,24 @@ function levelPartners(depths: Map<string, number>, pairs: [string, string][]): 
 }
 
 /**
- * One thread per child, leaving its parents.
+ * Threads from parents down to a child.
  *
- * Two parents who are partners give the thread a joint to leave from. A
- * single known parent passes the same id twice, which puts the joint on that
- * parent — a straight drop rather than a couple's arc.
+ * A thread leaves a *joint*: the midpoint between the two ids it is given.
+ * That reads correctly only when those two are drawn as a couple, because
+ * then the arc between them passes through the joint and the thread looks
+ * like it grows out of the pair.
+ *
+ * Three cases:
+ *
+ * - **One known parent** — pass that id twice. The joint collapses onto the
+ *   parent and the thread is a straight drop.
+ * - **Two parents who are partners** — the joint sits on their arc.
+ * - **Two parents with no spouse edge between them** — previously this hung
+ *   the thread off the midpoint of two unrelated nodes, so it appeared to
+ *   come out of empty space between them, or out of whichever node happened
+ *   to be near it. Each parent now gets a thread of its own. Two lines is
+ *   the honest drawing: the app knows both are parents and does not know
+ *   they are a couple, and inventing the arc would be inventing a marriage.
  */
 function buildDescents(
   parentsOf: Map<string, string[]>,
@@ -178,19 +210,18 @@ function buildDescents(
   for (const [child, parents] of parentsOf) {
     if (parents.length === 0) continue;
 
-    if (parents.length === 1) {
-      descents.push({ from: [parents[0], parents[0]], to: child });
+    const couple = parents
+      .flatMap((a, i) => parents.slice(i + 1).map((b): [string, string] => [a, b]))
+      .find(([a, b]) => isCouple(a, b));
+
+    if (couple !== undefined) {
+      descents.push({ from: couple, to: child });
       continue;
     }
 
-    // Prefer a pair the tree already draws an arc between, so the thread
-    // leaves the joint rather than floating between two unrelated parents.
-    const pair =
-      parents
-        .flatMap((a, i) => parents.slice(i + 1).map((b): [string, string] => [a, b]))
-        .find(([a, b]) => isCouple(a, b)) ?? ([parents[0], parents[1]] as [string, string]);
-
-    descents.push({ from: pair, to: child });
+    for (const parent of parents) {
+      descents.push({ from: [parent, parent], to: child });
+    }
   }
 
   return descents;

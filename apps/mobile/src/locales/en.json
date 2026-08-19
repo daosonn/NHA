@@ -106,7 +106,9 @@
     "noFamilyBody": "Create one and invite the people you want to keep things with, or join with a code someone sent you.",
     "startFamily": "Create or join a family",
     "loadFailed": "Could not load your families.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "switchToGroup": "Switch to {{name}}",
+    "newGroup": "Start a new family group"
   },
   "family": {
     "title": "Family tree",
@@ -140,7 +142,59 @@
     },
     "loadFailed": "Could not load the family tree.",
     "emptyTitle": "Nobody here yet",
-    "emptyBody": "Add the people in this family and the tree draws itself."
+    "emptyBody": "Add the people in this family and the tree draws itself.",
+    "new": {
+      "title": "New family group",
+      "markTitle": "A group of its own",
+      "markBody": "Its own tree, its own moments, its own code.",
+      "nameLabel": "Group name",
+      "namePlaceholder": "What the family calls itself",
+      "suggestions": {
+        "momsSide": "Mom's side",
+        "dadsSide": "Dad's side",
+        "grandparents": "Grandparents"
+      },
+      "useSuggestion": "Name the group {{name}}",
+      "youLabel": "Your place in it",
+      "youName": "{{name}} · you",
+      "youFallback": "You",
+      "youHint": "You keep the group. Relations get set as people arrive.",
+      "submit": "Create group",
+      "doneTitle": "Group created",
+      "doneBody": "It is on your family strip now. Hand out the code and the tree fills itself in.",
+      "codeLabel": "Family code",
+      "codeMeta": "Made for this group · does not expire",
+      "codeHint": "Anyone with this code joins the group. You can add spots to the tree afterwards.",
+      "done": "Done"
+    },
+    "nodeHint": "Press and hold to change their place in the tree.",
+    "member": {
+      "title": "Their place in the tree",
+      "closeScrim": "Close",
+      "nameLabel": "Name",
+      "namePlaceholder": "What the family calls them",
+      "genderLabel": "Gender",
+      "genderTitle": "How should the tree refer to them?",
+      "gender": {
+        "female": "Female",
+        "male": "Male",
+        "other": "Prefer not to say"
+      },
+      "relationshipLabel": "Relationship to you",
+      "relationshipTitle": "How is {{name}} related to you?",
+      "noRelationYet": "No relationship recorded yet — choosing one draws the thread.",
+      "theirsToEdit": "{{name}} has their own account, so their name and details are theirs to change.",
+      "save": "Save changes",
+      "remove": "Remove from the tree",
+      "blocked": {
+        "hasChildren": "Cannot remove someone who has a branch below them.",
+        "notYours": "Only this person can leave the family."
+      },
+      "errors": {
+        "forbidden": "Only this person can change that.",
+        "duplicate": "That relationship is already recorded."
+      }
+    }
   },
   "invite": {
     "sheet": {
@@ -189,7 +243,7 @@
     "addDetails": "Add details about {{name}}",
     "bornYear": "Born {{year}}",
     "lifespan": "{{born}} – {{died}}",
-    "noBio": "No story here yet. Anyone in the family can start it.",
+    "noBio": "Nothing written here yet. The pencil on your photo starts it.",
     "photos_one": "{{count}} photo",
     "photos_other": "{{count}} photos",
     "timelineEmpty": "No milestones yet",
@@ -403,5 +457,30 @@
     "loadFailed": "Could not load the photos.",
     "emptyTitle": "No photos yet",
     "emptyBody": "Everything the family shares with a photo or a video shows up here."
+  },
+  "profileEdit": {
+    "title": "Edit profile",
+    "save": "Save",
+    "loadFailed": "That profile could not be loaded.",
+    "nameLabel": "Name",
+    "nameFromAccount": "This is your account name. Change it in your account settings.",
+    "bioLabel": "Their story",
+    "bioPlaceholder": "Where they grew up, what they did, what they are like…",
+    "interestsLabel": "Interests",
+    "addInterestLabel": "Add an interest",
+    "addInterestPlaceholder": "Gardening, Hue cooking…",
+    "addInterest": "Add",
+    "removeInterest": "Remove {{interest}}",
+    "birthLabel": "Born",
+    "deathLabel": "Died",
+    "datePlaceholder": "YYYY-MM-DD",
+    "dateHint": "Year, month, day — 1968-04-12",
+    "deathHint": "Leave empty if they are living",
+    "errors": {
+      "date": "Write the date as YYYY-MM-DD.",
+      "noSuchDay": "There is no such day.",
+      "deathBeforeBirth": "This is before the birth date.",
+      "forbidden": "Only this person can change their own profile."
+    }
   }
 }

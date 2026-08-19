@@ -379,14 +379,40 @@ rendered by two routes: `member/[id].tsx` for anyone else, and the
 Profile tab for yourself. They differ only in chrome — your own profile
 is the same object your family reads, so it must not be a second design.
 
-Three rules from `docs/00-shared/domain-model.md` are encoded in the data
-rather than in the screen, as `MemberProfile.editability`:
+Who may edit is carried by the data rather than by the screen, as
+`MemberProfile.editability`:
 
-| Value    | Who is being viewed           | Edit affordance |
-| -------- | ----------------------------- | --------------- |
-| `self`   | you                           | **Edit**        |
-| `wiki`   | a placeholder with no account | **Add details** |
-| `locked` | someone else's linked account | none            |
+| Value    | Who is being viewed                        | Edit affordance |
+| -------- | ------------------------------------------ | --------------- |
+| `self`   | you                                        | **Edit**        |
+| `locked` | anybody else, and anybody not yet resolved | none            |
+| `wiki`   | unused by the client — see below           | **Add details** |
+
+**Only you edit your own profile (decided 2026-08-19).** This narrows
+`docs/00-shared/domain-model.md`, which makes a placeholder wiki-editable by
+the whole family. A life story written about someone by someone else is a
+different kind of object from one they wrote themselves, and the screen gave
+the reader no way to tell which they were looking at. What the family edits
+about another person is their **place in the tree** — name, relationships —
+on the family screen, not their biography.
+
+Three things follow, and none of them are obvious from the table:
+
+- `'wiki'` stays in the type and `ProfileHero` still renders it. The decision
+  lives in one function, `features/member/profile-overlay.ts` → `editability`,
+  so reversing it is one line rather than an archaeology exercise.
+- **The server has not narrowed.** `PATCH …/members/:memberId/profile` still
+  accepts an edit from any member of the family. The app stopped offering it;
+  making it impossible is a backend change to schedule.
+- The default when the profile has not loaded is `locked`, not whatever the
+  fixture says. It used to be the fixture, which drew an Edit pencil on a
+  stranger's face for as long as the request took — and forever if it failed.
+  Permissions are the server's to state (`CLAUDE.md` § 3); the honest default
+  is no.
+
+The Timeline follows the profile when `LifeEvent` arrives (task 1.6.8): a life
+event is part of the profile it sits on. Nothing edits it today, so nothing
+draws an affordance for it.
 
 The Album tab is **derived** — media from posts tagging the member — not
 the private `Album` model. The Memo tab is author-only (`Memo.ownerUserId`)

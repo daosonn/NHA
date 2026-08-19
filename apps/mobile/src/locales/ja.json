@@ -105,7 +105,9 @@
     "noFamilyBody": "家族を作って一緒に残したい人を招待するか、受け取ったコードで参加してください。",
     "startFamily": "家族を作る・参加する",
     "loadFailed": "家族の一覧を読み込めませんでした。",
-    "retry": "もう一度"
+    "retry": "もう一度",
+    "switchToGroup": "{{name}}に切り替える",
+    "newGroup": "新しい家族グループを作る"
   },
   "family": {
     "title": "家系図",
@@ -137,7 +139,59 @@
     },
     "loadFailed": "家系図を読み込めませんでした。",
     "emptyTitle": "まだ誰もいません",
-    "emptyBody": "この家族の人を追加すると、家系図が自動で描かれます。"
+    "emptyBody": "この家族の人を追加すると、家系図が自動で描かれます。",
+    "new": {
+      "title": "新しい家族グループ",
+      "markTitle": "ひとつの独立したグループ",
+      "markBody": "家系図も、思い出も、コードもこのグループだけのもの。",
+      "nameLabel": "グループ名",
+      "namePlaceholder": "家族での呼び名",
+      "suggestions": {
+        "momsSide": "母方",
+        "dadsSide": "父方",
+        "grandparents": "祖父母"
+      },
+      "useSuggestion": "グループ名を「{{name}}」にする",
+      "youLabel": "あなたの立ち位置",
+      "youName": "{{name}}・あなた",
+      "youFallback": "あなた",
+      "youHint": "あなたがこのグループの管理者です。続柄は人が増えたときに設定します。",
+      "submit": "グループを作成",
+      "doneTitle": "グループを作成しました",
+      "doneBody": "家族ストリップに追加されました。コードを渡せば家系図は自然に埋まっていきます。",
+      "codeLabel": "家族コード",
+      "codeMeta": "このグループ専用・期限なし",
+      "codeHint": "このコードを持っている人は誰でも参加できます。家系図の枠はあとから追加できます。",
+      "done": "完了"
+    },
+    "nodeHint": "長押しすると家系図での位置を変更できます。",
+    "member": {
+      "title": "家系図での位置",
+      "closeScrim": "閉じる",
+      "nameLabel": "名前",
+      "namePlaceholder": "家族での呼び名",
+      "genderLabel": "性別",
+      "genderTitle": "家系図での表記は？",
+      "gender": {
+        "female": "女性",
+        "male": "男性",
+        "other": "回答しない"
+      },
+      "relationshipLabel": "あなたとの続柄",
+      "relationshipTitle": "{{name}}さんはあなたから見てどんな関係ですか？",
+      "noRelationYet": "まだ続柄が登録されていません。選ぶと線が引かれます。",
+      "theirsToEdit": "{{name}}さんはご自身のアカウントをお持ちです。名前や情報はご本人だけが変更できます。",
+      "save": "変更を保存",
+      "remove": "家系図から外す",
+      "blocked": {
+        "hasChildren": "下に枝がある人は外せません。",
+        "notYours": "家族から抜けられるのはご本人だけです。"
+      },
+      "errors": {
+        "forbidden": "これを変更できるのはご本人だけです。",
+        "duplicate": "その続柄はすでに登録されています。"
+      }
+    }
   },
   "invite": {
     "sheet": {
@@ -186,7 +240,7 @@
     "addDetails": "{{name}}さんの情報を追加",
     "bornYear": "{{year}}年生まれ",
     "lifespan": "{{born}}年 – {{died}}年",
-    "noBio": "まだ何も書かれていません。家族の誰でも書き始められます。",
+    "noBio": "まだ何も書かれていません。写真の鉛筆から書き始められます。",
     "photos_other": "写真{{count}}枚",
     "timelineEmpty": "まだ出来事がありません",
     "timelineEmptyBody": "誕生、引っ越し、結婚 — 人生の節目になった日を。",
@@ -386,5 +440,30 @@
     "loadFailed": "写真を読み込めませんでした。",
     "emptyTitle": "まだ写真がありません",
     "emptyBody": "家族が写真や動画を共有すると、ここに集まります。"
+  },
+  "profileEdit": {
+    "title": "プロフィールを編集",
+    "save": "保存",
+    "loadFailed": "プロフィールを読み込めませんでした。",
+    "nameLabel": "名前",
+    "nameFromAccount": "アカウントの名前です。アカウント設定から変更できます。",
+    "bioLabel": "その人の物語",
+    "bioPlaceholder": "育った場所、してきたこと、どんな人か…",
+    "interestsLabel": "好きなもの",
+    "addInterestLabel": "好きなものを追加",
+    "addInterestPlaceholder": "園芸、フエ料理…",
+    "addInterest": "追加",
+    "removeInterest": "{{interest}}を削除",
+    "birthLabel": "生年月日",
+    "deathLabel": "没年月日",
+    "datePlaceholder": "YYYY-MM-DD",
+    "dateHint": "年・月・日 — 1968-04-12",
+    "deathHint": "ご存命の場合は空のままに",
+    "errors": {
+      "date": "日付はYYYY-MM-DDの形式で入力してください。",
+      "noSuchDay": "その日付は存在しません。",
+      "deathBeforeBirth": "生年月日より前の日付です。",
+      "forbidden": "このプロフィールを変更できるのは本人だけです。"
+    }
   }
 }

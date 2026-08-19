@@ -6,6 +6,10 @@ import { BackButton } from '../../src/components/layout/header-slots';
 import { MemoUndoToast } from '../../src/components/member/memo-undo-toast';
 import { ProfileBody } from '../../src/components/member/profile-body';
 import { Text } from '../../src/components/ui/text';
+import { useSession } from '../../src/features/auth/session';
+import { useActiveFamily } from '../../src/features/family/active-family';
+import { withProfileDetail } from '../../src/features/member/profile-overlay';
+import { useMemberProfile } from '../../src/features/member/use-profile';
 import { getMemberProfile } from '../../src/fixtures/member';
 
 /**
@@ -17,8 +21,11 @@ import { getMemberProfile } from '../../src/fixtures/member';
 export default function MemberScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useSession();
+  const { familyId } = useActiveFamily();
 
-  const profile = getMemberProfile(id);
+  const { data } = useMemberProfile(familyId, id);
+  const profile = withProfileDetail(getMemberProfile(id), data, user?.id ?? null, 'locked');
 
   return (
     <View className="flex-1 bg-page">
@@ -37,6 +44,14 @@ export default function MemberScreen() {
       >
         <ProfileBody
           profile={profile}
+          onEdit={() =>
+            familyId === null
+              ? undefined
+              : router.push({
+                  pathname: '/profile/edit',
+                  params: { familyId, memberId: id },
+                })
+          }
           onAddMemo={() =>
             router.push({ pathname: '/memo/edit', params: { memberId: profile.id } })
           }
