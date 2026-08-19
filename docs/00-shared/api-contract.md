@@ -356,6 +356,36 @@ The schema grew `title` and `category` for this (migration
 line and a category chip, and the backend follows the built UI
 (same UI-leads principle as invitations).
 
+### Video jobs — `apps/api/src/video-job/` (task 2.2.2, added 2026-08-19)
+
+Generate a video from photos (WBS 2.2). Async: submit, poll, then stream
+the result. The render itself is the AI team's, behind the seam in
+`docs/03-ai/architecture.md` — the app only ever talks to NestJS.
+
+| Route                 | Returns            |
+| --------------------- | ------------------ |
+| `POST /video-jobs`    | `VideoJobDetail`   |
+| `GET /video-jobs`     | `VideoJobDetail[]` |
+| `GET /video-jobs/:id` | `VideoJobDetail`   |
+
+`VideoJobDetail` is `{ id, status, inputMediaIds, resultMediaId, error,
+createdAt, updatedAt }`; `status` is
+`PENDING | PROCESSING | DONE | FAILED`. Create body:
+`{ mediaIds (1–50, order preserved into the render), style? }`.
+
+Semantics:
+
+- Source photos are any **images the requester may view** — own or
+  family-shared, the same gate as media streaming (404 with no oracle
+  when any is missing/unviewable; 400 for non-images).
+- With the AI service unreachable or unconfigured, create answers
+  `503 { code: "AI_UNAVAILABLE" }` and leaves **no orphan job** — retry
+  is safe. Jobs and results are private to the requester (others 404).
+- When `status` is `DONE`, stream the video via
+  `GET /media/:resultMediaId` (Range/206 works as usual); the result is
+  registered as the requester's own standalone media, so only they can
+  play it. `FAILED` carries `error`.
+
 ### Gallery — `apps/api/src/gallery/` (task 1.6.4, added 2026-08-19)
 
 The Album tab (screen 8). **Derived, no table** (`database.md` § Profile

@@ -376,6 +376,21 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   deletes in the MVP; a dump before risky work is the way back. Verified
   by a real backup→restore round-trip (row counts intact, API healthy
   after). See `docs/04-devops/local-environment.md` § Backup & restore.
+- Video job API (2026-08-19, sprint 2, task 2.2.2): the backend half of
+  video generation — `POST/GET /api/video-jobs` (+ `GET /:id` to poll)
+  and the internal completion callback
+  `POST /api/internal/video-jobs/:jobId/complete` for the AI team.
+  Sources are any images the requester may view (`MediaService.
+assertViewableBatch`, the same gate as streaming, now exported);
+  selection order is preserved into the render. Dispatch failure rolls
+  the job back and answers 503 `AI_UNAVAILABLE` (no orphan rows);
+  duplicate callbacks on finished jobs are retry-safe; the result is
+  registered as the requester's own standalone Media, so it streams
+  privately with Range/206. Verified by lint/build/test + 18-case live
+  smoke against a **mock AI service** (dispatch payload, failure
+  rollback, auth matrix, DONE/FAILED paths, result privacy). On branch
+  `feature/video-jobs` (stacked on `feature/memory-list`). Render itself
+  is the AI team's — seam in `docs/03-ai/architecture.md`.
 - Memory list API (2026-08-19, sprint 2, tasks 2.1.1–2.1.2): Memories
   reuse `Post` as designed — no new model; `GET /families/:id/posts`
   gained optional filters `?memberId` (tagged-in plus authored-by when

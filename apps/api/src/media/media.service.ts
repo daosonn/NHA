@@ -127,6 +127,51 @@ export class MediaService {
     }
   }
 
+  /**
+   * The batch form of the streaming gate: 404 unless every media exists
+   * and the viewer may see it (same per-parent rules as openForViewer,
+   * one message — no oracle about which failed). For building things out
+   * of shared photos, e.g. video jobs. Returns the rows so the caller
+   * needs no second read.
+   */
+  async assertViewableBatch(
+    userId: string,
+    mediaIds: string[],
+  ): Promise<{ id: string; storageKey: string; mimeType: string }[]> {
+    const media = await this.prisma.media.findMany({
+      where: { id: { in: mediaIds } },
+      select: {
+        id: true,
+        storageKey: true,
+        mimeType: true,
+        uploaderUserId: true,
+        memo: { select: { ownerUserId: true } },
+        post: {
+          select: {
+            authorUserId: true,
+            families: { select: { familyId: true } },
+          },
+        },
+        lifeEvent: {
+          select: {
+            profile: { select: { userId: true, memberId: true } },
+          },
+        },
+      },
+    });
+    const visibility = await Promise.all(
+      media.map((item) => this.canView(userId, item)),
+    );
+    if (media.length !== mediaIds.length || visibility.includes(false)) {
+      throw new NotFoundException('Some media were not found');
+    }
+    return media.map(({ id, storageKey, mimeType }) => ({
+      id,
+      storageKey,
+      mimeType,
+    }));
+  }
+
   /** Streams a media file (optionally a byte range) to an allowed viewer. */
   async openForViewer(
     userId: string,

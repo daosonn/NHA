@@ -30,10 +30,14 @@ photos, and get AI suggestions (gifts, messages, quality time).
 
 ### 2.2 Generate Video — MVP video generation
 
-- [ ] 2.2.1 Chọn ảnh làm video (multi-select)
-- [ ] 2.2.2 Gửi request generate (VideoJob — async)
-- [ ] 2.2.3 Hiển thị trạng thái (processing/done)
-- [ ] 2.2.4 Preview kết quả (xem video)
+- [ ] 2.2.1 Chọn ảnh làm video (multi-select) — UI; API nhận `mediaIds`
+      đã sẵn (2.2.2)
+- [x] 2.2.2 Gửi request generate (VideoJob — async) — done 2026-08-19:
+      `POST/GET /api/video-jobs` + callback nội bộ cho team AI (chi tiết:
+      `api-contract.md`); render thuộc team AI
+- [ ] 2.2.3 Hiển thị trạng thái (processing/done) — UI; API poll đã sẵn
+- [ ] 2.2.4 Preview kết quả (xem video) — UI; stream qua
+      `GET /media/:resultMediaId` đã sẵn (Range/206)
 
 ### 2.3 Nav3 – AI — AI Assistant
 
