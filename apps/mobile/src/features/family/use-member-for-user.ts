@@ -15,9 +15,23 @@ import { useFamilyTree } from './use-family-tree';
  * leave the avatar unpressable rather than guess.
  */
 export function useMemberIdForUser(userId: string | null): string | null {
+  const lookup = useMemberIdLookup();
+  return lookup(userId);
+}
+
+/**
+ * The same resolution as a reusable function, for lists.
+ *
+ * `renderItem` is a callback rather than a component, so it cannot call a
+ * hook per row — and calling one per row would be wasteful anyway, since
+ * every row reads the same cached tree.
+ */
+export function useMemberIdLookup(): (userId: string | null) => string | null {
   const { familyId } = useActiveFamily();
   const { data: tree } = useFamilyTree(familyId);
 
-  if (userId === null || tree === undefined) return null;
-  return tree.members.find((member) => member.userId === userId)?.id ?? null;
+  return (userId) => {
+    if (userId === null || tree === undefined) return null;
+    return tree.members.find((member) => member.userId === userId)?.id ?? null;
+  };
 }

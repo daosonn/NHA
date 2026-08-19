@@ -23,9 +23,7 @@
     "modeLabel": "ログインまたは新規登録",
     "signInTab": "ログイン",
     "signUpTab": "新規登録",
-    "continueApple": "Appleで続ける",
     "continueGoogle": "Googleで続ける",
-    "apple": "Apple",
     "google": "Google",
     "fields": {
       "name": "お名前",
@@ -315,18 +313,15 @@
   },
   "post": {
     "title": "思い出",
-    "momentsTitle": "思い出",
     "openLabel": "{{name}}さんの投稿を開く",
     "openProfile": "{{name}}さんのプロフィールを開く",
     "private": "非公開",
-    "reactionCount_other": "リアクション {{count}}件",
     "comments_other": "コメント {{count}}件",
     "noComments": "まだコメントはありません。",
     "addComment": "コメントを書く",
     "commentPlaceholder": "何か書いてみましょう",
     "send": "送信",
     "loadMoreComments": "以前のコメント",
-    "loadFailed": "思い出を読み込めませんでした。",
     "emptyTitle": "まだ思い出がありません",
     "emptyBody": "家族の誰かが最初の写真を共有すると、ここに表示されます。",
     "unavailableTitle": "表示できません",
@@ -337,6 +332,14 @@
       "haha": "うける",
       "wow": "すごい",
       "sad": "悲しい"
-    }
+    },
+    "families_other": "{{count}} 家族"
+  },
+  "omoide": {
+    "summary": "{{people}}人が投稿した写真 {{photos}}枚",
+    "openMoment": "この写真の投稿を開く",
+    "loadFailed": "写真を読み込めませんでした。",
+    "emptyTitle": "まだ写真がありません",
+    "emptyBody": "家族が写真や動画を共有すると、ここに集まります。"
   }
 }

@@ -51,6 +51,15 @@ export function configureApi(next: Partial<ApiConfig>): void {
   config = { ...config, ...next };
 }
 
+/**
+ * The current bearer token, for the few consumers that cannot go through
+ * `apiRequest` — an image or video player is handed a URL plus headers and
+ * fetches the bytes itself.
+ */
+export function apiAccessToken(): string | null {
+  return config.getAccessToken();
+}
+
 export function apiBaseUrl(): string {
   return config.baseUrl;
 }

@@ -35,16 +35,20 @@ function formatDuration(ms: number): string {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
-function toDraft(asset: ImagePicker.ImagePickerAsset): DraftMedia {
+function toDraft(asset: ImagePicker.ImagePickerAsset, index: number): DraftMedia {
   const isVideo = asset.type === 'video';
+  // `assetId` is null on web and `uri` is a `blob:` URL there, so neither
+  // makes a sane filename. The uri still works as a key because two picks of
+  // the same file produce two different object URLs.
+  const id = asset.assetId ?? `${asset.uri}#${index}`;
 
   return {
-    id: asset.assetId ?? asset.uri,
+    id,
     kind: isVideo ? 'video' : 'photo',
     tone: 'light',
     uri: asset.uri,
-    fileName: asset.fileName ?? undefined,
-    mimeType: asset.mimeType ?? undefined,
+    fileName: asset.fileName ?? `moment-${index}.${isVideo ? 'mp4' : 'jpg'}`,
+    mimeType: asset.mimeType ?? (isVideo ? 'video/mp4' : 'image/jpeg'),
     duration:
       isVideo && asset.duration !== null && asset.duration !== undefined
         ? formatDuration(asset.duration)

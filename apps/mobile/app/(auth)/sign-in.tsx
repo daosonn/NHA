@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { AuthModeTabs } from '../../src/components/auth/auth-mode-tabs';
-import { AppleMark, FacebookMark, GoogleMark } from '../../src/components/auth/identity-marks';
+import { FacebookMark, GoogleMark } from '../../src/components/auth/identity-marks';
 import { FormScreen } from '../../src/components/layout/form-screen';
 import { Button } from '../../src/components/ui/button';
 import { Checkbox } from '../../src/components/ui/checkbox';
@@ -71,15 +71,6 @@ export default function SignInScreen() {
           <Divider label={t('common.or')} />
 
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <Button
-                label={t('auth.apple')}
-                variant="neutral"
-                size="large"
-                fullWidth
-                renderIcon={() => <AppleMark />}
-              />
-            </View>
             <View style={{ flex: 1 }}>
               <Button
                 label={t('auth.google')}

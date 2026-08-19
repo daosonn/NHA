@@ -145,6 +145,7 @@ model PasswordResetToken {
   tokenHash String
   expiresAt DateTime
   usedAt    DateTime?
+  attempts  Int       @default(0) // 6-digit codes need a guess cap (added 2026-08-18)
   createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
