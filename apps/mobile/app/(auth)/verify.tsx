@@ -42,11 +42,12 @@ export default function VerifyScreen() {
   const resetting = intent === 'reset';
 
   /**
-   * There is no endpoint behind this screen yet — nothing sends a code and
-   * nothing confirms one (`docs/00-shared/api-contract.md`). Registration
-   * returns a token pair straight away, so the sign-up flow no longer comes
-   * through here at all; only the reset flow does, and that only needs the
-   * address carried forward.
+   * Nothing here calls the server yet. The reset flow does have endpoints —
+   * `POST /auth/password-reset/{request,verify,confirm}` — but they are not
+   * mirrored in `src/lib/api/endpoints.ts`, so this screen still only carries
+   * the address forward (`docs/00-shared/api-contract.md`). The sign-up half
+   * has no endpoint at all: registration returns a token pair straight away,
+   * so that flow no longer comes through here.
    *
    * It must not sign anyone in: doing so would hand out a session with no
    * token behind it, reachable by anyone who opens `/verify` directly.

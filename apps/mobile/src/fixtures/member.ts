@@ -42,11 +42,25 @@ export type GalleryItem = {
   tone: 'light' | 'dark';
 };
 
+/**
+ * A private note *about* a member, written by the viewer.
+ *
+ * No author field on purpose: `Memo.ownerUserId` is the only person who can
+ * ever read one (`docs/00-shared/domain-model.md`), so on any profile you open
+ * every note here is your own. An author line would be the same name repeated
+ * down the screen, and would imply the notes are shared when they are not.
+ */
 export type MemoItem = {
   id: string;
-  content: string;
+  /** The bold line on the card and the heading of the detail screen. */
+  title: string;
+  /** The longer text under it. Paragraphs are split on a blank line. */
+  body: string | null;
   category: MemoCategory;
+  createdAt: string;
   updatedAt: string;
+  /** Tone stand-ins, same as `gallery` — there are no real images yet. */
+  photos: GalleryItem[];
 };
 
 export type MemberProfile = {
@@ -131,22 +145,43 @@ const mai: MemberProfile = {
   memos: [
     {
       id: 'n1',
-      content: 'Allergic to shellfish — the whole family forgets this every Tet.',
-      category: 'health',
-      updatedAt: '2026-07-02',
+      title: 'Clay teapot she kept looking at',
+      body: 'Bat Trang, the shop near the ferry. The brown one with the bamboo handle — she picked it up twice and put it back both times.\n\nAround 400k. Ask for the same shape but without the crack near the lid.',
+      category: 'gift',
+      createdAt: '2026-08-05',
+      updatedAt: '2026-08-05',
+      photos: [
+        { id: 'p1', tone: 'dark' },
+        { id: 'p2', tone: 'light' },
+        { id: 'p3', tone: 'light' },
+      ],
     },
     {
       id: 'n2',
-      content: 'Wants the blue ceramic planters from the shop on Le Loi. Birthday idea.',
-      category: 'gift',
-      updatedAt: '2026-06-21',
+      title: 'Allergic to shellfish',
+      body: 'The whole family forgets this every Tet.',
+      category: 'health',
+      createdAt: '2026-07-02',
+      updatedAt: '2026-08-12',
+      photos: [],
     },
     {
       id: 'n3',
-      content:
-        'Ask her about the year in Hue before she moved — she has never told the whole story.',
+      title: 'Waters the garden at 6am',
+      body: 'Never later than seven, even in the rain.',
+      category: 'hobbies',
+      createdAt: '2026-08-16',
+      updatedAt: '2026-08-16',
+      photos: [],
+    },
+    {
+      id: 'n4',
+      title: 'The year in Hue before she moved',
+      body: 'She has never told the whole story. Record it this time.',
       category: 'memories',
+      createdAt: '2026-05-30',
       updatedAt: '2026-05-30',
+      photos: [],
     },
   ],
 };

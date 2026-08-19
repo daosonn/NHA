@@ -116,14 +116,7 @@ export const defaultSpot: TreeSpot = {
   summary: 'Gen 3 · beside Minh · child of Mai & Hoang',
 };
 
-/** Placeholder host. The real one is decided when `apps/web` gets a role. */
-const INVITE_HOST = 'https://nha.app/join';
-
 export const familyInviteCode = 'K7M2QRXP';
-
-export function inviteLink(code: string): string {
-  return `${INVITE_HOST}?code=${code}`;
-}
 
 /** What the tree shows while someone has been invited but has not joined. */
 export type PendingInvite = {

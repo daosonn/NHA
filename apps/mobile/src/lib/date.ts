@@ -39,3 +39,41 @@ export function formatFullDate(isoDate: string): string | null {
   const parts = parse(isoDate);
   return parts === null ? null : i18next.t('date.fullDate', parts);
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * How long ago, as a catalogue key plus a count — never as a finished string.
+ *
+ * The caller does `t(key, { count })` so the number goes through i18next
+ * plurals. Building the sentence here would mean choosing between "1 day" and
+ * "2 days" in code, and Japanese has no plural form to choose between.
+ *
+ * Buckets rather than exact arithmetic: past a week nobody reads "9 days ago"
+ * as anything more precise than "last week", and a memo written in March does
+ * not become more useful for being dated to the hour.
+ */
+export function relativeTime(isoDate: string): { key: string; count: number } | null {
+  // Compare calendar days, not instants: a note written last night is
+  // "yesterday" at 9am, not "14 hours ago".
+  const [year, month, day] = isoDate.split('-').map(Number);
+  if (year === undefined || month === undefined || day === undefined) return null;
+  if (!Number.isInteger(month) || month < 1 || month > 12) return null;
+  if (!Number.isInteger(year) || !Number.isInteger(day)) return null;
+
+  const then = Date.UTC(year, month - 1, day);
+  const now = new Date();
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const days = Math.round((today - then) / DAY_MS);
+
+  // A date in the future is a fixture typo or a clock skew, not a state the
+  // screen should try to phrase. Fall back to the plain date.
+  if (days < 0) return null;
+  if (days === 0) return { key: 'date.relative.today', count: 0 };
+  if (days === 1) return { key: 'date.relative.yesterday', count: 1 };
+  if (days < 7) return { key: 'date.relative.daysAgo', count: days };
+  if (days < 30) return { key: 'date.relative.weeksAgo', count: Math.floor(days / 7) };
+  if (days < 365) return { key: 'date.relative.monthsAgo', count: Math.floor(days / 30) };
+  return { key: 'date.relative.yearsAgo', count: Math.floor(days / 365) };
+}

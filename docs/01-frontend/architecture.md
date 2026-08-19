@@ -37,21 +37,21 @@ the same tokens into its own Tailwind config.
 
 ## Stack
 
-| Concern        | Library                                                       |
-| -------------- | ------------------------------------------------------------- |
-| Routing / tabs | `expo-router`                                                 |
-| Styling        | `nativewind`                                                  |
-| Icons          | `lucide-react-native` — 24px, stroke 2, **no other icon set** |
-| Bottom sheet   | `@gorhom/bottom-sheet`                                        |
-| Header blur    | `expo-blur`                                                   |
-| Images         | `expo-image`                                                  |
-| Image picking  | `expo-image-picker`                                           |
-| Family tree    | `react-native-svg` + `d3-hierarchy`                           |
-| Animation      | `react-native-reanimated`                                     |
-| Server state   | `@tanstack/react-query`                                       |
-| Client state   | `zustand`                                                     |
-| Forms          | `react-hook-form` + `zod`                                     |
-| Copy / i18n    | `i18next` + `react-i18next` + `expo-localization`             |
+| Concern        | Library                                                                                                                    |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Routing / tabs | `expo-router`                                                                                                              |
+| Styling        | `nativewind`                                                                                                               |
+| Icons          | `lucide-react-native` — 24px, stroke 2, **no other icon set**                                                              |
+| Bottom sheet   | `@gorhom/bottom-sheet` — chosen, **not installed**. Every sheet today is a plain `Modal`.                                  |
+| Header blur    | `expo-blur`                                                                                                                |
+| Images         | `expo-image`                                                                                                               |
+| Image picking  | `expo-image-picker`                                                                                                        |
+| Family tree    | `react-native-svg`. Layout is authored by hand in `components/family/tree-layout.ts`; `d3-hierarchy` is **not installed**. |
+| Animation      | `react-native-reanimated`                                                                                                  |
+| Server state   | `@tanstack/react-query`                                                                                                    |
+| Client state   | `zustand`                                                                                                                  |
+| Forms          | `useState`. `react-hook-form` and `zod` were considered and **not added** — see § State.                                   |
+| Copy / i18n    | `i18next` + `react-i18next` + `expo-localization`                                                                          |
 
 Do not add a library when the stack above already solves the problem.
 
@@ -74,10 +74,10 @@ app/                      expo-router routes — file = route
   create-family.tsx       Create or join — the way out of an empty account
   family.tsx              Family tree — pushed, not a tab
   member/[id].tsx         Life Profile (Timeline / Album / Memo)
+  post/[id].tsx           Post detail — comments and reactions
   ai/gifts.tsx            Gift ideas — pushed from the AI tab
   invite/[code].tsx       Invitation — what an invite link opens
   settings.tsx            Account & Settings — pushed from the Profile tab
-  _dev/kitchen-sink.tsx   design-system preview, dev only
   _layout.tsx             providers: react-query, safe area, fonts
 src/
   components/ui/          design-system primitives (Button, Card, ...)
@@ -293,19 +293,19 @@ rather than in `docs/00-shared/api-contract.md`, which several people write
 to — that document describes what the API offers, this one describes what
 this app does with it.
 
-| Screen                  | State                                                                                                                                        |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sign in / Sign up       | **Wired.** Social buttons still render without handlers, pending Apple on the server.                                                        |
-| Home                    | **Wired** — families, with loading, error and a "no family yet" empty state. Event widget and recommendations stay on fixtures: no endpoint. |
-| Create / join family    | **Wired** (`app/create-family.tsx`). 404 = unknown code, 409 = already a member.                                                             |
-| Family tree             | **Wired**, including adding a member. See § Family tree below.                                                                               |
-| New moment              | **Wired** — pick media, upload, post, choose audience.                                                                                       |
-| Moments + Post detail   | **Wired** — feed, comments, reactions (`app/moments.tsx`, `app/post/[id].tsx`).                                                              |
-| Life Profile            | Header and About could be wired; Timeline, Album and Memo have no endpoint, so the screen waits rather than showing one working tab of four. |
-| Omoide                  | No album endpoints, and "derived from what" is undecided. Still a placeholder.                                                               |
-| AI tab + Gift ideas     | `apps/ai` does not exist.                                                                                                                    |
-| Invitation page         | Needs a public read of an invite code; `POST /families/join` requires a token and joins immediately, so it cannot preview.                   |
-| Verify / Forgot / Reset | No endpoint. They no longer fake a session — see § Auth.                                                                                     |
+| Screen                  | State                                                                                                                                                                                                                                                                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Sign in / Sign up       | **Wired.** Social buttons still render without handlers, pending the OAuth redirect in the app.                                                                                                                                                                                                                                |
+| Home                    | **Wired** — families and the family feed, with loading, error and a "no family yet" empty state. The special-date widget and the recommendations still read `src/fixtures/home.ts`: recommendations have no endpoint, and `GET /families/:id/special-dates` exists on the server but is not in `src/lib/api/endpoints.ts` yet. |
+| Create / join family    | **Wired** (`app/create-family.tsx`). 404 = unknown code, 409 = already a member.                                                                                                                                                                                                                                               |
+| Family tree             | **Wired**, including adding a member. See § Family tree below.                                                                                                                                                                                                                                                                 |
+| New moment              | **Wired** — pick media, upload, post, choose audience.                                                                                                                                                                                                                                                                         |
+| Post detail             | **Wired** — comments and reactions (`app/post/[id].tsx`). The separate `app/moments.tsx` was deleted when the feed moved into Home.                                                                                                                                                                                            |
+| Omoide                  | **Wired** (2026-08-18) — `GET /families/:id/posts`, every shared photo grouped by the day it was posted. One shelf, not albums; search and sort are deliberately absent until something is behind them.                                                                                                                        |
+| Life Profile            | **Fixtures**, on both routes. Header and About could be wired (`GET /me/profile`, `GET .../members/:memberId/profile`); Timeline and Album have no endpoint. **Memo is a complete UI** — list, detail, editor, delete with undo — running on `features/member/memo-store.ts` until a `Memo` endpoint exists.                   |
+| AI tab + Gift ideas     | **Fixtures.** `apps/ai` does not exist.                                                                                                                                                                                                                                                                                        |
+| Invitation page         | **Fixtures.** Needs a public read of an invite code; `POST /families/join` requires a token and joins immediately, so it cannot preview. Its Join button currently has no handler — the one place the app breaks its own "a button that leads nowhere is not rendered" rule.                                                   |
+| Verify / Forgot / Reset | **Not wired.** The three screens only navigate. `POST /auth/password-reset/{request,verify,confirm}` landed on the server in PR #12, but `src/lib/api/endpoints.ts` does not mirror them yet. Verify's sign-up half still has no endpoint at all.                                                                              |
 
 ### Family tree
 
@@ -320,7 +320,10 @@ would otherwise sit in the top row while their spouse sits three rows down.
 Two things it cannot produce, both for the same reason: `empty` and
 `pending` nodes describe a spot reserved for a named invitee, and the server
 has one invite code per family rather than per spot. The component still
-supports both states; nothing feeds them.
+supports both states; nothing feeds them — `tree-from-graph.ts` emits
+`state: 'active'` for every node, and `components/family/pending-banner.tsx`
+is therefore written but rendered nowhere. It waits on the invitation record,
+not on a design decision.
 
 Kinship words are base relationships only (decided 2026-08-18). A node with
 no direct edge to the viewer — a grandparent, a cousin — shows its name with
@@ -359,8 +362,8 @@ Actual order differed: the family tree (6) was built before the profile
 (3–5), because the tree is what opens a profile and a screen with no way
 into it cannot be reviewed.
 
-The first pass is complete. Everything runs on `src/fixtures/`; no screen
-talks to the API yet.
+The first pass is complete. It was drawn against `src/fixtures/`; most of
+those screens have since been wired — § Wiring status is the current picture.
 
 Second pass, in order: auth (Welcome, Sign in, Create account, Verify,
 Forgot/Reset), then AI (hub, Gift ideas). Both done.
@@ -389,6 +392,36 @@ The Album tab is **derived** — media from posts tagging the member — not
 the private `Album` model. The Memo tab is author-only (`Memo.ownerUserId`)
 and says so on screen, because a private note that looks public is a
 privacy incident waiting to happen.
+
+#### Memo
+
+Five pieces, matching mockup sections 1c–1h:
+
+| Piece                      | File                                                                  |
+| -------------------------- | --------------------------------------------------------------------- |
+| Two-column grid + Add tile | `components/member/memo-list.tsx`                                     |
+| One card                   | `components/member/memo-card.tsx`                                     |
+| Detail                     | `app/memo/[id].tsx`                                                   |
+| Editor (add **and** edit)  | `app/memo/edit.tsx`                                                   |
+| Actions / delete / undo    | `components/member/memo-{actions-sheet,delete-dialog,undo-toast}.tsx` |
+
+There is no `Memo` endpoint, so `features/member/memo-store.ts` holds the
+notes in memory, seeded from the fixtures — plain module state plus
+`useSyncExternalStore`, the same shape as `features/auth/session-store.ts`.
+The three screens that write a note are separate routes and cannot share React
+state through props; this is what a react-query hook replaces later.
+
+The undo lives in the store rather than in the screen that pressed Delete,
+because those are two different screens: the detail screen deletes and pops,
+so the offer has to outlive it and surface on the profile. It expires after
+five seconds whether or not anyone was watching.
+
+Three things the mockups draw that are **not** built, all for the same reason —
+a memo is private to its author (`docs/00-shared/domain-model.md`, 2026-08-14):
+the author line under each card, the "Share with family" action, and the
+"visible to the family" row in the editor. The delete dialog says the note
+goes for good rather than that it disappears "for everyone". Revisiting that
+is a domain change, not a UI one.
 
 ### New moment
 
@@ -423,16 +456,32 @@ Four pieces, matching mockup sections 8a–8d:
 | Spot preview inside the invitation | `components/family/invite-preview.tsx` |
 | Invitation page (receiver)         | `app/invite/[code].tsx`                |
 
+**What it does today is add a member, not send an invitation.** The sheet's
+submit runs `features/family/use-add-member.ts` — create the placeholder,
+then create the edge — so the spot card, the delivery tabs and the link are
+drawn from `src/fixtures/invite.ts` while only the name and the kinship
+option reach the server. The receiver's page (`app/invite/[code].tsx`) is
+fixtures end to end. Both stay that way until the invitation record exists.
+
 The sheet is opened two ways from `app/family.tsx`: the floating
 add-member button (spot chosen for you) and tapping an **Empty** node (that
 node becomes the spot). Both feed the same `TreeSpot`, so the sheet always
 knows which position it is filling and can say so in words —
 "Gen 3 · beside Minh · child of Mai & Hoang".
 
-Two delivery modes share the sheet: a copyable link and, later, a contact
-pick. The code is the 8-character `Family.inviteCode` (alphabet
+**The sheet hands out a code, not a link** (2026-08-19, mockup 8a). The code
+is the 8-character `Family.inviteCode` (alphabet
 `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` — no I/O/0/1, so it survives being read
-aloud). Copy uses `expo-clipboard`; share uses the RN `Share` API.
+aloud), shown split 4+4 and copied unspaced. A link would have to open a web
+page that does not exist while the role of `apps/web` is undecided; a code
+also works read down a phone line to someone who does not have the app yet,
+which is most of the people this screen is for. Copy uses `expo-clipboard`;
+share uses the RN `Share` API and carries the code.
+
+The line under the card says what the code actually does — joins the family —
+and **not** what the mockup promised, that the receiver lands in the reserved
+spot. A family-wide code cannot do that: `POST /families/join` takes a
+`linkMemberId`, but a bare code does not carry one.
 
 Two deviations from this document's stack table, both deliberate:
 
@@ -463,7 +512,9 @@ flow instead of walking through every change of mind.
 before a reset are the same act to the person typing, so `intent` changes
 only where they land afterwards. Reset is three steps (email → code → new
 password) rather than an emailed link, because a link has to open
-somewhere and the role of `apps/web` is still undecided.
+somewhere and the role of `apps/web` is still undecided. The server grew
+those three steps in PR #12; the screens have not been connected to them
+yet.
 
 The six OTP boxes are a drawing over one real input. Six separate fields
 would each need focus juggling and would break paste, autofill and the

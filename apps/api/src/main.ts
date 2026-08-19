@@ -32,7 +32,10 @@ async function bootstrap() {
   if (origins.length > 0) {
     app.enableCors({
       origin: origins,
-      methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+      // PUT is here for `PUT /posts/:postId/reactions/me`, the one upsert in
+      // the API. Leaving it out failed the preflight rather than the request,
+      // so reacting to a post died in the browser with no server log at all.
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
       // Bearer tokens travel in a header, never a cookie, so the browser
       // has no credentials to send and enabling them would only widen what
       // a malicious page could attempt.
