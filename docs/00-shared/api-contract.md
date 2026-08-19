@@ -346,6 +346,38 @@ The schema grew `title` and `category` for this (migration
 line and a category chip, and the backend follows the built UI
 (same UI-leads principle as invitations).
 
+### Gallery — `apps/api/src/gallery/` (task 1.6.4, added 2026-08-19)
+
+The Album tab (screen 8). **Derived, no table** (`database.md` § Profile
+gallery & timeline photos) — a different thing from the `Album` model
+(screen 11, task 1.6.7, unscheduled), which is a private, user-curated
+collection.
+
+| Route                                               | Returns              |
+| --------------------------------------------------- | -------------------- |
+| `GET /me/gallery`                                   | `GalleryMediaItem[]` |
+| `GET /families/:familyId/members/:memberId/gallery` | `GalleryMediaItem[]` |
+
+`GalleryMediaItem` is `{ id, mimeType, sizeBytes, createdAt, postId,
+lifeEventId }` — exactly one of `postId`/`lifeEventId` is set (the same
+one-parent shape `Media` itself uses), so a tap can open the moment or
+milestone a photo came from. Sources, newest first:
+
+- Media of posts **authored by** the member, or **tagged with** them
+  (`taggedMemberIds`) — filtered to what the viewer may actually see
+  (the same author/private/shared-family rule `PostService.canViewPost`
+  applies elsewhere, batched into one membership query here).
+- Media attached to the member's **life events** — no extra filter beyond
+  reaching the profile at all, since both routes already establish that
+  (self, or a family shared with the member via
+  `ProfileService.resolveForMember`/`canViewProfileContent`).
+
+Same profile resolution as the rest of the Life Profile (linked → global
+gallery across every family they are in, placeholder → family-local).
+**Not paginated** — one person's own history, the same choice already
+made for their life-event timeline (unlike the family feed, which is
+shared and high-volume).
+
 ### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side)
 
 | Route                                   | Returns                |
@@ -406,7 +438,7 @@ an endpoint, so no amount of frontend work will connect these screens.
 | **Verify code** (`verify.tsx`)       | Send / confirm an email code for **sign-up**. Registration returns tokens immediately today, so that half of the screen has nothing to call. The reset half now has endpoints — see the row below.                                                                                            |
 | **Forgot + reset password**          | ~~WBS 1.1.7~~ — **resolved on the server**: `POST /auth/password-reset/{request,verify,confirm}` (email infrastructure decided 2026-08-18: SMTP/Gmail). **The app is not wired to them**: `endpoints.ts` has no password-reset group, and the three screens only navigate between themselves. |
 | **Invitation** (`invite/[code].tsx`) | ~~A public read of an invite code~~ — **resolved**: `GET /invitations/:code` previews and `POST /invitations/:code/accept` joins on the reserved spot (task 1.4.4, PR #16). The app is not wired to them yet.                                                                                 |
-| **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~ — **resolved** (task 1.6.2). ~~LifeEvent~~ — **resolved** (task 1.6.8). ~~Memo~~ — **resolved** (task 1.6.5). Still missing: the derived gallery (1.6.4) — the last of the three tabs.                                                                                        |
+| **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~ — **resolved** (task 1.6.2). ~~LifeEvent~~ — **resolved** (task 1.6.8). ~~Memo~~ — **resolved** (task 1.6.5). ~~Gallery~~ — **resolved** (task 1.6.4). All three tabs plus the header now have an endpoint; none of it is wired.                                              |
 | **New moment** (`(tabs)/new.tsx`)    | ~~Post + media upload~~ — **resolved**: `POST /media` then `POST /posts` (tasks 1.5.2–1.5.5, PR #5).                                                                                                                                                                                          |
 | **Home**                             | ~~moments feed~~ — **resolved and wired**. `GET .../special-dates` exists but the app does not call it, so the widget is still a fixture. Recommendations have no endpoint at all.                                                                                                            |
 | **AI tab + gift ideas**              | The whole of `apps/ai` — the FastAPI service does not exist.                                                                                                                                                                                                                                  |
