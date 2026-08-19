@@ -64,8 +64,10 @@ attempted. A dropped response costs the session.
 Social login is a browser redirect, not a fetch. Providers are Google and
 Facebook; a provider with no client ID configured returns 503.
 
-Password reset is the three-step flow of screen 3: `request` emails a
-6-digit code and answers success **whether or not the email exists** (no
+Password reset is the three-step flow of screen 3 (added 2026-08-18
+after the replay above — verified by server-side smoke test, not yet
+replayed from the mobile client). `request` emails a 6-digit code and
+answers success **whether or not the email exists** (no
 account enumeration). The code lives 15 minutes, dies after 5 wrong
 guesses, and is single-use. `verify` checks it without consuming — the
 middle UI step; `confirm` sets the new password and **revokes every
