@@ -336,8 +336,28 @@ model Media {
 
   albumItems AlbumItem[]
   coverOf    Album[]     @relation("AlbumCover")
+  insight    MediaInsight?
 
   @@index([postId])
+}
+
+// The hidden store (decided 2026-08-19, docs/03-ai/architecture.md):
+// vision-extracted facts about a photo, written only through the internal
+// AI ingest endpoint and never exposed by any user-facing API. It exists
+// solely to be folded back into suggestion context — filtered at use time
+// by the requester's own visibility of the source media, so an insight can
+// never leak content its photo would not have.
+model MediaInsight {
+  id        String   @id @default(uuid())
+  mediaId   String   @unique // one insight per photo; re-analysis overwrites
+  insight   Json // labels/scene/activities — shape owned by the AI team
+  model     String // which model produced it, so a model change can re-run
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Cascade: deleting a photo withdraws its traces — the hidden store must
+  // not remember what the user removed.
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
 }
 
 model Comment {

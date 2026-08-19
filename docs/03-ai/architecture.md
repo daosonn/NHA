@@ -52,6 +52,43 @@ Service-to-service auth: shared secret in `X-AI-Service-Token`
 NestJS reads `AI_SERVICE_URL` (unset in local dev = AI features answer
 503 cleanly). Suggestion calls time out at 30s NestJS-side.
 
+## Two-phase pipeline (decided 2026-08-19)
+
+Suggestions are not computed from raw photos at request time. The design
+the team chose is two phases:
+
+**Phase 1 — background analysis.** The AI team's service polls
+`GET /api/internal/ai/media/pending` (photos not yet analysed, oldest
+first, `storageKey` resolving under the shared `UPLOAD_DIR` volume), runs
+vision on them, and pushes the extracted facts back through
+`PUT /api/internal/ai/media/:mediaId/insight` — e.g. `{ scene: "outing",
+labels: ["beach", "family"] }`; the JSON shape is the AI team's to define.
+NestJS stores them in **`MediaInsight`, the hidden store** (migration
+`20260819071710`): written only through that internal route, exposed by
+**no user-facing API**, and cascade-deleted with its photo — deleting a
+picture withdraws its traces. Images only for the MVP; video analysis is
+a later conversation.
+
+**Phase 2 — suggestion requests.** The context bundle combines the
+hidden insights with the requester's own memos, the subject's profile,
+timeline and visible posts. **Comments are excluded** (decided
+2026-08-19).
+
+**The anti-laundering rule.** An insight inherits the visibility of the
+photo it came from. When NestJS assembles a bundle it filters insights
+through the requester's own view of the source media (the same
+`canViewPost` rule as everywhere else) — an insight derived from a photo
+the requester cannot see never enters their bundle, so the hidden store
+can never leak content across family or privacy boundaries.
+
+Two consequences stated plainly:
+
+- This _is_ automatic analysis — `mvp-scope.md`'s "manual context only"
+  note is superseded for photos by this team decision (2026-08-19).
+- In phase 1 **family photos leave the server for the Claude API**. That
+  is inherent to vision analysis and should be confirmed with the
+  customer (Japanese market, privacy-sensitive).
+
 ## FastAPI contract (what the AI team implements)
 
 Base: internal only, JSON in/out, `Accept-Language`-free — locale is an
@@ -87,6 +124,9 @@ Request (built entirely by NestJS):
       { "title": "Likes chrysanthemums", "content": "…", "category": "gift", "updatedAt": "…" },
     ],
     "recentPosts": [{ "content": "…", "place": "…", "createdAt": "…" }],
+    // phase-1 facts, already filtered by the requester's visibility of
+    // the source photos (anti-laundering rule above)
+    "photoInsights": [{ "scene": "outing", "labels": ["beach", "family"], "photoDate": "…" }],
     "counts": { "notes": 12, "photos": 248, "gifts": 3 }, // echoed back verbatim
   },
 }
@@ -144,6 +184,12 @@ Documented in `docs/00-shared/api-contract.md` as each lands:
   internal completion callback.
 - Memory list (2.1.2) reuses `Post` — a filter extension on the family
   feed, no AI involvement.
+- **Shipped 2026-08-19** — the phase-1 pipe:
+  `GET /api/internal/ai/media/pending` (`?limit` 1–200, default 50) and
+  `PUT /api/internal/ai/media/:mediaId/insight`
+  (`{ insight: object, model: string }`, upsert). Both under
+  `X-AI-Service-Token`; a user bearer token does not open them, and with
+  `AI_SERVICE_TOKEN` unset they answer `503 { code: "AI_UNAVAILABLE" }`.
 
 ## Open items for the AI team to record here
 

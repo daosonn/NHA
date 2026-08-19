@@ -376,6 +376,18 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   deletes in the MVP; a dump before risky work is the way back. Verified
   by a real backup→restore round-trip (row counts intact, API healthy
   after). See `docs/04-devops/local-environment.md` § Backup & restore.
+- AI insight pipe (2026-08-19, sprint 2): the backend half of the
+  two-phase photo pipeline — `MediaInsight` hidden store (migration
+  `20260819071710`, table 26) + internal routes
+  `GET /api/internal/ai/media/pending` and
+  `PUT /api/internal/ai/media/:mediaId/insight` behind
+  `X-AI-Service-Token` (timing-safe compare; user JWTs do not open them;
+  unset token = 503 `AI_UNAVAILABLE`, core unaffected). Env
+  `AI_SERVICE_TOKEN`/`AI_SERVICE_URL` added to `.env.example`. Verified
+  by lint/build/test + 13-case live smoke (503 unconfigured, 401 matrix,
+  pending→ingest→drop-out, upsert re-analysis, 404/400) + DB-level
+  cascade check (delete photo → insight gone). On branch
+  `feature/ai-insight-pipe`. Contract: `docs/03-ai/architecture.md`.
 - Gallery API (2026-08-19): the Album tab, derived — `GET /api/me/gallery` +
   `GET /api/families/:familyId/members/:memberId/gallery`. No new
   table: media from posts authored by or tagged with the member, plus
@@ -577,6 +589,17 @@ relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
 - **Memories reuse Post (2026-08-13)**: Sprint 2 Memories page reads the
   Sprint 1 `Post` table — no separate Memory model — see
   `docs/02-backend/database.md`.
+- **Photo-insight pipeline is a two-phase design (2026-08-19)**: the AI
+  team's service analyses photos in the background (vision) and the
+  extracted facts live in **`MediaInsight`, a hidden store** no
+  user-facing API exposes; suggestion requests then combine those
+  insights with the requester's own memos. An insight inherits the
+  visibility of its source photo and is filtered per requester at bundle
+  time (anti-laundering rule), and it cascade-deletes with the photo.
+  **Comments are excluded** from AI context for now. This supersedes the
+  "manual context only" scope note **for photos**; consequence to
+  confirm with the customer: family photos leave the server for the
+  Claude API during analysis. See `docs/03-ai/architecture.md`.
 - **AI work is owned by a separate AI team (2026-08-19)**: `apps/ai`
   (FastAPI), provider calls, prompts and the video render are theirs;
   backend supplies the API side — the NestJS proxy, auth, context
