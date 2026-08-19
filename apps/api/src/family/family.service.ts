@@ -416,7 +416,9 @@ export class FamilyService {
     return user;
   }
 
-  private async findMemberInFamily(
+  /** Public since 2026-08-19: PostService's ?memberId Memories filter
+   *  resolves members the same way (one home for the 404 semantics). */
+  async findMemberInFamily(
     familyId: string,
     memberId: string,
   ): Promise<{ id: string; userId: string | null }> {

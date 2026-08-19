@@ -7,8 +7,10 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../database/prisma/prisma.service';
+import type { VideoJob } from '../generated/prisma/client';
 import { VideoJobStatus } from '../generated/prisma/enums';
 import { MediaService } from '../media/media.service';
+import { StorageService } from '../storage/storage.service';
 import { CompleteVideoJobDto } from './dto/complete-video-job.dto';
 import { CreateVideoJobDto } from './dto/create-video-job.dto';
 
@@ -27,12 +29,24 @@ export interface VideoJobDetail {
  *  itself is async and reports back through the completion callback. */
 const DISPATCH_TIMEOUT_MS = 10_000;
 
+/** The statuses a completion callback may still act on. */
+const NON_TERMINAL: VideoJobStatus[] = [
+  VideoJobStatus.PENDING,
+  VideoJobStatus.PROCESSING,
+];
+
 /**
  * The backend half of video generation (WBS 2.2,
  * docs/03-ai/architecture.md): NestJS owns the authoritative `VideoJob`
  * row and the result file's Media row; the AI team renders behind the
  * seam. The app only ever talks to NestJS — submit, poll, then stream
  * the result through the existing authorized Media route.
+ *
+ * Every status transition is a conditional `updateMany` with the current
+ * status in the where clause (review 2026-08-19): the completion
+ * callback can land while create() is still awaiting the dispatch
+ * response, and unconditional writes were able to drag a DONE job back
+ * to PROCESSING or double-register its result.
  */
 @Injectable()
 export class VideoJobService {
@@ -42,6 +56,7 @@ export class VideoJobService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly mediaService: MediaService,
+    private readonly storage: StorageService,
   ) {}
 
   async create(
@@ -57,28 +72,24 @@ export class VideoJobService {
     }
 
     // Every source photo must exist and be visible to the requester —
-    // the same gate as streaming (no oracle about which failed).
-    const media = await this.mediaService.assertViewableBatch(
-      userId,
-      dto.mediaIds,
-    );
+    // the same gate as streaming (no oracle about which failed). The
+    // batch returns selection order, which is the frame order.
+    const [media, requester] = await Promise.all([
+      this.mediaService.assertViewableBatch(userId, dto.mediaIds),
+      this.prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: { locale: true },
+      }),
+    ]);
     if (media.some((item) => !item.mimeType.startsWith('image/'))) {
       throw new BadRequestException('A video is built from photos only');
     }
-    // assertViewableBatch returns DB order; the render must follow the
-    // user's selection order instead.
-    const byId = new Map(media.map((item) => [item.id, item]));
-    const mediaPaths = dto.mediaIds.map((id) => byId.get(id)!.storageKey);
-
-    const requester = await this.prisma.user.findUniqueOrThrow({
-      where: { id: userId },
-      select: { locale: true },
-    });
 
     const job = await this.prisma.videoJob.create({
       data: { requesterUserId: userId, inputMediaIds: dto.mediaIds },
     });
 
+    let timedOut = false;
     try {
       const response = await fetch(`${serviceUrl}/videos`, {
         method: 'POST',
@@ -88,7 +99,7 @@ export class VideoJobService {
         },
         body: JSON.stringify({
           jobId: job.id,
-          mediaPaths,
+          mediaPaths: media.map((item) => item.storageKey),
           locale: requester.locale ?? 'en',
           ...(dto.style && { style: dto.style }),
         }),
@@ -98,18 +109,40 @@ export class VideoJobService {
         throw new Error(`AI service answered ${response.status}`);
       }
     } catch (error) {
-      // Submission failed — remove the row so the user can simply retry,
-      // rather than leaving a PENDING job nothing will ever complete.
-      this.logger.warn(`Video dispatch failed: ${String(error)}`);
-      await this.prisma.videoJob.delete({ where: { id: job.id } });
-      throw new ServiceUnavailableException({ code: 'AI_UNAVAILABLE' });
+      // A timeout is ambiguous — the AI service may have accepted the
+      // job and just answered slowly, and its render will complete
+      // through the callback. Keep the row PENDING in that case; only a
+      // definite refusal (connection error, non-2xx) is safe to roll
+      // back so a retry stays clean.
+      timedOut =
+        error instanceof Error &&
+        (error.name === 'TimeoutError' || error.name === 'AbortError');
+      this.logger.warn(
+        `Video dispatch ${timedOut ? 'timed out' : 'failed'}: ${String(error)}`,
+      );
+      if (!timedOut) {
+        // Conditional: if the callback already advanced the job (it beat
+        // the failure signal), the row is the truth — keep it.
+        await this.prisma.videoJob.deleteMany({
+          where: { id: job.id, status: VideoJobStatus.PENDING },
+        });
+        throw new ServiceUnavailableException({ code: 'AI_UNAVAILABLE' });
+      }
     }
 
-    const processing = await this.prisma.videoJob.update({
+    if (!timedOut) {
+      // Conditional transition: a fast render's callback may already
+      // have made the job terminal while we awaited the dispatch — never
+      // drag it back to PROCESSING.
+      await this.prisma.videoJob.updateMany({
+        where: { id: job.id, status: VideoJobStatus.PENDING },
+        data: { status: VideoJobStatus.PROCESSING },
+      });
+    }
+    const fresh = await this.prisma.videoJob.findUniqueOrThrow({
       where: { id: job.id },
-      data: { status: VideoJobStatus.PROCESSING },
     });
-    return this.toDetail(processing);
+    return this.toDetail(fresh);
   }
 
   /** My jobs, newest first (WBS 2.2.3 status list). */
@@ -118,7 +151,7 @@ export class VideoJobService {
       where: { requesterUserId: userId },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     });
-    return Promise.all(jobs.map((job) => this.toDetail(job)));
+    return jobs.map((job) => this.toDetail(job));
   }
 
   /** 404 for anything that is not the caller's own job. */
@@ -136,80 +169,95 @@ export class VideoJobService {
    * The completion callback (internal, service token): DONE registers the
    * rendered file as a Media row owned by the requester — standalone
    * media streams uploader-only, so the result is private to whoever
-   * asked for it. Duplicate callbacks on a terminal job are acknowledged
-   * and ignored (the AI service may retry after a network blip).
+   * asked for it. The job is claimed with a conditional update inside
+   * the transaction, so concurrent or repeated callbacks (the AI service
+   * may retry after a network blip) settle exactly once; reports on an
+   * already-terminal job are acknowledged and ignored.
    */
   async complete(
     jobId: string,
     dto: CompleteVideoJobDto,
   ): Promise<{ success: boolean }> {
+    if (dto.error && dto.resultPath) {
+      // Ambiguous payloads must fail loudly during integration, not
+      // silently discard a rendered video (docs/03-ai/architecture.md).
+      throw new BadRequestException(
+        'Send either error or resultPath — not both',
+      );
+    }
     const job = await this.prisma.videoJob.findUnique({
       where: { id: jobId },
+      select: { id: true, requesterUserId: true, status: true },
     });
     if (!job) {
       throw new NotFoundException('Video job not found');
     }
-    if (
-      job.status === VideoJobStatus.DONE ||
-      job.status === VideoJobStatus.FAILED
-    ) {
-      return { success: true };
-    }
 
     if (dto.error) {
-      await this.prisma.videoJob.update({
-        where: { id: jobId },
+      await this.prisma.videoJob.updateMany({
+        where: { id: jobId, status: { in: NON_TERMINAL } },
         data: { status: VideoJobStatus.FAILED, error: dto.error },
       });
-      return { success: true };
+      return { success: true }; // count 0 = already terminal: acknowledged
     }
-    if (!dto.resultPath || !dto.mimeType || !dto.sizeBytes) {
+
+    const { resultPath, mimeType } = dto;
+    if (!resultPath || !mimeType) {
       throw new BadRequestException(
-        'A completion carries either error, or resultPath + mimeType + sizeBytes',
+        'A completion carries either error, or resultPath + mimeType',
       );
     }
-    await this.prisma.$transaction([
-      this.prisma.media.create({
+    // The AI service is trusted for rendering, not for Media invariants:
+    // the mime must be one the storage layer serves, and the file must
+    // actually exist under the shared volume — sizeOf also rejects paths
+    // that escape it, and its answer (not the caller's claim) is the
+    // stored size.
+    if (!this.storage.supports(mimeType)) {
+      throw new BadRequestException(`Unsupported result mimeType: ${mimeType}`);
+    }
+    let sizeBytes: number;
+    try {
+      sizeBytes = await this.storage.sizeOf(resultPath);
+    } catch {
+      throw new BadRequestException(
+        'resultPath is not a readable file under the storage volume',
+      );
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      // Claim the job first; losing the claim (count 0) means another
+      // callback already settled it — do nothing, rolling back nothing.
+      const claimed = await tx.videoJob.updateMany({
+        where: { id: jobId, status: { in: NON_TERMINAL } },
+        data: { status: VideoJobStatus.DONE, resultStorageKey: resultPath },
+      });
+      if (claimed.count === 0) {
+        return;
+      }
+      const resultMedia = await tx.media.create({
         data: {
           uploaderUserId: job.requesterUserId,
-          storageKey: dto.resultPath,
-          mimeType: dto.mimeType,
-          sizeBytes: dto.sizeBytes,
+          storageKey: resultPath,
+          mimeType,
+          sizeBytes,
         },
-      }),
-      this.prisma.videoJob.update({
+        select: { id: true },
+      });
+      await tx.videoJob.update({
         where: { id: jobId },
-        data: { status: VideoJobStatus.DONE, resultStorageKey: dto.resultPath },
-      }),
-    ]);
+        data: { resultMediaId: resultMedia.id },
+      });
+    });
     return { success: true };
   }
 
-  private async toDetail(job: {
-    id: string;
-    status: VideoJobStatus;
-    inputMediaIds: unknown;
-    resultStorageKey: string | null;
-    error: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-  }): Promise<VideoJobDetail> {
-    // The result Media row is looked up by its storage key — the render
-    // writes a fresh key per job, so this resolves to the one row the
-    // completion callback created.
-    const result = job.resultStorageKey
-      ? await this.prisma.media.findFirst({
-          where: { storageKey: job.resultStorageKey },
-          select: { id: true },
-        })
-      : null;
+  private toDetail(job: VideoJob): VideoJobDetail {
     return {
       id: job.id,
       status: job.status,
-      inputMediaIds: Array.isArray(job.inputMediaIds)
-        ? job.inputMediaIds.filter((id): id is string => typeof id === 'string')
-        : [],
-      resultMediaId: result?.id ?? null,
+      // Written exclusively by create() from a validated UUID array.
+      inputMediaIds: job.inputMediaIds as string[],
+      resultMediaId: job.resultMediaId,
       error: job.error,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,

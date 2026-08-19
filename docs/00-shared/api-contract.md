@@ -179,12 +179,16 @@ shared to this family.
 The same route is the **Memories API** (task 2.1.2, added 2026-08-19 —
 Memories reuse `Post`, no separate model): three optional filters narrow
 the same posts. `?memberId` = one member's memories — posts they are
-tagged in, plus posts they authored when the member is account-linked
-(404 if the member is not in this family). `?from` / `?to` = calendar
-days (`YYYY-MM-DD`, 400 for datetimes; 400 when from > to), bounding the
-**posted** date — the same grouping choice Omoide made, because the
-server has no capture metadata. `?type` = `POST | EVENT`. Filters
-combine, and pagination works unchanged.
+tagged in (under **any** of their member rows when account-linked, the
+same identity rule as the gallery), plus posts they authored (404 if the
+member is not in this family). `?from` / `?to` = calendar days
+(`YYYY-MM-DD`, 400 for datetimes; 400 when from > to), bounding the
+**posted** date in **UTC** — the same grouping choice Omoide made,
+because the server has no capture metadata. (Known consequence, flagged
+as a team question: a JST evening post lands on the previous UTC day.)
+`?type` = `POST | EVENT`. Filters combine, and pagination works
+unchanged — but a `nextCursor` is **filter-bound**: reuse it only with
+the same filter set, or pagination may end early.
 
 `PostDetail` is `{ id, authorUserId, authorName, type, content, eventDate,
 eventTitle, place, familyIds, taggedMemberIds, media[], commentCount,
@@ -378,9 +382,12 @@ Semantics:
 - Source photos are any **images the requester may view** — own or
   family-shared, the same gate as media streaming (404 with no oracle
   when any is missing/unviewable; 400 for non-images).
-- With the AI service unreachable or unconfigured, create answers
-  `503 { code: "AI_UNAVAILABLE" }` and leaves **no orphan job** — retry
-  is safe. Jobs and results are private to the requester (others 404).
+- With the AI service unconfigured or **definitely refusing** (connection
+  error, non-2xx), create answers `503 { code: "AI_UNAVAILABLE" }` and
+  leaves no orphan job — retry is safe. A dispatch **timeout** instead
+  returns the job as `PENDING`: submission may have succeeded and the
+  callback can still complete it. Jobs and results are private to the
+  requester (others 404).
 - When `status` is `DONE`, stream the video via
   `GET /media/:resultMediaId` (Range/206 works as usual); the result is
   registered as the requester's own standalone media, so only they can

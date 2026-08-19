@@ -1,17 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  MaxLength,
-  Min,
-} from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 /**
- * The AI service reports a finished render with `resultPath` (+ mimeType
- * + sizeBytes) or a failed one with `error` — exactly one of the two
- * shapes; the service layer enforces the either/or.
+ * The AI service reports a finished render with `resultPath` + `mimeType`
+ * or a failed one with `error` — exactly one of the two shapes; a body
+ * carrying both is a 400 (enforced in the service, where the message can
+ * say why). The file's size is measured from disk, never trusted from
+ * the caller.
  */
 export class CompleteVideoJobDto {
   @ApiPropertyOptional({
@@ -24,18 +19,15 @@ export class CompleteVideoJobDto {
   @MaxLength(500)
   resultPath?: string;
 
-  @ApiPropertyOptional({ example: 'video/mp4' })
+  @ApiPropertyOptional({
+    example: 'video/mp4',
+    description: 'Must be a mime type the storage layer serves',
+  })
   @IsOptional()
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
   mimeType?: string;
-
-  @ApiPropertyOptional({ minimum: 1 })
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  sizeBytes?: number;
 
   @ApiPropertyOptional({ maxLength: 1000 })
   @IsOptional()

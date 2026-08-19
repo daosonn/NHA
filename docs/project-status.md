@@ -380,14 +380,33 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   video generation — `POST/GET /api/video-jobs` (+ `GET /:id` to poll)
   and the internal completion callback
   `POST /api/internal/video-jobs/:jobId/complete` for the AI team.
-  Sources are any images the requester may view (`MediaService.
-assertViewableBatch`, the same gate as streaming, now exported);
-  selection order is preserved into the render. Dispatch failure rolls
-  the job back and answers 503 `AI_UNAVAILABLE` (no orphan rows);
-  duplicate callbacks on finished jobs are retry-safe; the result is
-  registered as the requester's own standalone Media, so it streams
-  privately with Range/206. Verified by lint/build/test + 18-case live
-  smoke against a **mock AI service** (dispatch payload, failure
+  Sources are any images the requester may view
+  (`MediaService.assertViewableBatch`, the same gate as streaming, now
+  exported and returning selection order — the frame order). A definite
+  dispatch refusal rolls the job back and answers 503 `AI_UNAVAILABLE`
+  (no orphan rows) while a **timeout leaves the job PENDING** — the AI
+  service may have accepted and its callback completes it late.
+  Code-review round 2026-08-19 (8 agents) — fixes applied same-day:
+  `resultMediaId` FK (unique, migration `20260819090000`) replaces the
+  unindexed non-unique storageKey lookup that was an N+1 and could
+  resolve to another user's row; every status transition is a
+  conditional `updateMany` so a fast callback can't be dragged back to
+  PROCESSING and concurrent callbacks settle exactly once; the callback
+  validates mimeType against the storage whitelist and **measures size
+  from disk** (path escapes and ghost files are 400s); `error` +
+  `resultPath` together is a 400; comments got their own
+  `PaginationQueryDto` (sharing FeedQueryDto had made Swagger advertise
+  Memories filters the comments route ignores); the Memories `?memberId`
+  filter now matches any of a linked member's rows (same identity rule
+  as the gallery) and reuses `findMemberInFamily` + `parseIsoDate`; and
+  the date-only guard became one `IsDateOnly()` decorator (was 4
+  copies). Known notes: `?from`/`?to` bucket by **UTC day**, consistent
+  with Omoide's grouping but off-by-one for JST evening posts — team
+  question; a feed `nextCursor` is filter-bound (reuse it only with the
+  same filters). The result is registered as the requester's own
+  standalone Media, so it streams privately with Range/206. Verified by
+  lint/build/test + 22-case live smoke against a **mock AI service**
+  (dispatch payload, failure
   rollback, auth matrix, DONE/FAILED paths, result privacy). On branch
   `feature/video-jobs` (stacked on `feature/memory-list`). Render itself
   is the AI team's — seam in `docs/03-ai/architecture.md`.

@@ -165,11 +165,16 @@ export class MediaService {
     if (media.length !== mediaIds.length || visibility.includes(false)) {
       throw new NotFoundException('Some media were not found');
     }
-    return media.map(({ id, storageKey, mimeType }) => ({
-      id,
-      storageKey,
-      mimeType,
-    }));
+    // Return in the caller's order — for a video render, frame order is
+    // the order the user tapped the photos, not DB insertion order. The
+    // completeness check above proves every id resolves.
+    const byId = new Map(
+      media.map(({ id, storageKey, mimeType }) => [
+        id,
+        { id, storageKey, mimeType },
+      ]),
+    );
+    return mediaIds.map((id) => byId.get(id)!);
   }
 
   /** Streams a media file (optionally a byte range) to an allowed viewer. */
