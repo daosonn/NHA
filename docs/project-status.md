@@ -345,10 +345,19 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   and the wiki rule + profile-content visibility moved to one home on
   `ProfileService` (`resolveForMember`/`canViewProfileContent`), tag
   boundary to `family/member-tags.ts`, media summary shape to
-  `attach-media.ts`. **For the team**: deleting a member cascades every
-  author's private memos about them (schema as designed) — confirm that
-  is intended; the memo migration adds a required `title` with no
-  backfill, fine while Memo tables are empty everywhere.
+  `attach-media.ts`. The memo-cascade question was then **decided
+  2026-08-19: memos survive member removal** — `aboutMemberId` SetNull +
+  `aboutName` snapshot (migration `20260819052340`, backfilled so it
+  deploys on non-empty tables), new `GET /me/memos` lists orphaned notes;
+  verified by 22-case memo smoke incl. the survival path. Remaining note
+  for the team: the earlier `title` migration (`20260819042417`) has no
+  backfill — fine while every Memo table predates the API.
+- Local DB backup/restore (2026-08-19): `pnpm db:backup` (pg_dump custom
+  format into gitignored `backups/`) and `pnpm db:restore <file> --force`
+  (mandatory flag — restore replaces the database). Deletes stay hard
+  deletes in the MVP; a dump before risky work is the way back. Verified
+  by a real backup→restore round-trip (row counts intact, API healthy
+  after). See `docs/04-devops/local-environment.md` § Backup & restore.
   **main was broken** by a PR #15 conflict resolution leftover
   (`origin: origins` in `main.ts`) — `nest build` failed on main from
   merge `e33e8a8` until this branch's fix. Code-review round 2026-08-19

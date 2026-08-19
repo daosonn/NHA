@@ -44,6 +44,25 @@ POSTGRES_DB=nha
 POSTGRES_PORT=5432
 ```
 
+### Backup & restore (added 2026-08-19)
+
+Deletes in the product are hard deletes (no soft-delete in the MVP), so a
+dump taken before risky work is the only way back:
+
+```
+pnpm db:backup                       # -> backups/nha-<timestamp>.dump
+pnpm db:restore backups/<file> --force
+```
+
+`db:backup` runs `pg_dump --format=custom` inside the container; restore
+**replaces** the database's current contents, which is why `--force` is
+mandatory. If the dump predates newer migrations, run
+`pnpm --filter api exec prisma migrate dev` afterwards. `backups/` is
+gitignored — dumps contain real family data and must never be committed.
+Take one before destructive experiments (mass deletes, migration surgery)
+and before `prisma migrate reset`. Production backups (managed PITR) are a
+deployment decision for later — this covers local/dev and the demo box.
+
 ## Environment Variables
 
 ### Root (`.env`)

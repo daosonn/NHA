@@ -15,8 +15,11 @@ import { UpdateMemoDto } from './dto/update-memo.dto';
 
 export interface MemoDetail {
   id: string;
-  /** Who the note is about — stable through account-linking. */
-  aboutMemberId: string;
+  /** Who the note is about; null once that member left or was removed —
+   *  the memo outlives the node (decided 2026-08-19). */
+  aboutMemberId: string | null;
+  /** Name snapshot from write time, so an orphaned note stays readable. */
+  aboutName: string;
   title: string;
   content: string | null;
   category: string | null;
@@ -63,13 +66,28 @@ export class MemoService {
     return memos.map((memo) => this.toDetail(memo));
   }
 
+  /** Every note I ever wrote, whoever it was about — the home of notes
+   *  whose member has since left (their tree route no longer exists). */
+  async listOwn(userId: string): Promise<MemoDetail[]> {
+    const memos = await this.prisma.memo.findMany({
+      where: { ownerUserId: userId },
+      orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+      include: memoInclude,
+    });
+    return memos.map((memo) => this.toDetail(memo));
+  }
+
   async create(
     userId: string,
     familyId: string,
     memberId: string,
     dto: CreateMemoDto,
   ): Promise<MemoDetail> {
-    await this.profileService.findMember(userId, familyId, memberId);
+    const member = await this.profileService.findMember(
+      userId,
+      familyId,
+      memberId,
+    );
     const title = requireTrimmed(dto.title, 'A memo needs a title');
     const mediaIds = dto.mediaIds ?? [];
     await assertAttachableMedia(this.prisma, userId, mediaIds);
@@ -79,6 +97,9 @@ export class MemoService {
         data: {
           ownerUserId: userId,
           aboutMemberId: memberId,
+          // Snapshot the name now — the note must stay readable after
+          // the member is gone.
+          aboutName: member.user?.name ?? member.displayName,
           title,
           content: normalizeText(dto.content),
           category: normalizeText(dto.category),
@@ -177,6 +198,7 @@ export class MemoService {
     return {
       id: memo.id,
       aboutMemberId: memo.aboutMemberId,
+      aboutName: memo.aboutName,
       title: memo.title,
       content: memo.content,
       category: memo.category,

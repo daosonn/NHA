@@ -317,12 +317,19 @@ because a memo's existence is itself private.
 | -------------------------------------------------- | -------------- |
 | `GET /families/:familyId/members/:memberId/memos`  | `MemoDetail[]` |
 | `POST /families/:familyId/members/:memberId/memos` | `MemoDetail`   |
+| `GET /me/memos`                                    | `MemoDetail[]` |
 | `GET /memos/:memoId`                               | `MemoDetail`   |
 | `PATCH /memos/:memoId`                             | `MemoDetail`   |
 | `DELETE /memos/:memoId`                            | `{ success }`  |
 
-`MemoDetail` is `{ id, aboutMemberId, title, content, category, media[],
-createdAt, updatedAt }` with `media[]` items `{ id, mimeType, sizeBytes }`.
+`MemoDetail` is `{ id, aboutMemberId, aboutName, title, content, category,
+media[], createdAt, updatedAt }` with `media[]` items
+`{ id, mimeType, sizeBytes }`. **Memos survive the member** (decided
+2026-08-19): deleting a member — or a linked member leaving — sets
+`aboutMemberId` to `null` instead of destroying other people's notes, and
+`aboutName` (the name snapshot from write time) keeps the orphaned note
+readable. `GET /me/memos` is the home of every note the caller ever wrote,
+orphaned ones included (their member route no longer exists).
 The list is **most recently touched first** (`updatedAt` desc — the note
 written today is the one being looked for), which is why a PATCH that
 changes nothing does not bump `updatedAt`. `title` is required and not

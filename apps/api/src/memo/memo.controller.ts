@@ -51,6 +51,23 @@ export class MemberMemoController {
 
 @ApiTags('memos')
 @ApiBearerAuth()
+@Controller('me/memos')
+export class MeMemoController {
+  constructor(private readonly memoService: MemoService) {}
+
+  @Get()
+  @ApiOperation({
+    summary:
+      'Every note I ever wrote, newest-touched first — including notes ' +
+      'whose member has since left (aboutMemberId null, aboutName kept)',
+  })
+  list(@CurrentUser() user: AuthUser): Promise<MemoDetail[]> {
+    return this.memoService.listOwn(user.userId);
+  }
+}
+
+@ApiTags('memos')
+@ApiBearerAuth()
 @Controller('memos')
 export class MemoController {
   constructor(private readonly memoService: MemoService) {}

@@ -291,17 +291,13 @@ export class FamilyService {
         'A linked member can only be removed by themselves',
       );
     }
-    // The delete cascades memos about this member (and, for a
-    // placeholder, its profile's life events) — and their Media rows.
-    // Collect the storage keys first, or the files are orphaned with no
-    // row left to find them by (storageKey only lives on Media).
+    // For a placeholder, the delete cascades its profile's life events —
+    // and their Media rows. Collect the storage keys first, or the files
+    // are orphaned with no row left to find them by (storageKey only
+    // lives on Media). Memos survive the member (aboutMemberId SetNull,
+    // decided 2026-08-19), so their media stay untouched.
     const media = await this.prisma.media.findMany({
-      where: {
-        OR: [
-          { memo: { aboutMemberId: memberId } },
-          { lifeEvent: { profile: { memberId } } },
-        ],
-      },
+      where: { lifeEvent: { profile: { memberId } } },
       select: { storageKey: true },
     });
     await this.prisma.familyMember.delete({ where: { id: memberId } });
