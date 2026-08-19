@@ -89,6 +89,12 @@ enum OAuthProvider {
   FACEBOOK
 }
 
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  CANCELLED
+}
+
 // ─── Accounts & auth ────────────────────────────────────────────────────────
 
 model User {
@@ -122,6 +128,7 @@ model User {
   createdSpecialDates SpecialDate[]
   notifications       Notification[]
   videoJobs           VideoJob[]
+  sentInvitations     Invitation[]         @relation("InvitationInviter")
   plans               Plan[]
   planShares          PlanShare[]
 }
@@ -181,6 +188,7 @@ model Family {
   relationships Relationship[]
   postShares    PostFamily[]
   specialDates  SpecialDate[]
+  invitations   Invitation[]
 }
 
 model FamilyMember {
@@ -202,6 +210,7 @@ model FamilyMember {
   specialDateTags    SpecialDateMember[]
   memosAbout         Memo[]
   plansFor           Plan[]
+  invitations        Invitation[]
 
   @@unique([familyId, userId])
 }
@@ -238,6 +247,31 @@ model Relationship {
   toMember   FamilyMember @relation("RelationTo", fields: [toMemberId], references: [id], onDelete: Cascade)
 
   @@unique([familyId, fromMemberId, toMemberId, type])
+}
+
+// Per-spot invite (Important Decisions 2026-08-18): a specific person is
+// invited to a specific reserved tree node. `code` is what the link
+// carries — Family.inviteCode stays as the open "anyone with the link"
+// path and cannot mark a spot Pending.
+model Invitation {
+  id               String            @id @default(uuid())
+  familyId         String
+  memberId         String // the reserved spot — a placeholder FamilyMember
+  inviterId        String
+  code             String            @unique
+  name             String // what the inviter calls the invitee
+  relationshipType RelationshipType
+  kinshipKey       String? // picker word ("sister") — display-only, client translates
+  status           InvitationStatus  @default(PENDING)
+  expiresAt        DateTime
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  family  Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  member  FamilyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  inviter User         @relation("InvitationInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([familyId, status])
 }
 
 // ─── Content ────────────────────────────────────────────────────────────────

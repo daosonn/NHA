@@ -9,6 +9,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma/prisma.service';
+import { InvitationStatus } from '../generated/prisma/enums';
 import type { Gender, RelationshipType } from '../generated/prisma/enums';
 import { AddMemberDto } from './dto/add-member.dto';
 import { CreateFamilyDto } from './dto/create-family.dto';
@@ -55,10 +56,15 @@ export interface RelationshipSummary {
   label: string | null;
 }
 
+/** A tree node: member plus whether a live invitation is holding the spot. */
+export interface TreeMemberSummary extends FamilyMemberSummary {
+  pending: boolean;
+}
+
 export interface FamilyTree {
   id: string;
   name: string;
-  members: FamilyMemberSummary[];
+  members: TreeMemberSummary[];
   relationships: RelationshipSummary[];
 }
 
@@ -72,8 +78,9 @@ const memberSelect = {
 } as const;
 
 // No 0/O/1/I — invite codes are meant to be read aloud or retyped.
-const INVITE_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const INVITE_CODE_LENGTH = 8;
+// Shared with per-spot invitation codes (invitation.service.ts).
+export const INVITE_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+export const INVITE_CODE_LENGTH = 8;
 
 @Injectable()
 export class FamilyService {
@@ -163,7 +170,26 @@ export class FamilyService {
     if (!family) {
       throw new NotFoundException('Family not found');
     }
-    return family;
+    // A spot is Pending while a live invitation reserves it — the tree
+    // draws that node dashed with a clock badge (design-system.md).
+    const pendingInvitations = await this.prisma.invitation.findMany({
+      where: {
+        familyId,
+        status: InvitationStatus.PENDING,
+        expiresAt: { gt: new Date() },
+      },
+      select: { memberId: true },
+    });
+    const pendingMemberIds = new Set(
+      pendingInvitations.map((invitation) => invitation.memberId),
+    );
+    return {
+      ...family,
+      members: family.members.map((member) => ({
+        ...member,
+        pending: pendingMemberIds.has(member.id),
+      })),
+    };
   }
 
   async join(userId: string, dto: JoinFamilyDto): Promise<JoinFamilyResult> {
@@ -394,8 +420,10 @@ export class FamilyService {
    * Links this account to a placeholder member: the placeholder's local
    * profile is replaced by the account's canonical one, but content
    * attached to it (life events, tags) is kept (domain-model.md).
+   * Public because accepting a per-spot invitation is the same link
+   * operation (invitation.service.ts).
    */
-  private async linkToPlaceholder(
+  async linkToPlaceholder(
     familyId: string,
     memberId: string,
     userId: string,

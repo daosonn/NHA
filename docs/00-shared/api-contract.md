@@ -104,7 +104,60 @@ account to one, keeping everything already written about that person
 
 `FamilyTree` is `{ id, name, members, relationships }` — nodes plus edges
 in one payload; the client owns the layout (d3-hierarchy). This is the
-read the tree screen needs (task 1.4.1, merged 2026-08-18).
+read the tree screen needs (task 1.4.1, merged 2026-08-18). Each member in
+`members` carries `pending: boolean` (added 2026-08-19): `true` while a
+live per-spot invitation reserves that node — the dashed-node-with-clock
+state in `design-system.md`.
+
+### Invitations — `apps/api/src/family/` (task 1.4.4, added 2026-08-19)
+
+The per-spot invite flow (Important Decisions 2026-08-18): a specific
+person is invited to a specific reserved tree node, so the receiving page
+can say who invited them, as what, and where they land.
+`Family.inviteCode` stays as the open "anyone with the link" join path;
+invitation codes are separate, same 8-char alphabet.
+
+| Route                                             | Auth | Returns                      |
+| ------------------------------------------------- | ---- | ---------------------------- |
+| `POST /families/:familyId/invitations`            | ✔    | `InvitationSummary`          |
+| `GET /families/:familyId/invitations`             | ✔    | `InvitationSummary[]`        |
+| `POST /families/:familyId/invitations/:id/resend` | ✔    | `InvitationSummary`          |
+| `DELETE /families/:familyId/invitations/:id`      | ✔    | `{ success, memberRemoved }` |
+| `GET /invitations/:code`                          | —    | `InvitationPreview`          |
+| `POST /invitations/:code/accept`                  | ✔    | `JoinFamilyResult`           |
+
+Create body: `{ name, relationshipType, kinshipKey?, newMemberIsFrom?,
+relationshipLabel?, memberId? }`. Sending an invite **reserves the spot
+immediately** (design-system.md): the server creates the placeholder
+member and its relationship edge to the inviter in the same transaction —
+the tree shows the node as `pending` from that moment. `newMemberIsFrom`
+is the edge direction from `fixtures/invite.ts` (Mother `true`, Daughter
+`false`). Pass `memberId` instead to invite an existing placeholder to
+its spot (no new edge). One live invitation per spot — a second is a 409.
+
+`InvitationSummary` is `{ id, familyId, memberId, code, name,
+relationshipType, kinshipKey, status, inviterName, expiresAt, createdAt }`.
+`status` is `PENDING | ACCEPTED | CANCELLED | EXPIRED`; `EXPIRED` is
+derived from `expiresAt` at read time, never stored. Invitations live
+**7 days**; resend starts the week over on the same code.
+
+`GET /invitations/:code` is **public** — the invitation page is opened by
+someone with no account. It answers only while the invitation is live
+(pending and unexpired); accepted, cancelled and expired codes 404, so a
+dead link stops leaking names. `InvitationPreview` is `{ code, familyName,
+inviterName, name, relationshipType, kinshipKey, memberCount, momentCount,
+parents[], siblings[], expiresAt }` — `parents`/`siblings` are display
+names from the spot's direct edges only (kinship stays basic).
+`kinshipKey` is the picker word ("sister") — display-only, the client
+translates it; the stored edge is always the base `relationshipType`.
+
+Accepting joins the family **on the reserved spot** — same link operation
+as `POST /families/join` with `linkMemberId`, so everything written about
+the placeholder is kept. Cancelling an untouched reserved spot deletes the
+placeholder (the node falls back to Empty); a spot that already
+accumulated content (tags, memos, life events) survives as an ordinary
+placeholder and only the invitation dies — the response says which with
+`memberRemoved`.
 
 ### Posts — `apps/api/src/post/` (tasks 1.5.2–1.5.5, merged in PR #5)
 
