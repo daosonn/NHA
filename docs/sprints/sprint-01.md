@@ -81,7 +81,7 @@ build the family tree, post content with photos, and view member profiles.
 > Màn mời thành viên (invite sheet, pending spot, trang nhận lời mời) đã
 > code UI 2026-08-18 nhưng không nằm trong checklist sprint 1 — nó cần một
 > bản ghi invitation phía backend, xem `project-status.md` → Important
-> Decisions ("Invites are per-spot"). Cần thêm task backend trước khi nối.
+> Decisions ("Invites are per-spot"). Task backend thêm 2026-08-19 là 1.4.4.
 
 - [x] 1.4.1 API relationship (dữ liệu cây) — done 2026-08-18:
       `GET /api/families/:familyId/tree` trả member nodes + relationship
@@ -102,6 +102,10 @@ build the family tree, post content with photos, and view member profiles.
       sang member id; trả `null` khi người đó không thuộc family đang xem,
       lúc đó avatar để trơ thay vì dẫn tới chỗ không tồn tại. Màn
       `member/[id]` vẫn là fixture — chờ `LifeEvent` + `Memo`.
+- [x] 1.4.4 API invitation per-spot (`Invitation` model — added 2026-08-19,
+      see `project-status.md` → "Invites are per-spot") — API done
+      2026-08-19 (chi tiết: `api-contract.md`); UI mời/nhận đã build từ
+      2026-08-18, chưa nối.
 
 ### 1.5 Nav2.5 – Bài viết / Ảnh / Sự kiện — Tạo nội dung
 
@@ -158,6 +162,8 @@ build the family tree, post content with photos, and view member profiles.
 >
 > - About bây giờ sẽ cho ra một màn trung tâm với ba tab trống, nên frontend
 >   đợi. Thứ tự mở khoá đề xuất: `LifeEvent` → `Memo` → gallery.
+>   `LifeEvent` xong 2026-08-19 (1.6.8), `Memo` xong 2026-08-19 (1.6.5) —
+>   còn gallery (1.6.4).
 
 - [ ] 1.6.1 UI Profile (avatar + tên) — UI xong 2026-08-18 (mock data, chưa nối API)
 - [ ] 1.6.2 About (thông tin cá nhân) — API done 2026-08-18:
@@ -169,11 +175,11 @@ build the family tree, post content with photos, and view member profiles.
       UI xong 2026-08-18 (mock data, chưa nối API)
 - [ ] 1.6.3 Timeline chung (bài viết/ảnh theo thời gian) — UI xong 2026-08-18 (mock data, chưa nối API)
 - [ ] 1.6.4 Album/Gallery (danh sách ảnh) — UI xong 2026-08-18 (mock data, chưa nối API)
-- [ ] 1.6.5 Memo cá nhân (tạo memo — ghi chú về một thành viên, xem `database.md`) — UI xong 2026-08-18 (mock data, chưa nối API)
+- [x] 1.6.5 Memo cá nhân (tạo memo — ghi chú về một thành viên, xem `database.md`) — API done 2026-08-19 (schema thêm title/category theo UI; chi tiết: `api-contract.md`); UI xong 2026-08-18, chưa nối
 - ~~1.6.6 Quyền riêng tư Memo (private/shared)~~ — dropped 2026-08-14:
   memo luôn private, chỉ chủ xem/sửa (see `database.md`)
 - [ ] 1.6.7 Album cá nhân (private — tạo album, tự thêm ảnh; added 2026-08-14, see `database.md`)
-- [ ] 1.6.8 Life Timeline milestones (LifeEvent CRUD + hiển thị theo thời gian; added 2026-08-14, see `database.md`)
+- [x] 1.6.8 Life Timeline milestones (LifeEvent CRUD + hiển thị theo thời gian; added 2026-08-14, see `database.md`) — API done 2026-08-19 (chi tiết: `api-contract.md`); UI Timeline vẫn fixture, chưa nối
 
 ### 1.7 Test Sprint 1
 

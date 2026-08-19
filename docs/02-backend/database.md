@@ -110,8 +110,11 @@ erDiagram
     Memo {
         uuid id PK
         uuid ownerUserId FK "author - only they view or edit"
-        uuid aboutMemberId FK "note about this member"
-        text content
+        uuid aboutMemberId FK "null once the member left - SetNull"
+        string aboutName "name snapshot at write time"
+        string title
+        text content "null"
+        string category "null - client taxonomy"
         datetime createdAt
         datetime updatedAt
     }
@@ -460,13 +463,16 @@ The author's own notes **about a family member** ("mẹ thích hoa cúc", …).
 Distinct from posts — a memo annotates a person, it is not shared content.
 Future AI features (gift/care suggestions) can use memos as context.
 
-| Field                 | Type     | Notes                                                                                       |
-| --------------------- | -------- | ------------------------------------------------------------------------------------------- |
-| id                    | uuid PK  |                                                                                             |
-| ownerUserId           | uuid FK  | → User — the author; only they view/edit                                                    |
-| aboutMemberId         | uuid FK  | → FamilyMember — who the note is about (stable through account-linking, like PostMemberTag) |
-| content               | text     |                                                                                             |
-| createdAt / updatedAt | datetime |                                                                                             |
+| Field                 | Type     | Notes                                                                                  |
+| --------------------- | -------- | -------------------------------------------------------------------------------------- |
+| id                    | uuid PK  |                                                                                        |
+| ownerUserId           | uuid FK  | → User — the author; only they view/edit                                               |
+| aboutMemberId         | uuid? FK | → FamilyMember, **SetNull** — null once the member left/was removed (see Decision Log) |
+| aboutName             | string   | name snapshot at write time — orphaned notes stay readable (added 2026-08-19)          |
+| title                 | string   | the bold card line — added 2026-08-19, UI-led (see Decision Log)                       |
+| content               | text?    | the longer body — optional since `title` arrived                                       |
+| category              | string?  | client taxonomy (hobbies/health/gift/memories/todo) — free text like `LifeEvent.type`  |
+| createdAt / updatedAt | datetime |                                                                                        |
 
 Index on `(ownerUserId, aboutMemberId)`.
 
@@ -702,6 +708,25 @@ viewing requires login.
   persistent tables required for MVP beyond logging, if desired.
 
 ## Decision Log (review closed 2026-08-14)
+
+Post-review additions:
+
+- **Memos survive member removal (2026-08-19, migration
+  `20260819052340`)**: `aboutMemberId` went nullable with **ON DELETE SET
+  NULL** (was CASCADE) and `aboutName` snapshots the member's display name
+  at write time. A memo is the author's private notebook — another person
+  deleting a placeholder, or a linked member leaving, must not destroy it.
+  Orphaned notes (`aboutMemberId: null`) stay readable via `aboutName` and
+  are listed by `GET /me/memos`. The migration backfills `aboutName` from
+  the current members, so it deploys on non-empty tables.
+- **Memo grew `title` + `category`, `content` went optional (2026-08-19,
+  migration `20260819042417`)**: the memo UI built on 2026-08-19 designs a
+  card with a bold title line and a category chip
+  (hobbies/health/gift/memories/todo), which one `content` blob cannot
+  carry. UI leads, backend follows — the same principle as per-spot
+  invitations. `category` is stored as free text and the client owns the
+  vocabulary, exactly like `LifeEvent.type`, so a taxonomy change is not
+  an enum migration.
 
 All items from the 2026-08-14 design review are resolved:
 

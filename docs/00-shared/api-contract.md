@@ -104,7 +104,60 @@ account to one, keeping everything already written about that person
 
 `FamilyTree` is `{ id, name, members, relationships }` — nodes plus edges
 in one payload; the client owns the layout (d3-hierarchy). This is the
-read the tree screen needs (task 1.4.1, merged 2026-08-18).
+read the tree screen needs (task 1.4.1, merged 2026-08-18). Each member in
+`members` carries `pending: boolean` (added 2026-08-19): `true` while a
+live per-spot invitation reserves that node — the dashed-node-with-clock
+state in `design-system.md`.
+
+### Invitations — `apps/api/src/family/` (task 1.4.4, added 2026-08-19)
+
+The per-spot invite flow (Important Decisions 2026-08-18): a specific
+person is invited to a specific reserved tree node, so the receiving page
+can say who invited them, as what, and where they land.
+`Family.inviteCode` stays as the open "anyone with the link" join path;
+invitation codes are separate, same 8-char alphabet.
+
+| Route                                             | Auth | Returns                      |
+| ------------------------------------------------- | ---- | ---------------------------- |
+| `POST /families/:familyId/invitations`            | ✔    | `InvitationSummary`          |
+| `GET /families/:familyId/invitations`             | ✔    | `InvitationSummary[]`        |
+| `POST /families/:familyId/invitations/:id/resend` | ✔    | `InvitationSummary`          |
+| `DELETE /families/:familyId/invitations/:id`      | ✔    | `{ success, memberRemoved }` |
+| `GET /invitations/:code`                          | —    | `InvitationPreview`          |
+| `POST /invitations/:code/accept`                  | ✔    | `JoinFamilyResult`           |
+
+Create body: `{ name, relationshipType, kinshipKey?, newMemberIsFrom?,
+relationshipLabel?, memberId? }`. Sending an invite **reserves the spot
+immediately** (design-system.md): the server creates the placeholder
+member and its relationship edge to the inviter in the same transaction —
+the tree shows the node as `pending` from that moment. `newMemberIsFrom`
+is the edge direction from `fixtures/invite.ts` (Mother `true`, Daughter
+`false`). Pass `memberId` instead to invite an existing placeholder to
+its spot (no new edge). One live invitation per spot — a second is a 409.
+
+`InvitationSummary` is `{ id, familyId, memberId, code, name,
+relationshipType, kinshipKey, status, inviterName, expiresAt, createdAt }`.
+`status` is `PENDING | ACCEPTED | CANCELLED | EXPIRED`; `EXPIRED` is
+derived from `expiresAt` at read time, never stored. Invitations live
+**7 days**; resend starts the week over on the same code.
+
+`GET /invitations/:code` is **public** — the invitation page is opened by
+someone with no account. It answers only while the invitation is live
+(pending and unexpired); accepted, cancelled and expired codes 404, so a
+dead link stops leaking names. `InvitationPreview` is `{ code, familyName,
+inviterName, name, relationshipType, kinshipKey, memberCount, momentCount,
+parents[], siblings[], expiresAt }` — `parents`/`siblings` are display
+names from the spot's direct edges only (kinship stays basic).
+`kinshipKey` is the picker word ("sister") — display-only, the client
+translates it; the stored edge is always the base `relationshipType`.
+
+Accepting joins the family **on the reserved spot** — same link operation
+as `POST /families/join` with `linkMemberId`, so everything written about
+the placeholder is kept. Cancelling an untouched reserved spot deletes the
+placeholder (the node falls back to Empty); a spot that already
+accumulated content (tags, memos, life events) survives as an ordinary
+placeholder and only the invitation dies — the response says which with
+`memberRemoved`.
 
 ### Posts — `apps/api/src/post/` (tasks 1.5.2–1.5.5, merged in PR #5)
 
@@ -125,9 +178,12 @@ shared to this family.
 
 `PostDetail` is `{ id, authorUserId, authorName, type, content, eventDate,
 eventTitle, place, familyIds, taggedMemberIds, media[], commentCount,
-reactionCount, myReaction, createdAt, updatedAt }` with `media[]` items
-`{ id, mimeType, sizeBytes }`. `myReaction` is the viewer's own reaction
-(`null` when they have not reacted) — it differs per viewer.
+reactionCount, myReaction, canEdit, canDelete, createdAt, updatedAt }` with
+`media[]` items `{ id, mimeType, sizeBytes }`. `myReaction` is the viewer's
+own reaction (`null` when they have not reacted) — it differs per viewer.
+`canEdit`/`canDelete` (added 2026-08-19) say whether the requesting user may
+edit/delete: the app renders these instead of comparing `authorUserId`
+against the session, so a future rule change stays server-side.
 
 Semantics the app must respect:
 
@@ -158,7 +214,9 @@ Semantics the app must respect:
 | `DELETE /posts/:postId/reactions/me`        | `ReactionState`  |
 
 `CommentSummary` is `{ id, postId, authorUserId, authorName, content,
-createdAt, updatedAt }`; `CommentList` is `{ items, nextCursor }` with the
+canEdit, canDelete, createdAt, updatedAt }` — `canEdit`/`canDelete` carry
+the server's permission verdict (author-only today), same rationale as on
+`PostDetail`; `CommentList` is `{ items, nextCursor }` with the
 same `limit`/`cursor` params as the feed, **oldest first** (a thread reads
 top-down). Anyone who can view the post can comment; only the comment's
 author edits or deletes it (post-author moderation is an open product
@@ -194,10 +252,99 @@ otherwise). Every successful PATCH writes an `EditHistory` row (editor +
 snapshot) — no history UI yet, but the log exists from day one.
 
 PATCH semantics: omitted = unchanged, `null` clears a date, `''` clears
-the bio, `interests` replaces the whole list. Dates are strict ISO 8601;
+the bio, `interests` replaces the whole list. Dates are **date-only
+`YYYY-MM-DD`** (2026-08-19 — the columns are DATEs; an offset datetime
+shifted the stored day, same guard as `LifeEvent.eventDate`);
 `deathDate` before `birthDate` is a 400. `birthDate`/`deathDate` here are
 the single source the special-date widgets (1.2.5) and Sprint-3 reminders
 will derive from.
+
+### Life Events — `apps/api/src/profile/` (task 1.6.8, added 2026-08-19)
+
+The Timeline tab's data: milestones hanging off a LifeProfile, so they
+follow the profile everywhere (a linked member's timeline is the same in
+every family; a placeholder's is family-local).
+
+| Route                                                               | Returns             |
+| ------------------------------------------------------------------- | ------------------- |
+| `GET /me/life-events`                                               | `LifeEventDetail[]` |
+| `POST /me/life-events`                                              | `LifeEventDetail`   |
+| `PATCH /me/life-events/:eventId`                                    | `LifeEventDetail`   |
+| `DELETE /me/life-events/:eventId`                                   | `{ success }`       |
+| `GET /families/:familyId/members/:memberId/life-events`             | `LifeEventDetail[]` |
+| `POST /families/:familyId/members/:memberId/life-events`            | `LifeEventDetail`   |
+| `PATCH /families/:familyId/members/:memberId/life-events/:eventId`  | `LifeEventDetail`   |
+| `DELETE /families/:familyId/members/:memberId/life-events/:eventId` | `{ success }`       |
+
+`LifeEventDetail` is `{ id, profileId, title, description, eventDate,
+place, type, taggedMemberIds, media[], createdById, updatedById,
+createdAt, updatedAt }` with `media[]` items `{ id, mimeType, sizeBytes }`.
+Lists are **oldest first** (a life timeline reads birth-to-now). `type` is
+free text — the taxonomy is still TBD (screen 9 filters). `eventDate` is
+**date-only `YYYY-MM-DD`** (400 otherwise): the column is a DATE, and a
+datetime with a timezone offset would shift the stored day — `08:00+09:00`
+is yesterday in UTC. Title and eventDate are required and not clearable;
+PATCHing either to `null` is a 400, and a PATCH that changes nothing
+writes no `EditHistory` row.
+
+Same rules as the profile it hangs off:
+
+- **Resolution**: linked member → global timeline (the one `/me` edits),
+  placeholder → family-local. Reading needs family membership; `/me`
+  works with no family at all.
+- **Editing**: placeholder events are wiki-editable by the whole family;
+  a linked member's events are theirs alone (403). Every PATCH writes an
+  `EditHistory` row; `updatedById` is the last editor.
+- **Media**: attach your own unattached uploads via `mediaIds` at
+  creation; fixed afterwards, exactly like posts. Deleting the event
+  deletes its media rows and files.
+- **Tags** (`taggedMemberIds`, "members involved" — screen 10): on the
+  member-scoped routes they must belong to **that family** (so every
+  viewer can resolve them — same principle as post tags); on `/me` routes,
+  any family the editor belongs to. Editable on PATCH (replaces the list).
+- **No-op PATCHes are value-checked**: a PATCH that changes nothing (a
+  retry, a save with no edits) stamps no editor and writes no EditHistory
+  row.
+
+### Memos — `apps/api/src/memo/` (task 1.6.5, added 2026-08-19)
+
+Private notes about a family member ("mẹ thích hoa cúc"). **Always
+author-only** (decided 2026-08-14, sharing task 1.6.6 dropped): nobody
+else ever sees them, and anything that is not yours 404s — never 403,
+because a memo's existence is itself private.
+
+| Route                                              | Returns        |
+| -------------------------------------------------- | -------------- |
+| `GET /families/:familyId/members/:memberId/memos`  | `MemoDetail[]` |
+| `POST /families/:familyId/members/:memberId/memos` | `MemoDetail`   |
+| `GET /me/memos`                                    | `MemoDetail[]` |
+| `GET /memos/:memoId`                               | `MemoDetail`   |
+| `PATCH /memos/:memoId`                             | `MemoDetail`   |
+| `DELETE /memos/:memoId`                            | `{ success }`  |
+
+`MemoDetail` is `{ id, aboutMemberId, aboutName, title, content, category,
+media[], createdAt, updatedAt }` with `media[]` items
+`{ id, mimeType, sizeBytes }`. **Memos survive the member** (decided
+2026-08-19): deleting a member — or a linked member leaving — sets
+`aboutMemberId` to `null` instead of destroying other people's notes, and
+`aboutName` (the name snapshot from write time) keeps the orphaned note
+readable. `GET /me/memos` is the home of every note the caller ever wrote,
+orphaned ones included (their member route no longer exists).
+The list is **most recently touched first** (`updatedAt` desc — the note
+written today is the one being looked for), which is why a PATCH that
+changes nothing does not bump `updatedAt`. `title` is required and not
+clearable; `content` and `category` are nullable (`null` clears).
+`category` is the client's vocabulary (hobbies/health/gift/memories/todo
+today) stored as free text, like `LifeEvent.type` — the server never
+validates the taxonomy. Media attach via `mediaIds` at creation, fixed
+afterwards; memo media streams to the **owner only**. Listing requires
+membership of the family in the route; the flat `/memos/:id` routes need
+only ownership.
+
+The schema grew `title` and `category` for this (migration
+`20260819042417`) — the UI's memo cards were designed with a bold title
+line and a category chip, and the backend follows the built UI
+(same UI-leads principle as invitations).
 
 ### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side)
 
@@ -242,7 +389,9 @@ as `mediaIds` when creating the post.
 Download requires a bearer token and the same visibility as the parent
 post (uploader always allowed; standalone media is uploader-only), and
 supports **HTTP Range / 206** — hand the URL plus the auth header to the
-video/audio player.
+video/audio player. Life-event media (2026-08-19) follows the profile it
+hangs off: the owner and anyone sharing a family with them for a global
+profile, the family's members for a placeholder.
 
 ## What does not exist yet
 
@@ -256,8 +405,8 @@ an endpoint, so no amount of frontend work will connect these screens.
 | **Family tree** (`family.tsx`)       | ~~`GET` for relationships~~ — **resolved**: `GET /families/:familyId/tree` returns nodes + edges (task 1.4.1). Remaining: the kinship-label derivation below.                                                                                                                                 |
 | **Verify code** (`verify.tsx`)       | Send / confirm an email code for **sign-up**. Registration returns tokens immediately today, so that half of the screen has nothing to call. The reset half now has endpoints — see the row below.                                                                                            |
 | **Forgot + reset password**          | ~~WBS 1.1.7~~ — **resolved on the server**: `POST /auth/password-reset/{request,verify,confirm}` (email infrastructure decided 2026-08-18: SMTP/Gmail). **The app is not wired to them**: `endpoints.ts` has no password-reset group, and the three screens only navigate between themselves. |
-| **Invitation** (`invite/[code].tsx`) | A public read of an invite code — who invited you, which family, which spot. `POST /families/join` both requires a token and joins immediately, so it cannot preview.                                                                                                                         |
-| **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~ — **resolved** (profile routes above, task 1.6.2). Still missing: LifeEvent (1.6.8), the derived gallery (1.6.4), Memo (1.6.5).                                                                                                                                               |
+| **Invitation** (`invite/[code].tsx`) | ~~A public read of an invite code~~ — **resolved**: `GET /invitations/:code` previews and `POST /invitations/:code/accept` joins on the reserved spot (task 1.4.4, PR #16). The app is not wired to them yet.                                                                                 |
+| **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~ — **resolved** (task 1.6.2). ~~LifeEvent~~ — **resolved** (task 1.6.8). ~~Memo~~ — **resolved** (task 1.6.5). Still missing: the derived gallery (1.6.4) — the last of the three tabs.                                                                                        |
 | **New moment** (`(tabs)/new.tsx`)    | ~~Post + media upload~~ — **resolved**: `POST /media` then `POST /posts` (tasks 1.5.2–1.5.5, PR #5).                                                                                                                                                                                          |
 | **Home**                             | ~~moments feed~~ — **resolved and wired**. `GET .../special-dates` exists but the app does not call it, so the widget is still a fixture. Recommendations have no endpoint at all.                                                                                                            |
 | **AI tab + gift ideas**              | The whole of `apps/ai` — the FastAPI service does not exist.                                                                                                                                                                                                                                  |

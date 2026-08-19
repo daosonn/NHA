@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { parseIsoDate } from '../common/input';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { FamilyService } from '../family/family.service';
 import { EditEntityType } from '../generated/prisma/enums';
@@ -102,15 +103,84 @@ export class ProfileService {
     memberId: string,
     dto: UpdateProfileDto,
   ): Promise<ProfileDetail> {
+    const { profile } = await this.resolveForMember(
+      userId,
+      familyId,
+      memberId,
+      {
+        forEdit: true,
+      },
+    );
+    await this.applyUpdate(profile, userId, dto);
+    return this.getForMember(userId, familyId, memberId);
+  }
+
+  /**
+   * The one home of the member→profile resolution plus the wiki rule
+   * (domain-model.md): linked member → global profile, editable only by
+   * its owner; placeholder → family-local profile, wiki-editable by the
+   * whole family. Everything hanging off a profile (life events, memos,
+   * the coming gallery) resolves through here instead of re-assembling
+   * the rule from the primitives.
+   */
+  async resolveForMember(
+    userId: string,
+    familyId: string,
+    memberId: string,
+    options: { forEdit?: boolean } = {},
+  ): Promise<{
+    profile: ProfileRecord;
+    member: { id: string; userId: string | null; familyId: string };
+  }> {
     const member = await this.findMember(userId, familyId, memberId);
-    if (member.userId && member.userId !== userId) {
-      throw new ForbiddenException('Linked members manage their own profile');
+    if (options.forEdit && member.userId && member.userId !== userId) {
+      throw new ForbiddenException(
+        'Linked members manage their own profile content',
+      );
     }
     const profile = member.userId
       ? await this.ensureGlobalProfile(member.userId)
       : await this.ensurePlaceholderProfile(member.id);
-    await this.applyUpdate(profile, userId, dto);
-    return this.getForMember(userId, familyId, memberId);
+    return {
+      profile,
+      member: { id: member.id, userId: member.userId, familyId },
+    };
+  }
+
+  /**
+   * Who may see content hanging off a profile (life-event media today,
+   * the derived gallery next): the owner of a global profile and anyone
+   * sharing a family with them; a placeholder's family's members. One
+   * home for the rule — MediaService delegates, never copies.
+   */
+  async canViewProfileContent(
+    userId: string,
+    profile: { userId: string | null; memberId: string | null },
+  ): Promise<boolean> {
+    if (profile.userId === userId) {
+      return true;
+    }
+    if (profile.userId) {
+      const shared = await this.prisma.familyMember.findFirst({
+        where: {
+          userId: profile.userId,
+          family: { members: { some: { userId } } },
+        },
+        select: { id: true },
+      });
+      return shared !== null;
+    }
+    if (profile.memberId) {
+      const membership = await this.prisma.familyMember.findFirst({
+        where: {
+          userId,
+          family: { members: { some: { id: profile.memberId } } },
+        },
+        select: { id: true },
+      });
+      return membership !== null;
+    }
+    return false;
   }
 
   /** Applies the edit, stamps the editor, and logs an EditHistory row. */
@@ -124,13 +194,13 @@ export class ProfileService {
       dto.birthDate === undefined
         ? profile.birthDate
         : dto.birthDate
-          ? this.parseDate(dto.birthDate, 'birthDate')
+          ? parseIsoDate(dto.birthDate, 'birthDate')
           : null;
     const nextDeath =
       dto.deathDate === undefined
         ? profile.deathDate
         : dto.deathDate
-          ? this.parseDate(dto.deathDate, 'deathDate')
+          ? parseIsoDate(dto.deathDate, 'deathDate')
           : null;
     if (nextBirth && nextDeath && nextDeath < nextBirth) {
       throw new BadRequestException('deathDate cannot precede birthDate');
@@ -166,7 +236,8 @@ export class ProfileService {
     });
   }
 
-  private async findMember(
+  /** Public because LifeEventService resolves members the same way. */
+  async findMember(
     userId: string,
     familyId: string,
     memberId: string,
@@ -192,8 +263,9 @@ export class ProfileService {
     return member;
   }
 
-  /** Every account gets a profile at registration; self-heal if missing. */
-  private ensureGlobalProfile(userId: string): Promise<ProfileRecord> {
+  /** Every account gets a profile at registration; self-heal if missing.
+   *  Public so LifeEventService resolves profiles the same way. */
+  ensureGlobalProfile(userId: string): Promise<ProfileRecord> {
     return this.prisma.lifeProfile.upsert({
       where: { userId },
       create: { userId },
@@ -202,8 +274,9 @@ export class ProfileService {
     });
   }
 
-  /** addMember creates one; self-heal for rows that predate that. */
-  private ensurePlaceholderProfile(memberId: string): Promise<ProfileRecord> {
+  /** addMember creates one; self-heal for rows that predate that.
+   *  Public so LifeEventService resolves profiles the same way. */
+  ensurePlaceholderProfile(memberId: string): Promise<ProfileRecord> {
     return this.prisma.lifeProfile.upsert({
       where: { memberId },
       create: { memberId },
@@ -231,15 +304,5 @@ export class ProfileService {
     return Array.isArray(value)
       ? value.filter((item): item is string => typeof item === 'string')
       : [];
-  }
-
-  /** @IsISO8601({ strict: true }) guards the format; this guards forms
-   *  JS Date cannot parse from becoming an Invalid Date → 500. */
-  private parseDate(value: string, field: string): Date {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      throw new BadRequestException(`${field} is not a parsable date`);
-    }
-    return date;
   }
 }

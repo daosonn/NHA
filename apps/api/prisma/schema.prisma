@@ -89,6 +89,12 @@ enum OAuthProvider {
   FACEBOOK
 }
 
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  CANCELLED
+}
+
 // ─── Accounts & auth ────────────────────────────────────────────────────────
 
 model User {
@@ -122,6 +128,7 @@ model User {
   createdSpecialDates SpecialDate[]
   notifications       Notification[]
   videoJobs           VideoJob[]
+  sentInvitations     Invitation[]         @relation("InvitationInviter")
   plans               Plan[]
   planShares          PlanShare[]
 }
@@ -181,6 +188,7 @@ model Family {
   relationships Relationship[]
   postShares    PostFamily[]
   specialDates  SpecialDate[]
+  invitations   Invitation[]
 }
 
 model FamilyMember {
@@ -202,6 +210,7 @@ model FamilyMember {
   specialDateTags    SpecialDateMember[]
   memosAbout         Memo[]
   plansFor           Plan[]
+  invitations        Invitation[]
 
   @@unique([familyId, userId])
 }
@@ -238,6 +247,31 @@ model Relationship {
   toMember   FamilyMember @relation("RelationTo", fields: [toMemberId], references: [id], onDelete: Cascade)
 
   @@unique([familyId, fromMemberId, toMemberId, type])
+}
+
+// Per-spot invite (Important Decisions 2026-08-18): a specific person is
+// invited to a specific reserved tree node. `code` is what the link
+// carries — Family.inviteCode stays as the open "anyone with the link"
+// path and cannot mark a spot Pending.
+model Invitation {
+  id               String            @id @default(uuid())
+  familyId         String
+  memberId         String // the reserved spot — a placeholder FamilyMember
+  inviterId        String
+  code             String            @unique
+  name             String // what the inviter calls the invitee
+  relationshipType RelationshipType
+  kinshipKey       String? // picker word ("sister") — display-only, client translates
+  status           InvitationStatus  @default(PENDING)
+  expiresAt        DateTime
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  family  Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  member  FamilyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  inviter User         @relation("InvitationInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([familyId, status])
 }
 
 // ─── Content ────────────────────────────────────────────────────────────────
@@ -297,6 +331,9 @@ model Media {
   memo      Memo?      @relation(fields: [memoId], references: [id], onDelete: Cascade)
   lifeEvent LifeEvent? @relation(fields: [lifeEventId], references: [id], onDelete: Cascade)
 
+  @@index([memoId])
+  @@index([lifeEventId])
+
   albumItems AlbumItem[]
   coverOf    Album[]     @relation("AlbumCover")
 
@@ -335,13 +372,18 @@ model Reaction {
 model Memo {
   id            String   @id @default(uuid())
   ownerUserId   String // author — only they view/edit
-  aboutMemberId String // who the note is about
-  content       String
+  aboutMemberId String? // who the note is about; null = that member left/was removed
+  aboutName     String // name snapshot at write time — the note stays readable after the member is gone (decided 2026-08-19)
+  title         String // the bold card line (UI-led, 2026-08-19)
+  content       String? // the longer body under it — optional since title arrived
+  category      String? // client taxonomy (hobbies/health/gift/memories/todo) — free text like LifeEvent.type
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  owner       User         @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
-  aboutMember FamilyMember @relation(fields: [aboutMemberId], references: [id], onDelete: Cascade)
+  owner       User          @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  // SetNull, not Cascade: a memo is the author's private notebook — another
+  // person deleting a member (or leaving) must not burn it.
+  aboutMember FamilyMember? @relation(fields: [aboutMemberId], references: [id], onDelete: SetNull)
   media       Media[]
 
   @@index([ownerUserId, aboutMemberId])

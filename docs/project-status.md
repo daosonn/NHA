@@ -140,8 +140,11 @@
   node state therefore cannot be told apart from an ordinary placeholder.
   Decided 2026-08-17 that the UI leads and the backend follows.
   **Resolved on the UI side 2026-08-18** — the invite sheet now defines the
-  shape the backend has to grow into; see Important Decisions. The backend
-  change itself is still to schedule.
+  shape the backend has to grow into; see Important Decisions.
+  **Backend done 2026-08-19** as task 1.4.4 (branch
+  `feature/per-spot-invitations`) — `Invitation` model + endpoints, tree
+  nodes carry `pending`; see `api-contract.md` → Invitations. Wiring the
+  invite UI to it is the remaining half.
 
 ## For the backend owner
 
@@ -172,6 +175,9 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   **Asked for**: `canEdit` / `canDelete` on `CommentSummary` (and the same
   on `PostDetail` while the shape is being touched). The app then draws
   what it is told and never has to change when the rule does.
+  — done 2026-08-19 (branch `fix/backend-owner-requests`): both shapes
+  carry `canEdit`/`canDelete` (author-only today), see `api-contract.md`;
+  verified by live smoke test with two users.
 - **CORS is pinned to fixed ports and will break again (2026-08-18).** The
   allowlist in `apps/api/src/main.ts` names `http://localhost:8081` and
   `:19006`. Metro moves to the next free port whenever 8081 is taken, so a
@@ -183,6 +189,11 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   the CORS code itself was written by the frontend session and rode in on
   commit `e895259` on `ui-sprint2` — it has not been reviewed by whoever
   owns `apps/api`.
+  — done 2026-08-19 (branch `fix/backend-owner-requests`): dev now matches
+  any `http://localhost:<port>` / `127.0.0.1` origin (regex, equivalent to
+  the callback asked for); `CORS_ORIGINS` override and closed-by-default
+  production kept. Backend review of the frontend-written CORS code done in
+  the same pass — no other issues found. Verified by live preflight tests.
 
 ## Completed
 
@@ -299,6 +310,80 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   API side done, UI not wired). Verified by lint/build + live smoke
   test (ordering, pagination, 403 non-member, 401, limit validation,
   new-member visibility). On branch `feature/post-feed`.
+- Per-spot invitation API (2026-08-19): `Invitation` model (migration
+  `20260819021946`) + `POST/GET /api/families/:familyId/invitations`,
+  resend, cancel, **public** `GET /api/invitations/:code` for the invite
+  page, and `POST /api/invitations/:code/accept` (joins on the reserved
+  spot via the same link operation as join-with-`linkMemberId`). Sending
+  reserves the spot in one transaction (placeholder + edge + invitation);
+  tree members now carry `pending`. 7-day expiry (derived `EXPIRED`, never
+  stored), one live invitation per spot, cancel deletes an untouched
+  placeholder so the node falls back to Empty. Task 1.4.4 done; verified
+  by lint/build/test + 28-case live smoke test. On branch
+  `feature/per-spot-invitations`. Details in `api-contract.md`.
+- Life Event API (2026-08-19): Timeline milestones for the Life Profile —
+  `GET/POST/PATCH/DELETE /api/me/life-events` +
+  `.../families/:familyId/members/:memberId/life-events` (no new tables:
+  `LifeEvent` shipped in the sprint-0 schema). Same rules as the profile
+  it hangs off: linked → global timeline, placeholder → family-local
+  wiki-editable, every PATCH logged to `EditHistory`. Media attach via
+  `mediaIds` at creation (fixed after, like posts) and **streaming now
+  follows profile visibility** — the MediaService "uploader-only until
+  1.6.8" gap is closed by delegating to LifeEventService. Lists oldest
+  first; tags replace on PATCH. Task 1.6.8 done — first of the three
+  Life Profile tab unlocks (next: Memo 1.6.5, then gallery 1.6.4).
+  Verified by lint/build/test + 29-case live smoke test incl. EditHistory
+  rows in the DB. On branch `feature/life-events`. Also rides along:
+- Memo API (2026-08-19): private notes about a member —
+  `GET/POST /api/families/:familyId/members/:memberId/memos` +
+  `GET/PATCH/DELETE /api/memos/:memoId`. Always author-only (decision
+  2026-08-14): everything not yours 404s, memo media streams to the owner
+  only. List is `updatedAt` desc (matching the memo UI), so a no-op PATCH
+  does not bump it. **Schema: Memo grew `title` + `category`, `content`
+  optional** (migration `20260819042417`, UI-led — see `database.md`
+  Decision Log). Ships with the deferred dedupe now that a third consumer
+  arrived: shared `attach-media` helpers (the one-parent rule's write
+  side), `common/input.ts` (`normalizeText`, `parseIsoDate`) and
+  `StorageService.removeAllBestEffort` — PostService, LifeEventService,
+  ProfileService and MemoService all delegate. Task 1.6.5 done; verified
+  by lint/build/test + 16-case memo smoke + 29-case life-event regression
+  smoke. On branch `feature/memo-api` (stacked on `feature/life-events`).
+  Code-review round 2026-08-19 (8 agents) — fixes applied: life-event
+  tags scoped to the family being edited (were leaking cross-family
+  member ids), `removeMember` now cleans up cascaded memo/life-event
+  media files (were orphaned on disk), no-op PATCHes value-checked
+  (retries no longer spam EditHistory / reorder memos), concurrent
+  delete races return 404 not 500, profile `birthDate`/`deathDate`
+  restricted to date-only (same +09:00 day-shift as eventDate), Media
+  gained `memoId`/`lifeEventId` indexes (migration `20260819045211`),
+  and the wiki rule + profile-content visibility moved to one home on
+  `ProfileService` (`resolveForMember`/`canViewProfileContent`), tag
+  boundary to `family/member-tags.ts`, media summary shape to
+  `attach-media.ts`. The memo-cascade question was then **decided
+  2026-08-19: memos survive member removal** — `aboutMemberId` SetNull +
+  `aboutName` snapshot (migration `20260819052340`, backfilled so it
+  deploys on non-empty tables), new `GET /me/memos` lists orphaned notes;
+  verified by 22-case memo smoke incl. the survival path. Remaining note
+  for the team: the earlier `title` migration (`20260819042417`) has no
+  backfill — fine while every Memo table predates the API.
+- Local DB backup/restore (2026-08-19): `pnpm db:backup` (pg_dump custom
+  format into gitignored `backups/`) and `pnpm db:restore <file> --force`
+  (mandatory flag — restore replaces the database). Deletes stay hard
+  deletes in the MVP; a dump before risky work is the way back. Verified
+  by a real backup→restore round-trip (row counts intact, API healthy
+  after). See `docs/04-devops/local-environment.md` § Backup & restore.
+  **main was broken** by a PR #15 conflict resolution leftover
+  (`origin: origins` in `main.ts`) — `nest build` failed on main from
+  merge `e33e8a8` until this branch's fix. Code-review round 2026-08-19
+  (8 review agents): fixes applied — PATCH `title`/`eventDate: null`
+  (were a 500 and a silent 1970-01-01), whitespace-only title, `eventDate`
+  restricted to date-only `YYYY-MM-DD` (a `+09:00` datetime shifted the
+  stored day), no-op PATCH no longer writes EditHistory. **Deferred to the
+  Memo branch (1.6.5), which would otherwise copy them a third time**:
+  extract shared media-attach + tag-validation + parseDate/normalizeText +
+  best-effort file cleanup + a `ProfileService.resolveForMember` for the
+  wiki rule; also known: a tag-write FK race returns 500 (same window
+  exists in PostService).
 
 ### Planning Phase
 
@@ -361,7 +446,8 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   `apps/mobile`, and a shared zod package would fight the API's
   class-validator DTOs. Revisit each when a second case appears.
 - **Invites are per-spot, not per-family (2026-08-18)** — UI-led decision,
-  backend to follow. The invite sheet sends a specific person to a specific
+  backend to follow. — backend done 2026-08-19 (task 1.4.4, see
+  `api-contract.md` → Invitations). The invite sheet sends a specific person to a specific
   tree node: it captures the spot id, a display name and a relationship, and
   only then produces a link. The receiver's page can therefore say who
   invited them, as what, and where they land, which is what makes a cold

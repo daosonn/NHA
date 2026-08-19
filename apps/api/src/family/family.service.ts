@@ -9,7 +9,9 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma/prisma.service';
+import { InvitationStatus } from '../generated/prisma/enums';
 import type { Gender, RelationshipType } from '../generated/prisma/enums';
+import { StorageService } from '../storage/storage.service';
 import { AddMemberDto } from './dto/add-member.dto';
 import { CreateFamilyDto } from './dto/create-family.dto';
 import { CreateRelationshipDto } from './dto/create-relationship.dto';
@@ -55,10 +57,15 @@ export interface RelationshipSummary {
   label: string | null;
 }
 
+/** A tree node: member plus whether a live invitation is holding the spot. */
+export interface TreeMemberSummary extends FamilyMemberSummary {
+  pending: boolean;
+}
+
 export interface FamilyTree {
   id: string;
   name: string;
-  members: FamilyMemberSummary[];
+  members: TreeMemberSummary[];
   relationships: RelationshipSummary[];
 }
 
@@ -72,12 +79,16 @@ const memberSelect = {
 } as const;
 
 // No 0/O/1/I — invite codes are meant to be read aloud or retyped.
-const INVITE_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const INVITE_CODE_LENGTH = 8;
+// Shared with per-spot invitation codes (invitation.service.ts).
+export const INVITE_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+export const INVITE_CODE_LENGTH = 8;
 
 @Injectable()
 export class FamilyService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService,
+  ) {}
 
   async createFamily(
     userId: string,
@@ -163,7 +174,26 @@ export class FamilyService {
     if (!family) {
       throw new NotFoundException('Family not found');
     }
-    return family;
+    // A spot is Pending while a live invitation reserves it — the tree
+    // draws that node dashed with a clock badge (design-system.md).
+    const pendingInvitations = await this.prisma.invitation.findMany({
+      where: {
+        familyId,
+        status: InvitationStatus.PENDING,
+        expiresAt: { gt: new Date() },
+      },
+      select: { memberId: true },
+    });
+    const pendingMemberIds = new Set(
+      pendingInvitations.map((invitation) => invitation.memberId),
+    );
+    return {
+      ...family,
+      members: family.members.map((member) => ({
+        ...member,
+        pending: pendingMemberIds.has(member.id),
+      })),
+    };
   }
 
   async join(userId: string, dto: JoinFamilyDto): Promise<JoinFamilyResult> {
@@ -261,7 +291,17 @@ export class FamilyService {
         'A linked member can only be removed by themselves',
       );
     }
+    // For a placeholder, the delete cascades its profile's life events —
+    // and their Media rows. Collect the storage keys first, or the files
+    // are orphaned with no row left to find them by (storageKey only
+    // lives on Media). Memos survive the member (aboutMemberId SetNull,
+    // decided 2026-08-19), so their media stay untouched.
+    const media = await this.prisma.media.findMany({
+      where: { lifeEvent: { profile: { memberId } } },
+      select: { storageKey: true },
+    });
     await this.prisma.familyMember.delete({ where: { id: memberId } });
+    await this.storage.removeAllBestEffort(media.map((m) => m.storageKey));
     return { success: true };
   }
 
@@ -394,8 +434,10 @@ export class FamilyService {
    * Links this account to a placeholder member: the placeholder's local
    * profile is replaced by the account's canonical one, but content
    * attached to it (life events, tags) is kept (domain-model.md).
+   * Public because accepting a per-spot invitation is the same link
+   * operation (invitation.service.ts).
    */
-  private async linkToPlaceholder(
+  async linkToPlaceholder(
     familyId: string,
     memberId: string,
     userId: string,
