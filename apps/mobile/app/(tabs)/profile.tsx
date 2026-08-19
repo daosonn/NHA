@@ -4,6 +4,7 @@ import { ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
 import { SettingsButton } from '../../src/components/layout/header-slots';
+import { MemoUndoToast } from '../../src/components/member/memo-undo-toast';
 import { ProfileBody } from '../../src/components/member/profile-body';
 import { Text } from '../../src/components/ui/text';
 import { viewerProfile } from '../../src/fixtures/member';
@@ -43,8 +44,28 @@ export default function ProfileScreen() {
         contentContainerStyle={{ padding: spacing.xl, paddingBottom: BOTTOM_INSET }}
         showsVerticalScrollIndicator={false}
       >
-        <ProfileBody profile={viewerProfile} />
+        <ProfileBody
+          profile={viewerProfile}
+          onAddMemo={() =>
+            router.push({ pathname: '/memo/edit', params: { memberId: viewerProfile.id } })
+          }
+          onOpenMemo={(memo) =>
+            router.push({
+              pathname: '/memo/[id]',
+              params: { id: memo.id, memberId: viewerProfile.id },
+            })
+          }
+          onEditMemo={(memo) =>
+            router.push({
+              pathname: '/memo/edit',
+              params: { id: memo.id, memberId: viewerProfile.id },
+            })
+          }
+        />
       </ScrollView>
+
+      {/* Above the bottom nav, not under it. */}
+      <MemoUndoToast memberId={viewerProfile.id} bottom={BOTTOM_INSET} />
     </View>
   );
 }

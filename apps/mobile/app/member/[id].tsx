@@ -3,6 +3,7 @@ import { ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
 import { BackButton } from '../../src/components/layout/header-slots';
+import { MemoUndoToast } from '../../src/components/member/memo-undo-toast';
 import { ProfileBody } from '../../src/components/member/profile-body';
 import { Text } from '../../src/components/ui/text';
 import { getMemberProfile } from '../../src/fixtures/member';
@@ -34,8 +35,21 @@ export default function MemberScreen() {
         contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
-        <ProfileBody profile={profile} />
+        <ProfileBody
+          profile={profile}
+          onAddMemo={() =>
+            router.push({ pathname: '/memo/edit', params: { memberId: profile.id } })
+          }
+          onOpenMemo={(memo) =>
+            router.push({ pathname: '/memo/[id]', params: { id: memo.id, memberId: profile.id } })
+          }
+          onEditMemo={(memo) =>
+            router.push({ pathname: '/memo/edit', params: { id: memo.id, memberId: profile.id } })
+          }
+        />
       </ScrollView>
+
+      <MemoUndoToast memberId={profile.id} />
     </View>
   );
 }

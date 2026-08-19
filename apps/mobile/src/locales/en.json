@@ -152,19 +152,16 @@
       "namePlaceholder": "Their name",
       "relationship": "Relationship",
       "relationshipTitle": "How are they related to you?",
-      "methodHeading": "How should we invite them",
-      "methodLabel": "Invite method",
-      "methodLink": "Invite link",
-      "methodContact": "Phone or email",
-      "contactLabel": "Where to send it",
-      "contactPlaceholder": "Phone number or email",
-      "carries": "The invite carries their spot and \"{{kinship}}\", so they land in the right place after signing up.",
       "copy": "Copy",
       "copied": "Copied",
       "share": "Share the invite",
-      "shareMessage": "{{name}}, join our family on NHA: {{link}}",
+      "shareMessage": "{{name}}, join {{family}} on NHA with this code: {{code}}",
       "shareFallbackName": "You",
-      "send": "Send invite"
+      "codeHeading": "Family code",
+      "codeLabel": "Family code {{code}}",
+      "codeMeta": "{{family}} · does not expire",
+      "codeHint": "Send them this code. They enter it when signing up and join {{family}}.",
+      "save": "Save spot"
     },
     "preview": {
       "nodeLabel": "{{name}} · {{role}}",
@@ -213,6 +210,49 @@
       "gift": "Gift idea",
       "memories": "Ask about",
       "todo": "To do"
+    },
+    "memoHeading": "Notes about {{name}}",
+    "memoOpenHint": "Opens the note. Press and hold for more.",
+    "memoDetail": {
+      "title": "Note",
+      "actions": "More actions for this note",
+      "edit": "Edit this note",
+      "metaEdited": "{{written}} · edited {{edited}}",
+      "photos_one": "Photo · {{count}}",
+      "photos_other": "Photos · {{count}}",
+      "addPhoto": "Add photo",
+      "gone": "This note is gone",
+      "goneBody": "It was deleted. Go back to write a new one."
+    },
+    "memoEditor": {
+      "titleNew": "New note",
+      "titleEdit": "Edit note",
+      "cancel": "Cancel",
+      "save": "Save",
+      "titleLabel": "What is it",
+      "titlePlaceholder": "The thing worth remembering",
+      "bodyLabel": "Anything else",
+      "bodyPlaceholder": "Where, how much, who said it…",
+      "photosLabel": "Photos",
+      "private": "Only you can see this note."
+    },
+    "memoActions": {
+      "closeScrim": "Close the note actions",
+      "meta_one": "{{category}} · {{count}} photo",
+      "meta_other": "{{category}} · {{count}} photos",
+      "edit": "Edit note",
+      "delete": "Delete note",
+      "cancel": "Cancel"
+    },
+    "memoDelete": {
+      "dismiss": "Keep the note",
+      "title": "Delete this note?",
+      "body_one": "This note and its {{count}} photo are gone for good.",
+      "body_other": "This note and its {{count}} photos are gone for good.",
+      "confirm": "Delete note",
+      "cancel": "Keep it",
+      "done": "Note deleted",
+      "undo": "Undo"
     }
   },
   "moment": {
@@ -294,6 +334,18 @@
       "10": "Oct",
       "11": "Nov",
       "12": "Dec"
+    },
+    "relative": {
+      "today": "today",
+      "yesterday": "yesterday",
+      "daysAgo_one": "{{count}} day ago",
+      "daysAgo_other": "{{count}} days ago",
+      "weeksAgo_one": "last week",
+      "weeksAgo_other": "{{count}} weeks ago",
+      "monthsAgo_one": "last month",
+      "monthsAgo_other": "{{count}} months ago",
+      "yearsAgo_one": "last year",
+      "yearsAgo_other": "{{count}} years ago"
     }
   },
   "errors": {

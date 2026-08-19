@@ -49,6 +49,10 @@ export default function FamilyTreeScreen() {
 
   const [spot, setSpot] = useState<TreeSpot | null>(null);
 
+  // The invite sheet names the family whose code it is handing out, so the
+  // sender can see which door they are opening.
+  const activeFamily = families?.find((family) => family.id === familyId);
+
   const tree = useMemo(
     () =>
       payload === undefined
@@ -155,7 +159,8 @@ export default function FamilyTreeScreen() {
         visible={spot !== null}
         onClose={() => setSpot(null)}
         spot={spot ?? defaultSpot}
-        code={families?.find((family) => family.id === familyId)?.inviteCode ?? ''}
+        code={activeFamily?.inviteCode ?? ''}
+        familyName={activeFamily?.name ?? ''}
         onSubmit={submitNewMember}
         submitting={addMember.isPending}
         errorKey={
