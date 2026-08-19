@@ -11,6 +11,7 @@ import {
 import { PrismaService } from '../database/prisma/prisma.service';
 import { InvitationStatus } from '../generated/prisma/enums';
 import type { Gender, RelationshipType } from '../generated/prisma/enums';
+import { StorageService } from '../storage/storage.service';
 import { AddMemberDto } from './dto/add-member.dto';
 import { CreateFamilyDto } from './dto/create-family.dto';
 import { CreateRelationshipDto } from './dto/create-relationship.dto';
@@ -84,7 +85,10 @@ export const INVITE_CODE_LENGTH = 8;
 
 @Injectable()
 export class FamilyService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService,
+  ) {}
 
   async createFamily(
     userId: string,
@@ -287,7 +291,17 @@ export class FamilyService {
         'A linked member can only be removed by themselves',
       );
     }
+    // For a placeholder, the delete cascades its profile's life events —
+    // and their Media rows. Collect the storage keys first, or the files
+    // are orphaned with no row left to find them by (storageKey only
+    // lives on Media). Memos survive the member (aboutMemberId SetNull,
+    // decided 2026-08-19), so their media stay untouched.
+    const media = await this.prisma.media.findMany({
+      where: { lifeEvent: { profile: { memberId } } },
+      select: { storageKey: true },
+    });
     await this.prisma.familyMember.delete({ where: { id: memberId } });
+    await this.storage.removeAllBestEffort(media.map((m) => m.storageKey));
     return { success: true };
   }
 

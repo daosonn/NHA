@@ -19,6 +19,7 @@ import { ProfileService } from './profile.service';
     MemberLifeEventController,
   ],
   providers: [ProfileService, LifeEventService],
-  exports: [LifeEventService],
+  // ProfileService: MemoModule resolves members through findMember.
+  exports: [ProfileService, LifeEventService],
 })
 export class ProfileModule {}

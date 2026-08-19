@@ -1,23 +1,23 @@
 import {
   BadRequestException,
-  ConflictException,
-  ForbiddenException,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { normalizeText, parseIsoDate, requireTrimmed } from '../common/input';
 import { PrismaService } from '../database/prisma/prisma.service';
+import { assertTaggedMembers, ownFamilyIds } from '../family/member-tags';
+import { Prisma } from '../generated/prisma/client';
 import { EditEntityType } from '../generated/prisma/enums';
+import {
+  assertAttachableMedia,
+  attachMediaInTx,
+  attachedMediaInclude,
+  type AttachedMediaSummary,
+} from '../media/attach-media';
 import { StorageService } from '../storage/storage.service';
 import { CreateLifeEventDto } from './dto/create-life-event.dto';
 import { UpdateLifeEventDto } from './dto/update-life-event.dto';
 import { ProfileService } from './profile.service';
-
-export interface LifeEventMediaSummary {
-  id: string;
-  mimeType: string;
-  sizeBytes: number;
-}
 
 export interface LifeEventDetail {
   id: string;
@@ -28,7 +28,7 @@ export interface LifeEventDetail {
   place: string | null;
   type: string | null;
   taggedMemberIds: string[];
-  media: LifeEventMediaSummary[];
+  media: AttachedMediaSummary[];
   createdById: string;
   updatedById: string | null;
   createdAt: Date;
@@ -37,32 +37,15 @@ export interface LifeEventDetail {
 
 const eventInclude = {
   memberTags: { select: { memberId: true } },
-  media: {
-    select: { id: true, mimeType: true, sizeBytes: true },
-    orderBy: { createdAt: 'asc' as const },
-  },
+  media: attachedMediaInclude,
 } as const;
 
-interface LifeEventRecord {
-  id: string;
-  profileId: string;
-  title: string;
-  description: string | null;
-  eventDate: Date;
-  place: string | null;
-  type: string | null;
-  createdById: string;
-  updatedById: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  memberTags: { memberId: string }[];
-  media: LifeEventMediaSummary[];
-}
+type LifeEventRecord = Prisma.LifeEventGetPayload<{
+  include: typeof eventInclude;
+}>;
 
 @Injectable()
 export class LifeEventService {
-  private readonly logger = new Logger(LifeEventService.name);
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly profileService: ProfileService,
@@ -80,7 +63,12 @@ export class LifeEventService {
     dto: CreateLifeEventDto,
   ): Promise<LifeEventDetail> {
     const profile = await this.profileService.ensureGlobalProfile(userId);
-    return this.createEvent(profile.id, userId, dto);
+    return this.createEvent(
+      profile.id,
+      userId,
+      dto,
+      await ownFamilyIds(this.prisma, userId),
+    );
   }
 
   async updateOwn(
@@ -89,7 +77,13 @@ export class LifeEventService {
     dto: UpdateLifeEventDto,
   ): Promise<LifeEventDetail> {
     const profile = await this.profileService.ensureGlobalProfile(userId);
-    return this.updateEvent(profile.id, eventId, userId, dto);
+    return this.updateEvent(
+      profile.id,
+      eventId,
+      userId,
+      dto,
+      await ownFamilyIds(this.prisma, userId),
+    );
   }
 
   async removeOwn(
@@ -100,14 +94,18 @@ export class LifeEventService {
     return this.removeEvent(profile.id, eventId);
   }
 
-  /** A member's timeline inside one family — same profile resolution as
-   *  GET .../profile (linked → global, placeholder → family-local). */
+  /** A member's timeline inside one family — same profile resolution and
+   *  wiki rule as GET .../profile (ProfileService.resolveForMember). */
   async listForMember(
     userId: string,
     familyId: string,
     memberId: string,
   ): Promise<LifeEventDetail[]> {
-    const profile = await this.resolveProfile(userId, familyId, memberId);
+    const { profile } = await this.profileService.resolveForMember(
+      userId,
+      familyId,
+      memberId,
+    );
     return this.listForProfile(profile.id);
   }
 
@@ -117,10 +115,15 @@ export class LifeEventService {
     memberId: string,
     dto: CreateLifeEventDto,
   ): Promise<LifeEventDetail> {
-    const profile = await this.resolveProfile(userId, familyId, memberId, {
-      forEdit: true,
-    });
-    return this.createEvent(profile.id, userId, dto);
+    const { profile } = await this.profileService.resolveForMember(
+      userId,
+      familyId,
+      memberId,
+      { forEdit: true },
+    );
+    // Tags stay inside the family being edited, so every viewer of that
+    // family can resolve them — the same principle as post tags.
+    return this.createEvent(profile.id, userId, dto, [familyId]);
   }
 
   async updateForMember(
@@ -130,10 +133,13 @@ export class LifeEventService {
     eventId: string,
     dto: UpdateLifeEventDto,
   ): Promise<LifeEventDetail> {
-    const profile = await this.resolveProfile(userId, familyId, memberId, {
-      forEdit: true,
-    });
-    return this.updateEvent(profile.id, eventId, userId, dto);
+    const { profile } = await this.profileService.resolveForMember(
+      userId,
+      familyId,
+      memberId,
+      { forEdit: true },
+    );
+    return this.updateEvent(profile.id, eventId, userId, dto, [familyId]);
   }
 
   async removeForMember(
@@ -142,72 +148,13 @@ export class LifeEventService {
     memberId: string,
     eventId: string,
   ): Promise<{ success: boolean }> {
-    const profile = await this.resolveProfile(userId, familyId, memberId, {
-      forEdit: true,
-    });
-    return this.removeEvent(profile.id, eventId);
-  }
-
-  /**
-   * The life-event media visibility rule, for MediaService: the owner of a
-   * global profile and anyone who shares a family with them; for a
-   * placeholder, its family's members. One home for the rule — never a
-   * second copy in MediaService.
-   */
-  async canViewProfileMedia(
-    userId: string,
-    profile: { userId: string | null; memberId: string | null },
-  ): Promise<boolean> {
-    if (profile.userId === userId) {
-      return true;
-    }
-    if (profile.userId) {
-      const shared = await this.prisma.familyMember.findFirst({
-        where: {
-          userId: profile.userId,
-          family: { members: { some: { userId } } },
-        },
-        select: { id: true },
-      });
-      return shared !== null;
-    }
-    if (profile.memberId) {
-      // One query, same relation-join shape as the linked branch above:
-      // the viewer's membership in the placeholder's family.
-      const membership = await this.prisma.familyMember.findFirst({
-        where: {
-          userId,
-          family: { members: { some: { id: profile.memberId } } },
-        },
-        select: { id: true },
-      });
-      return membership !== null;
-    }
-    return false;
-  }
-
-  /**
-   * Wiki rule, same as the profile it hangs off (database.md): a
-   * placeholder's events are editable by the whole family; a linked
-   * member's events are managed by that member only.
-   */
-  private async resolveProfile(
-    userId: string,
-    familyId: string,
-    memberId: string,
-    options: { forEdit?: boolean } = {},
-  ): Promise<{ id: string }> {
-    const member = await this.profileService.findMember(
+    const { profile } = await this.profileService.resolveForMember(
       userId,
       familyId,
       memberId,
+      { forEdit: true },
     );
-    if (options.forEdit && member.userId && member.userId !== userId) {
-      throw new ForbiddenException('Linked members manage their own timeline');
-    }
-    return member.userId
-      ? this.profileService.ensureGlobalProfile(member.userId)
-      : this.profileService.ensurePlaceholderProfile(member.id);
+    return this.removeEvent(profile.id, eventId);
   }
 
   /** Oldest first — a life timeline reads birth-to-now (screen 9). */
@@ -224,30 +171,29 @@ export class LifeEventService {
     profileId: string,
     editorUserId: string,
     dto: CreateLifeEventDto,
+    allowedTagFamilyIds: string[],
   ): Promise<LifeEventDetail> {
-    const eventDate = this.parseDate(dto.eventDate);
+    const title = requireTrimmed(dto.title, 'A life event needs a title');
+    const eventDate = parseIsoDate(dto.eventDate, 'eventDate');
     const taggedMemberIds = dto.taggedMemberIds ?? [];
-    await this.validateTags(editorUserId, taggedMemberIds);
+    await assertTaggedMembers(
+      this.prisma,
+      taggedMemberIds,
+      allowedTagFamilyIds,
+      'Tagged members must belong to the family this timeline is viewed in',
+    );
     const mediaIds = dto.mediaIds ?? [];
-    if (mediaIds.length > 0) {
-      await this.validateAttachableMedia(editorUserId, mediaIds);
-    }
-
-    const title = dto.title.trim();
-    if (!title) {
-      // @IsNotEmpty() lets "   " through — it only rejects ''.
-      throw new BadRequestException('A life event needs a title');
-    }
+    await assertAttachableMedia(this.prisma, editorUserId, mediaIds);
 
     const event = await this.prisma.$transaction(async (tx) => {
       const created = await tx.lifeEvent.create({
         data: {
           profileId,
           title,
-          description: this.normalizeText(dto.description),
+          description: normalizeText(dto.description),
           eventDate,
-          place: this.normalizeText(dto.place),
-          type: this.normalizeText(dto.type),
+          place: normalizeText(dto.place),
+          type: normalizeText(dto.type),
           createdById: editorUserId,
           memberTags: {
             create: taggedMemberIds.map((memberId) => ({ memberId })),
@@ -255,23 +201,9 @@ export class LifeEventService {
         },
         select: { id: true },
       });
-      if (mediaIds.length > 0) {
-        const attached = await tx.media.updateMany({
-          where: {
-            id: { in: mediaIds },
-            uploaderUserId: editorUserId,
-            postId: null,
-            memoId: null,
-            lifeEventId: null,
-          },
-          data: { lifeEventId: created.id },
-        });
-        if (attached.count !== mediaIds.length) {
-          // A concurrent request attached one of these media first;
-          // throwing rolls the whole transaction back.
-          throw new ConflictException('Some media are no longer attachable');
-        }
-      }
+      await attachMediaInTx(tx, editorUserId, mediaIds, {
+        lifeEventId: created.id,
+      });
       return tx.lifeEvent.findUniqueOrThrow({
         where: { id: created.id },
         include: eventInclude,
@@ -285,79 +217,83 @@ export class LifeEventService {
     eventId: string,
     editorUserId: string,
     dto: UpdateLifeEventDto,
+    allowedTagFamilyIds: string[],
   ): Promise<LifeEventDetail> {
-    await this.findEventInProfile(profileId, eventId);
+    const existing = await this.findEventInProfile(profileId, eventId);
 
     // PartialType applies @IsOptional, which skips every validator for an
-    // explicit JSON null — so null reaches this far and must be handled
-    // here. Neither title nor eventDate is clearable (the model requires
-    // both); without these guards null.trim() is a 500 and new Date(null)
-    // silently rewrites the date to 1970-01-01.
-    if (dto.title !== undefined && !dto.title?.trim()) {
-      throw new BadRequestException('A life event needs a title');
+    // explicit JSON null — handled here. Neither title nor eventDate is
+    // clearable (the model requires both); without these guards
+    // null.trim() is a 500 and new Date(null) silently rewrites the date
+    // to 1970-01-01.
+    if (dto.title !== undefined) {
+      requireTrimmed(dto.title, 'A life event needs a title');
     }
     if (dto.eventDate !== undefined && !dto.eventDate) {
       throw new BadRequestException('eventDate cannot be cleared');
     }
-    const nextDate = dto.eventDate ? this.parseDate(dto.eventDate) : undefined;
     // null tags = unchanged, same as omitted (only an array replaces).
     const taggedMemberIds = dto.taggedMemberIds ?? undefined;
     if (taggedMemberIds) {
-      await this.validateTags(editorUserId, taggedMemberIds);
+      await assertTaggedMembers(
+        this.prisma,
+        taggedMemberIds,
+        allowedTagFamilyIds,
+        'Tagged members must belong to the family this timeline is viewed in',
+      );
     }
 
-    // A no-op PATCH must not stamp an editor or append an EditHistory
-    // row — a client retry would otherwise fill the wiki log.
-    const hasChanges =
-      dto.title !== undefined ||
-      dto.description !== undefined ||
-      dto.eventDate !== undefined ||
-      dto.place !== undefined ||
-      dto.type !== undefined ||
-      taggedMemberIds !== undefined;
-    if (!hasChanges) {
-      const unchanged = await this.prisma.lifeEvent.findUniqueOrThrow({
-        where: { id: eventId },
-        include: eventInclude,
-      });
-      return this.toDetail(unchanged);
+    // Build the write from values that actually differ, so a PATCH that
+    // changes nothing (a client retry, a save with no edits) stamps no
+    // editor and appends no EditHistory row — the wiki log records edits,
+    // not requests (api-contract.md).
+    const next = {
+      title: dto.title !== undefined ? dto.title.trim() : existing.title,
+      description:
+        dto.description !== undefined
+          ? normalizeText(dto.description)
+          : existing.description,
+      eventDate: dto.eventDate
+        ? parseIsoDate(dto.eventDate, 'eventDate')
+        : existing.eventDate,
+      place:
+        dto.place !== undefined ? normalizeText(dto.place) : existing.place,
+      type: dto.type !== undefined ? normalizeText(dto.type) : existing.type,
+    };
+    const existingTagIds = existing.memberTags.map((tag) => tag.memberId);
+    const nextTags =
+      taggedMemberIds && !sameIdSet(taggedMemberIds, existingTagIds)
+        ? taggedMemberIds
+        : undefined;
+    const data: Prisma.LifeEventUpdateInput = {
+      ...(next.title !== existing.title && { title: next.title }),
+      ...(next.description !== existing.description && {
+        description: next.description,
+      }),
+      ...(next.eventDate.getTime() !== existing.eventDate.getTime() && {
+        eventDate: next.eventDate,
+      }),
+      ...(next.place !== existing.place && { place: next.place }),
+      ...(next.type !== existing.type && { type: next.type }),
+      ...(nextTags && {
+        memberTags: {
+          deleteMany: {},
+          create: nextTags.map((memberId) => ({ memberId })),
+        },
+      }),
+    };
+    if (Object.keys(data).length === 0) {
+      return this.toDetail(existing);
     }
 
     const event = await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.lifeEvent.update({
-        where: { id: eventId },
-        data: {
-          // dto.title is non-null non-blank here (guarded above).
-          ...(dto.title !== undefined && { title: dto.title.trim() }),
-          ...(dto.description !== undefined && {
-            description: this.normalizeText(dto.description),
-          }),
-          ...(nextDate !== undefined && { eventDate: nextDate }),
-          ...(dto.place !== undefined && {
-            place: this.normalizeText(dto.place),
-          }),
-          ...(dto.type !== undefined && {
-            type: this.normalizeText(dto.type),
-          }),
-          updatedById: editorUserId,
-        },
-        select: { id: true },
-      });
-      if (taggedMemberIds) {
-        await tx.lifeEventMemberTag.deleteMany({
-          where: { lifeEventId: eventId },
-        });
-        await tx.lifeEventMemberTag.createMany({
-          data: taggedMemberIds.map((memberId) => ({
-            lifeEventId: eventId,
-            memberId,
-          })),
-        });
-      }
-      const full = await tx.lifeEvent.findUniqueOrThrow({
-        where: { id: updated.id },
-        include: eventInclude,
-      });
+      const full = await tx.lifeEvent
+        .update({
+          where: { id: eventId },
+          data: { ...data, updatedBy: { connect: { id: editorUserId } } },
+          include: eventInclude,
+        })
+        .catch(rethrowMissingAs404);
       // Wiki edits are logged from the start so history display/undo can
       // be added later without data loss (domain-model.md).
       await tx.editHistory.create({
@@ -385,87 +321,36 @@ export class LifeEventService {
     eventId: string,
   ): Promise<{ success: boolean }> {
     await this.findEventInProfile(profileId, eventId);
-    const media = await this.prisma.media.findMany({
+    const files = await this.prisma.media.findMany({
       where: { lifeEventId: eventId },
       select: { storageKey: true },
     });
-    // Cascades remove the media and tag rows.
-    await this.prisma.lifeEvent.delete({ where: { id: eventId } });
-    // Files go best-effort after the DB commit — an orphan file is
-    // recoverable noise, a dangling DB row is not.
-    await Promise.all(
-      media.map(async ({ storageKey }) => {
-        try {
-          await this.storage.remove(storageKey);
-        } catch (error) {
-          this.logger.warn(
-            `Could not delete stored file ${storageKey}: ${String(error)}`,
-          );
-        }
-      }),
-    );
+    // Scoped delete: a concurrent delete makes count 0 → 404, never a
+    // raw P2025 500. Cascades remove the media and tag rows.
+    const deleted = await this.prisma.lifeEvent.deleteMany({
+      where: { id: eventId, profileId },
+    });
+    if (deleted.count === 0) {
+      throw new NotFoundException('Life event not found');
+    }
+    await this.storage.removeAllBestEffort(files.map((f) => f.storageKey));
     return { success: true };
   }
 
-  /** Existence guard: 404 unless the event belongs to this profile. */
+  /** 404 unless the event belongs to this profile; returns the full
+   *  record so update/remove need no second read. */
   private async findEventInProfile(
     profileId: string,
     eventId: string,
-  ): Promise<void> {
+  ): Promise<LifeEventRecord> {
     const event = await this.prisma.lifeEvent.findFirst({
       where: { id: eventId, profileId },
-      select: { id: true },
+      include: eventInclude,
     });
     if (!event) {
       throw new NotFoundException('Life event not found');
     }
-  }
-
-  /** Tags must stay inside the editor's own families — the same boundary
-   *  private posts use (post.service.ts). */
-  private async validateTags(
-    userId: string,
-    taggedMemberIds: string[],
-  ): Promise<void> {
-    if (taggedMemberIds.length === 0) {
-      return;
-    }
-    const members = await this.prisma.familyMember.findMany({
-      where: { id: { in: taggedMemberIds } },
-      select: { familyId: true },
-    });
-    if (members.length !== taggedMemberIds.length) {
-      throw new NotFoundException('Some tagged members were not found');
-    }
-    const familyIds = [...new Set(members.map((member) => member.familyId))];
-    const memberships = await this.prisma.familyMember.count({
-      where: { userId, familyId: { in: familyIds } },
-    });
-    if (memberships !== familyIds.length) {
-      throw new BadRequestException(
-        'You can only tag members of your own families',
-      );
-    }
-  }
-
-  private async validateAttachableMedia(
-    userId: string,
-    mediaIds: string[],
-  ): Promise<void> {
-    const attachable = await this.prisma.media.count({
-      where: {
-        id: { in: mediaIds },
-        uploaderUserId: userId,
-        postId: null,
-        memoId: null,
-        lifeEventId: null,
-      },
-    });
-    if (attachable !== mediaIds.length) {
-      throw new BadRequestException(
-        'Media must be your own uploads and not attached elsewhere',
-      );
-    }
+    return event;
   }
 
   private toDetail(event: LifeEventRecord): LifeEventDetail {
@@ -485,21 +370,25 @@ export class LifeEventService {
       updatedAt: event.updatedAt,
     };
   }
+}
 
-  /** null is possible at runtime: PartialType admits explicit JSON null.
-   *  For the nullable columns it simply means "clear". */
-  private normalizeText(value: string | null | undefined): string | null {
-    const trimmed = value?.trim();
-    return trimmed ? trimmed : null;
+/** Order-insensitive id comparison for the tags-changed check. */
+function sameIdSet(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) {
+    return false;
   }
+  const set = new Set(b);
+  return a.every((id) => set.has(id));
+}
 
-  /** @IsISO8601({ strict: true }) guards the format; this guards forms
-   *  JS Date cannot parse from becoming an Invalid Date → 500. */
-  private parseDate(value: string): Date {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      throw new BadRequestException('eventDate is not a parsable date');
-    }
-    return date;
+/** A row deleted between the ownership check and the write is a 404,
+ *  not a raw Prisma P2025 500. */
+function rethrowMissingAs404(error: unknown): never {
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === 'P2025'
+  ) {
+    throw new NotFoundException('Life event not found');
   }
+  throw error;
 }

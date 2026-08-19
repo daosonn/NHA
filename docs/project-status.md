@@ -320,6 +320,44 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   Life Profile tab unlocks (next: Memo 1.6.5, then gallery 1.6.4).
   Verified by lint/build/test + 29-case live smoke test incl. EditHistory
   rows in the DB. On branch `feature/life-events`. Also rides along:
+- Memo API (2026-08-19): private notes about a member —
+  `GET/POST /api/families/:familyId/members/:memberId/memos` +
+  `GET/PATCH/DELETE /api/memos/:memoId`. Always author-only (decision
+  2026-08-14): everything not yours 404s, memo media streams to the owner
+  only. List is `updatedAt` desc (matching the memo UI), so a no-op PATCH
+  does not bump it. **Schema: Memo grew `title` + `category`, `content`
+  optional** (migration `20260819042417`, UI-led — see `database.md`
+  Decision Log). Ships with the deferred dedupe now that a third consumer
+  arrived: shared `attach-media` helpers (the one-parent rule's write
+  side), `common/input.ts` (`normalizeText`, `parseIsoDate`) and
+  `StorageService.removeAllBestEffort` — PostService, LifeEventService,
+  ProfileService and MemoService all delegate. Task 1.6.5 done; verified
+  by lint/build/test + 16-case memo smoke + 29-case life-event regression
+  smoke. On branch `feature/memo-api` (stacked on `feature/life-events`).
+  Code-review round 2026-08-19 (8 agents) — fixes applied: life-event
+  tags scoped to the family being edited (were leaking cross-family
+  member ids), `removeMember` now cleans up cascaded memo/life-event
+  media files (were orphaned on disk), no-op PATCHes value-checked
+  (retries no longer spam EditHistory / reorder memos), concurrent
+  delete races return 404 not 500, profile `birthDate`/`deathDate`
+  restricted to date-only (same +09:00 day-shift as eventDate), Media
+  gained `memoId`/`lifeEventId` indexes (migration `20260819045211`),
+  and the wiki rule + profile-content visibility moved to one home on
+  `ProfileService` (`resolveForMember`/`canViewProfileContent`), tag
+  boundary to `family/member-tags.ts`, media summary shape to
+  `attach-media.ts`. The memo-cascade question was then **decided
+  2026-08-19: memos survive member removal** — `aboutMemberId` SetNull +
+  `aboutName` snapshot (migration `20260819052340`, backfilled so it
+  deploys on non-empty tables), new `GET /me/memos` lists orphaned notes;
+  verified by 22-case memo smoke incl. the survival path. Remaining note
+  for the team: the earlier `title` migration (`20260819042417`) has no
+  backfill — fine while every Memo table predates the API.
+- Local DB backup/restore (2026-08-19): `pnpm db:backup` (pg_dump custom
+  format into gitignored `backups/`) and `pnpm db:restore <file> --force`
+  (mandatory flag — restore replaces the database). Deletes stay hard
+  deletes in the MVP; a dump before risky work is the way back. Verified
+  by a real backup→restore round-trip (row counts intact, API healthy
+  after). See `docs/04-devops/local-environment.md` § Backup & restore.
   **main was broken** by a PR #15 conflict resolution leftover
   (`origin: origins` in `main.ts`) — `nest build` failed on main from
   merge `e33e8a8` until this branch's fix. Code-review round 2026-08-19

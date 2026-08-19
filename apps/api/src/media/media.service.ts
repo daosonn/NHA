@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { PostService } from '../post/post.service';
-import { LifeEventService } from '../profile/life-event.service';
+import { ProfileService } from '../profile/profile.service';
 import { StorageService } from '../storage/storage.service';
 
 /** Multer file injected by FileInterceptor (streamed to a temp file). */
@@ -83,7 +83,7 @@ export class MediaService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly postService: PostService,
-    private readonly lifeEventService: LifeEventService,
+    private readonly profileService: ProfileService,
   ) {}
 
   /** Stores the file and creates a standalone Media row (no parent yet). */
@@ -203,8 +203,9 @@ export class MediaService {
       return this.postService.canViewPost(userId, media.post);
     }
     if (media.lifeEvent) {
-      // Same delegation for the life-event rule (WBS 1.6.8).
-      return this.lifeEventService.canViewProfileMedia(
+      // Profile-attached content shares one visibility rule, homed on
+      // ProfileService (the gallery task 1.6.4 will use the same one).
+      return this.profileService.canViewProfileContent(
         userId,
         media.lifeEvent.profile,
       );

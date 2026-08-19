@@ -102,6 +102,27 @@ export class StorageService {
     await rm(this.resolvePath(storageKey), { force: true });
   }
 
+  /**
+   * Best-effort removal of many stored files, for after a DB commit that
+   * orphaned them: an orphan file is recoverable noise, a dangling DB row
+   * is not — so failures are logged, never thrown. One home for the
+   * cleanup policy (extracted 2026-08-19; post/life-event/memo deletes
+   * all use it).
+   */
+  async removeAllBestEffort(storageKeys: string[]): Promise<void> {
+    await Promise.all(
+      storageKeys.map(async (storageKey) => {
+        try {
+          await this.remove(storageKey);
+        } catch (error) {
+          this.logger.warn(
+            `Could not delete stored file ${storageKey}: ${String(error)}`,
+          );
+        }
+      }),
+    );
+  }
+
   /** Best-effort removal of an upload temp file. */
   async discardTemp(path: string): Promise<void> {
     try {

@@ -26,6 +26,8 @@
     "dev:api": "pnpm --filter api start:dev",
     "studio": "pnpm --filter api exec prisma studio",
     "seed": "pnpm --filter api exec prisma db seed",
+    "db:backup": "node scripts/db-backup.mjs",
+    "db:restore": "node scripts/db-restore.mjs",
     "lint:web": "pnpm --filter web lint",
     "lint:api": "pnpm --filter api lint",
     "lint": "pnpm lint:web && pnpm lint:api",
