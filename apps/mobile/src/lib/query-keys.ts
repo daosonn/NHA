@@ -13,4 +13,15 @@ export const queryKeys = {
   familyFeed: (familyId: string) => ['families', familyId, 'posts'] as const,
   post: (postId: string) => ['posts', postId] as const,
   postComments: (postId: string) => ['posts', postId, 'comments'] as const,
+  // Khu AI (màn 21-33)
+  specialDates: (familyId: string) => ['families', familyId, 'special-dates'] as const,
+  evidenceStats: (familyId: string, memberId: string) =>
+    ['families', familyId, 'members', memberId, 'evidence-stats'] as const,
+  memberProfile: (familyId: string, memberId: string) =>
+    ['families', familyId, 'members', memberId, 'profile'] as const,
+  savedGiftIdeas: (familyId: string, memberId: string) =>
+    ['families', familyId, 'members', memberId, 'saved-gift-ideas'] as const,
+  videoMusic: () => ['video-music'] as const,
+  videoJobs: () => ['video-jobs'] as const,
+  videoJob: (jobId: string) => ['video-jobs', jobId] as const,
 } as const;

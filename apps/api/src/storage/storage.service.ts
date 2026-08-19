@@ -102,6 +102,14 @@ export class StorageService {
     await rm(this.resolvePath(storageKey), { force: true });
   }
 
+  /**
+   * Absolute path cho pipeline render video (ffmpeg cần đường dẫn file thật).
+   * Vẫn đi qua resolvePath nên không thoát khỏi rootDir.
+   */
+  absolutePathOf(storageKey: string): string {
+    return this.resolvePath(storageKey);
+  }
+
   /** Best-effort removal of an upload temp file. */
   async discardTemp(path: string): Promise<void> {
     try {

@@ -1,4 +1,4 @@
-# Node
+﻿# Node
 node_modules/
 
 # Next.js
@@ -16,7 +16,7 @@ apps/mobile/ios/
 *.keystore
 *.jks
 
-# Mockups (large, self-contained HTML — see docs/01-frontend/mockups/README.md)
+# Mockups (large, self-contained HTML 窶・see docs/01-frontend/mockups/README.md)
 docs/01-frontend/mockups/*.html
 
 # Python
@@ -44,3 +44,6 @@ desktop.ini
 # Docker
 **/docker-compose.override.yml
 docker-compose.override.yml
+# Nh蘯｡c n盻］ cho video k盻ｷ ni盻㍊ (45 track .m4a, ~80MB) 窶・tﾃi s蘯｣n nh盻・phﾃ｢n, khﾃｴng vﾃo git.
+# L蘯･y v盻・b蘯ｱng cﾃ｡ch copy t盻ｫ demo onemoretime (assets/music) ho蘯ｷc ch蘯｡y l蘯｡i script fetch-music.
+apps/api/assets/music/

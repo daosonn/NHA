@@ -6,6 +6,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { ProfileService } from '../ai/profile.service';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { FamilyService } from '../family/family.service';
 import { PostType, ReactionType } from '../generated/prisma/enums';
@@ -74,6 +75,7 @@ export class PostService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly familyService: FamilyService,
+    private readonly profiles: ProfileService,
   ) {}
 
   /** The include every PostDetail read uses — viewer-dependent because it
@@ -152,6 +154,11 @@ export class PostService {
       }
       return post.id;
     });
+
+    // Đọc bài để hiểu người đăng (0-4 interest signal) — chạy nền, KHÔNG chặn
+    // response và không được làm đăng bài thất bại nếu AI hỏng.
+    this.profiles.analyzePostInBackground(postId);
+
     return this.getPost(userId, postId);
   }
 

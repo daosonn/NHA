@@ -19,7 +19,7 @@ const SOURCES = ['app', 'src'];
 /** Keys written as `t('a.b')` or handed to `t()` through a constant. */
 const LITERAL = /\bt\(\s*'([A-Za-z0-9_.]+)'/g;
 const INDIRECT =
-  /'((?:common|nav|auth|home|family|invite|member|moment|ai|settings|date)\.[A-Za-z0-9_.]+)'/g;
+  /'((?:common|nav|auth|home|family|invite|member|moment|ai|settings|date|video)\.[A-Za-z0-9_.]+)'/g;
 
 /** Plural keys live in the catalogue as `key_one` / `key_other`. */
 const SUFFIXES = ['', '_one', '_other'];
@@ -43,6 +43,17 @@ const DYNAMIC = [
   'moment.errors.',
   // src/components/feed/reaction-bar.tsx picks one per reaction type.
   'post.reactions.',
+  // app/ai/card.tsx picks one per template id.
+  'ai.card.template.',
+  // app/video/setup.tsx picks one per video kind.
+  'video.kind.',
+  // app/video/style.tsx + setup.tsx pick one per opening style.
+  'video.style.',
+  'video.styleDesc.',
+  // setup.tsx + story.tsx pick "Album opening"… by the draft's style id.
+  'video.styleOpening.',
+  // app/(tabs)/ai.tsx builds `date.weekdays.<getDay()>` for the featured date.
+  'date.weekdays.',
 ];
 
 function walk(dir) {
