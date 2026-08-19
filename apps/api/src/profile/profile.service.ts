@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { parseIsoDate } from '../common/input';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { FamilyService } from '../family/family.service';
 import { EditEntityType } from '../generated/prisma/enums';
@@ -124,13 +125,13 @@ export class ProfileService {
       dto.birthDate === undefined
         ? profile.birthDate
         : dto.birthDate
-          ? this.parseDate(dto.birthDate, 'birthDate')
+          ? parseIsoDate(dto.birthDate, 'birthDate')
           : null;
     const nextDeath =
       dto.deathDate === undefined
         ? profile.deathDate
         : dto.deathDate
-          ? this.parseDate(dto.deathDate, 'deathDate')
+          ? parseIsoDate(dto.deathDate, 'deathDate')
           : null;
     if (nextBirth && nextDeath && nextDeath < nextBirth) {
       throw new BadRequestException('deathDate cannot precede birthDate');
@@ -234,15 +235,5 @@ export class ProfileService {
     return Array.isArray(value)
       ? value.filter((item): item is string => typeof item === 'string')
       : [];
-  }
-
-  /** @IsISO8601({ strict: true }) guards the format; this guards forms
-   *  JS Date cannot parse from becoming an Invalid Date → 500. */
-  private parseDate(value: string, field: string): Date {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      throw new BadRequestException(`${field} is not a parsable date`);
-    }
-    return date;
   }
 }

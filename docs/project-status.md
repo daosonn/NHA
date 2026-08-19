@@ -320,6 +320,20 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   Life Profile tab unlocks (next: Memo 1.6.5, then gallery 1.6.4).
   Verified by lint/build/test + 29-case live smoke test incl. EditHistory
   rows in the DB. On branch `feature/life-events`. Also rides along:
+- Memo API (2026-08-19): private notes about a member —
+  `GET/POST /api/families/:familyId/members/:memberId/memos` +
+  `GET/PATCH/DELETE /api/memos/:memoId`. Always author-only (decision
+  2026-08-14): everything not yours 404s, memo media streams to the owner
+  only. List is `updatedAt` desc (matching the memo UI), so a no-op PATCH
+  does not bump it. **Schema: Memo grew `title` + `category`, `content`
+  optional** (migration `20260819042417`, UI-led — see `database.md`
+  Decision Log). Ships with the deferred dedupe now that a third consumer
+  arrived: shared `attach-media` helpers (the one-parent rule's write
+  side), `common/input.ts` (`normalizeText`, `parseIsoDate`) and
+  `StorageService.removeAllBestEffort` — PostService, LifeEventService,
+  ProfileService and MemoService all delegate. Task 1.6.5 done; verified
+  by lint/build/test + 16-case memo smoke + 29-case life-event regression
+  smoke. On branch `feature/memo-api` (stacked on `feature/life-events`).
   **main was broken** by a PR #15 conflict resolution leftover
   (`origin: origins` in `main.ts`) — `nest build` failed on main from
   merge `e33e8a8` until this branch's fix. Code-review round 2026-08-19

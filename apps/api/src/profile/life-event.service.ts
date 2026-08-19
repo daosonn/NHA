@@ -1,13 +1,13 @@
 import {
   BadRequestException,
-  ConflictException,
   ForbiddenException,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { normalizeText, parseIsoDate } from '../common/input';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { EditEntityType } from '../generated/prisma/enums';
+import { assertAttachableMedia, attachMediaInTx } from '../media/attach-media';
 import { StorageService } from '../storage/storage.service';
 import { CreateLifeEventDto } from './dto/create-life-event.dto';
 import { UpdateLifeEventDto } from './dto/update-life-event.dto';
@@ -61,8 +61,6 @@ interface LifeEventRecord {
 
 @Injectable()
 export class LifeEventService {
-  private readonly logger = new Logger(LifeEventService.name);
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly profileService: ProfileService,
@@ -225,13 +223,11 @@ export class LifeEventService {
     editorUserId: string,
     dto: CreateLifeEventDto,
   ): Promise<LifeEventDetail> {
-    const eventDate = this.parseDate(dto.eventDate);
+    const eventDate = parseIsoDate(dto.eventDate, 'eventDate');
     const taggedMemberIds = dto.taggedMemberIds ?? [];
     await this.validateTags(editorUserId, taggedMemberIds);
     const mediaIds = dto.mediaIds ?? [];
-    if (mediaIds.length > 0) {
-      await this.validateAttachableMedia(editorUserId, mediaIds);
-    }
+    await assertAttachableMedia(this.prisma, editorUserId, mediaIds);
 
     const title = dto.title.trim();
     if (!title) {
@@ -244,10 +240,10 @@ export class LifeEventService {
         data: {
           profileId,
           title,
-          description: this.normalizeText(dto.description),
+          description: normalizeText(dto.description),
           eventDate,
-          place: this.normalizeText(dto.place),
-          type: this.normalizeText(dto.type),
+          place: normalizeText(dto.place),
+          type: normalizeText(dto.type),
           createdById: editorUserId,
           memberTags: {
             create: taggedMemberIds.map((memberId) => ({ memberId })),
@@ -255,23 +251,9 @@ export class LifeEventService {
         },
         select: { id: true },
       });
-      if (mediaIds.length > 0) {
-        const attached = await tx.media.updateMany({
-          where: {
-            id: { in: mediaIds },
-            uploaderUserId: editorUserId,
-            postId: null,
-            memoId: null,
-            lifeEventId: null,
-          },
-          data: { lifeEventId: created.id },
-        });
-        if (attached.count !== mediaIds.length) {
-          // A concurrent request attached one of these media first;
-          // throwing rolls the whole transaction back.
-          throw new ConflictException('Some media are no longer attachable');
-        }
-      }
+      await attachMediaInTx(tx, editorUserId, mediaIds, {
+        lifeEventId: created.id,
+      });
       return tx.lifeEvent.findUniqueOrThrow({
         where: { id: created.id },
         include: eventInclude,
@@ -299,7 +281,9 @@ export class LifeEventService {
     if (dto.eventDate !== undefined && !dto.eventDate) {
       throw new BadRequestException('eventDate cannot be cleared');
     }
-    const nextDate = dto.eventDate ? this.parseDate(dto.eventDate) : undefined;
+    const nextDate = dto.eventDate
+      ? parseIsoDate(dto.eventDate, 'eventDate')
+      : undefined;
     // null tags = unchanged, same as omitted (only an array replaces).
     const taggedMemberIds = dto.taggedMemberIds ?? undefined;
     if (taggedMemberIds) {
@@ -330,14 +314,14 @@ export class LifeEventService {
           // dto.title is non-null non-blank here (guarded above).
           ...(dto.title !== undefined && { title: dto.title.trim() }),
           ...(dto.description !== undefined && {
-            description: this.normalizeText(dto.description),
+            description: normalizeText(dto.description),
           }),
           ...(nextDate !== undefined && { eventDate: nextDate }),
           ...(dto.place !== undefined && {
-            place: this.normalizeText(dto.place),
+            place: normalizeText(dto.place),
           }),
           ...(dto.type !== undefined && {
-            type: this.normalizeText(dto.type),
+            type: normalizeText(dto.type),
           }),
           updatedById: editorUserId,
         },
@@ -389,21 +373,10 @@ export class LifeEventService {
       where: { lifeEventId: eventId },
       select: { storageKey: true },
     });
-    // Cascades remove the media and tag rows.
+    // Cascades remove the media and tag rows; files go best-effort after
+    // the DB commit.
     await this.prisma.lifeEvent.delete({ where: { id: eventId } });
-    // Files go best-effort after the DB commit — an orphan file is
-    // recoverable noise, a dangling DB row is not.
-    await Promise.all(
-      media.map(async ({ storageKey }) => {
-        try {
-          await this.storage.remove(storageKey);
-        } catch (error) {
-          this.logger.warn(
-            `Could not delete stored file ${storageKey}: ${String(error)}`,
-          );
-        }
-      }),
-    );
+    await this.storage.removeAllBestEffort(media.map((m) => m.storageKey));
     return { success: true };
   }
 
@@ -448,26 +421,6 @@ export class LifeEventService {
     }
   }
 
-  private async validateAttachableMedia(
-    userId: string,
-    mediaIds: string[],
-  ): Promise<void> {
-    const attachable = await this.prisma.media.count({
-      where: {
-        id: { in: mediaIds },
-        uploaderUserId: userId,
-        postId: null,
-        memoId: null,
-        lifeEventId: null,
-      },
-    });
-    if (attachable !== mediaIds.length) {
-      throw new BadRequestException(
-        'Media must be your own uploads and not attached elsewhere',
-      );
-    }
-  }
-
   private toDetail(event: LifeEventRecord): LifeEventDetail {
     return {
       id: event.id,
@@ -484,22 +437,5 @@ export class LifeEventService {
       createdAt: event.createdAt,
       updatedAt: event.updatedAt,
     };
-  }
-
-  /** null is possible at runtime: PartialType admits explicit JSON null.
-   *  For the nullable columns it simply means "clear". */
-  private normalizeText(value: string | null | undefined): string | null {
-    const trimmed = value?.trim();
-    return trimmed ? trimmed : null;
-  }
-
-  /** @IsISO8601({ strict: true }) guards the format; this guards forms
-   *  JS Date cannot parse from becoming an Invalid Date → 500. */
-  private parseDate(value: string): Date {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      throw new BadRequestException('eventDate is not a parsable date');
-    }
-    return date;
   }
 }

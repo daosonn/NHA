@@ -300,6 +300,39 @@ Same rules as the profile it hangs off:
   members of families the editor belongs to; editable on PATCH (replaces
   the list).
 
+### Memos — `apps/api/src/memo/` (task 1.6.5, added 2026-08-19)
+
+Private notes about a family member ("mẹ thích hoa cúc"). **Always
+author-only** (decided 2026-08-14, sharing task 1.6.6 dropped): nobody
+else ever sees them, and anything that is not yours 404s — never 403,
+because a memo's existence is itself private.
+
+| Route                                              | Returns        |
+| -------------------------------------------------- | -------------- |
+| `GET /families/:familyId/members/:memberId/memos`  | `MemoDetail[]` |
+| `POST /families/:familyId/members/:memberId/memos` | `MemoDetail`   |
+| `GET /memos/:memoId`                               | `MemoDetail`   |
+| `PATCH /memos/:memoId`                             | `MemoDetail`   |
+| `DELETE /memos/:memoId`                            | `{ success }`  |
+
+`MemoDetail` is `{ id, aboutMemberId, title, content, category, media[],
+createdAt, updatedAt }` with `media[]` items `{ id, mimeType, sizeBytes }`.
+The list is **most recently touched first** (`updatedAt` desc — the note
+written today is the one being looked for), which is why a PATCH that
+changes nothing does not bump `updatedAt`. `title` is required and not
+clearable; `content` and `category` are nullable (`null` clears).
+`category` is the client's vocabulary (hobbies/health/gift/memories/todo
+today) stored as free text, like `LifeEvent.type` — the server never
+validates the taxonomy. Media attach via `mediaIds` at creation, fixed
+afterwards; memo media streams to the **owner only**. Listing requires
+membership of the family in the route; the flat `/memos/:id` routes need
+only ownership.
+
+The schema grew `title` and `category` for this (migration
+`20260819042417`) — the UI's memo cards were designed with a bold title
+line and a category chip, and the backend follows the built UI
+(same UI-leads principle as invitations).
+
 ### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side)
 
 | Route                                   | Returns                |
@@ -360,7 +393,7 @@ an endpoint, so no amount of frontend work will connect these screens.
 | **Verify code** (`verify.tsx`)       | Send / confirm an email code for **sign-up**. Registration returns tokens immediately today, so that half of the screen has nothing to call. The reset half now has endpoints — see the row below.                                                                                            |
 | **Forgot + reset password**          | ~~WBS 1.1.7~~ — **resolved on the server**: `POST /auth/password-reset/{request,verify,confirm}` (email infrastructure decided 2026-08-18: SMTP/Gmail). **The app is not wired to them**: `endpoints.ts` has no password-reset group, and the three screens only navigate between themselves. |
 | **Invitation** (`invite/[code].tsx`) | ~~A public read of an invite code~~ — **resolved**: `GET /invitations/:code` previews and `POST /invitations/:code/accept` joins on the reserved spot (task 1.4.4, PR #16). The app is not wired to them yet.                                                                                 |
-| **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~ — **resolved** (profile routes above, task 1.6.2). ~~LifeEvent~~ — **resolved** (life-event routes above, task 1.6.8). Still missing: the derived gallery (1.6.4) and Memo (1.6.5).                                                                                           |
+| **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~ — **resolved** (task 1.6.2). ~~LifeEvent~~ — **resolved** (task 1.6.8). ~~Memo~~ — **resolved** (task 1.6.5). Still missing: the derived gallery (1.6.4) — the last of the three tabs.                                                                                        |
 | **New moment** (`(tabs)/new.tsx`)    | ~~Post + media upload~~ — **resolved**: `POST /media` then `POST /posts` (tasks 1.5.2–1.5.5, PR #5).                                                                                                                                                                                          |
 | **Home**                             | ~~moments feed~~ — **resolved and wired**. `GET .../special-dates` exists but the app does not call it, so the widget is still a fixture. Recommendations have no endpoint at all.                                                                                                            |
 | **AI tab + gift ideas**              | The whole of `apps/ai` — the FastAPI service does not exist.                                                                                                                                                                                                                                  |
