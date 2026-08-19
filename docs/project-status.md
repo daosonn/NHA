@@ -140,8 +140,11 @@
   node state therefore cannot be told apart from an ordinary placeholder.
   Decided 2026-08-17 that the UI leads and the backend follows.
   **Resolved on the UI side 2026-08-18** — the invite sheet now defines the
-  shape the backend has to grow into; see Important Decisions. The backend
-  change itself is still to schedule.
+  shape the backend has to grow into; see Important Decisions.
+  **Backend done 2026-08-19** as task 1.4.4 (branch
+  `feature/per-spot-invitations`) — `Invitation` model + endpoints, tree
+  nodes carry `pending`; see `api-contract.md` → Invitations. Wiring the
+  invite UI to it is the remaining half.
 
 ## For the backend owner
 
@@ -293,6 +296,17 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   API side done, UI not wired). Verified by lint/build + live smoke
   test (ordering, pagination, 403 non-member, 401, limit validation,
   new-member visibility). On branch `feature/post-feed`.
+- Per-spot invitation API (2026-08-19): `Invitation` model (migration
+  `20260819021946`) + `POST/GET /api/families/:familyId/invitations`,
+  resend, cancel, **public** `GET /api/invitations/:code` for the invite
+  page, and `POST /api/invitations/:code/accept` (joins on the reserved
+  spot via the same link operation as join-with-`linkMemberId`). Sending
+  reserves the spot in one transaction (placeholder + edge + invitation);
+  tree members now carry `pending`. 7-day expiry (derived `EXPIRED`, never
+  stored), one live invitation per spot, cancel deletes an untouched
+  placeholder so the node falls back to Empty. Task 1.4.4 done; verified
+  by lint/build/test + 28-case live smoke test. On branch
+  `feature/per-spot-invitations`. Details in `api-contract.md`.
 
 ### Planning Phase
 
@@ -355,7 +369,8 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   `apps/mobile`, and a shared zod package would fight the API's
   class-validator DTOs. Revisit each when a second case appears.
 - **Invites are per-spot, not per-family (2026-08-18)** — UI-led decision,
-  backend to follow. The invite sheet sends a specific person to a specific
+  backend to follow. — backend done 2026-08-19 (task 1.4.4, see
+  `api-contract.md` → Invitations). The invite sheet sends a specific person to a specific
   tree node: it captures the spot id, a display name and a relationship, and
   only then produces a link. The receiver's page can therefore say who
   invited them, as what, and where they land, which is what makes a cold

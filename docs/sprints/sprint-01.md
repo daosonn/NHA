@@ -81,7 +81,7 @@ build the family tree, post content with photos, and view member profiles.
 > Màn mời thành viên (invite sheet, pending spot, trang nhận lời mời) đã
 > code UI 2026-08-18 nhưng không nằm trong checklist sprint 1 — nó cần một
 > bản ghi invitation phía backend, xem `project-status.md` → Important
-> Decisions ("Invites are per-spot"). Cần thêm task backend trước khi nối.
+> Decisions ("Invites are per-spot"). Task backend thêm 2026-08-19 là 1.4.4.
 
 - [x] 1.4.1 API relationship (dữ liệu cây) — done 2026-08-18:
       `GET /api/families/:familyId/tree` trả member nodes + relationship
@@ -102,6 +102,10 @@ build the family tree, post content with photos, and view member profiles.
       sang member id; trả `null` khi người đó không thuộc family đang xem,
       lúc đó avatar để trơ thay vì dẫn tới chỗ không tồn tại. Màn
       `member/[id]` vẫn là fixture — chờ `LifeEvent` + `Memo`.
+- [x] 1.4.4 API invitation per-spot (`Invitation` model — added 2026-08-19,
+      see `project-status.md` → "Invites are per-spot") — API done
+      2026-08-19 (chi tiết: `api-contract.md`); UI mời/nhận đã build từ
+      2026-08-18, chưa nối.
 
 ### 1.5 Nav2.5 – Bài viết / Ảnh / Sự kiện — Tạo nội dung
 
