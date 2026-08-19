@@ -1,35 +1,37 @@
-import * as Clipboard from 'expo-clipboard';
-import { Copy, Share2, UserRoundPlus, X } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { Check, Share2, UserRoundPlus, X } from 'lucide-react-native';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, Share, View } from 'react-native';
 
+import { kinshipOptions, type KinshipOption } from '../../features/family/kinship';
+import type { InvitationSummary } from '../../lib/api';
+import { daysUntil } from '../../lib/date';
 import { colors, elevation, radius } from '../../theme';
-import {
-  defaultSpot,
-  kinshipOptions,
-  type KinshipOption,
-  type TreeSpot,
-} from '../../fixtures/invite';
 import { Button } from '../ui/button';
 import { SelectField } from '../ui/select-field';
 import { Text } from '../ui/text';
 import { TextField } from '../ui/text-field';
+import { InviteCodeCard } from './invite-code-card';
 
-/** How long the Copy button stays in its confirmed state. */
-const COPIED_MS = 2000;
-
-function SheetHeader({ onClose }: { onClose: () => void }) {
+function SheetHeader({
+  title,
+  subtitle,
+  onClose,
+}: {
+  title: string;
+  subtitle: string;
+  onClose: () => void;
+}) {
   const { t } = useTranslation();
 
   return (
     <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
       <View style={{ flex: 1, gap: 3 }}>
         <Text variant="h2" weight="bold" style={{ letterSpacing: -0.3 }}>
-          {t('invite.sheet.title')}
+          {title}
         </Text>
         <Text variant="body2" color={colors.text.muted}>
-          {t('invite.sheet.subtitle')}
+          {subtitle}
         </Text>
       </View>
 
@@ -53,8 +55,16 @@ function SheetHeader({ onClose }: { onClose: () => void }) {
   );
 }
 
-/** The reserved spot, so the inviter can see what they are filling. */
-function SpotCard({ spot }: { spot: TreeSpot }) {
+/**
+ * The spot being reserved, described from the form above it.
+ *
+ * It used to read "Gen 3 · beside Minh · child of Mai & Hoang" from a fixture,
+ * on every invite, whoever was being invited. The spot does not exist until
+ * the request is sent, so the only honest thing to show beforehand is what
+ * the inviter has typed and picked — which is also the thing they might have
+ * got wrong.
+ */
+function SpotCard({ name, option }: { name: string; option: KinshipOption | undefined }) {
   const { t } = useTranslation();
 
   return (
@@ -85,90 +95,13 @@ function SpotCard({ spot }: { spot: TreeSpot }) {
       </View>
 
       <View style={{ flex: 1, gap: 2 }}>
-        <Text variant="body2" weight="semibold">
-          {t('invite.sheet.spot', { id: spot.id })}
+        <Text variant="body2" weight="semibold" numberOfLines={1}>
+          {name === '' ? t('invite.sheet.spotEmpty') : name}
         </Text>
-        <Text variant="badge" color={colors.text.subtle}>
-          {spot.summary}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-/**
- * Splits the 8-character code down the middle: `K7M2QRXP` → `K7M2 QRXP`.
- *
- * Two groups of four is what makes a code survive being read down a phone
- * line. The alphabet already drops I, O, 0 and 1 for the same reason
- * (`src/fixtures/invite.ts`).
- */
-function grouped(code: string): string {
-  const half = Math.ceil(code.length / 2);
-  return `${code.slice(0, half)} ${code.slice(half)}`.trim();
-}
-
-/**
- * The family's invite code, the thing the receiver actually types.
- *
- * Not a link: `Family.inviteCode` is what the server has, and the web page a
- * link would need does not exist yet — the role of `apps/web` is still
- * undecided (`docs/01-frontend/architecture.md`). A code also works when it is
- * read aloud to someone who does not have the app yet, which is most of the
- * people this screen is for.
- */
-function InviteCodeCard({ code, familyName }: { code: string; familyName: string }) {
-  const { t } = useTranslation();
-
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (!copied) return;
-    const timer = setTimeout(() => setCopied(false), COPIED_MS);
-    return () => clearTimeout(timer);
-  }, [copied]);
-
-  const copy = async () => {
-    // The raw code, not the spaced one — the spacing is for eyes only, and a
-    // pasted space is a rejected code.
-    await Clipboard.setStringAsync(code);
-    setCopied(true);
-  };
-
-  return (
-    <View
-      style={{
-        borderRadius: radius.xl,
-        backgroundColor: colors.coral.light,
-        padding: 14,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-      }}
-    >
-      <View style={{ flex: 1, gap: 3 }}>
-        {/* No monospace face is bundled, so the code is spaced out by hand —
-            letter spacing is what makes a code scannable, not the family. */}
-        <Text
-          weight="bold"
-          numberOfLines={1}
-          accessibilityLabel={t('invite.sheet.codeLabel', { code: code.split('').join(' ') })}
-          style={{ fontSize: 22, lineHeight: 26, letterSpacing: 3 }}
-        >
-          {grouped(code)}
-        </Text>
-        <Text variant="badge" color={colors.text.subtle}>
-          {t('invite.sheet.codeMeta', { family: familyName })}
+        <Text variant="badge" color={colors.text.subtle} numberOfLines={1}>
+          {option === undefined ? t('invite.sheet.spotUnset') : t(option.hintKey)}
         </Text>
       </View>
-
-      <Button
-        label={copied ? t('invite.sheet.copied') : t('invite.sheet.copy')}
-        variant="secondary"
-        size="small"
-        onPress={copy}
-        renderIcon={({ size, color }) => <Copy size={size} color={color} strokeWidth={2.1} />}
-      />
     </View>
   );
 }
@@ -176,17 +109,14 @@ function InviteCodeCard({ code, familyName }: { code: string; familyName: string
 export type InviteSheetProps = {
   visible: boolean;
   onClose: () => void;
-  /** The empty node that was tapped, if the flow started from the tree. */
-  spot?: TreeSpot;
-  /** `Family.inviteCode` — the 8 characters the receiver types. */
-  code: string;
-  /** Named in the code card, so the sender can see which family they are opening. */
+  /** Named throughout, so the sender can see which door they are opening. */
   familyName: string;
   /**
-   * Creates the spot. Called with the name and the kinship shortcut, which
-   * carries the `RelationshipType` and the direction the edge points.
-   * Omitted while the screen has nothing to write to.
+   * The invitation that was just created. Non-null switches the sheet to its
+   * second state — the code exists only once the server has reserved the spot,
+   * so there is nothing to show before this.
    */
+  created: InvitationSummary | null;
   onSubmit?: (input: { name: string; option: KinshipOption }) => void;
   submitting?: boolean;
   /** Catalogue key for whatever went wrong, shown above the button. */
@@ -194,19 +124,22 @@ export type InviteSheetProps = {
 };
 
 /**
- * The invite flow from the family tree.
+ * Inviting one person to one place in the tree.
+ *
+ * Two states in one sheet, because they are one act: fill in who is coming
+ * and as what, then hand over the code that arrives back. The code is per
+ * invitation, not `Family.inviteCode` — that distinction is what lets the
+ * copy promise the invitee lands on the reserved spot, which a family-wide
+ * code could never do.
  *
  * A plain `Modal` rather than `@gorhom/bottom-sheet`: this is a form, not a
- * gesture surface, and pulling in a native gesture dependency for a slide-up
- * would buy nothing here. The tree's pinch/pan is where that library earns
- * its place.
+ * gesture surface. The tree's pinch/pan is where that library earns its place.
  */
 export function InviteSheet({
   visible,
   onClose,
-  spot = defaultSpot,
-  code,
   familyName,
+  created,
   onSubmit,
   submitting = false,
   errorKey = null,
@@ -216,24 +149,29 @@ export function InviteSheet({
   const [name, setName] = useState('');
   const [kinship, setKinship] = useState<string>(kinshipOptions[0]?.value ?? 'sister');
 
-  const chosen: KinshipOption | undefined = kinshipOptions.find(
-    (option) => option.value === kinship,
-  );
+  const chosen = kinshipOptions.find((option) => option.value === kinship);
+  const expiresIn = created === null ? null : daysUntil(created.expiresAt);
 
-  const share = () => {
+  const share = (code: string, invitee: string) => {
     void Share.share({
       message: t('invite.sheet.shareMessage', {
-        name: name.trim() === '' ? t('invite.sheet.shareFallbackName') : name.trim(),
+        name: invitee,
         code,
         family: familyName,
       }),
     });
   };
 
+  /** Both states leave the form blank, so the next invite starts clean. */
+  const close = () => {
+    setName('');
+    onClose();
+  };
+
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
       <Pressable
-        onPress={onClose}
+        onPress={close}
         accessibilityRole="button"
         accessibilityLabel={t('invite.sheet.closeScrim')}
         style={{ flex: 1, backgroundColor: colors.state.scrim }}
@@ -266,91 +204,129 @@ export function InviteSheet({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <SheetHeader onClose={onClose} />
+          {created === null ? (
+            <>
+              <SheetHeader
+                title={t('invite.sheet.title')}
+                subtitle={t('invite.sheet.subtitle')}
+                onClose={close}
+              />
 
-          <SpotCard spot={spot} />
+              <SpotCard name={name.trim()} option={chosen} />
 
-          <TextField
-            label={t('invite.sheet.nameLabel')}
-            value={name}
-            onChangeText={setName}
-            placeholder={t('invite.sheet.namePlaceholder')}
-            maxLength={24}
-          />
+              <TextField
+                label={t('invite.sheet.nameLabel')}
+                value={name}
+                onChangeText={setName}
+                placeholder={t('invite.sheet.namePlaceholder')}
+                maxLength={50}
+              />
 
-          <SelectField
-            label={t('invite.sheet.relationship')}
-            title={t('invite.sheet.relationshipTitle')}
-            value={kinship}
-            options={kinshipOptions}
-            onChange={setKinship}
-          />
+              <SelectField
+                label={t('invite.sheet.relationship')}
+                title={t('invite.sheet.relationshipTitle')}
+                value={kinship}
+                options={kinshipOptions.map((option) => ({
+                  value: option.value,
+                  label: t(option.labelKey),
+                }))}
+                onChange={setKinship}
+              />
 
-          <View style={{ gap: 10 }}>
-            <Text variant="caption" weight="semibold" color={colors.text.secondary}>
-              {t('invite.sheet.codeHeading')}
-            </Text>
+              {errorKey !== null && (
+                <Text
+                  variant="caption"
+                  color={colors.themes.destructive.text}
+                  accessibilityRole="alert"
+                >
+                  {t(errorKey)}
+                </Text>
+              )}
 
-            <InviteCodeCard code={code} familyName={familyName} />
-
-            {/* What the code actually does today. The mockup promised it would
-                drop them into the reserved spot; a family-wide code cannot —
-                `POST /families/join` takes a `linkMemberId`, but a bare code
-                does not carry one. Saying so is cheaper than a surprise. */}
-            <Text variant="badge" color={colors.text.subtle}>
-              {t('invite.sheet.codeHint', { family: familyName })}
-            </Text>
-          </View>
-
-          {errorKey !== null && (
-            <Text
-              variant="caption"
-              color={colors.themes.destructive.text}
-              accessibilityRole="alert"
-            >
-              {t(errorKey)}
-            </Text>
-          )}
-
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Pressable
-              onPress={share}
-              accessibilityRole="button"
-              accessibilityLabel={t('invite.sheet.share')}
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: radius.full,
-                backgroundColor: colors.background.card,
-                borderWidth: 1.5,
-                borderColor: colors.state.disabledBorder,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Share2 size={21} color={colors.text.secondary} strokeWidth={2} />
-            </Pressable>
-
-            <View style={{ flex: 1 }}>
               <Button
-                label={t('invite.sheet.save')}
+                label={t('invite.sheet.send')}
                 size="large"
                 fullWidth
                 disabled={name.trim() === '' || chosen === undefined}
                 loading={submitting}
                 onPress={() => {
-                  if (onSubmit === undefined || chosen === undefined) {
-                    onClose();
-                    return;
-                  }
+                  if (onSubmit === undefined || chosen === undefined) return;
                   onSubmit({ name: name.trim(), option: chosen });
                 }}
                 renderIcon={({ size, color }) => (
                   <UserRoundPlus size={size} color={color} strokeWidth={2.1} />
                 )}
               />
-            </View>
-          </View>
+            </>
+          ) : (
+            <>
+              <SheetHeader
+                title={t('invite.sheet.sentTitle', { name: created.name })}
+                subtitle={t('invite.sheet.sentSubtitle')}
+                onClose={close}
+              />
+
+              <View style={{ gap: 10 }}>
+                <Text variant="caption" weight="semibold" color={colors.text.secondary}>
+                  {t('invite.sheet.codeHeading')}
+                </Text>
+
+                {/* The deadline is the one thing about a code that changes
+                    on its own, so it is named rather than left to be
+                    discovered when it stops working. `daysUntil` returns
+                    null for a date already gone, which cannot happen on a
+                    just-created invitation but is not worth asserting. */}
+                <InviteCodeCard
+                  code={created.code}
+                  subtitle={
+                    expiresIn === null
+                      ? t('invite.sheet.codeMetaPlain', { family: familyName })
+                      : t('invite.sheet.codeMeta', { family: familyName, count: expiresIn })
+                  }
+                />
+
+                {/* True now, and it was not before: a per-invitation code
+                    carries the reserved spot, so the person who types it
+                    lands where the inviter put them rather than arriving
+                    unattached. The old family-wide code could not. */}
+                <Text variant="badge" color={colors.text.subtle}>
+                  {t('invite.sheet.codeHint', { name: created.name, family: familyName })}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <Pressable
+                  onPress={() => share(created.code, created.name)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('invite.sheet.share')}
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: radius.full,
+                    backgroundColor: colors.background.card,
+                    borderWidth: 1.5,
+                    borderColor: colors.state.disabledBorder,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Share2 size={21} color={colors.text.secondary} strokeWidth={2} />
+                </Pressable>
+
+                <View style={{ flex: 1 }}>
+                  <Button
+                    label={t('invite.sheet.done')}
+                    size="large"
+                    fullWidth
+                    onPress={close}
+                    renderIcon={({ size, color }) => (
+                      <Check size={size} color={color} strokeWidth={2.2} />
+                    )}
+                  />
+                </View>
+              </View>
+            </>
+          )}
         </ScrollView>
       </View>
     </Modal>

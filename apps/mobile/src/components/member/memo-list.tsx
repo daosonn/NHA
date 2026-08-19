@@ -1,8 +1,8 @@
-import { Lock, NotebookPen, Plus } from 'lucide-react-native';
+import { Lock, NotebookPen, Plus, TriangleAlert } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
-import type { MemoItem } from '../../fixtures/member';
+import type { MemoDetail } from '../../lib/api';
 import { colors, radius } from '../../theme';
 import { EmptyState } from '../ui/empty-state';
 import { Text } from '../ui/text';
@@ -24,7 +24,9 @@ function AddCard({ onPress }: { onPress?: () => void }) {
         borderRadius: radius['3xl'],
         borderWidth: 1.5,
         borderStyle: 'dashed',
-        borderColor: colors.state.disabledBorder,
+        // Mockup 1c: a slightly firmer dash than a disabled border, so the
+        // tile reads as an invitation rather than as something switched off.
+        borderColor: colors.state.borderDashed,
         backgroundColor: colors.background.surfaceSoft,
         alignItems: 'center',
         justifyContent: 'center',
@@ -52,11 +54,14 @@ function AddCard({ onPress }: { onPress?: () => void }) {
 }
 
 export type MemoListProps = {
-  memos: MemoItem[];
+  memos: MemoDetail[];
   memberName: string;
+  loading?: boolean;
+  failed?: boolean;
+  onRetry?: () => void;
   onAddMemo?: () => void;
-  onOpenMemo?: (memo: MemoItem) => void;
-  onMemoActions?: (memo: MemoItem) => void;
+  onOpenMemo?: (memo: MemoDetail) => void;
+  onMemoActions?: (memo: MemoDetail) => void;
 };
 
 /**
@@ -75,11 +80,33 @@ export type MemoListProps = {
 export function MemoList({
   memos,
   memberName,
+  loading = false,
+  failed = false,
+  onRetry,
   onAddMemo,
   onOpenMemo,
   onMemoActions,
 }: MemoListProps) {
   const { t } = useTranslation();
+
+  if (loading) {
+    return (
+      <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+        <ActivityIndicator color={colors.coral.primary} />
+      </View>
+    );
+  }
+
+  if (failed) {
+    return (
+      <EmptyState
+        renderIcon={(props) => <TriangleAlert {...props} strokeWidth={2} />}
+        title={t('member.memoFailed')}
+        actionLabel={t('home.retry')}
+        onActionPress={onRetry}
+      />
+    );
+  }
 
   if (memos.length === 0) {
     return (
@@ -93,8 +120,20 @@ export function MemoList({
     );
   }
 
-  const columns: MemoItem[][] = [[], []];
-  memos.forEach((memo, index) => columns[index % 2]?.push(memo));
+  /**
+   * The Add tile is the first *item*, not an extra stuck on top of the left
+   * column. Counting it into the alternation is what keeps the two sides even:
+   * bolting it on gave the left column one more card than the right every
+   * time, and with a single note the right column was empty altogether — the
+   * whole grid leaned. Mockup 1c alternates the same way.
+   */
+  const cells: ({ kind: 'add' } | { kind: 'memo'; memo: MemoDetail })[] = [
+    { kind: 'add' },
+    ...memos.map((memo) => ({ kind: 'memo' as const, memo })),
+  ];
+
+  const columns: (typeof cells)[] = [[], []];
+  cells.forEach((cell, index) => columns[index % 2]?.push(cell));
 
   return (
     <View style={{ gap: 12 }}>
@@ -114,16 +153,18 @@ export function MemoList({
       <View style={{ flexDirection: 'row', gap: GRID_GAP }}>
         {columns.map((column, index) => (
           <View key={index} style={{ flex: 1, gap: GRID_GAP }}>
-            {index === 0 && <AddCard onPress={onAddMemo} />}
-
-            {column.map((memo) => (
-              <MemoCard
-                key={memo.id}
-                memo={memo}
-                onPress={() => onOpenMemo?.(memo)}
-                onLongPress={() => onMemoActions?.(memo)}
-              />
-            ))}
+            {column.map((cell) =>
+              cell.kind === 'add' ? (
+                <AddCard key="add" onPress={onAddMemo} />
+              ) : (
+                <MemoCard
+                  key={cell.memo.id}
+                  memo={cell.memo}
+                  onPress={() => onOpenMemo?.(cell.memo)}
+                  onLongPress={() => onMemoActions?.(cell.memo)}
+                />
+              ),
+            )}
           </View>
         ))}
       </View>

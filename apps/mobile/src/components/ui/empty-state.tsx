@@ -9,6 +9,7 @@ export type EmptyStateProps = {
   renderIcon: (props: { size: number; color: string }) => React.ReactNode;
   title: string;
   description?: string;
+  /** Drawn only alongside `onActionPress` — see below. */
   actionLabel?: string;
   onActionPress?: () => void;
 };
@@ -17,6 +18,14 @@ export type EmptyStateProps = {
  * Shown where content would be. States what is missing and what to do about
  * it — an empty section should never be a blank rectangle the reader has to
  * interpret.
+ *
+ * The action needs **both** a label and a handler. A label on its own used to
+ * be enough, which is how two profiles ended up offering "Add a milestone"
+ * and "Post a memory" buttons that did nothing at all: the caller wrote the
+ * copy before the destination existed, and nothing here objected. Requiring
+ * the pair moves "a button that leads nowhere is not rendered"
+ * (`docs/project-status.md` → Important Decisions) from a rule people have to
+ * remember into one the component keeps.
  */
 export function EmptyState({
   renderIcon,
@@ -52,8 +61,14 @@ export function EmptyState({
         )}
       </View>
 
-      {actionLabel !== undefined && (
-        <Button label={actionLabel} variant="secondary" size="small" onPress={onActionPress} />
+      {actionLabel !== undefined && onActionPress !== undefined && (
+        <Button
+          label={actionLabel}
+          variant="secondary"
+          size="small"
+          align="center"
+          onPress={onActionPress}
+        />
       )}
     </View>
   );

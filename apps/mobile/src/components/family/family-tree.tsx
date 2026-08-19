@@ -71,6 +71,8 @@ const DESIGN_WIDTH = 353;
 export type FamilyTreeProps = {
   data: FamilyTreeData;
   onSelectNode?: (node: PositionedNode) => void;
+  /** Long press: manage the person rather than open them. */
+  onManageNode?: (node: PositionedNode) => void;
   onAddMember?: () => void;
 };
 
@@ -82,7 +84,7 @@ export type FamilyTreeProps = {
  * now, and gestures need `react-native-gesture-handler` wired into the layout
  * before they behave on both platforms.
  */
-export function FamilyTree({ data, onSelectNode, onAddMember }: FamilyTreeProps) {
+export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: FamilyTreeProps) {
   const { t } = useTranslation();
 
   const window = useWindowDimensions();
@@ -132,7 +134,7 @@ export function FamilyTree({ data, onSelectNode, onAddMember }: FamilyTreeProps)
         ))}
 
         {[...layout.nodes.values()].map((node) => (
-          <TreeNode key={node.id} node={node} onPress={onSelectNode} />
+          <TreeNode key={node.id} node={node} onPress={onSelectNode} onLongPress={onManageNode} />
         ))}
       </View>
 

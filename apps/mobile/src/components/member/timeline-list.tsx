@@ -1,9 +1,9 @@
-import { Images, MapPin, Milestone } from 'lucide-react-native';
+import { Images, MapPin, Milestone, TriangleAlert } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
 import { colors, radius } from '../../theme';
-import type { LifeEventItem } from '../../fixtures/member';
+import type { LifeEventDetail } from '../../lib/api';
 import { formatDayMonth } from '../../lib/date';
 import { EmptyState } from '../ui/empty-state';
 import { Text } from '../ui/text';
@@ -15,7 +15,7 @@ const DOT = 11;
 const DOT_CENTRE = DOT / 2 + 3;
 
 type RowProps = {
-  event: LifeEventItem;
+  event: LifeEventDetail;
   /** Repeated years are drawn once — the rail already implies continuity. */
   showYear: boolean;
   isLatest: boolean;
@@ -86,11 +86,11 @@ function TimelineRow({ event, showYear, isLatest, isLast }: RowProps) {
           </Text>
         )}
 
-        {event.mediaCount > 0 && (
+        {event.media.length > 0 && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
             <Images size={13} color={colors.text.lightMuted} strokeWidth={2} />
             <Text variant="caption" color={colors.text.lightMuted}>
-              {t('member.photos', { count: event.mediaCount })}
+              {t('member.photos', { count: event.media.length })}
             </Text>
           </View>
         )}
@@ -100,7 +100,20 @@ function TimelineRow({ event, showYear, isLatest, isLast }: RowProps) {
 }
 
 export type TimelineListProps = {
-  events: LifeEventItem[];
+  events: LifeEventDetail[];
+  loading?: boolean;
+  failed?: boolean;
+  onRetry?: () => void;
+  /**
+   * Adds a milestone. Nothing passes it yet — `LifeEvent` has no endpoint
+   * (task 1.6.8), so the button is simply not drawn.
+   *
+   * When it does arrive it is gated the same way the profile is, because a
+   * life event is part of that profile: your own timeline and a placeholder's
+   * are editable, a linked member's is theirs alone
+   * (`docs/00-shared/domain-model.md` → wiki-style). `ProfileBody` already
+   * holds the `editability` that decides it.
+   */
   onAddEvent?: () => void;
 };
 
@@ -111,8 +124,33 @@ export type TimelineListProps = {
  * the other way, because the top is the beginning. The most recent event is
  * the one coral node, which is where the reader ends up.
  */
-export function TimelineList({ events, onAddEvent }: TimelineListProps) {
+export function TimelineList({
+  events,
+  loading = false,
+  failed = false,
+  onRetry,
+  onAddEvent,
+}: TimelineListProps) {
   const { t } = useTranslation();
+
+  if (loading) {
+    return (
+      <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+        <ActivityIndicator color={colors.coral.primary} />
+      </View>
+    );
+  }
+
+  if (failed) {
+    return (
+      <EmptyState
+        renderIcon={(props) => <TriangleAlert {...props} strokeWidth={2} />}
+        title={t('member.timelineFailed')}
+        actionLabel={t('home.retry')}
+        onActionPress={onRetry}
+      />
+    );
+  }
 
   if (events.length === 0) {
     return (

@@ -44,7 +44,9 @@ export function SectionHeader({
         )}
       </View>
 
-      {actionLabel !== undefined && (
+      {/* Both, or neither — a "See all" that goes nowhere is worse than no
+          "See all" at all. Same rule the empty state keeps. */}
+      {actionLabel !== undefined && onActionPress !== undefined && (
         <Pressable onPress={onActionPress} accessibilityRole="button" hitSlop={8}>
           <Text variant="caption" weight="medium" color={colors.text.lightMuted}>
             {actionLabel}

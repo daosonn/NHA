@@ -2,17 +2,17 @@ import { Pencil, Trash2 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, View } from 'react-native';
 
-import type { MemoItem } from '../../fixtures/member';
+import type { MemoDetail } from '../../lib/api';
 import { colors, elevation, radius } from '../../theme';
 import { Text } from '../ui/text';
-import { CATEGORY_KEY } from './memo-card';
+import { categoryLabel } from './memo-card';
 
 export type MemoActionsSheetProps = {
   /** The note being acted on. `null` closes the sheet. */
-  memo: MemoItem | null;
+  memo: MemoDetail | null;
   onClose: () => void;
-  onEdit: (memo: MemoItem) => void;
-  onDelete: (memo: MemoItem) => void;
+  onEdit: (memo: MemoDetail) => void;
+  onDelete: (memo: MemoDetail) => void;
 };
 
 /**
@@ -75,8 +75,8 @@ export function MemoActionsSheet({ memo, onClose, onEdit, onDelete }: MemoAction
             </Text>
             <Text variant="badge" color={colors.text.subtle}>
               {t('member.memoActions.meta', {
-                category: t(CATEGORY_KEY[memo.category]),
-                count: memo.photos.length,
+                category: categoryLabel(t, memo.category),
+                count: memo.media.length,
               })}
             </Text>
           </View>

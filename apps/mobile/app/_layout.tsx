@@ -1,6 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -19,7 +19,7 @@ import Lora_700Bold from '@expo-google-fonts/lora/700Bold/Lora_700Bold.ttf';
 // Registers the Tailwind utilities with NativeWind. Must be imported once,
 // at the root.
 import '../global.css';
-import { SessionProvider } from '../src/features/auth/session';
+import { SessionProvider, useSession } from '../src/features/auth/session';
 import { currentAccessToken, refreshSession } from '../src/features/auth/session-store';
 import { ActiveFamilyProvider } from '../src/features/family/active-family';
 import { configureApi } from '../src/lib/api';
@@ -41,6 +41,50 @@ configureApi({
 // One client for the life of the process, created outside the component so a
 // fast refresh does not throw the cache away on every save.
 const queryClient = createQueryClient();
+
+/**
+ * Route groups a signed-out visitor may see.
+ *
+ * `(auth)` is the signed-out half of the app. `invite` is there because
+ * `GET /invitations/:code` is the API's only public route — the whole point
+ * of the invitation page is to make its case to somebody who does not have an
+ * account yet, and bouncing them to Welcome throws the code away.
+ */
+const PUBLIC_GROUPS: readonly string[] = ['(auth)', 'invite'];
+
+/**
+ * Sends a signed-out visitor back to Welcome, from anywhere.
+ *
+ * `(tabs)/_layout.tsx` and `(auth)/_layout.tsx` each guard their own group,
+ * which left every route that belongs to neither — `settings`, `member`,
+ * `memo`, `post`, `profile`, `family`, `ai`, `create-family` — unguarded.
+ * Signing out from Settings is what exposed it: the session went empty, the
+ * screen stayed put, and it simply redrew itself with "not signed in" where
+ * the name had been.
+ *
+ * An effect rather than `<Redirect>` because this layout has to keep
+ * rendering the `Stack` in every state — the Welcome screen being redirected
+ * *to* is one of its children.
+ */
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { status } = useSession();
+  const segments = useSegments();
+  const router = useRouter();
+
+  const group = segments[0];
+
+  useEffect(() => {
+    // `loading` is the keychain read, not a verdict — acting on it would
+    // bounce every returning user through Welcome on each cold start.
+    if (status !== 'anonymous') return;
+    // Empty on the very first render, before a route has resolved.
+    if (group === undefined || PUBLIC_GROUPS.includes(group)) return;
+
+    router.replace('/welcome');
+  }, [status, group, router]);
+
+  return children;
+}
 
 export default function RootLayout() {
   // Deliberately not a render gate. i18next is already initialised with the
@@ -76,12 +120,14 @@ export default function RootLayout() {
           {/* Below the session: which family is active is only a question
               once somebody is signed in. */}
           <ActiveFamilyProvider>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: colors.background.page },
-              }}
-            />
+            <AuthGate>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: colors.background.page },
+                }}
+              />
+            </AuthGate>
           </ActiveFamilyProvider>
         </SessionProvider>
       </QueryClientProvider>

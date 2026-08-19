@@ -1,41 +1,27 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Lock } from 'lucide-react-native';
+import { ImageOff, Lock } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
-import { CATEGORY_KEY } from '../../src/components/member/memo-card';
+import {
+  MEMO_CATEGORIES,
+  categoryKey,
+  type MemoCategory,
+} from '../../src/components/member/memo-card';
+import { NoteField } from '../../src/components/member/note-field';
 import { MediaStrip, type DraftMedia } from '../../src/components/moment/media-strip';
 import { BrandMark } from '../../src/components/ui/brand-mark';
+import { Card } from '../../src/components/ui/card';
 import { Text } from '../../src/components/ui/text';
-import { TextField } from '../../src/components/ui/text-field';
-import { getMemo, saveMemo } from '../../src/features/member/memo-store';
-import type { GalleryItem, MemoCategory } from '../../src/fixtures/member';
+import { useCreateMemo, useMemo, useUpdateMemo } from '../../src/features/member/use-memos';
+import { ApiError, type MemoDetail } from '../../src/lib/api';
 import { colors, radius, spacing } from '../../src/theme';
 
-const CATEGORIES: MemoCategory[] = ['gift', 'hobbies', 'health', 'memories', 'todo'];
-
-const TITLE_MAX = 60;
-
-/** Today as `YYYY-MM-DD`, which is what the fixtures and the API both use. */
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-/**
- * Photos already on the note become tiles without a `uri`, which is exactly
- * what `MediaStrip` draws as a striped placeholder — there is no real image
- * behind a fixture photo to show.
- */
-function toDraft(photo: GalleryItem): DraftMedia {
-  return { id: photo.id, kind: 'photo', tone: photo.tone };
-}
-
-function toPhoto(item: DraftMedia): GalleryItem {
-  return { id: item.id, tone: item.tone };
-}
+const TITLE_MAX = 120;
+const CONTENT_MAX = 5000;
 
 /** One pill per category, coloured by its own theme when chosen. */
 function CategoryPills({
@@ -53,7 +39,7 @@ function CategoryPills({
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ gap: 7, paddingRight: spacing.xl }}
     >
-      {CATEGORIES.map((category) => {
+      {MEMO_CATEGORIES.map((category) => {
         const theme = colors.themes[category];
         const active = category === value;
 
@@ -89,7 +75,7 @@ function CategoryPills({
               weight={active ? 'semibold' : 'medium'}
               color={active ? theme.text : colors.text.secondary}
             >
-              {t(CATEGORY_KEY[category])}
+              {t(categoryKey(category))}
             </Text>
           </Pressable>
         );
@@ -102,20 +88,73 @@ function CategoryPills({
  * Write a note, or change one.
  *
  * One screen for both: to the person typing, adding a note and correcting one
- * are the same act, and `id` only decides what the fields start out holding
- * and which word the header uses.
+ * are the same act. Which it is comes from the params — `id` means an
+ * existing note, `familyId` + `memberId` mean a new one about that person.
  */
 export default function MemoEditorScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { id, memberId } = useLocalSearchParams<{ id?: string; memberId: string }>();
+  const { id, familyId, memberId } = useLocalSearchParams<{
+    id?: string;
+    familyId?: string;
+    memberId?: string;
+  }>();
 
-  const existing = id === undefined ? null : getMemo(memberId, id);
+  const editing = id !== undefined;
+  const existing = useMemo(editing ? id : null);
 
-  const [title, setTitle] = useState(existing?.title ?? '');
-  const [body, setBody] = useState(existing?.body ?? '');
-  const [category, setCategory] = useState<MemoCategory>(existing?.category ?? 'gift');
-  const [photos, setPhotos] = useState<DraftMedia[]>(existing?.photos.map(toDraft) ?? []);
+  if (editing && existing.isPending) {
+    return (
+      <View className="flex-1 bg-page">
+        <AppHeader />
+        <View style={{ paddingTop: 48, alignItems: 'center' }}>
+          <ActivityIndicator color={colors.coral.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <MemoEditorForm
+      memo={existing.data ?? null}
+      familyId={familyId ?? null}
+      memberId={memberId ?? null}
+      onDone={() => router.back()}
+      onCancel={() => router.back()}
+    />
+  );
+}
+
+/**
+ * Split out so the fields can be seeded with `useState` once the note has
+ * loaded — a form whose initial values arrive after the first render either
+ * needs this or an effect that fights the person typing.
+ */
+function MemoEditorForm({
+  memo,
+  familyId,
+  memberId,
+  onDone,
+  onCancel,
+}: {
+  memo: MemoDetail | null;
+  familyId: string | null;
+  memberId: string | null;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const { t } = useTranslation();
+
+  const create = useCreateMemo(familyId, memberId);
+  const update = useUpdateMemo(memo?.id ?? null);
+  const mutation = memo === null ? create : update;
+
+  const [title, setTitle] = useState(memo?.title ?? '');
+  const [content, setContent] = useState(memo?.content ?? '');
+  const [category, setCategory] = useState<MemoCategory>(
+    MEMO_CATEGORIES.find((value) => value === memo?.category) ?? 'gift',
+  );
+  const [photos, setPhotos] = useState<DraftMedia[]>([]);
   const [permissionDenied, setPermissionDenied] = useState(false);
 
   const pick = async () => {
@@ -145,6 +184,8 @@ export default function MemoEditorScreen() {
         kind: 'photo' as const,
         tone: 'light' as const,
         uri: asset.uri,
+        fileName: asset.fileName ?? `memo-${index}.jpg`,
+        mimeType: asset.mimeType ?? 'image/jpeg',
       })),
     ]);
   };
@@ -154,26 +195,44 @@ export default function MemoEditorScreen() {
   const save = () => {
     if (!ready) return;
 
-    const now = today();
+    const trimmed = content.trim();
 
-    saveMemo(memberId, {
-      id: existing?.id ?? `memo-${now}-${Math.round(Math.random() * 1e6)}`,
-      title: title.trim(),
-      body: body.trim() === '' ? null : body.trim(),
-      category,
-      createdAt: existing?.createdAt ?? now,
-      updatedAt: now,
-      photos: photos.map(toPhoto),
-    });
+    if (memo === null) {
+      create.mutate(
+        {
+          title: title.trim(),
+          content: trimmed === '' ? undefined : trimmed,
+          category,
+          media: photos,
+        },
+        { onSuccess: onDone },
+      );
+      return;
+    }
 
-    router.back();
+    update.mutate(
+      {
+        title: title.trim() === memo.title ? undefined : title.trim(),
+        // `null` clears it on the server; `undefined` leaves it alone.
+        content: trimmed === (memo.content ?? '') ? undefined : trimmed === '' ? null : trimmed,
+        category: category === memo.category ? undefined : category,
+      },
+      { onSuccess: onDone },
+    );
   };
+
+  const errorKey =
+    mutation.error === null
+      ? null
+      : mutation.error instanceof ApiError && mutation.error.isOffline
+        ? 'errors.offline'
+        : 'errors.generic';
 
   return (
     <View className="flex-1 bg-page">
       <AppHeader
         left={
-          <Pressable onPress={() => router.back()} accessibilityRole="button" hitSlop={8}>
+          <Pressable onPress={onCancel} accessibilityRole="button" hitSlop={8}>
             <Text variant="body1" weight="medium" color={colors.text.muted}>
               {t('member.memoEditor.cancel')}
             </Text>
@@ -183,16 +242,14 @@ export default function MemoEditorScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <BrandMark size={22} />
             <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-              {existing === null
-                ? t('member.memoEditor.titleNew')
-                : t('member.memoEditor.titleEdit')}
+              {memo === null ? t('member.memoEditor.titleNew') : t('member.memoEditor.titleEdit')}
             </Text>
           </View>
         }
         right={
           <Pressable
             onPress={save}
-            disabled={!ready}
+            disabled={!ready || mutation.isPending}
             accessibilityRole="button"
             accessibilityState={{ disabled: !ready }}
             hitSlop={8}
@@ -218,56 +275,83 @@ export default function MemoEditorScreen() {
           <CategoryPills value={category} onChange={setCategory} />
         </View>
 
-        {/* Deliberately not wrapped in a `Card` like the mockup: `TextField`
-            is already a white bordered surface, and nesting two of them in a
-            third draws a box inside a box. Every other form in the app —
-            auth, the invite sheet — stacks the fields the same way. */}
-        <View style={{ paddingHorizontal: spacing.xl, gap: 14 }}>
-          <TextField
-            label={t('member.memoEditor.titleLabel')}
-            value={title}
-            onChangeText={setTitle}
-            placeholder={t('member.memoEditor.titlePlaceholder')}
-            maxLength={TITLE_MAX}
-          />
-
-          <TextField
-            label={t('member.memoEditor.bodyLabel')}
-            value={body}
-            onChangeText={setBody}
-            placeholder={t('member.memoEditor.bodyPlaceholder')}
-            multiline
-            numberOfLines={6}
-          />
-
-          <View style={{ gap: 6 }}>
-            <Text variant="caption" weight="semibold" color={colors.text.secondary}>
-              {t('member.memoEditor.photosLabel')}
-            </Text>
-
-            <MediaStrip
-              media={photos}
-              onAdd={() => void pick()}
-              onRemove={(item) =>
-                setPhotos((current) => current.filter((photo) => photo.id !== item.id))
-              }
+        {/* Mockup 1f: the note is one card you write on, not a stack of form
+            fields. The inputs are borderless because the card is already the
+            surface — see `note-field.tsx`. */}
+        <View style={{ paddingHorizontal: spacing.xl, gap: 12 }}>
+          <Card padding={18} style={{ gap: 14 }}>
+            <NoteField
+              weight="bold"
+              fontSize={21}
+              lineHeight={28}
+              letterSpacing={-0.4}
+              value={title}
+              onChangeText={setTitle}
+              placeholder={t('member.memoEditor.titlePlaceholder')}
+              maxLength={TITLE_MAX}
+              accessibilityLabel={t('member.memoEditor.titleLabel')}
+              autoFocus={memo === null}
             />
 
-            {permissionDenied && (
-              <Text
-                variant="caption"
-                color={colors.themes.destructive.text}
-                accessibilityRole="alert"
-              >
-                {t('moment.permissionDenied')}
-              </Text>
-            )}
-          </View>
+            <View style={{ height: 1, backgroundColor: colors.background.subtle }} />
 
-          {/* The mockup has a "Visible to the Nguyen family" row here. A memo
-              is private to whoever wrote it (`docs/00-shared/domain-model.md`),
-              so the screen states that instead of offering a choice that does
-              not exist. */}
+            <NoteField
+              weight="regular"
+              fontSize={15}
+              lineHeight={25}
+              value={content}
+              onChangeText={setContent}
+              placeholder={t('member.memoEditor.bodyPlaceholder')}
+              maxLength={CONTENT_MAX}
+              accessibilityLabel={t('member.memoEditor.bodyLabel')}
+            />
+
+            {memo === null ? (
+              <>
+                <MediaStrip
+                  media={photos}
+                  onAdd={() => void pick()}
+                  onRemove={(item) =>
+                    setPhotos((current) => current.filter((photo) => photo.id !== item.id))
+                  }
+                />
+
+                {permissionDenied && (
+                  <Text
+                    variant="caption"
+                    color={colors.themes.destructive.text}
+                    accessibilityRole="alert"
+                  >
+                    {t('moment.permissionDenied')}
+                  </Text>
+                )}
+              </>
+            ) : (
+              // Attachments are fixed at creation, the same rule posts and
+              // life events follow. Said out loud rather than shown as a
+              // picker that would throw the pictures away on save.
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                <ImageOff size={14} color={colors.text.subtle} strokeWidth={2} />
+                <Text variant="caption" color={colors.text.subtle} style={{ flex: 1 }}>
+                  {t('member.memoEditor.photosFixed', { count: memo.media.length })}
+                </Text>
+              </View>
+            )}
+          </Card>
+
+          {errorKey !== null && (
+            <Text
+              variant="caption"
+              color={colors.themes.destructive.text}
+              accessibilityRole="alert"
+            >
+              {t(errorKey)}
+            </Text>
+          )}
+
+          {/* Where 1f puts "Visible to the Nguyen family · Change". A memo is
+              private to whoever wrote it, so this states the fact rather than
+              offering a choice that does not exist. */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 4 }}>
             <Lock size={14} color={colors.text.subtle} strokeWidth={2} />
             <Text variant="caption" color={colors.text.subtle} style={{ flex: 1 }}>

@@ -2,13 +2,17 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
-import type { MemberProfile, MemoItem } from '../../fixtures/member';
-import { deleteMemo, useMemos } from '../../features/member/memo-store';
+import type { MemberProfile } from '../../features/member/member-profile';
+import { useLifeEvents } from '../../features/member/use-life-events';
+import { useMemberMoments } from '../../features/member/use-member-moments';
+import { useDeleteMemo, useMemberMemos } from '../../features/member/use-memos';
+import type { MemoDetail, PostDetail } from '../../lib/api';
 import { SegmentedTabs } from '../ui/segmented-tabs';
 import { AlbumGrid } from './album-grid';
 import { MemoActionsSheet } from './memo-actions-sheet';
 import { MemoDeleteDialog } from './memo-delete-dialog';
 import { MemoList } from './memo-list';
+import { ProfileFacts } from './profile-facts';
 import { ProfileHero } from './profile-hero';
 import { TimelineList } from './timeline-list';
 
@@ -16,10 +20,17 @@ type Tab = 'timeline' | 'album' | 'memo';
 
 export type ProfileBodyProps = {
   profile: MemberProfile;
+  /** The family these sections are read through. Null while none is active. */
+  familyId: string | null;
+  /** This person's row in that family. */
+  memberId: string | null;
+  /** True on your own Profile tab, which reads the `/me` routes. */
+  ownProfile?: boolean;
   onEdit?: () => void;
   onAddMemo?: () => void;
-  onOpenMemo?: (memo: MemoItem) => void;
-  onEditMemo?: (memo: MemoItem) => void;
+  onOpenMemo?: (memo: MemoDetail) => void;
+  onEditMemo?: (memo: MemoDetail) => void;
+  onOpenMoment?: (moment: PostDetail) => void;
 };
 
 /**
@@ -33,57 +44,93 @@ export type ProfileBodyProps = {
  * The memo sheet and the delete dialog live here rather than in the two
  * routes: they are the same state on both, and a second copy is a second
  * thing to keep in step. Navigation stays with the routes, handed down as
- * callbacks, and the undo toast belongs to them too — it has to float over
- * the scroll view rather than inside it.
+ * callbacks.
  */
 export function ProfileBody({
   profile,
+  familyId,
+  memberId,
+  ownProfile = false,
   onEdit,
   onAddMemo,
   onOpenMemo,
   onEditMemo,
+  onOpenMoment,
 }: ProfileBodyProps) {
   const { t } = useTranslation();
 
   const [tab, setTab] = useState<Tab>('timeline');
 
-  // Notes come from the store rather than from `profile`, so a note written on
-  // the editor screen is already here when that screen pops back.
-  const memos = useMemos(profile.id);
+  const memos = useMemberMemos(familyId, memberId);
+  const deleteMemo = useDeleteMemo();
 
-  const [acting, setActing] = useState<MemoItem | null>(null);
-  const [confirming, setConfirming] = useState<MemoItem | null>(null);
+  const timeline = useLifeEvents({ own: ownProfile, familyId, memberId });
+  const events = timeline.data ?? [];
+
+  const moments = useMemberMoments(familyId, memberId, profile.userId);
+
+  const [acting, setActing] = useState<MemoDetail | null>(null);
+  const [confirming, setConfirming] = useState<MemoDetail | null>(null);
+
+  const list = memos.data ?? [];
 
   const confirmDelete = () => {
     if (confirming === null) return;
 
-    // The store holds the note for the length of the undo window; the toast
-    // that offers it back is rendered by the route, over the scroll view.
-    deleteMemo(profile.id, confirming.id);
+    // No undo: a real DELETE takes the media files with it, so putting the
+    // note back would mean writing a new one that has lost its photos. The
+    // dialog carries the weight instead — see `use-memos.ts`.
+    deleteMemo.mutate(confirming);
     setConfirming(null);
   };
 
   return (
-    <View style={{ gap: 20 }}>
+    <View style={{ gap: 16 }}>
       <ProfileHero profile={profile} onEdit={onEdit} />
+
+      <ProfileFacts profile={profile} />
 
       <SegmentedTabs
         accessibilityLabel={t('member.sections', { name: profile.displayName })}
         value={tab}
         onChange={setTab}
         options={[
-          { value: 'timeline', label: t('member.timeline'), count: profile.lifeEvents.length },
-          { value: 'album', label: t('member.album'), count: profile.gallery.length },
-          { value: 'memo', label: t('member.memo'), count: memos.length },
+          { value: 'timeline', label: t('member.timeline'), count: events.length },
+          { value: 'album', label: t('member.album'), count: moments.data?.items.length ?? 0 },
+          { value: 'memo', label: t('member.memo'), count: list.length },
         ]}
       />
 
-      {tab === 'timeline' && <TimelineList events={profile.lifeEvents} />}
-      {tab === 'album' && <AlbumGrid items={profile.gallery} />}
+      {tab === 'timeline' && (
+        <TimelineList
+          events={events}
+          loading={timeline.isPending && (ownProfile || memberId !== null)}
+          failed={timeline.isError}
+          onRetry={() => void timeline.refetch()}
+        />
+      )}
+      {tab === 'album' && (
+        <AlbumGrid
+          moments={moments.data}
+          memberName={profile.displayName}
+          own={ownProfile}
+          // Distinct from "nothing to show": with no family on screen there
+          // is no feed to read, and the empty state should not blame the
+          // absence of photographs for the absence of a family.
+          noFamily={familyId === null || memberId === null}
+          loading={moments.isPending && familyId !== null && memberId !== null}
+          failed={moments.isError}
+          onRetry={() => void moments.refetch()}
+          onOpenMoment={onOpenMoment}
+        />
+      )}
       {tab === 'memo' && (
         <MemoList
-          memos={memos}
+          memos={list}
           memberName={profile.displayName}
+          loading={memos.isPending && memberId !== null}
+          failed={memos.isError}
+          onRetry={() => void memos.refetch()}
           onAddMemo={onAddMemo}
           onOpenMemo={onOpenMemo}
           onMemoActions={setActing}
@@ -105,7 +152,7 @@ export function ProfileBody({
 
       <MemoDeleteDialog
         visible={confirming !== null}
-        photoCount={confirming?.photos.length ?? 0}
+        photoCount={confirming?.media.length ?? 0}
         onConfirm={confirmDelete}
         onCancel={() => setConfirming(null)}
       />

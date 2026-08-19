@@ -169,6 +169,89 @@ export type FamilyTree = {
   relationships: RelationshipSummary[];
 };
 
+// --------------------------------------------------------- invitations
+
+/**
+ * `EXPIRED` is not a stored value: the server derives it from `expiresAt`
+ * when it reads the row (`invitation.service.ts`). So a client must never
+ * write it back, and must not assume a `PENDING` it cached an hour ago is
+ * still pending.
+ */
+export type InvitationStatus = 'PENDING' | 'ACCEPTED' | 'CANCELLED' | 'EXPIRED';
+
+/**
+ * `POST /api/families/:familyId/invitations` and the list under it.
+ *
+ * Note `code` — this is the invitation's **own** code, not
+ * `Family.inviteCode`. That difference is the whole point of the endpoint: a
+ * family code lets somebody in the door, while this one carries the spot
+ * that was reserved for them, so they land in the tree where the inviter put
+ * them instead of arriving unattached.
+ */
+export type InvitationSummary = {
+  id: string;
+  familyId: string;
+  /** The reserved spot — a placeholder `FamilyMember` created with the invite. */
+  memberId: string;
+  code: string;
+  name: string;
+  relationshipType: RelationshipType;
+  /** Display-only picker key ("sister"); never a `RelationshipType`. */
+  kinshipKey: string | null;
+  status: InvitationStatus;
+  inviterName: string;
+  expiresAt: IsoDateTime;
+  createdAt: IsoDateTime;
+};
+
+/**
+ * `GET /api/invitations/:code` — the only route in the API that answers
+ * without a token, so the person being invited can read the page before they
+ * have an account.
+ */
+export type InvitationPreview = {
+  code: string;
+  familyName: string;
+  inviterName: string;
+  /** What the inviter calls the invitee. */
+  name: string;
+  relationshipType: RelationshipType;
+  kinshipKey: string | null;
+  memberCount: number;
+  /** Posts shared to this family. */
+  momentCount: number;
+  /** First names around the reserved spot, so the page can be specific. */
+  parents: { name: string }[];
+  siblings: { name: string }[];
+  expiresAt: IsoDateTime;
+};
+
+/**
+ * `POST /api/families/:familyId/invitations`.
+ *
+ * Omit `memberId` and the server creates the placeholder and its edge in the
+ * same transaction — which is why the app no longer adds a member first and
+ * invites second. `newMemberIsFrom` is ignored when `memberId` is given,
+ * because that spot already sits somewhere in the tree.
+ */
+export type CreateInvitationRequest = {
+  name: string;
+  memberId?: string;
+  relationshipType: RelationshipType;
+  kinshipKey?: string;
+  /** `PARENT` points parent→child, so "Mother" is `true`, "Daughter" `false`. */
+  newMemberIsFrom?: boolean;
+  /** Free label for the edge, only when `relationshipType` is `OTHER`. */
+  relationshipLabel?: string;
+};
+
+/** `DELETE /api/families/:familyId/invitations/:invitationId`. */
+export type CancelInvitationResult = {
+  success: boolean;
+  /** False when the spot had already been written to and was kept. */
+  memberRemoved: boolean;
+};
+
 // --------------------------------------------------------------- posts
 
 /** `apps/api/src/generated/prisma/enums.ts` → `PostType`. */
@@ -336,6 +419,107 @@ export type UpdateProfileRequest = {
   interests?: string[];
   birthDate?: string | null;
   deathDate?: string | null;
+};
+
+// ---------------------------------------------------------- life events
+
+/**
+ * `LifeEventService.LifeEventDetail` — a milestone on the Timeline tab.
+ *
+ * Hangs off the LifeProfile, so it follows the person: a linked member's
+ * timeline is the same in every family, a placeholder's is family-local.
+ */
+export type LifeEventDetail = {
+  id: string;
+  profileId: string;
+  title: string;
+  description: string | null;
+  /**
+   * A DATE column — but it arrives as a full ISO timestamp all the same
+   * (`1968-04-12T00:00:00.000Z`), like every other date on this wire.
+   * `src/lib/date.ts` cuts it down; do not parse it by hand.
+   */
+  eventDate: IsoDateTime;
+  place: string | null;
+  /** Free text; the taxonomy is still TBD (screen 9 filters). */
+  type: string | null;
+  taggedMemberIds: string[];
+  media: PostMediaSummary[];
+  createdById: string;
+  updatedById: string | null;
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+};
+
+/** Title and `eventDate` are required; media is fixed at creation. */
+export type CreateLifeEventRequest = {
+  title: string;
+  description?: string;
+  eventDate: string;
+  place?: string;
+  type?: string;
+  taggedMemberIds?: string[];
+  mediaIds?: string[];
+};
+
+/**
+ * Omit a key to leave it alone. Title and `eventDate` cannot be cleared —
+ * sending `null` for either is a 400. Media cannot change.
+ */
+export type UpdateLifeEventRequest = {
+  title?: string;
+  description?: string | null;
+  eventDate?: string;
+  place?: string | null;
+  type?: string | null;
+  taggedMemberIds?: string[];
+};
+
+// ---------------------------------------------------------------- memos
+
+/**
+ * `MemoService.MemoDetail` — a private note *about* a family member.
+ *
+ * Always author-only (`docs/00-shared/domain-model.md`): nobody else ever
+ * sees one, and anything that is not yours 404s rather than 403s, because a
+ * memo's existence is itself private.
+ */
+export type MemoDetail = {
+  id: string;
+  /**
+   * Who the note is about — `null` once that member left or was removed. A
+   * memo outlives the node it hangs off (decided 2026-08-19), so other
+   * people's notes are not destroyed by someone else leaving.
+   */
+  aboutMemberId: string | null;
+  /** Name snapshot from write time, so an orphaned note stays readable. */
+  aboutName: string;
+  title: string;
+  content: string | null;
+  /** The client's own vocabulary, stored as free text — the server never validates it. */
+  category: string | null;
+  media: PostMediaSummary[];
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+};
+
+/** `POST /api/families/:familyId/members/:memberId/memos`. */
+export type CreateMemoRequest = {
+  title: string;
+  content?: string;
+  category?: string;
+  /** Your own uploads, not attached elsewhere. Fixed after creation. */
+  mediaIds?: string[];
+};
+
+/**
+ * `PATCH /api/memos/:memoId`. Omit a key to leave it alone; `null` clears
+ * content or category. Media cannot change — same rule as posts.
+ */
+export type UpdateMemoRequest = {
+  title?: string;
+  content?: string | null;
+  category?: string | null;
 };
 
 /** What the delete endpoints return. */

@@ -106,7 +106,9 @@
     "noFamilyBody": "Create one and invite the people you want to keep things with, or join with a code someone sent you.",
     "startFamily": "Create or join a family",
     "loadFailed": "Could not load your families.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "switchToGroup": "Switch to {{name}}",
+    "newGroup": "Start a new family group"
   },
   "family": {
     "title": "Family tree",
@@ -140,14 +142,88 @@
     },
     "loadFailed": "Could not load the family tree.",
     "emptyTitle": "Nobody here yet",
-    "emptyBody": "Add the people in this family and the tree draws itself."
+    "emptyBody": "Add the people in this family and the tree draws itself.",
+    "new": {
+      "title": "New family group",
+      "markTitle": "A group of its own",
+      "markBody": "Its own tree, its own moments, its own code.",
+      "nameLabel": "Group name",
+      "namePlaceholder": "What the family calls itself",
+      "suggestions": {
+        "momsSide": "Mom's side",
+        "dadsSide": "Dad's side",
+        "grandparents": "Grandparents"
+      },
+      "useSuggestion": "Name the group {{name}}",
+      "youLabel": "Your place in it",
+      "youName": "{{name}} · you",
+      "youFallback": "You",
+      "youHint": "You keep the group. Relations get set as people arrive.",
+      "submit": "Create group",
+      "doneTitle": "Group created",
+      "doneBody": "It is on your family strip now. Hand out the code and the tree fills itself in.",
+      "codeLabel": "Family code",
+      "codeMeta": "Made for this group · does not expire",
+      "codeHint": "Anyone with this code joins the group. You can add spots to the tree afterwards.",
+      "done": "Done"
+    },
+    "nodeHint": "Press and hold to change their place in the tree.",
+    "member": {
+      "title": "Their place in the tree",
+      "closeScrim": "Close",
+      "nameLabel": "Name",
+      "namePlaceholder": "What the family calls them",
+      "genderLabel": "Gender",
+      "genderTitle": "How should the tree refer to them?",
+      "gender": {
+        "female": "Female",
+        "male": "Male",
+        "other": "Prefer not to say"
+      },
+      "relationshipLabel": "Relationship to you",
+      "relationshipTitle": "How is {{name}} related to you?",
+      "noRelationYet": "No relationship recorded yet — choosing one draws the thread.",
+      "theirsToEdit": "{{name}} has their own account, so their name and details are theirs to change.",
+      "save": "Save changes",
+      "remove": "Remove from the tree",
+      "blocked": {
+        "hasChildren": "Cannot remove someone who has a branch below them.",
+        "notYours": "Only this person can leave the family."
+      },
+      "errors": {
+        "forbidden": "Only this person can change that.",
+        "duplicate": "That relationship is already recorded."
+      }
+    },
+    "waitingForMore": "Waiting for {{name}} and {{count}} other",
+    "waitingForMore_other": "Waiting for {{name}} and {{count}} others",
+    "invitedExpires": "{{count}} day left",
+    "invitedExpires_other": "{{count}} days left",
+    "resendFor": "Give {{name}} another week",
+    "kinship": {
+      "sister": "Sister",
+      "brother": "Brother",
+      "mother": "Mother",
+      "father": "Father",
+      "daughter": "Daughter",
+      "son": "Son",
+      "partner": "Partner",
+      "stepParent": "Step-parent",
+      "other": "Someone else",
+      "hint": {
+        "sameGeneration": "Same generation as you",
+        "above": "One generation above you",
+        "below": "One generation below you",
+        "beside": "Beside you",
+        "custom": "You describe the relationship"
+      }
+    }
   },
   "invite": {
     "sheet": {
       "title": "Invite a family member",
-      "subtitle": "They will be linked to the spot you tapped",
+      "subtitle": "They get a code that lands them in the spot you choose",
       "closeScrim": "Close the invite sheet",
-      "spot": "Spot in the tree · {{id}}",
       "nameLabel": "Name to remember them by",
       "namePlaceholder": "Their name",
       "relationship": "Relationship",
@@ -156,15 +232,24 @@
       "copied": "Copied",
       "share": "Share the invite",
       "shareMessage": "{{name}}, join {{family}} on NHA with this code: {{code}}",
-      "shareFallbackName": "You",
-      "codeHeading": "Family code",
+      "codeHeading": "Their invitation code",
       "codeLabel": "Family code {{code}}",
-      "codeMeta": "{{family}} · does not expire",
-      "codeHint": "Send them this code. They enter it when signing up and join {{family}}.",
-      "save": "Save spot"
+      "codeMeta": "{{family}} · expires in {{count}} day",
+      "codeHint": "Send {{name}} this code. They enter it when signing up and land on the spot you saved for them in {{family}}.",
+      "spotEmpty": "A new spot in the tree",
+      "spotUnset": "Pick how they are related to you",
+      "codeMeta_other": "{{family}} · expires in {{count}} days",
+      "codeMetaPlain": "{{family}}",
+      "send": "Send invitation",
+      "done": "Done",
+      "sentTitle": "{{name}} has a spot",
+      "sentSubtitle": "It is held for a week. Send them the code below.",
+      "errors": {
+        "noAnchor": "You are not in this tree yet, so there is nothing to relate the new person to.",
+        "forbidden": "Only a member of this family can invite someone to it."
+      }
     },
     "preview": {
-      "nodeLabel": "{{name}} · {{role}}",
       "yourSpot": "YOUR SPOT"
     },
     "page": {
@@ -177,7 +262,15 @@
       "privacy": "Only this family can see what you post",
       "join": "Join the family",
       "notNow": "Not now",
-      "finePrint": "No account yet? You will set one up in one step. Code {{code}}."
+      "finePrint": "No account yet? You will set one up in one step. Code {{code}}.",
+      "joinSignedOut": "Create an account and join",
+      "dead": "This invitation is no longer open",
+      "deadBody": "It may have been withdrawn, already used, or run out of time. Ask whoever sent it for a new code.",
+      "finePrintExpiry": "Code {{code}} · {{count}} day left to accept",
+      "finePrintExpiry_other": "Code {{code}} · {{count}} days left to accept",
+      "errors": {
+        "alreadyMember": "You are already part of this family."
+      }
     }
   },
   "member": {
@@ -186,20 +279,12 @@
     "album": "Album",
     "memo": "Memo",
     "editSelf": "Edit your profile",
-    "addDetails": "Add details about {{name}}",
-    "bornYear": "Born {{year}}",
-    "lifespan": "{{born}} – {{died}}",
-    "noBio": "No story here yet. Anyone in the family can start it.",
+    "noBio": "Nothing written here yet. The pencil on your photo starts it.",
     "photos_one": "{{count}} photo",
     "photos_other": "{{count}} photos",
     "timelineEmpty": "No milestones yet",
     "timelineEmptyBody": "Births, moves, weddings — the moments that mark a life.",
     "timelineEmptyAction": "Add a milestone",
-    "albumCaption": "From memories this family shared",
-    "albumEmpty": "No photos yet",
-    "albumEmptyBody": "Photos appear here when someone posts a memory and tags this person.",
-    "albumEmptyAction": "Post a memory",
-    "openPhoto": "Open photo",
     "memoEmpty": "No notes yet",
     "memoEmptyBody": "Things to remember about {{name}} — allergies, gift ideas, stories to ask for. Only you will see them.",
     "memoEmptyAction": "Write a note",
@@ -209,7 +294,8 @@
       "health": "Health",
       "gift": "Gift idea",
       "memories": "Ask about",
-      "todo": "To do"
+      "todo": "To do",
+      "none": "Note"
     },
     "memoHeading": "Notes about {{name}}",
     "memoOpenHint": "Opens the note. Press and hold for more.",
@@ -220,9 +306,10 @@
       "metaEdited": "{{written}} · edited {{edited}}",
       "photos_one": "Photo · {{count}}",
       "photos_other": "Photos · {{count}}",
-      "addPhoto": "Add photo",
       "gone": "This note is gone",
-      "goneBody": "It was deleted. Go back to write a new one."
+      "goneBody": "It was deleted. Go back to write a new one.",
+      "about": "About {{name}}",
+      "aboutWhen": "About {{name}} · {{when}}"
     },
     "memoEditor": {
       "titleNew": "New note",
@@ -233,8 +320,9 @@
       "titlePlaceholder": "The thing worth remembering",
       "bodyLabel": "Anything else",
       "bodyPlaceholder": "Where, how much, who said it…",
-      "photosLabel": "Photos",
-      "private": "Only you can see this note."
+      "private": "Only you can see this note.",
+      "photosFixed_one": "{{count}} photo, fixed when the note was written.",
+      "photosFixed_other": "{{count}} photos, fixed when the note was written."
     },
     "memoActions": {
       "closeScrim": "Close the note actions",
@@ -250,9 +338,28 @@
       "body_one": "This note and its {{count}} photo are gone for good.",
       "body_other": "This note and its {{count}} photos are gone for good.",
       "confirm": "Delete note",
-      "cancel": "Keep it",
-      "done": "Note deleted",
-      "undo": "Undo"
+      "cancel": "Keep it"
+    },
+    "memoFailed": "Those notes could not be loaded.",
+    "timelineFailed": "That timeline could not be loaded.",
+    "moments": {
+      "heading": "Moments together",
+      "counts": "{{photos}} photos · {{count}} moment",
+      "counts_other": "{{photos}} photos · {{count}} moments",
+      "partial": "From the most recent moments shared with this family.",
+      "empty": "No moments yet",
+      "emptyBody": "Photos appear here when somebody posts a moment and tags {{name}} in it.",
+      "failed": "Could not load the moments",
+      "video": "Video",
+      "openMoment": "Open {{title}}, {{count}} item",
+      "openMoment_other": "Open {{title}}, {{count}} items",
+      "headingOwn": "Your moments",
+      "emptyBodyOwn": "Photos appear here when you post a moment, or when somebody tags you in theirs.",
+      "noFamily": "Join or create a family first — moments are shared with one."
+    },
+    "facts": {
+      "born": "Born {{date}}",
+      "lifespan": "Born {{born}} · died {{died}}"
     }
   },
   "moment": {
@@ -279,7 +386,11 @@
       "tooLarge": "That file is over the 100MB limit.",
       "unsupported": "That file type is not supported.",
       "empty": "Add a photo or write something first."
-    }
+    },
+    "tagHeading": "Who's in this moment?",
+    "tagYou": "You",
+    "tagMember": "Tag {{name}}",
+    "tagHint": "Tagged people get this moment on their profile."
   },
   "ai": {
     "title": "AI",
@@ -313,7 +424,6 @@
     "title": "Account & Settings",
     "signedOut": "Signed out",
     "noEmail": "—",
-    "mockNotice": "This account is not signed in for real yet. Nothing here reaches the API.",
     "signOut": "Sign out",
     "language": "Language",
     "languageTitle": "Choose a language"
@@ -403,5 +513,30 @@
     "loadFailed": "Could not load the photos.",
     "emptyTitle": "No photos yet",
     "emptyBody": "Everything the family shares with a photo or a video shows up here."
+  },
+  "profileEdit": {
+    "title": "Edit profile",
+    "save": "Save",
+    "loadFailed": "That profile could not be loaded.",
+    "nameLabel": "Name",
+    "nameFromAccount": "This is your account name. Change it in your account settings.",
+    "bioLabel": "Your story",
+    "bioPlaceholder": "Where you grew up, what you have done, what you are like…",
+    "interestsLabel": "Your interests",
+    "addInterestLabel": "Add an interest",
+    "addInterestPlaceholder": "Gardening, Hue cooking…",
+    "addInterest": "Add",
+    "removeInterest": "Remove {{interest}}",
+    "birthLabel": "Born",
+    "deathLabel": "Died",
+    "datePlaceholder": "YYYY-MM-DD",
+    "dateHint": "Year, month, day — 1968-04-12",
+    "errors": {
+      "date": "Write the date as YYYY-MM-DD.",
+      "noSuchDay": "There is no such day.",
+      "forbidden": "Only this person can change their own profile.",
+      "birthAfterDeath": "This is after the recorded death date."
+    },
+    "deathReadOnly": "Recorded elsewhere. It is not changed on this screen."
   }
 }

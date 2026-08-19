@@ -1,31 +1,18 @@
-import type { TFunction } from 'i18next';
 import { PencilLine } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import type { MemberProfile } from '../../features/member/member-profile';
 import { colors, radius } from '../../theme';
-import type { MemberProfile } from '../../fixtures/member';
 import { Avatar } from '../ui/avatar';
-import { Chip } from '../ui/chip';
+import { Card } from '../ui/card';
 import { Text } from '../ui/text';
 
-const AVATAR = 88;
+const AVATAR = 56;
 /** Same warm-white lift the tree nodes use, so a face reads the same anywhere. */
-const RING = `0 0 0 4px ${colors.background.card}, 0 0 0 5px ${colors.state.borderDefault}`;
+const RING = `0 0 0 3px ${colors.background.card}, 0 0 0 4px ${colors.state.borderDefault}`;
 
-const EDIT = 34;
-/** The gap is painted, not empty: the badge sits on top of the avatar ring. */
-const EDIT_RING = `0 0 0 2.5px ${colors.background.page}`;
-
-/** Years only. A life is placed by its decades, not by exact days. */
-function lifespan(t: TFunction, birthDate: string | null, deathDate: string | null): string | null {
-  const born = birthDate?.slice(0, 4);
-  const died = deathDate?.slice(0, 4);
-
-  if (born !== undefined && died !== undefined) return t('member.lifespan', { born, died });
-  if (born !== undefined) return t('member.bornYear', { year: born });
-  return null;
-}
+const EDIT = 30;
 
 export type ProfileHeroProps = {
   profile: MemberProfile;
@@ -33,87 +20,77 @@ export type ProfileHeroProps = {
 };
 
 /**
- * The identity block at the top of a Life Profile.
+ * The identity block at the top of a Life Profile (mockup 7).
  *
- * Editing is a badge on the avatar rather than a button under the bio: it
- * belongs to the face it changes, and it keeps the space between the name
- * and the tabs empty, which is what makes the screen read as a person
- * rather than as a toolbar.
+ * A card with the face on the left rather than a centred column: the screen
+ * below it is a stack of cards, and centring the one at the top made it read
+ * as a banner the rest of the page hung off. Left-aligned it is the first row
+ * of the page, which is what it is.
  *
- * Who may edit is a domain rule, not a UI preference: the viewer's own
- * profile is theirs alone, a placeholder is wiki-editable by the whole
- * family, and a linked account belongs to that person — see
- * docs/00-shared/domain-model.md.
+ * The bio lives here rather than in the facts block under it. The mockup does
+ * not draw one at all — its example person has none — but the field is real,
+ * the edit screen writes it, and dropping it from the only screen that shows
+ * it would quietly lose what somebody wrote about their own life. A paragraph
+ * belongs with the name, not in a list of one-line facts.
+ *
+ * Who may edit is the server's answer, carried on `editability`.
  */
 export function ProfileHero({ profile, onEdit }: ProfileHeroProps) {
   const { t } = useTranslation();
 
-  const years = lifespan(t, profile.birthDate, profile.deathDate);
-  const meta = [profile.relation, years].filter((part) => part !== null).join(' · ');
-  const canEdit = profile.editability !== 'locked';
+  const meta = [profile.relation, profile.familyName]
+    .filter((part): part is string => part !== null && part !== '')
+    .join(' · ');
 
   return (
-    <View style={{ alignItems: 'center', gap: 12 }}>
-      <View>
-        <Avatar size={AVATAR} tone={profile.tone} ring={RING} />
+    <Card padding={16} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14 }}>
+      <Avatar size={AVATAR} tone={profile.tone} ring={RING} />
 
-        {canEdit && (
-          <Pressable
-            onPress={onEdit}
-            accessibilityRole="button"
-            accessibilityLabel={
-              profile.editability === 'self'
-                ? t('member.editSelf')
-                : t('member.addDetails', { name: profile.displayName })
-            }
-            hitSlop={6}
-            style={{
-              position: 'absolute',
-              right: -2,
-              bottom: -2,
-              width: EDIT,
-              height: EDIT,
-              borderRadius: radius.full,
-              backgroundColor: colors.coral.primary,
-              boxShadow: EDIT_RING,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <PencilLine size={16} color={colors.background.card} strokeWidth={2.2} />
-          </Pressable>
-        )}
-      </View>
-
-      <View style={{ alignItems: 'center', gap: 3 }}>
-        <Text variant="h1" weight="bold" style={{ letterSpacing: -0.4 }}>
+      <View style={{ flex: 1, gap: 3, paddingTop: 2 }}>
+        <Text variant="h2" weight="bold" style={{ letterSpacing: -0.3 }}>
           {profile.displayName}
         </Text>
 
-        <Text variant="caption" weight="medium" color={colors.text.muted}>
-          {meta}
-        </Text>
+        {meta !== '' && (
+          <Text variant="caption" weight="medium" color={colors.coral.deep}>
+            {meta}
+          </Text>
+        )}
+
+        {profile.bio !== null && profile.bio !== '' ? (
+          <Text variant="body2" color={colors.text.body} style={{ paddingTop: 4 }}>
+            {profile.bio}
+          </Text>
+        ) : (
+          // Only on your own profile. On somebody else's, an empty story is
+          // not a gap the reader can close — saying so would only point at a
+          // door that is not theirs to open.
+          profile.editability === 'self' && (
+            <Text variant="body2" color={colors.text.subtle} style={{ paddingTop: 4 }}>
+              {t('member.noBio')}
+            </Text>
+          )
+        )}
       </View>
 
-      {profile.bio !== null ? (
-        <Text variant="body2" color={colors.text.body} style={{ textAlign: 'center' }}>
-          {profile.bio}
-        </Text>
-      ) : (
-        profile.editability === 'wiki' && (
-          <Text variant="body2" color={colors.text.subtle} style={{ textAlign: 'center' }}>
-            {t('member.noBio')}
-          </Text>
-        )
+      {profile.editability === 'self' && (
+        <Pressable
+          onPress={onEdit}
+          accessibilityRole="button"
+          accessibilityLabel={t('member.editSelf')}
+          hitSlop={8}
+          style={{
+            width: EDIT,
+            height: EDIT,
+            borderRadius: radius.full,
+            backgroundColor: colors.coral.light,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <PencilLine size={15} color={colors.coral.deep} strokeWidth={2.2} />
+        </Pressable>
       )}
-
-      {profile.interests.length > 0 && (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6 }}>
-          {profile.interests.map((interest) => (
-            <Chip key={interest} label={interest} />
-          ))}
-        </View>
-      )}
-    </View>
+    </Card>
   );
 }

@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import { HousePlus, TriangleAlert } from 'lucide-react-native';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, View } from 'react-native';
 
@@ -14,6 +15,7 @@ import { EmptyState } from '../../src/components/ui/empty-state';
 import { SectionHeader } from '../../src/components/ui/section-header';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { useFamilies } from '../../src/features/family/use-families';
+import { takePendingInvite } from '../../src/features/family/pending-invite';
 import { useMemberIdLookup } from '../../src/features/family/use-member-for-user';
 import { useFamilyFeed } from '../../src/features/feed/use-family-feed';
 import { notificationCount, recommendations, upcomingEvent } from '../../src/fixtures/home';
@@ -44,6 +46,23 @@ export default function HomeScreen() {
   const router = useRouter();
   const { familyId } = useActiveFamily();
 
+  /**
+   * Somebody who opened an invite link while signed out was sent through
+   * sign-up, and the auth group lands everyone here afterwards. This is the
+   * far end of that detour: take the code back out and finish the trip.
+   *
+   * Home rather than the sign-up screen because the same route serves people
+   * who signed *in* instead, and because the auth redirect fires on the tick
+   * the session appears — a return navigation from inside that screen races
+   * it. See `features/family/pending-invite.ts`.
+   */
+  useEffect(() => {
+    const code = takePendingInvite();
+    if (code === null) return;
+
+    router.replace({ pathname: '/invite/[code]', params: { code } });
+  }, [router]);
+
   const { data: families, isPending, isError, refetch } = useFamilies();
   const feed = useFamilyFeed(familyId);
   const memberIdFor = useMemberIdLookup();
@@ -71,11 +90,14 @@ export default function HomeScreen() {
    */
   const intro = (
     <View style={{ gap: 14, paddingBottom: 14 }}>
+      {/* The + starts another group. Someone with no family at all lands on
+          `/create-family` from the empty state below, which offers joining
+          too — by the time this strip exists, they already have one. */}
       <GroupStrip
         groups={toStripGroups(families ?? [])}
         remainingCount={Math.max(0, (families?.length ?? 0) - VISIBLE_GROUPS)}
         onPress={() => router.push('/family')}
-        onAddPress={() => router.push('/create-family')}
+        onAddPress={() => router.push('/family/new')}
       />
 
       {/* Both still read fixtures. Recommendations have no endpoint at all;
