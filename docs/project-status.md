@@ -376,6 +376,15 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   deletes in the MVP; a dump before risky work is the way back. Verified
   by a real backup→restore round-trip (row counts intact, API healthy
   after). See `docs/04-devops/local-environment.md` § Backup & restore.
+- Memory list API (2026-08-19, sprint 2, tasks 2.1.1–2.1.2): Memories
+  reuse `Post` as designed — no new model; `GET /families/:id/posts`
+  gained optional filters `?memberId` (tagged-in plus authored-by when
+  linked; 404 outside the family), `?from`/`?to` (calendar days on the
+  posted date, same grouping choice as Omoide) and `?type`. Filters
+  combine and pagination is unchanged, so the Home feed path is
+  untouched. Verified by lint/build/test + 13-case live smoke (filters,
+  combinations, cursor pagination under filter, 400/404 matrix). On
+  branch `feature/memory-list`. Details in `api-contract.md`.
 - AI insight pipe (2026-08-19, sprint 2): the backend half of the
   two-phase photo pipeline — `MediaInsight` hidden store (migration
   `20260819071710`, table 26) + internal routes

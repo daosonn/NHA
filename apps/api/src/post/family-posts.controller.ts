@@ -16,7 +16,9 @@ export class FamilyPostsController {
   @Get()
   @ApiOperation({
     summary:
-      'Recent posts shared to this family, newest first, cursor-paginated (WBS 1.2.3)',
+      'Posts shared to this family, newest first, cursor-paginated ' +
+      '(WBS 1.2.3). Optional Memories filters (WBS 2.1.2): ?memberId, ' +
+      '?from/?to (YYYY-MM-DD, posted date), ?type',
   })
   feed(
     @CurrentUser() user: AuthUser,
