@@ -9,7 +9,8 @@
     "selectedOption": "{{label}}: {{value}}",
     "retry": "Try again",
     "done": "Done",
-    "addOwn": "Add your own"
+    "addOwn": "Add your own",
+    "or": "or"
   },
   "nav": {
     "home": "Home",
@@ -95,11 +96,22 @@
       "invalidCredentials": "That email and password do not match.",
       "emailTaken": "That email already has an account.",
       "checkFields": "Check the fields above and try again."
+    },
+    "google": "Google",
+    "facebook": "Facebook",
+    "continueGoogle": "Continue with Google",
+    "continueFacebook": "Continue with Facebook",
+    "social": {
+      "finishing": "Finishing sign-in…",
+      "errors": {
+        "emailTaken": "That address already has a password on NHA. Sign in with it instead — we have filled it in for you.",
+        "rejected": "The provider would not complete the sign-in. Try again, or use your email and password.",
+        "incomplete": "The sign-in came back incomplete. Please try again."
+      }
     }
   },
   "home": {
     "recommendations": "Recommendations",
-    "seeAll": "See all",
     "familyTree": "Family tree",
     "openFamilyTree": "Open family tree",
     "moreGroups": "+{{count}}",
@@ -118,6 +130,14 @@
       "inDays_other": "In {{count}} days",
       "more": "{{count}} more coming up",
       "more_other": "{{count}} more coming up"
+    },
+    "recommend": {
+      "onThisDay": "On this day, {{year}}",
+      "month": "{{month}} {{year}}",
+      "photoCount": "{{count}} photo",
+      "photoCount_other": "{{count}} photos",
+      "lookBack": "A look back",
+      "album": "From “{{name}}”"
     }
   },
   "family": {

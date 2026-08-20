@@ -9,7 +9,8 @@
     "selectedOption": "{{label}}：{{value}}",
     "retry": "もう一度",
     "done": "完了",
-    "addOwn": "自分で追加"
+    "addOwn": "自分で追加",
+    "or": "または"
   },
   "nav": {
     "home": "ホーム",
@@ -94,11 +95,22 @@
       "invalidCredentials": "メールアドレスまたはパスワードが正しくありません。",
       "emailTaken": "このメールアドレスは既に登録されています。",
       "checkFields": "入力内容を確認してもう一度お試しください。"
+    },
+    "google": "Google",
+    "facebook": "Facebook",
+    "continueGoogle": "Googleで続ける",
+    "continueFacebook": "Facebookで続ける",
+    "social": {
+      "finishing": "サインインを完了しています…",
+      "errors": {
+        "emailTaken": "このメールアドレスはすでにNHAでパスワード登録されています。パスワードでサインインしてください（アドレスは入力済みです）。",
+        "rejected": "サインインが完了しませんでした。もう一度試すか、メールとパスワードをお使いください。",
+        "incomplete": "サインインの結果が不完全でした。もう一度お試しください。"
+      }
     }
   },
   "home": {
     "recommendations": "おすすめ",
-    "seeAll": "すべて見る",
     "familyTree": "家系図",
     "openFamilyTree": "家系図を開く",
     "moreGroups": "+{{count}}",
@@ -115,6 +127,13 @@
       "tomorrow": "明日",
       "inDays_other": "あと{{count}}日",
       "more_other": "ほかに{{count}}件"
+    },
+    "recommend": {
+      "onThisDay": "{{year}}年の今日",
+      "month": "{{year}}年{{month}}",
+      "photoCount_other": "写真{{count}}枚",
+      "lookBack": "あの頃",
+      "album": "「{{name}}」から"
     }
   },
   "family": {
