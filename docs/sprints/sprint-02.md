@@ -11,7 +11,8 @@
 ## Sprint Goal
 
 Memory + AI: the family can browse shared memories, generate a video from
-photos, and get AI suggestions (gifts, messages, quality time).
+photos, and get AI suggestions (gifts, messages). ~~quality time~~ — the
+third suggestion type was dropped 2026-08-20, see § 2.6.
 
 ## Scope
 
@@ -47,12 +48,22 @@ photos, and get AI suggestions (gifts, messages, quality time).
 - [ ] 2.5.1 Chọn người/dịp (context)
 - [ ] 2.5.2 Generate lời nhắn (có regenerate)
 
-### 2.6 AI Quality Time — Gợi ý hoạt động
+### 2.6 AI Quality Time — Gợi ý hoạt động — **BỎ (2026-08-20)**
 
-- [ ] 2.6.1 Chọn thành viên (family member)
-- [ ] 2.6.2 Nhập thời gian/sở thích (context)
-- [ ] 2.6.3 Generate kế hoạch (danh sách hoạt động)
-- [ ] 2.6.4 Lưu & chia sẻ plan (bảng `Plan` + `PlanShare` — chỉ chủ sửa/chia sẻ, người được chia sẻ chỉ xem; added 2026-08-14, see `database.md`)
+**Cả nhóm 2.6 không làm nữa** (quyết định 2026-08-20). Lý do và hệ quả
+ghi ở `project-status.md` → Important Decisions. Tóm tắt: tính năng này
+nằm trong WBS nhưng **không có dòng nào trong `mvp-scope.md`**, và AI
+sprint 2 chốt ở hai tính năng đã chạy end-to-end là gợi ý quà (2.4) và
+gợi ý lời nhắn (2.5).
+
+- ~~2.6.1 Chọn thành viên (family member)~~ — bỏ
+- ~~2.6.2 Nhập thời gian/sở thích (context)~~ — bỏ
+- ~~2.6.3 Generate kế hoạch (danh sách hoạt động)~~ — bỏ; chưa bao giờ có API
+- ~~2.6.4 Lưu & chia sẻ plan (`Plan` + `PlanShare`)~~ — bỏ. API **đã viết
+  và verify xong** 2026-08-20 nhưng **không merge**: nằm ở branch
+  `feature/plans` nếu sau này quay lại. Hai bảng `Plan`/`PlanShare` **giữ
+  nguyên trong schema** (rỗng, vô hại — xoá thì tốn một migration cho thứ
+  có thể sống lại).
 
 ### 2.7 Test Sprint 2
 
