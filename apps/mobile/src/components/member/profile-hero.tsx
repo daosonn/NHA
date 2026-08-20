@@ -38,7 +38,7 @@ export type ProfileHeroProps = {
 export function ProfileHero({ profile, onEdit }: ProfileHeroProps) {
   const { t } = useTranslation();
 
-  const meta = [profile.relation, profile.familyName]
+  const meta = [profile.relationKey === null ? null : t(profile.relationKey), profile.familyName]
     .filter((part): part is string => part !== null && part !== '')
     .join(' · ');
 

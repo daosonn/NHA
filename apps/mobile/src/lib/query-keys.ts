@@ -39,6 +39,12 @@ export const queryKeys = {
   /** Your own, which exists before you belong to any family. */
   myGallery: () => ['me', 'gallery'] as const,
   /**
+   * Personal albums. Outside `families` because they belong to the account,
+   * not to any family — leaving a family must not drop them.
+   */
+  myAlbums: () => ['me', 'albums'] as const,
+  album: (albumId: string) => ['me', 'albums', albumId] as const,
+  /**
    * Notes the viewer wrote about one member. Under `families` so leaving a
    * family drops them from the cache with everything else about it.
    */

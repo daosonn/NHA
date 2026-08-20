@@ -131,7 +131,7 @@ relationshipLabel?, memberId? }`. Sending an invite **reserves the spot
 immediately** (design-system.md): the server creates the placeholder
 member and its relationship edge to the inviter in the same transaction —
 the tree shows the node as `pending` from that moment. `newMemberIsFrom`
-is the edge direction from `fixtures/invite.ts` (Mother `true`, Daughter
+is the edge direction from `features/family/kinship.ts` (Mother `true`, Daughter
 `false`). Pass `memberId` instead to invite an existing placeholder to
 its spot (no new edge). One live invitation per spot — a second is a 409.
 
@@ -575,6 +575,25 @@ missing).
 The mockup puts a running time on a video cover ("0:24"). The summary is
 `{ id, mimeType, sizeBytes }`, so a video tile says "Video" instead. A
 `durationSeconds` on video media would let the tile say what the design says.
+
+**5. Social login cannot finish in the app (added 2026-08-20).**
+`GET /auth/oauth/:provider` redirects to the consent screen correctly, but
+the callback ends with `res.status(200).json(result)` — the token pair is
+printed into the browser. A native app has no way to read that: an in-app
+browser session only hands control back when a URL matches a redirect scheme
+it is watching, and a JSON page redirects nowhere. There is no env var for an
+app redirect either; `OAUTH_REDIRECT_BASE_URL` only names where the _provider_
+sends the code back to.
+
+So the app has **removed the six Google/Facebook buttons** it was drawing on
+Welcome, Sign in and Sign up. None of them had a handler, because none could.
+
+**Asked for**: after `oauthService.login()`, redirect instead of answering
+JSON — `302` to `${APP_OAUTH_REDIRECT}#accessToken=…&refreshToken=…`, with the
+target configurable and defaulting to the app's scheme (`nha://auth/callback`,
+already set as `expo.scheme`). The fragment keeps the tokens out of server
+logs and out of the `Referer`. The app then completes the flow with
+`expo-web-browser`; putting the buttons back is one screen edit each.
 
 **4. Avatars have columns and no endpoints (added 2026-08-19).**
 `User.avatarKey` and `FamilyMember.avatarKey` are in the schema, and nothing
