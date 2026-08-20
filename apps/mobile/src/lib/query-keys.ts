@@ -28,6 +28,7 @@ export const queryKeys = {
    * they belong to (`docs/00-shared/domain-model.md`).
    */
   myProfile: () => ['me', 'profile'] as const,
+  /** Cũng là khoá màn Ask dùng để đọc ngày sinh của người nhận quà. */
   memberProfile: (familyId: string, memberId: string) =>
     ['families', familyId, 'members', memberId, 'profile'] as const,
   /**
@@ -51,4 +52,14 @@ export const queryKeys = {
   myLifeEvents: () => ['me', 'life-events'] as const,
   memberLifeEvents: (familyId: string, memberId: string) =>
     ['families', familyId, 'members', memberId, 'life-events'] as const,
+
+  // Khu AI (màn 21-33)
+  specialDates: (familyId: string) => ['families', familyId, 'special-dates'] as const,
+  evidenceStats: (familyId: string, memberId: string) =>
+    ['families', familyId, 'members', memberId, 'evidence-stats'] as const,
+  savedGiftIdeas: (familyId: string, memberId: string) =>
+    ['families', familyId, 'members', memberId, 'saved-gift-ideas'] as const,
+  videoMusic: () => ['video-music'] as const,
+  videoJobs: () => ['video-jobs'] as const,
+  videoJob: (jobId: string) => ['video-jobs', jobId] as const,
 } as const;

@@ -15,6 +15,10 @@ allowBuilds:
   '@prisma/engines': false
   '@scarf/scarf': false
   argon2: true
+  # ffmpeg-static/ffprobe-static: postinstall TẢI binary ffmpeg/ffprobe — bắt buộc true,
+  # không có binary thì VideoModule (render video kỷ niệm) không chạy.
+  ffmpeg-static: true
+  ffprobe-static: true
   prisma: false
   sharp: false
   unrs-resolver: true
