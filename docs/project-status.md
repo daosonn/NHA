@@ -9,6 +9,12 @@ backend side is finished, so `apps/api` work now follows
 `docs/sprints/sprint-02.md` while frontend wires the remaining sprint-1
 screens.
 
+- **Sprint 2's AI side delivered 2026-08-20** — groups 2.2–2.5
+  end-to-end (`apps/ai` FastAPI, NestJS `src/ai` + `src/video`, mobile
+  screens 21-33), **merged to `main` in PR #25**; a perf + privacy pass
+  follows on `merge/ai-integration` (PR pending). Per-task detail in
+  `docs/sprints/sprint-02.md`; contract and measured latency in
+  `docs/03-ai/architecture.md`.
 - Active sprint docs: `docs/sprints/sprint-01.md` (frontend wiring),
   `docs/sprints/sprint-02.md` (backend + AI team)
 - Later: `docs/sprints/sprint-03.md` (Notification / Settings / Release)
@@ -563,6 +569,32 @@ dev` **did not regenerate the client**, and the stale client survived
   (`components/member/profile-facts.tsx`). On branch
   `feature/profile-facts` (stacked on `fix/backend-doc-accuracy`).
 
+### Sprint 2 — AI team
+
+- AI integration for screens 21-33 (2026-08-20, **merged to `main` in
+  PR #25**): `apps/ai` (FastAPI, gpt-5.6-luna, structured outputs strict,
+  `AI_MOCK=1` for token-free tests), NestJS `src/ai` (gift / message /
+  card / evidence / two-tier profile pipeline: `InterestSignal` →
+  versioned `MemberProfile`, rollup after every post) + `src/video`
+  (storyboard + 0-token ffmpeg render: 6 intro styles, Ken Burns, music
+  ducking under clip voices), and the full mobile flow (AI hub → gift
+  ask/results/sources → message → card → video
+  setup/photos/music/style/plan/making/done). Provenance is end-to-end:
+  every suggestion cites `memo_…`/`sig_…` ids that resolve back to the
+  real note or post.
+- Perf + privacy pass (2026-08-20, on `merge/ai-integration` after
+  PR #25 — PR pending): suggestion context narrowed to **the requester's
+  own memos only** (buildFor, counters, past gifts, evidence resolution;
+  cache keys carry the requester + a memo fingerprint), message
+  suggestions cached like gift, ♡ rolls the profile up in the background,
+  reasoning-effort tuned per feature, gift sources' labels built by code
+  instead of the model, video segments rendered in parallel. Measured on
+  real calls: gift 12.3s→~8-9s cold / 43ms repeat, message 3.6s / 38ms
+  repeat, storyboard 11.1s→5.7s, render 49s→~25s — numbers and method in
+  `docs/03-ai/architecture.md`. Verified: e2e 10/10 (real render),
+  pytest, tsc/eslint/check:i18n clean. Sprint tasks 2.2.1–2.5.2 ticked
+  in `sprint-02.md`; 2.6 (Quality Time) dropped 2026-08-20 (PR #28).
+
 ### Planning Phase
 
 - MVP scope decided (`docs/00-shared/mvp-scope.md`)
@@ -585,10 +617,11 @@ dev` **did not regenerate the client**, and the stale client survived
 
 ## Not Started
 
-- `apps/ai` (FastAPI service — not yet created)
-- All product features: auth, family, Life Profile, Life Timeline, Memories,
-  Family Tree, memory boxes, personal archive, reminders, notifications,
-  AI-assisted features
+- ~~`apps/ai` (FastAPI service — not yet created)~~ — created 2026-08-20,
+  merged to `main` in PR #25 (see Current Sprint)
+- Sprint 3 (notifications / reminders / settings / release).
+  Sprint-2 group 2.6 (AI Quality Time) was **dropped** 2026-08-20 —
+  see Important Decisions / PR #28.
 
 ## Important Decisions
 
