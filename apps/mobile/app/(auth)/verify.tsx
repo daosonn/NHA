@@ -8,6 +8,12 @@ import { FormScreen } from '../../src/components/layout/form-screen';
 import { Button } from '../../src/components/ui/button';
 import { OtpInput } from '../../src/components/ui/otp-input';
 import { Text } from '../../src/components/ui/text';
+import { authErrorKey } from '../../src/features/auth/auth-error';
+import { ApiError } from '../../src/lib/api';
+import {
+  useRequestPasswordReset,
+  useVerifyResetCode,
+} from '../../src/features/auth/use-password-reset';
 import { colors } from '../../src/theme';
 
 const CODE_LENGTH = 6;
@@ -31,6 +37,11 @@ export default function VerifyScreen() {
 
   const [code, setCode] = useState('');
   const [seconds, setSeconds] = useState(RESEND_SECONDS);
+  /** A code the server rejected, as opposed to a request that failed. */
+  const [wrongCode, setWrongCode] = useState(false);
+
+  const verify = useVerifyResetCode();
+  const resend = useRequestPasswordReset();
 
   useEffect(() => {
     if (seconds === 0) return;
@@ -42,34 +53,79 @@ export default function VerifyScreen() {
   const resetting = intent === 'reset';
 
   /**
-   * Nothing here calls the server yet. The reset flow does have endpoints —
-   * `POST /auth/password-reset/{request,verify,confirm}` — but they are not
-   * mirrored in `src/lib/api/endpoints.ts`, so this screen still only carries
-   * the address forward (`docs/00-shared/api-contract.md`). The sign-up half
-   * has no endpoint at all: registration returns a token pair straight away,
-   * so that flow no longer comes through here.
+   * The reset half is real; the sign-up half is not.
    *
-   * It must not sign anyone in: doing so would hand out a session with no
-   * token behind it, reachable by anyone who opens `/verify` directly.
+   * `POST /auth/password-reset/verify` checks the code **without spending
+   * it**, which is exactly what this middle step needs: the person finds out
+   * they mistyped before choosing a password, and the same code still works
+   * on the next screen — verified against the running server, twice in a row.
+   *
+   * A wrong code comes back as a **400**, not as `{ valid: false }`, even
+   * though the shape allows the latter. Both are treated as "wrong code":
+   * routing the 400 through the generic mapper instead would have put
+   * "check the fields" under a six-digit box with nothing else in it.
+   *
+   * Registration has no code to check: it returns a token pair immediately,
+   * so that flow no longer comes through here. This screen must never sign
+   * anyone in — doing so would hand out a session with no token behind it, to
+   * anyone who opens `/verify` directly.
    */
   const submit = () => {
-    if (resetting) {
-      router.push({ pathname: '/reset', params: { email: address } });
+    if (!resetting) {
+      router.replace('/sign-in');
       return;
     }
-    router.replace('/sign-in');
+
+    setWrongCode(false);
+
+    verify.mutate(
+      { email: address, code },
+      {
+        onSuccess: (result) => {
+          if (!result.valid) {
+            setWrongCode(true);
+            return;
+          }
+          router.push({ pathname: '/reset', params: { email: address, code } });
+        },
+        onError: (error) => {
+          if (error instanceof ApiError && error.status === 400) setWrongCode(true);
+        },
+      },
+    );
   };
+
+  const rejected = wrongCode || (verify.error instanceof ApiError && verify.error.status === 400);
+
+  const errorKey = rejected
+    ? 'auth.verify.wrongCode'
+    : verify.error !== null
+      ? authErrorKey(verify.error)
+      : resend.error !== null
+        ? authErrorKey(resend.error)
+        : null;
 
   return (
     <FormScreen
       onBack={() => router.back()}
       footer={
         <>
+          {errorKey !== null && (
+            <Text
+              variant="caption"
+              color={colors.themes.destructive.text}
+              accessibilityRole="alert"
+            >
+              {t(errorKey)}
+            </Text>
+          )}
+
           <Button
             label={resetting ? t('auth.verify.continue') : t('auth.verify.verify')}
             size="large"
             fullWidth
             disabled={code.length < CODE_LENGTH}
+            loading={verify.isPending}
             onPress={submit}
           />
 
@@ -103,7 +159,13 @@ export default function VerifyScreen() {
 
       <OtpInput
         value={code}
-        onChangeText={setCode}
+        // Editing clears the complaint: leaving "that code is not right"
+        // under a box the person is busy correcting is just noise.
+        onChangeText={(next) => {
+          setWrongCode(false);
+          verify.reset();
+          setCode(next);
+        }}
         length={CODE_LENGTH}
         accessibilityLabel={t('auth.verify.codeLabel', { count: CODE_LENGTH })}
       />
@@ -123,7 +185,16 @@ export default function VerifyScreen() {
             label={t('auth.verify.resend')}
             variant="ghost"
             size="small"
-            onPress={() => setSeconds(RESEND_SECONDS)}
+            loading={resend.isPending}
+            onPress={() =>
+              resend.mutate(
+                { email: address },
+                // The countdown restarts only once the mail is actually on
+                // its way; restarting it on the tap would hide a failure
+                // behind a timer.
+                { onSuccess: () => setSeconds(RESEND_SECONDS) },
+              )
+            }
           />
         )}
       </View>

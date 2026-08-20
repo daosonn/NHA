@@ -44,7 +44,7 @@ export function ProfileHero({ profile, onEdit }: ProfileHeroProps) {
 
   return (
     <Card padding={16} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14 }}>
-      <Avatar size={AVATAR} tone={profile.tone} ring={RING} />
+      <Avatar size={AVATAR} name={profile.displayName} tone={profile.tone} ring={RING} />
 
       <View style={{ flex: 1, gap: 3, paddingTop: 2 }}>
         <Text variant="h2" weight="bold" style={{ letterSpacing: -0.3 }}>

@@ -56,7 +56,7 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Card padding={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <Avatar size={56} />
+          <Avatar size={56} name={user?.name} />
 
           <View style={{ flex: 1, gap: 3 }}>
             <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>

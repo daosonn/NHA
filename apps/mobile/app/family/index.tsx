@@ -39,10 +39,9 @@ import {
  * between trees, and a switch that hides half its positions is not one.
  */
 function toStripGroups(families: FamilySummary[]): FamilyGroupSummary[] {
-  return families.map((family, index) => ({
+  return families.map((family) => ({
     id: family.id,
     name: family.name,
-    tone: index % 2 === 0 ? 'light' : 'dark',
   }));
 }
 

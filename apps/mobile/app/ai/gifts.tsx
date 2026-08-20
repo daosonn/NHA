@@ -72,10 +72,12 @@ export default function GiftAskScreen() {
   const saved = useSavedGiftIdeas(familyId, target?.id ?? null);
 
   const occasionDays = occasion?.date
-    ? (dates.data?.items ?? []).find((i) => i.nextOccurrence === occasion.date)?.daysUntil ?? null
+    ? ((dates.data?.items ?? []).find((i) => i.nextOccurrence === occasion.date)?.daysUntil ?? null)
     : null;
 
-  const sinceMonth = stats.data?.since ? t(`date.months.${Number(stats.data.since.slice(5, 7))}`) : null;
+  const sinceMonth = stats.data?.since
+    ? t(`date.months.${Number(stats.data.since.slice(5, 7))}`)
+    : null;
 
   const canAsk = !!familyId && !!target && !!occasion;
 
@@ -91,15 +93,20 @@ export default function GiftAskScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: 14, paddingBottom: 40, gap: 8 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.xl,
+          paddingTop: 14,
+          paddingBottom: 40,
+          gap: 8,
+        }}
         showsVerticalScrollIndicator={false}
       >
         {/* FOR */}
         <SectionLabel label={t('ai.gifts.for')} />
         <SelectRow
-          leading={<Avatar size={38} />}
+          leading={<Avatar size={38} name={target?.displayName} />}
           title={target?.displayName ?? t('ai.gifts.pickPerson')}
-          subtitle={born ? t('ai.gifts.bornOn', { date: born }) : family.data?.name ?? null}
+          subtitle={born ? t('ai.gifts.bornOn', { date: born }) : (family.data?.name ?? null)}
           onPress={() => setMemberSheet(true)}
         />
 
@@ -109,9 +116,17 @@ export default function GiftAskScreen() {
         <SelectRow
           leading={
             occasion?.date ? (
-              <DateTile day={Number(occasion.date.slice(8, 10))} month={t(`date.months.${Number(occasion.date.slice(5, 7))}`)} />
+              <DateTile
+                day={Number(occasion.date.slice(8, 10))}
+                month={t(`date.months.${Number(occasion.date.slice(5, 7))}`)}
+              />
             ) : (
-              <IconBadge size={38} renderIcon={({ size, color }) => <Gift size={size} color={color} strokeWidth={2.1} />} />
+              <IconBadge
+                size={38}
+                renderIcon={({ size, color }) => (
+                  <Gift size={size} color={color} strokeWidth={2.1} />
+                )}
+              />
             )
           }
           title={occasion?.label ?? t('ai.gifts.pickOccasion')}
@@ -137,7 +152,7 @@ export default function GiftAskScreen() {
         <View style={{ height: 6 }} />
         <SectionLabel label={t('ai.gifts.from')} />
         <SelectRow
-          leading={<Avatar size={38} />}
+          leading={<Avatar size={38} name={user?.name} />}
           title={user?.name ?? ''}
           subtitle={family.data?.name ?? null}
           trailing="lock"
@@ -175,7 +190,10 @@ export default function GiftAskScreen() {
                 surface={colors.background.card}
               />
             }
-            title={t('ai.gifts.evidenceCount', { photos: stats.data.photos, notes: stats.data.notes })}
+            title={t('ai.gifts.evidenceCount', {
+              photos: stats.data.photos,
+              notes: stats.data.notes,
+            })}
             subtitle={sinceMonth ? t('ai.gifts.sharedSince', { month: sinceMonth }) : null}
             trailing="none"
           />
@@ -189,11 +207,16 @@ export default function GiftAskScreen() {
                 size={38}
                 background={colors.background.subtle}
                 foreground={colors.text.muted}
-                renderIcon={({ size, color }) => <Gift size={size} color={color} strokeWidth={2.1} />}
+                renderIcon={({ size, color }) => (
+                  <Gift size={size} color={color} strokeWidth={2.1} />
+                )}
               />
             }
             title={t('ai.gifts.savedBefore', { count: saved.data!.length })}
-            subtitle={saved.data!.map((s) => s.title).slice(0, 2).join(' · ')}
+            subtitle={saved
+              .data!.map((s) => s.title)
+              .slice(0, 2)
+              .join(' · ')}
             trailing="none"
           />
         )}

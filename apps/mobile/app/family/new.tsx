@@ -246,7 +246,11 @@ export default function NewFamilyScreen() {
             boxShadow: 'inset 0 0 0 1px rgba(24,24,27,0.06)',
           }}
         >
-          <Avatar size={40} ring="0 0 0 2px #FFFFFF, 0 0 0 3px rgba(240,112,95,0.35)" />
+          <Avatar
+            size={40}
+            name={name.trim()}
+            ring="0 0 0 2px #FFFFFF, 0 0 0 3px rgba(240,112,95,0.35)"
+          />
 
           <View style={{ flex: 1, gap: 2 }}>
             <Text variant="body2" weight="semibold">

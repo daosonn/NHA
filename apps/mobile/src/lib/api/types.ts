@@ -68,6 +68,37 @@ export type RefreshTokenRequest = {
   refreshToken: string;
 };
 
+/**
+ * `POST /api/auth/password-reset/request`.
+ *
+ * Always answers `{ success: true }`, whether or not the address is
+ * registered. That is deliberate on the server's part — a different answer
+ * for a real address turns the endpoint into a way to test whether somebody
+ * has an account — so the screen must not read anything into it either.
+ */
+export type RequestPasswordResetRequest = {
+  email: string;
+};
+
+/** `POST /api/auth/password-reset/verify` — checks without consuming. */
+export type VerifyResetCodeRequest = {
+  email: string;
+  /** Exactly six digits. */
+  code: string;
+};
+
+/** `POST /api/auth/password-reset/verify` — `valid`, not `success`. */
+export type VerifyResetCodeResult = {
+  valid: boolean;
+};
+
+/** `POST /api/auth/password-reset/confirm` — password 8–72. Revokes every session. */
+export type ConfirmPasswordResetRequest = {
+  email: string;
+  code: string;
+  newPassword: string;
+};
+
 /** Providers wired in `apps/api/src/auth/oauth/`. */
 export type OAuthProvider = 'google' | 'facebook';
 
@@ -473,6 +504,31 @@ export type UpdateLifeEventRequest = {
   place?: string | null;
   type?: string | null;
   taggedMemberIds?: string[];
+};
+
+// -------------------------------------------------------------- gallery
+
+/**
+ * One file on a Life Profile's Album tab — `GET /api/me/gallery` and
+ * `GET /api/families/:familyId/members/:memberId/gallery` (WBS 1.6.4).
+ *
+ * **Derived, not stored**: the media of posts this person authored or was
+ * tagged in, plus their life-event media, filtered server-side to what the
+ * viewer may actually see. Not the `Album` model, which is a private
+ * user-curated collection with its own table.
+ *
+ * Exactly one of `postId` / `lifeEventId` is set, which is what lets the
+ * client group loose files back into the moment they came from.
+ *
+ * Not paginated — one person's history, returned whole.
+ */
+export type GalleryMediaItem = {
+  id: string;
+  mimeType: string;
+  sizeBytes: number;
+  createdAt: IsoDateTime;
+  postId: string | null;
+  lifeEventId: string | null;
 };
 
 // ---------------------------------------------------------------- memos

@@ -9,11 +9,12 @@ backend side is finished, so `apps/api` work now follows
 `docs/sprints/sprint-02.md` while frontend wires the remaining sprint-1
 screens.
 
-- **Sprint 2's AI side delivered 2026-08-20** on branch
-  `merge/ai-integration` (PR pending): groups 2.2–2.5 end-to-end —
-  `apps/ai` (FastAPI), NestJS `src/ai` + `src/video`, mobile screens
-  21-33. Per-task detail in `docs/sprints/sprint-02.md`; contract and
-  measured latency in `docs/03-ai/architecture.md`.
+- **Sprint 2's AI side delivered 2026-08-20** — groups 2.2–2.5
+  end-to-end (`apps/ai` FastAPI, NestJS `src/ai` + `src/video`, mobile
+  screens 21-33), **merged to `main` in PR #25**; a perf + privacy pass
+  follows on `merge/ai-integration` (PR pending). Per-task detail in
+  `docs/sprints/sprint-02.md`; contract and measured latency in
+  `docs/03-ai/architecture.md`.
 - Active sprint docs: `docs/sprints/sprint-01.md` (frontend wiring),
   `docs/sprints/sprint-02.md` (backend + AI team)
 - Later: `docs/sprints/sprint-03.md` (Notification / Settings / Release)
@@ -161,29 +162,65 @@ screens.
 
 Raised by the frontend, neither actionable from `apps/mobile`.
 
-- **Three gaps found building the Life Profile against mockup 7
-  (2026-08-19).** Written up in full in `docs/00-shared/api-contract.md`
-  § Requests from the app; in short: (1) a member's media can only be found
-  by paging the whole family feed and filtering on `taggedMemberIds`, so the
-  Album tab scans a bounded 200 moments and tells the reader when it stopped
-  short — a `memberId` filter on the feed, or WBS 1.6.4's own route, fixes
-  it; (2) `LifeProfile` has no `occupation` and no `birthPlace`, so one of
-  the mockup's three fact rows is not drawn and the first is missing its
-  place; (3) `PostMediaSummary` has no duration, so a video tile says
-  "Video" where the mockup shows a running time. None block a screen — the
-  app ships without them and says on screen what it does not know.
+- **Avatars have columns and no endpoints (2026-08-19).**
+  `User.avatarKey` and `FamilyMember.avatarKey` are in the schema; nothing
+  writes them and nothing serves them. Verified: `PATCH …/members/:memberId`
+  with an `avatarKey` answers **200** and leaves the column `null`, because
+  `whitelist: true` strips the unknown field. The app therefore ships **no
+  upload button** — one that looks like it worked is worse than none — and
+  draws an initial on a per-person tint instead. **Asked for**: an
+  `avatarMediaId` on `UpdateProfileDto` pointing at a `Media` row; if the
+  stored value is a `Media.id` then `GET /media/:id` already serves it and the
+  client needs nothing further. Full write-up in
+  `docs/00-shared/api-contract.md` § Requests from the app.
 
-- **Profile editing narrowed to self, and the server still disagrees
-  (2026-08-19).** The app now draws the Edit affordance only on your own
-  profile: a life story written about someone by someone else is a different
-  object from one they wrote themselves, and the screen could not tell the
-  reader which they were reading. What the family edits about another person
-  is their place in the tree, not their biography. **The server has not
-  changed** — `PATCH /families/:familyId/members/:memberId/profile` still
-  accepts an edit from any member of the family, so the rule is currently
-  enforced only by the UI not offering it. **Asked for**: narrow that route to
-  the profile's owner, or say the wiki rule stands and the app should put the
-  affordance back. Decision recorded in
+- **Three gaps found building the Life Profile against mockup 7
+  (2026-08-19; status re-checked against the code 2026-08-20).** Written up
+  in full in `docs/00-shared/api-contract.md` § Requests from the app.
+
+  1. ~~A member's media can only be found by paging the whole family
+     feed~~ — **closed on both sides**: the server landed
+     `GET /me/gallery` + `GET …/members/:memberId/gallery` (task 1.6.4,
+     PR #19) and `?memberId` on the family feed (task 2.1.2, PR #22), and
+     **the app switched to the gallery route on 2026-08-19**, dropping its
+     bounded 200-moment scan.
+  2. ~~`LifeProfile` has no `occupation` and no `birthPlace`~~ — **done
+     2026-08-20**, migration `20260820031808`. Both are on
+     `ProfileDetail`; the app has not read them yet.
+  3. `PostMediaSummary` has no duration — **still true**, so a video tile
+     says "Video" where the mockup shows a running time. Note this is not
+     just a column: reading a duration server-side means probing the file
+     (an ffmpeg/ffprobe dependency), so the cheaper path is the client
+     sending it at upload, consistent with the existing "client-declared
+     MIME type is trusted for now" decision. Worth deciding before doing.
+
+  Neither remaining gap blocks a screen — the app ships without them and
+  says on screen what it does not know.
+
+- **Profile editing: half of this was already true on the server
+  (2026-08-19; corrected 2026-08-20 after reading the code).** The app
+  draws the Edit affordance only on your own profile: a life story written
+  about someone by someone else is a different object from one they wrote
+  themselves, and the screen could not tell the reader which they were
+  reading. **The original note here said "the server has not changed" —
+  that was wrong.** `ProfileService.resolveForMember({ forEdit: true })`
+  already throws `403 Linked members manage their own profile content`, so
+  `PATCH /families/:familyId/members/:memberId/profile` on a member **who
+  has an account** is owner-only and has been since the route shipped
+  (task 1.6.2). The app and the server agree there.
+
+  What is left is **placeholder** profiles, and narrowing those is not a
+  fix — it contradicts a recorded decision. A placeholder has no account,
+  so "only the owner may edit" would mean **nobody** may ever edit, while
+  `domain-model.md` (2026-08-13) says placeholder profiles are
+  wiki-editable by any family member with no manager ACL in the MVP. That
+  is also the only way a deceased or elderly relative's profile gets
+  written at all.
+
+  **So the real question for the team is narrower than it looked**: should
+  the app offer Edit on a _placeholder_ profile? The wiki rule says yes;
+  the app currently says no, which leaves placeholders un-editable from the
+  UI even though the server allows it. Decision recorded in
   `docs/01-frontend/architecture.md` § Life Profile; reversing it on the
   client is one function (`features/member/member-profile.ts` →
   `editability`).
@@ -490,24 +527,68 @@ Raised by the frontend, neither actionable from `apps/mobile`.
     a "choose album" step in Post a Moment). On branch `feature/album`
     (stacked on `feature/gallery`).
 
-### Sprint 2 — AI team (branch `merge/ai-integration`, PR pending)
+- Locale sent to the AI service is now validated (2026-08-20): `User.locale`
+  is a plain nullable string with no column constraint, and
+  `VideoJobService` forwarded it as `requester.locale ?? 'en'` — so the day
+  a Settings screen writes `"ja-JP"` (or anything else) there, it would
+  travel straight to FastAPI, whose contract names only `en`/`ja`/`vi`.
+  Latent today because **nothing writes that column yet**; found while
+  reviewing the AI proxy, fixed at the source instead. New
+  `common/locale.ts` → `resolveLocale(...candidates)`: first supported
+  value wins, a region subtag is honoured by its primary language
+  (`ja-JP` → `ja`), anything unrecognised falls back to `en`. Verified by
+  lint/build + **the repo's first service-level unit test**
+  (`common/locale.spec.ts`, 6 cases) — jest already picked up `*.spec.ts`
+  under `src/`, so no config change. **Note for whoever merges
+  `feature/ai-suggestions`**: its `SuggestionRequestDto` declares its own
+  `SUGGESTION_LOCALES` and its service repeats the same unchecked
+  fallback — point both at this helper.
 
-- AI integration for screens 21-33 (2026-08-20): `apps/ai` (FastAPI,
-  gpt-5.6-luna, structured outputs strict, `AI_MOCK=1` for token-free
-  tests), NestJS `src/ai` (gift / message / card / evidence / two-tier
-  profile pipeline: `InterestSignal` → versioned `MemberProfile`, rollup
-  after every post) + `src/video` (storyboard + 0-token ffmpeg render:
-  6 intro styles, Ken Burns, music ducking under clip voices), and the
-  full mobile flow (AI hub → gift ask/results/sources → message → card →
-  video setup/photos/music/style/plan/making/done). Provenance is
-  end-to-end: every suggestion cites `memo_…`/`sig_…` ids that resolve
-  back to the real note or post. Privacy rule tightened 2026-08-20:
-  suggestion context uses only the requester's own memos. Perf pass
-  measured on real calls (gift 12.3s→~8-9s cold / 43ms repeat, message
-  3.6s / 38ms repeat, storyboard 5.7s, render 49s→~25s) — numbers and
-  method in `docs/03-ai/architecture.md`. Verified: e2e 10/10 (real
-  render), pytest 7/7, tsc/eslint/check:i18n clean. Sprint tasks
-  2.2.1–2.5.2 ticked in `sprint-02.md`; 2.6 (Quality Time) not started.
+- LifeProfile gained `birthPlace` + `occupation` (2026-08-20): the two
+  columns mockup 7's fact rows needed — the place after the birth date and
+  "Carpenter, retired since 2021". Migration
+  `20260820031808_add_profile_birthplace_occupation`, two nullable TEXT
+  columns, **no backfill**, so it deploys on a populated table. Free text,
+  max 200, cleared by `''`/whitespace/`null` like `bio`; both routes
+  (`/me/profile` and the family one) carry them because they share one
+  DTO. Deliberately **not structured** — `occupation` is a phrase, so
+  nothing can derive "retired since 2021" from it; that would need its own
+  field. Verified by lint/build/test + a 20-case live smoke test **plus a
+  direct DB check of the `EditHistory` snapshots**, because that is the one
+  place a new field can be forgotten with nothing failing. Two operational
+  findings, written up in `04-devops/local-environment.md`: `prisma migrate
+dev` **did not regenerate the client**, and the stale client survived
+  lint, build and tests before 500ing on the first request — because an
+  extracted `as const` select object escapes TypeScript's excess-property
+  check. FE work remaining: read the two fields
+  (`components/member/profile-facts.tsx`). On branch
+  `feature/profile-facts` (stacked on `fix/backend-doc-accuracy`).
+
+### Sprint 2 — AI team
+
+- AI integration for screens 21-33 (2026-08-20, **merged to `main` in
+  PR #25**): `apps/ai` (FastAPI, gpt-5.6-luna, structured outputs strict,
+  `AI_MOCK=1` for token-free tests), NestJS `src/ai` (gift / message /
+  card / evidence / two-tier profile pipeline: `InterestSignal` →
+  versioned `MemberProfile`, rollup after every post) + `src/video`
+  (storyboard + 0-token ffmpeg render: 6 intro styles, Ken Burns, music
+  ducking under clip voices), and the full mobile flow (AI hub → gift
+  ask/results/sources → message → card → video
+  setup/photos/music/style/plan/making/done). Provenance is end-to-end:
+  every suggestion cites `memo_…`/`sig_…` ids that resolve back to the
+  real note or post.
+- Perf + privacy pass (2026-08-20, on `merge/ai-integration` after
+  PR #25 — PR pending): suggestion context narrowed to **the requester's
+  own memos only** (buildFor, counters, past gifts, evidence resolution;
+  cache keys carry the requester + a memo fingerprint), message
+  suggestions cached like gift, ♡ rolls the profile up in the background,
+  reasoning-effort tuned per feature, gift sources' labels built by code
+  instead of the model, video segments rendered in parallel. Measured on
+  real calls: gift 12.3s→~8-9s cold / 43ms repeat, message 3.6s / 38ms
+  repeat, storyboard 11.1s→5.7s, render 49s→~25s — numbers and method in
+  `docs/03-ai/architecture.md`. Verified: e2e 10/10 (real render),
+  pytest, tsc/eslint/check:i18n clean. Sprint tasks 2.2.1–2.5.2 ticked
+  in `sprint-02.md`; 2.6 (Quality Time) dropped 2026-08-20 (PR #28).
 
 ### Planning Phase
 
@@ -531,13 +612,35 @@ Raised by the frontend, neither actionable from `apps/mobile`.
 
 ## Not Started
 
-- ~~`apps/ai` (FastAPI service — not yet created)~~ — created 2026-08-20 on
-  branch `merge/ai-integration` (see Current Sprint)
-- Sprint-2 group 2.6 (AI Quality Time) and Sprint 3 (notifications /
-  reminders / settings / release)
+- ~~`apps/ai` (FastAPI service — not yet created)~~ — created 2026-08-20,
+  merged to `main` in PR #25 (see Current Sprint)
+- Sprint 3 (notifications / reminders / settings / release).
+  Sprint-2 group 2.6 (AI Quality Time) was **dropped** 2026-08-20 —
+  see Important Decisions / PR #28.
 
 ## Important Decisions
 
+- **AI Quality Time dropped (2026-08-20)** — the whole of WBS 2.6, both
+  the suggestion (2.6.1–2.6.3) and saving/sharing the result as a `Plan`
+  (2.6.4). Sprint-2 AI is now the two features that actually run end to
+  end: **gift ideas (2.4) and message suggestions (2.5)**. Consequences,
+  recorded so nobody re-derives them:
+  - **Every AI suggestion the product ships is read-once.** Nothing is
+    persisted; the "AI output you follow over days" case is gone.
+  - **`Plan` and `PlanShare` stay in the schema, unused.** They shipped in
+    the sprint-0 migration and are empty; dropping them costs a migration
+    for something that may come back. Nothing reads or writes them.
+  - The Plan API was **written and verified** (49-case live smoke test,
+    2026-08-20) but deliberately **not merged** — branch `feature/plans`
+    if this is revived. Same for `feature/ai-suggestions`, which had the
+    quality-time route and was superseded by the AI module already on
+    `main`.
+  - The **"Plan a surprise" data-source question** in `domain-model.md`
+    (availability, distances, a possible `MemberAvailability` table) is
+    closed by this decision rather than answered.
+  - Worth noting for the next scope review: Quality Time was in the WBS
+    but **never in `mvp-scope.md`'s AI table** — the gap between the two
+    documents is likely why it went unbuilt while 2.4 and 2.5 shipped.
 - PostgreSQL is the primary database.
 - Prisma is used for database access, via the `pg` driver adapter (required
   for SQL providers in Prisma 7).
@@ -722,8 +825,9 @@ relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
 - **Full-MVP DB design + domain decisions (2026-08-14)**: 25 tables.
   Albums split (family library = derived, rendered as Omoide "books" /
   personal albums private / profile gallery derived); Memo = private
-  notes about a member (author-only, always); AI plans are saved
-  (`Plan` + `PlanShare` — owner edits, view-only sharing); birth/death
+  notes about a member (author-only, always); ~~AI plans are saved
+  (`Plan` + `PlanShare` — owner edits, view-only sharing)~~ — **the
+  feature was dropped 2026-08-20, tables kept unused**; birth/death
   dates live on LifeProfile; wiki edits logged (`EditHistory`); diverse
   reactions (base LIKE/LOVE/HAHA/WOW/SAD); solar-only dates (product
   targets the Japanese market); special-date widgets (`SpecialDate`).

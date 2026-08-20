@@ -1,10 +1,34 @@
 # AI Architecture
 
-> Status: **contract draft** (2026-08-19, backend-authored at sprint-2
-> start per `sprint-02.md` Notes). The AI team owns `apps/ai` and
-> everything model-side; this document is the seam both teams build
-> against. Change it by agreement, not silently — the NestJS proxy and
-> the FastAPI service move together.
+> Status: **the draft below no longer matches the code** (drafted
+> 2026-08-19; checked against the implementation 2026-08-20). It was
+> written before either side was built, and both were then built to a
+> different shape:
+>
+> | This doc says                | What exists                                          |
+> | ---------------------------- | ---------------------------------------------------- |
+> | `POST /suggestions/gifts`    | `apps/ai` → `POST /v1/gift-ideas`                    |
+> | `POST /suggestions/messages` | `apps/ai` → `POST /v1/message-suggestions`           |
+> | `POST /videos`               | `apps/ai` → `POST /v1/video-storyboard`              |
+> | `POST /api/ai/gifts`         | NestJS → `POST /families/:id/members/:id/gift-ideas` |
+> | (not drafted)                | `apps/ai` → `/v1/analyze-post`, `/v1/profile-rollup` |
+>
+> **Do not build against the shapes below.** They are kept as the record
+> of what was agreed at sprint-2 start; the request/response bodies and
+> the two-phase design are still the intent, the route names are not.
+> **Whoever owns the AI module should rewrite this from the code** — that
+> is a real task, not a formatting pass, because this file is the only
+> place the two services are supposed to meet.
+>
+> The AI team owns `apps/ai` and everything model-side. Change this by
+> agreement, not silently — the NestJS proxy and the FastAPI service move
+> together.
+>
+> Known open items against the current implementation, both raised
+> 2026-08-20: the **memo privacy boundary** (§ Non-negotiables 5) is not
+> what `ai-context.service.ts` does — the AI team is patching it — and
+> **`MediaInsight` is written but never read**, so phase 1 runs at a cost
+> with nothing consuming it.
 
 ## Ownership
 
@@ -100,7 +124,7 @@ language (`vi` / `ja` / `en`).
 `{ status: "ok", provider: "claude", model: "<current>" }` — what the
 NestJS proxy pings.
 
-### `POST /suggestions/gifts` · `POST /suggestions/messages` · `POST /suggestions/quality-time`
+### `POST /suggestions/gifts` · `POST /suggestions/messages`
 
 Request (built entirely by NestJS):
 
@@ -142,7 +166,7 @@ every idea carries its provenance (shape mirrors the shipped UI,
   "suggestions": [
     {
       "title": "Clay teapot from Bát Tràng",
-      "price": "800,000 – 1,200,000₫", // gifts only; messages return "text", quality-time returns "steps"
+      "price": "800,000 – 1,200,000₫", // gifts only; messages return "text" instead
       "tags": ["Bát Tràng", "In his taste"],
       "why": "He stopped at the shop near the ferry twice…",
       "source": "From Lan's note · 2 weeks ago", // human-readable; MUST trace to a sent evidence item
@@ -152,10 +176,12 @@ every idea carries its provenance (shape mirrors the shipped UI,
 }
 ```
 
-`messages` adds nothing structural (regenerate = the same call again);
-`quality-time` returns `steps: string[]` per suggestion — the app may
-save one as a `Plan` via the NestJS Plan endpoints (2.6.4, pure NestJS,
-no AI involvement in the save).
+`messages` adds nothing structural (regenerate = the same call again).
+
+~~`quality-time`~~ — **dropped 2026-08-20 together with the whole of WBS
+2.6**, so there is no third suggestion kind and nothing saves a `Plan`.
+Every suggestion the product ships is read-once. See `project-status.md`
+→ Important Decisions.
 
 ### `POST /videos` + status
 
@@ -187,12 +213,18 @@ polls NestJS (`GET /api/video-jobs/:id`).
 
 Documented in `docs/00-shared/api-contract.md` as each lands:
 
-- `POST /api/ai/gifts` · `/api/ai/messages` · `/api/ai/quality-time` —
-  auth'd; NestJS resolves the member, checks family membership, gathers
-  the context above (own memos only), forwards, returns the envelope.
-- `GET/POST/PATCH/DELETE /api/me/plans` + share endpoints (2.6.4) —
-  `Plan`/`PlanShare` tables from sprint 0; owner edits, shares are
-  view-only.
+- ~~`POST /api/ai/gifts` · `/api/ai/messages` · `/api/ai/quality-time`~~ —
+  **this route shape was never built.** What shipped instead (see
+  `apps/api/src/ai/ai.controller.ts`) is member-scoped:
+  `POST /families/:familyId/members/:memberId/gift-ideas` and
+  `.../message-suggestions`, plus `profile-understanding`, `evidence`,
+  `profile-rollup`, `posts/:postId/analyze`, `families/:familyId/cards`
+  and `ai/health`. Quality time does not exist and will not — dropped
+  2026-08-20.
+- ~~`GET/POST/PATCH/DELETE /api/me/plans` + share endpoints (2.6.4)~~ —
+  **dropped 2026-08-20** with the rest of WBS 2.6. The `Plan`/`PlanShare`
+  tables stay in the schema, unused; the API was written and verified but
+  not merged (branch `feature/plans`).
 - `POST /api/video-jobs` · `GET /api/video-jobs/:id` (2.2) + the
   internal completion callback.
 - Memory list (2.1.2) reuses `Post` — a filter extension on the family
@@ -224,14 +256,14 @@ out=1520`, NestJS writes `gift ideas: AI 15.0s · shops 0.4s`.
 
 ### FastAPI surface (`apps/ai`, stateless, never touches Postgres)
 
-| Endpoint | Purpose |
-| --- | --- |
-| `POST /v1/gift-ideas` | 5 ideas + insights + `note_to_giver`, each idea with `why`, sources, JP search keywords |
-| `POST /v1/message-suggestions` | three variants (short/standard/heartfelt) |
-| `POST /v1/video-storyboard` | title/subtitle/opening/closing/dedication + scenes (caption, duration, reason) + palette |
-| `POST /v1/analyze-post` | one post (caption + up to 6 photos) → 0-4 interest signals about its AUTHOR |
-| `POST /v1/profile-rollup` | pending signals + current profile → the next profile version |
-| `GET /health` | reachability + whether a key is configured |
+| Endpoint                       | Purpose                                                                                  |
+| ------------------------------ | ---------------------------------------------------------------------------------------- |
+| `POST /v1/gift-ideas`          | 5 ideas + insights + `note_to_giver`, each idea with `why`, sources, JP search keywords  |
+| `POST /v1/message-suggestions` | three variants (short/standard/heartfelt)                                                |
+| `POST /v1/video-storyboard`    | title/subtitle/opening/closing/dedication + scenes (caption, duration, reason) + palette |
+| `POST /v1/analyze-post`        | one post (caption + up to 6 photos) → 0-4 interest signals about its AUTHOR              |
+| `POST /v1/profile-rollup`      | pending signals + current profile → the next profile version                             |
+| `GET /health`                  | reachability + whether a key is configured                                               |
 
 Every call uses OpenAI Structured Outputs (`json_schema`, `strict: true`) generated
 from pydantic. `AI_MOCK=1` answers all of them with schema-correct data for 0 tokens,

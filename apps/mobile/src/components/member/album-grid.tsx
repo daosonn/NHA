@@ -1,10 +1,9 @@
 import { Image } from 'expo-image';
-import { Camera, Images, Play, TriangleAlert } from 'lucide-react-native';
+import { Camera, Images, Milestone, Play, TriangleAlert } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
-import type { MemberMoments } from '../../features/member/use-member-moments';
-import type { PostDetail } from '../../lib/api';
+import type { GalleryGroup, MemberGallery } from '../../features/member/use-member-gallery';
 import { mediaSource } from '../../lib/media-source';
 import { colors, radius } from '../../theme';
 import { EmptyState } from '../ui/empty-state';
@@ -41,17 +40,17 @@ function Badge({ children }: { children: React.ReactNode }) {
 }
 
 function MomentTile({
-  moment,
+  group,
   aspectRatio,
   onPress,
 }: {
-  moment: PostDetail;
+  group: GalleryGroup;
   aspectRatio: number;
   onPress?: () => void;
 }) {
   const { t } = useTranslation();
 
-  const cover = moment.media[0];
+  const cover = group.media[0];
   if (cover === undefined) return null;
 
   const isVideo = cover.mimeType.startsWith('video/');
@@ -60,10 +59,10 @@ function MomentTile({
     <Pressable
       onPress={onPress}
       accessibilityRole="imagebutton"
-      accessibilityLabel={t('member.moments.openMoment', {
-        title: moment.eventTitle ?? moment.authorName,
-        count: moment.media.length,
-      })}
+      accessibilityLabel={t(
+        group.kind === 'event' ? 'member.moments.openMilestone' : 'member.moments.openMoment',
+        { count: group.media.length },
+      )}
       style={{
         aspectRatio,
         borderRadius: radius.lg,
@@ -79,31 +78,6 @@ function MomentTile({
         style={{ width: '100%', height: '100%' }}
       />
 
-      {/* An event names itself over its own cover, the way the mockup writes
-          "TẾT 2019" across the picture. A plain post has no title to write. */}
-      {moment.eventTitle !== null && (
-        <View
-          style={{
-            position: 'absolute',
-            left: 10,
-            right: 10,
-            top: '50%',
-            alignItems: 'center',
-          }}
-          pointerEvents="none"
-        >
-          <Text
-            variant="caption"
-            weight="bold"
-            color={colors.text.white}
-            numberOfLines={1}
-            style={{ letterSpacing: 0.6, textShadowColor: 'rgba(0,0,0,0.45)', textShadowRadius: 6 }}
-          >
-            {moment.eventTitle}
-          </Text>
-        </View>
-      )}
-
       <View
         style={{
           position: 'absolute',
@@ -117,26 +91,23 @@ function MomentTile({
         }}
         pointerEvents="none"
       >
-        {/* Who put it there. A stripe placeholder for now — members have no
-            avatar image, only `avatarKey`, and nothing uploads one yet. */}
-        <View
-          style={{
-            width: 20,
-            height: 20,
-            borderRadius: radius.full,
-            backgroundColor: 'rgba(255,255,255,0.9)',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text variant="badge" weight="bold" color={colors.text.secondary}>
-            {moment.authorName.slice(0, 1).toUpperCase()}
-          </Text>
-        </View>
+        {/* A milestone's photographs are the only ones on this page that did
+            not come from the feed, and tapping one goes somewhere different.
+            Saying which is which beats letting the destination surprise. */}
+        {group.kind === 'event' ? (
+          <Badge>
+            <Milestone size={10} color={colors.text.white} strokeWidth={2.4} />
+            <Text variant="badge" weight="semibold" color={colors.text.white}>
+              {t('member.moments.milestone')}
+            </Text>
+          </Badge>
+        ) : (
+          <View />
+        )}
 
         {isVideo ? (
           <Badge>
-            {/* The mockup shows a running time. `PostMediaSummary` carries id,
+            {/* The mockup shows a running time. `GalleryMediaItem` carries id,
                 mime type and size and no duration, so this says "video" and
                 stops there rather than making a number up. */}
             <Play size={10} color={colors.text.white} strokeWidth={2.4} fill={colors.text.white} />
@@ -144,11 +115,11 @@ function MomentTile({
               {t('member.moments.video')}
             </Text>
           </Badge>
-        ) : moment.media.length > 1 ? (
+        ) : group.media.length > 1 ? (
           <Badge>
             <Images size={10} color={colors.text.white} strokeWidth={2.4} />
             <Text variant="badge" weight="semibold" color={colors.text.white}>
-              {moment.media.length}
+              {group.media.length}
             </Text>
           </Badge>
         ) : null}
@@ -158,16 +129,17 @@ function MomentTile({
 }
 
 export type AlbumGridProps = {
-  moments: MemberMoments | undefined;
+  gallery: MemberGallery | undefined;
   memberName: string;
   /** Your own page, which is addressed in the second person. */
   own?: boolean;
-  /** No family on screen, so there is no feed this could be read from. */
-  noFamily?: boolean;
   loading?: boolean;
   failed?: boolean;
   onRetry?: () => void;
-  onOpenMoment?: (moment: PostDetail) => void;
+  /** A moment that came from a post. */
+  onOpenMoment?: (postId: string) => void;
+  /** A milestone's photographs, which live on the Timeline tab. */
+  onOpenTimeline?: () => void;
 };
 
 /**
@@ -177,33 +149,28 @@ export type AlbumGridProps = {
  * moment is what a family remembers: one tile is one thing that happened, and
  * the count on it says how much of it there is to look at.
  *
- * **Derived, not curated.** These are the family's posts that this person is
- * tagged in or posted themselves. Nobody assembles them, and there is no way
- * to add a picture to somebody's page directly — which is why there is no
- * "add photo" action here. A moment is posted, and the people in it are
- * tagged in the composer.
+ * **Derived, not curated.** The server assembles this from the posts the
+ * person authored or was tagged in plus their life-event media. Nobody
+ * curates it, and there is no way to put a picture on somebody's page
+ * directly — which is why there is no "add photo" action here. A moment is
+ * posted, and the people in it are tagged in the composer.
+ *
+ * One deliberate departure from the mockup: it writes an event's title across
+ * its cover ("TẾT 2019"). `GalleryMediaItem` carries no title, and fetching
+ * one post per tile to find it would trade a legible grid for a burst of
+ * requests. The tiles say how many and what kind instead.
  */
 export function AlbumGrid({
-  moments,
+  gallery,
   memberName,
   own = false,
-  noFamily = false,
   loading = false,
   failed = false,
   onRetry,
   onOpenMoment,
+  onOpenTimeline,
 }: AlbumGridProps) {
   const { t } = useTranslation();
-
-  if (noFamily) {
-    return (
-      <EmptyState
-        renderIcon={(props) => <Camera {...props} strokeWidth={2} />}
-        title={t('member.moments.empty')}
-        description={t('member.moments.noFamily')}
-      />
-    );
-  }
 
   if (loading) {
     return (
@@ -224,9 +191,9 @@ export function AlbumGrid({
     );
   }
 
-  const items = moments?.items ?? [];
+  const groups = gallery?.groups ?? [];
 
-  if (items.length === 0) {
+  if (groups.length === 0) {
     return (
       <EmptyState
         renderIcon={(props) => <Camera {...props} strokeWidth={2} />}
@@ -240,8 +207,8 @@ export function AlbumGrid({
     );
   }
 
-  const columns: PostDetail[][] = [[], []];
-  items.forEach((moment, index) => columns[index % 2]?.push(moment));
+  const columns: GalleryGroup[][] = [[], []];
+  groups.forEach((group, index) => columns[index % 2]?.push(group));
 
   return (
     <View style={{ gap: 12 }}>
@@ -252,30 +219,28 @@ export function AlbumGrid({
 
         <Text variant="caption" color={colors.text.muted}>
           {t('member.moments.counts', {
-            photos: moments?.photoCount ?? 0,
-            count: items.length,
+            photos: gallery?.photoCount ?? 0,
+            count: groups.length,
           })}
         </Text>
-
-        {/* Said out loud, because a partial album that looks complete is a
-            lie about somebody's life. See `use-member-moments.ts`. */}
-        {moments?.complete === false && (
-          <Text variant="badge" color={colors.text.subtle}>
-            {t('member.moments.partial')}
-          </Text>
-        )}
       </View>
 
       <View style={{ flexDirection: 'row', gap: GRID_GAP }}>
         {columns.map((column, columnIndex) => (
           <View key={columnIndex} style={{ flex: 1, gap: GRID_GAP }}>
-            {column.map((moment, rowIndex) => (
+            {column.map((group, rowIndex) => (
               <MomentTile
-                key={moment.id}
-                moment={moment}
+                key={group.key}
+                group={group}
                 // Offset by column so the two sides never step together.
                 aspectRatio={SHAPES[(rowIndex + columnIndex) % SHAPES.length] ?? 1}
-                onPress={() => onOpenMoment?.(moment)}
+                onPress={
+                  group.postId !== null
+                    ? () => onOpenMoment?.(group.postId as string)
+                    : group.kind === 'event'
+                      ? onOpenTimeline
+                      : undefined
+                }
               />
             ))}
           </View>

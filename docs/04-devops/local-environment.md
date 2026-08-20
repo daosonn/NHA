@@ -83,6 +83,26 @@ Prisma does not load `.env` automatically in v7 — `apps/api/prisma.config.ts`
 explicitly loads it via `dotenv/config`, and `AppModule` loads it into
 `process.env` at runtime via `@nestjs/config`.
 
+### After changing `schema.prisma`, run `prisma generate` yourself
+
+`prisma migrate dev` writes and applies the migration but **did not
+regenerate the client** here (observed 2026-08-20 on Prisma 7.9.1). Nothing
+warns you, and the gap survives every check the repo runs:
+
+```
+pnpm --filter api exec prisma migrate dev --name <name>
+pnpm --filter api exec prisma generate   # ← do not skip this
+```
+
+Why lint, build and tests all stay green with a stale client: services pass
+Prisma an **extracted `as const` select object** (`profileSelect` in
+`profile.service.ts` is the pattern). TypeScript only applies
+excess-property checking to _fresh_ object literals, so a select naming a
+column the generated client has never heard of type-checks fine and then
+throws `Unknown field ... for select statement` at runtime — a 500 on the
+first real request, not a build error. If a brand-new column 500s, this is
+the first thing to check.
+
 ### `apps/web`
 
 No environment variables required yet (default Next.js starter).

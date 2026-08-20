@@ -98,7 +98,13 @@ it — no cross-owner references.
   posts — a memo annotates a person, it is not shared content. May feed AI
   gift/care suggestions later.
 
-### Plans (decided 2026-08-14)
+### Plans (decided 2026-08-14; **feature dropped 2026-08-20**)
+
+**Not being built.** Quality Time (WBS 2.6) was dropped on 2026-08-20, and
+a Plan only ever existed to hold its output — see `project-status.md` →
+Important Decisions. Every AI suggestion the product ships is now
+read-once. The rules below stand as the record of the decision, and as the
+starting point if this is revived.
 
 - AI-drafted plans (surprise / quality time) are **saved** — they are
   followed over days, not read-once suggestions like gift ideas.
@@ -131,14 +137,15 @@ it — no cross-owner references.
   parents and children), and (b) content they had posted to that family?
 - **Time-capsule unlock semantics**: who can see that a locked box exists;
   what happens if the recipient has no account at unlock time.
-- **"Plan a surprise" data sources** (AI hub mock, 2026-08-14): the mock
-  copy assumes known availability ("Lan and Minh are free on Sunday") and
-  distances ("Grandma's house is 40 minutes away") — neither is stored
-  anywhere. Options: (1) MVP per WBS 2.6.2 — user types the context
-  manually, no schema change; (2) add a `MemberAvailability` table +
-  `address` on profiles (+ maps API for distance); (3) calendar
-  integration (post-MVP scale). Gift-ideas and celebration-video cards
-  need nothing new (Memo counts, birthDate, media counts).
+- ~~**"Plan a surprise" data sources**~~ (AI hub mock, 2026-08-14) —
+  **closed 2026-08-20 by dropping the feature.** The mock copy assumed
+  known availability ("Lan and Minh are free on Sunday") and distances
+  ("Grandma's house is 40 minutes away"), neither of which is stored
+  anywhere; the options on the table were a `MemberAvailability` table, an
+  `address` on profiles plus a maps API, or calendar integration. None is
+  needed now — Quality Time is not being built, and the surprise-plan
+  screen goes with it. Gift ideas and celebration-video cards never needed
+  anything new (Memo counts, birthDate, media counts).
 
 Fill in sections here as each question is decided, and update
 `docs/project-status.md` → Important Decisions.

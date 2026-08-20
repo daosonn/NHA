@@ -12,6 +12,7 @@ export {
   auth,
   comments,
   families,
+  gallery,
   invitations,
   lifeEvents,
   media,

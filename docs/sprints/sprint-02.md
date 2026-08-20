@@ -2,8 +2,9 @@
 
 > Status: **backend started 2026-08-19** (sprint 1's backend side is
 > finished; frontend is still wiring sprint-1 screens in parallel).
-> **AI side delivered 2026-08-20** on branch `merge/ai-integration`
-> (PR pending): groups 2.2–2.5 done end-to-end — `apps/ai` (FastAPI,
+> **AI side delivered 2026-08-20** (merged to `main` in PR #25; a perf +
+> privacy pass follows on the same branch): groups 2.2–2.5 done
+> end-to-end — `apps/ai` (FastAPI,
 > model-level call landed on gpt-5.6-luna), NestJS `src/ai` + `src/video`,
 > and the mobile screens 21-33 (gift → message → card → memory video).
 > Verified by e2e (10 tests incl. a real ffmpeg render), pytest, and live
@@ -17,7 +18,8 @@
 ## Sprint Goal
 
 Memory + AI: the family can browse shared memories, generate a video from
-photos, and get AI suggestions (gifts, messages, quality time).
+photos, and get AI suggestions (gifts, messages). ~~quality time~~ — the
+third suggestion type was dropped 2026-08-20, see § 2.6.
 
 ## Scope
 
@@ -65,12 +67,22 @@ photos, and get AI suggestions (gifts, messages, quality time).
       Short/Standard/Heartfelt + "Say it differently" (re-roll thật qua `force`),
       thiệp PNG 5 mẫu ở màn 26
 
-### 2.6 AI Quality Time — Gợi ý hoạt động
+### 2.6 AI Quality Time — Gợi ý hoạt động — **BỎ (2026-08-20)**
 
-- [ ] 2.6.1 Chọn thành viên (family member)
-- [ ] 2.6.2 Nhập thời gian/sở thích (context)
-- [ ] 2.6.3 Generate kế hoạch (danh sách hoạt động)
-- [ ] 2.6.4 Lưu & chia sẻ plan (bảng `Plan` + `PlanShare` — chỉ chủ sửa/chia sẻ, người được chia sẻ chỉ xem; added 2026-08-14, see `database.md`)
+**Cả nhóm 2.6 không làm nữa** (quyết định 2026-08-20). Lý do và hệ quả
+ghi ở `project-status.md` → Important Decisions. Tóm tắt: tính năng này
+nằm trong WBS nhưng **không có dòng nào trong `mvp-scope.md`**, và AI
+sprint 2 chốt ở hai tính năng đã chạy end-to-end là gợi ý quà (2.4) và
+gợi ý lời nhắn (2.5).
+
+- ~~2.6.1 Chọn thành viên (family member)~~ — bỏ
+- ~~2.6.2 Nhập thời gian/sở thích (context)~~ — bỏ
+- ~~2.6.3 Generate kế hoạch (danh sách hoạt động)~~ — bỏ; chưa bao giờ có API
+- ~~2.6.4 Lưu & chia sẻ plan (`Plan` + `PlanShare`)~~ — bỏ. API **đã viết
+  và verify xong** 2026-08-20 nhưng **không merge**: nằm ở branch
+  `feature/plans` nếu sau này quay lại. Hai bảng `Plan`/`PlanShare` **giữ
+  nguyên trong schema** (rỗng, vô hại — xoá thì tốn một migration cho thứ
+  có thể sống lại).
 
 ### 2.7 Test Sprint 2
 
@@ -91,5 +103,5 @@ photos, and get AI suggestions (gifts, messages, quality time).
   AI team: **gpt-5.6-luna** for every call (analysis, rollup, suggestions,
   storyboard), recorded with parameters and latency numbers in
   `docs/03-ai/architecture.md` (2026-08-19, perf pass 2026-08-20).
-- 2.6 (Quality Time) is the one sprint-2 AI group not started — the
-  `Plan` table it needs is live (gift-save already writes to it).
+- 2.6 (Quality Time) was **dropped** 2026-08-20 (see § 2.6) — note that
+  the `Plan` table stays live regardless: gift-save (2.4) writes to it.
