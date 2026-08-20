@@ -320,6 +320,9 @@ export class AiService {
     dto: MessageRequestDto,
   ): Promise<MessageView> {
     const me = await this.context.assertMembership(userId, familyId);
+    // Cùng quy tắc với giftIdeas: chưng cất nốt bài chưa phân tích trước khi
+    // build context, để lời nhắn không tụt hậu so với bài vừa đăng.
+    await this.profiles.ensureFreshProfile(memberId, dto.locale ?? 'en');
     const bundle = await this.context.buildFor(userId, familyId, memberId);
     if (dto.extraNote) {
       // "Anything to add" đi vào evidence như lời dặn của người gửi — model được phép dùng nguyên văn

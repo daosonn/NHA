@@ -190,6 +190,32 @@ describe('AI + Video (screens 21-33)', () => {
     ]);
   });
 
+  it('screen 23: a title-only memo resolves as evidence with the title as its text', async () => {
+    // memo có title bắt buộc, content tuỳ chọn (schema 2026-08-19) — evidence
+    // từng trả text=null cho memo chỉ-title, UI hiểu nhầm là "nguồn đã bị xoá"
+    const memo = await json<IdBody>(
+      request(http)
+        .post(`/api/families/${familyId}/members/${memberId}/memos`)
+        .set(auth())
+        .send({ title: 'Bà chỉ uống trà không đường', category: 'health' }),
+      201,
+    );
+    const refs = await json<
+      { ref: string; kind: string; text: string | null; topic: string | null }[]
+    >(
+      request(http)
+        .get(
+          `/api/families/${familyId}/members/${memberId}/evidence?refs=memo_${memo.id}`,
+        )
+        .set(auth()),
+      200,
+    );
+    expect(refs).toHaveLength(1);
+    expect(refs[0].kind).toBe('memo');
+    expect(refs[0].text).toBe('Bà chỉ uống trà không đường');
+    expect(refs[0].topic).toContain('health');
+  });
+
   it('screen 26: renders a card PNG and returns a viewable media id', async () => {
     const card = await json<CardBody>(
       request(http).post(`/api/families/${familyId}/cards`).set(auth()).send({
@@ -199,6 +225,30 @@ describe('AI + Video (screens 21-33)', () => {
         fromName: 'E2E',
         heading: 'BIRTHDAY',
       }),
+      201,
+    );
+    expect(card.media_id).toBeTruthy();
+    await request(http)
+      .get(`/api/media/${card.media_id}`)
+      .set(auth())
+      .expect(200);
+  });
+
+  it('screen 26: Vietnamese text and a long custom occasion still render', async () => {
+    // heading 45 ký tự — cap 30 cũ làm "Save the card" 400 im lặng; chữ Việt
+    // có thanh điệu từng ra tofu vì Georgia thiếu glyph Extended Additional
+    const card = await json<CardBody>(
+      request(http)
+        .post(`/api/families/${familyId}/cards`)
+        .set(auth())
+        .send({
+          template: 'tet',
+          message:
+            'Chúc mừng năm mới! Cả nhà chúc bà mạnh khoẻ, bình an và thật nhiều niềm vui.',
+          toName: 'Bà Nội',
+          fromName: 'Cháu của bà',
+          heading: 'Kỷ niệm ngày ông bà về thăm quê hương yêu dấu',
+        }),
       201,
     );
     expect(card.media_id).toBeTruthy();
@@ -278,6 +328,14 @@ describe('AI + Video (screens 21-33)', () => {
       .set({ ...auth(), range: 'bytes=0-99' })
       .expect(206);
 
+    // Range vượt cuối file phải là 416 kèm độ dài thật (RFC 9110) — từng nổ 500
+    // vì createReadStream nhận start > end khi player seek quá cuối
+    const res416 = await request(http)
+      .get(`/api/video-jobs/${job.id}/file`)
+      .set({ ...auth(), range: 'bytes=99999999999-' })
+      .expect(416);
+    expect(res416.headers['content-range']).toMatch(/^bytes \*\/\d+$/);
+
     const share = await json<ShareBody>(
       request(http)
         .post(`/api/video-jobs/${job.id}/share`)
@@ -290,6 +348,17 @@ describe('AI + Video (screens 21-33)', () => {
       200,
     );
     expect(JSON.stringify(feed)).toContain(share.post_id);
+
+    // share COPY file sang media của post — xoá post đã share không được phá
+    // video gốc của job (từng làm job DONE nhưng file biến mất)
+    await request(http)
+      .delete(`/api/posts/${share.post_id}`)
+      .set(auth())
+      .expect(200);
+    await request(http)
+      .get(`/api/video-jobs/${job.id}/file`)
+      .set(auth())
+      .expect(200);
   });
 
   it('quick mode renders with no AI and no cards', async () => {

@@ -129,6 +129,16 @@ export class VideoController {
         : Math.max(0, size - parseInt(m[2], 10));
       const end =
         m[1] && m[2] ? Math.min(parseInt(m[2], 10), size - 1) : size - 1;
+      // Range nằm ngoài file (player seek quá cuối, hoặc file đổi giữa hai request)
+      // → 416 theo RFC 9110 kèm độ dài thật để client tự sửa; trước đây rơi thẳng
+      // vào createReadStream với start > end và nổ 500 (đã dính).
+      if (start >= size || start > end) {
+        res
+          .status(416)
+          .set({ 'content-range': `bytes */${size}`, 'accept-ranges': 'bytes' })
+          .end();
+        return;
+      }
       res.status(206).set({
         'content-type': 'video/mp4',
         'content-length': String(end - start + 1),

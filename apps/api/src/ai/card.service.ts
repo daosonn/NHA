@@ -161,6 +161,11 @@ function ffPath(p: string): string {
 const CJK_RE =
   /[\u2E80-\u303F\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\uFF00-\uFFEF]/;
 
+// Chữ Việt có thanh điệu (ơ ư ạ ế …) nằm ở Latin Extended-B/Additional — Georgia
+// trên Windows chỉ phủ tới Extended-A nên ra tofu (đã dính); Times/Palatino/Cambria
+// phủ đủ (kiểm bằng cmap, 8/8 glyph thử).
+const VN_RE = /[\u0110\u0111\u01A0\u01A1\u01AF\u01B0\u1EA0-\u1EF9]/;
+
 /**
  * Thiệp dùng font CÓ CHÂN (mincho/serif), không phải font UI của video.
  * Thiệp là giấy in — Yu Gothic/Segoe UI làm nó trông như một cái form.
@@ -172,7 +177,9 @@ function cardFont(
   const dir = 'C:\\Windows\\Fonts';
   const cands = CJK_RE.test(text)
     ? ['yumindb.ttf', 'yumin.ttf', 'YuMincho.ttc']
-    : ['georgiab.ttf', 'timesbd.ttf', 'georgia.ttf', 'times.ttf'];
+    : VN_RE.test(text)
+      ? ['timesbd.ttf', 'palab.ttf', 'cambriab.ttf', 'times.ttf']
+      : ['georgiab.ttf', 'timesbd.ttf', 'georgia.ttf', 'times.ttf'];
   for (const f of cands) {
     const p = path.join(dir, f);
     if (existsSync(p)) return p;
@@ -271,12 +278,23 @@ export class CardService {
       );
     };
 
-    const heading = (input.heading ?? '').trim();
-    if (heading) {
-      // Latin thì giãn chữ cho ra dáng "BIRTHDAY"; tiếng Nhật đã đủ thoáng
+    const headingRaw = (input.heading ?? '').trim();
+    if (headingRaw) {
+      // Dịp tự thêm dài tới 80 ký tự nhưng thiệp chỉ có một dòng 1080px —
+      // cắt hiển thị ở 40, còn validate thì không cắt (xem CardRenderDto).
+      const heading =
+        headingRaw.length > 40
+          ? `${headingRaw.slice(0, 39).trimEnd()}…`
+          : headingRaw;
+      // Latin thì giãn chữ cho ra dáng "BIRTHDAY"; tiếng Nhật đã đủ thoáng.
+      // Giãn làm bề rộng gần gấp đôi nên chỉ giãn khi còn ngắn.
       const isLatin = /^[\u0020-\u024F]+$/.test(heading);
       await draw(
-        isLatin ? spaced(heading.toUpperCase()) : heading,
+        isLatin
+          ? heading.length <= 22
+            ? spaced(heading.toUpperCase())
+            : heading.toUpperCase()
+          : heading,
         34,
         t.sub,
         272,

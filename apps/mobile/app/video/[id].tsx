@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Check, Clapperboard, Download, Pencil, Play, Users } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { Check, Clapperboard, Download, Maximize2, Pencil, Play, Users } from 'lucide-react-native';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Platform, Pressable, ScrollView, View } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
@@ -112,6 +112,7 @@ export default function VideoJobScreen() {
           : { uri: webUri }
         : { uri: fileUrl, headers: { authorization: `Bearer ${apiAccessToken() ?? ''}` } };
 
+  const videoRef = useRef<VideoView>(null);
   const player = useVideoPlayer(playerSource);
   // useVideoPlayer chỉ đọc source lúc TẠO player; blob web tới sau nên phải nạp lại.
   useEffect(() => {
@@ -272,11 +273,36 @@ export default function VideoJobScreen() {
           <>
             <View style={{ borderRadius: radius['2xl'], overflow: 'hidden', backgroundColor: '#000' }}>
               <VideoView
+                ref={videoRef}
                 player={player}
                 style={{ width: '100%', aspectRatio: data.options?.aspect === 'landscape' ? 16 / 9 : 9 / 16, maxHeight: 440 }}
                 contentFit="contain"
                 nativeControls
+                // PHẢI truyền: trên web expo-video mặc định gắn controlsList="nofullscreen",
+                // nên nút toàn màn hình của trình duyệt hiện ra mà bấm không có tác dụng.
+                fullscreenOptions={{ enable: true }}
               />
+
+              {/* Nút toàn màn hình của app: gọi thẳng enterFullscreen() qua ref nên không
+                  phụ thuộc vào control của trình duyệt/hệ điều hành. */}
+              <Pressable
+                onPress={() => void videoRef.current?.enterFullscreen()}
+                accessibilityRole="button"
+                accessibilityLabel={t('video.fullscreen')}
+                style={({ pressed }) => ({
+                  position: 'absolute',
+                  top: 10,
+                  right: 10,
+                  width: 34,
+                  height: 34,
+                  borderRadius: radius.full,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: pressed ? 'rgba(0,0,0,0.75)' : 'rgba(0,0,0,0.45)',
+                })}
+              >
+                <Maximize2 size={16} color={colors.text.white} strokeWidth={2.2} />
+              </Pressable>
               {/* web: đang tải bytes về blob — nói rõ chứ không để khung đen im lặng */}
               {Platform.OS === 'web' && webUri === null && (
                 <View

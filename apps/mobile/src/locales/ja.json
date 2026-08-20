@@ -756,6 +756,7 @@
     "loadingPlayer": "動画を読み込んでいます…",
     "download": "動画を保存",
     "downloaded": "端末に保存しました",
-    "saveFailed": "動画を保存できませんでした。もう一度お試しください。"
+    "saveFailed": "動画を保存できませんでした。もう一度お試しください。",
+    "fullscreen": "全画面表示"
   }
 }

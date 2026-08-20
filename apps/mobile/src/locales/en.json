@@ -780,6 +780,7 @@
     "loadingPlayer": "Loading the video…",
     "download": "Save the video",
     "downloaded": "Saved to your device",
-    "saveFailed": "Could not save the video — try again."
+    "saveFailed": "Could not save the video — try again.",
+    "fullscreen": "Full screen"
   }
 }

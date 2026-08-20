@@ -299,13 +299,29 @@ export class VideoService {
     if (job.status !== 'DONE' || !job.resultStorageKey || !job.familyId) {
       throw new BadRequestException('Video chưa render xong');
     }
-    const size = await this.storage.sizeOf(job.resultStorageKey);
+
+    // Bài đăng nhận một BẢN SAO vật lý của file, không dùng chung storageKey với
+    // job: xoá post sẽ xoá file của mọi media đính kèm (post.service →
+    // removeAllBestEffort), mà nếu đó cũng là file của job thì "Your videos" vẫn
+    // ghi DONE nhưng bấm phát là hỏng — mất vĩnh viễn video đã render (đã dính).
+    const sourceAbs = this.storage.absolutePathOf(job.resultStorageKey);
+    const tmpCopy = path.join(
+      this.storage.tempDir,
+      `share_${jobId}_${Date.now()}.mp4`,
+    );
+    fs.mkdirSync(path.dirname(tmpCopy), { recursive: true });
+    fs.copyFileSync(sourceAbs, tmpCopy);
+    const postStorageKey = await this.storage.promote(tmpCopy, 'video/mp4');
+    const size = await this.storage.sizeOf(postStorageKey);
+
     const plan = job.plan as PlanJson | null;
     const post = await this.prisma.post.create({
       data: {
         authorUserId: userId,
         type: 'POST',
-        content: caption ?? plan?.title ?? 'Memory video',
+        // `||` chứ không phải `??`: plan.title của quick mode là chuỗi RỖNG, và
+        // `caption ?? '' ?? fallback` dừng ở '' — bài share ra timeline không lời.
+        content: caption?.trim() || plan?.title?.trim() || 'Memory video',
         families: { create: [{ familyId: job.familyId }] },
         ...(job.aboutMemberId
           ? { memberTags: { create: [{ memberId: job.aboutMemberId }] } }
@@ -314,7 +330,7 @@ export class VideoService {
           create: [
             {
               uploaderUserId: userId,
-              storageKey: job.resultStorageKey,
+              storageKey: postStorageKey,
               mimeType: 'video/mp4',
               sizeBytes: size,
             },

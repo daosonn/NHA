@@ -1,4 +1,4 @@
-﻿# AI Architecture
+# AI Architecture
 
 > Status: **contract draft** (2026-08-19, backend-authored at sprint-2
 > start per `sprint-02.md` Notes). The AI team owns `apps/ai` and
@@ -211,15 +211,16 @@ is running and covered by `pnpm verify`; the contract's non-negotiables (1-5) ho
 
 ### Models
 
-`gpt-5.6-luna` for every call 窶・analysis, rollup, gift, message, storyboard 窶・set through `MODEL_ANALYSIS` / `MODEL_SUGGEST` in `apps/ai/.env`, plus
+`gpt-5.6-luna` for every call — analysis, rollup, gift, message, storyboard —
+set through `MODEL_ANALYSIS` / `MODEL_SUGGEST` in `apps/ai/.env`, plus
 `max_completion_tokens: 8192`. Measured 2026-08-19: `gpt-5` (reasoning) needed
 77.9s for one gift round against luna's 14-16s, and that call is ~80% of the
 latency the family feels. Do not switch models without re-measuring.
 
-Latency is roughly linear in OUTPUT tokens (out 1420 竊・13.4s ﾂｷ out 2359 竊・24.3s),
+Latency is roughly linear in OUTPUT tokens (out 1420 → 13.4s · out 2359 → 24.3s),
 so the prompts carry hard length caps per field and ask for exactly 5 ideas.
 Both services log it: FastAPI writes `suggest_gift gpt-5.6-luna 15.0s in=2439
-out=1520`, NestJS writes `gift ideas: AI 15.0s ﾂｷ shops 0.4s`.
+out=1520`, NestJS writes `gift ideas: AI 15.0s · shops 0.4s`.
 
 ### FastAPI surface (`apps/ai`, stateless, never touches Postgres)
 
@@ -228,60 +229,61 @@ out=1520`, NestJS writes `gift ideas: AI 15.0s ﾂｷ shops 0.4s`.
 | `POST /v1/gift-ideas` | 5 ideas + insights + `note_to_giver`, each idea with `why`, sources, JP search keywords |
 | `POST /v1/message-suggestions` | three variants (short/standard/heartfelt) |
 | `POST /v1/video-storyboard` | title/subtitle/opening/closing/dedication + scenes (caption, duration, reason) + palette |
-| `POST /v1/analyze-post` | one post (caption + up to 6 photos) 竊・0-4 interest signals about its AUTHOR |
-| `POST /v1/profile-rollup` | pending signals + current profile 竊・the next profile version |
+| `POST /v1/analyze-post` | one post (caption + up to 6 photos) → 0-4 interest signals about its AUTHOR |
+| `POST /v1/profile-rollup` | pending signals + current profile → the next profile version |
 | `GET /health` | reachability + whether a key is configured |
 
 Every call uses OpenAI Structured Outputs (`json_schema`, `strict: true`) generated
 from pydantic. `AI_MOCK=1` answers all of them with schema-correct data for 0 tokens,
 which is how `pnpm test:ai` runs in CI.
 
-### Understanding a person 窶・two layers
+### Understanding a person — two layers
 
-    post created 笏笏analyze (1 call, 竕､6 photos)笏笏笆ｺ  InterestSignal
+    post created ──analyze (1 call, ≤6 photos)──►  InterestSignal
                                                    atomic evidence, append-only
-                                                          笏・rollup (1 call)
-                                                          笆ｼ
+                                                          │ rollup (1 call)
+                                                          ▼
                                                    MemberProfile v+1
                                                    distilled ~1k tokens, versioned
 
 - `analyzePost` runs in the background when a post is created (retried once after
-  8s on a provider error), and the rollup follows immediately 窶・  `ROLLUP_EVERY_N_POSTS` defaults to **1**. Rolling up at suggestion time is the
+  8s on a provider error), and the rollup follows immediately —
+  `ROLLUP_EVERY_N_POSTS` defaults to **1**. Rolling up at suggestion time is the
   one moment the user is actually waiting.
 - The analysis prompt fills `context_analysis` FIRST: who did what to whom, and
-  whether the author was ACTOR / RECIPIENT / OBSERVER. "Con trai v盻・quﾃｪ thﾄノ m蘯ｹ"
-  posted by the mother means the MOTHER was visited 窶・not that she likes visiting.
+  whether the author was ACTOR / RECIPIENT / OBSERVER. "Con trai về quê thăm mẹ"
+  posted by the mother means the MOTHER was visited — not that she likes visiting.
 - Signals belong to the post's AUTHOR, never to a tagged person. Code (not the
-  model) decides `sourceType`, caps confidence (caption 0.75 ﾂｷ photo 0.85 ﾂｷ a
-  human's 笙｡ 0.9) and stamps `observedAt` with the day it happened.
-- The rollup follows six rules (never invent ﾂｷ human sources override machine
-  ones ﾂｷ newer beats older, health goes to `avoid hard` ﾂｷ merge near-synonyms ﾂｷ
-  竕､12 interests ﾂｷ set trend). `gift_history` is re-merged in code, not trusted to
+  model) decides `sourceType`, caps confidence (caption 0.75 · photo 0.85 · a
+  human's ♡ 0.9) and stamps `observedAt` with the day it happened.
+- The rollup follows six rules (never invent · human sources override machine
+  ones · newer beats older, health goes to `avoid hard` · merge near-synonyms ·
+  ≤12 interests · set trend). `gift_history` is re-merged in code, not trusted to
   the model. Old versions are never overwritten, so a suggestion is always
   traceable to the profile that produced it.
 
 ### Gift and message read the profile, not the captions again
 
 Each post is analysed once. Suggestion prompts carry the distilled profile plus
-relatives' notes **verbatim** 窶・no captions a second time, which is both faster
-and cheaper. Provenance survives because the model cites `sig_窶ｦ` ids from the
-profile: `GET /families/:familyId/members/:memberId/evidence?refs=sig_窶ｦ,memo_窶ｦ`
-resolves each one back to its signal 竊・original post 竊・photo, so screen 23
+relatives' notes **verbatim** — no captions a second time, which is both faster
+and cheaper. Provenance survives because the model cites `sig_…` ids from the
+profile: `GET /families/:familyId/members/:memberId/evidence?refs=sig_…,memo_…`
+resolves each one back to its signal → original post → photo, so screen 23
 ("Where this came from") still opens the real picture. If the post was deleted,
 the signal's own detail is returned rather than silence.
 
 Two independent caches: `AiSuggestionCache` (a whole round, keyed with the profile
-version so new evidence invalidates it; the 竊ｻ button sends `force`) and
+version so new evidence invalidates it; the ↻ button sends `force`) and
 `ProductCache` (marketplace results by week + keyword + price band).
 
 ### Real products, 0 tokens
 
-`src/ai/shops.service.ts` calls Yahoo!繧ｷ繝ｧ繝・ヴ繝ｳ繧ｰ `itemSearch V3`. The model only
-supplies `search_keywords_ja`; "together" ideas map to a hard-coded 菴馴ｨ薙ぐ繝輔ヨ
+`src/ai/shops.service.ts` calls Yahoo!ショッピング `itemSearch V3`. The model only
+supplies `search_keywords_ja`; "together" ideas map to a hard-coded 体験ギフト
 keyword per `experience_kind`. When a query returns nothing the service widens in
-steps (as-is 竊・wider budget 竊・shorter keyword 竊・both), then filters price ﾂｱ10%,
+steps (as-is → wider budget → shorter keyword → both), then filters price ±10%,
 drops titles hitting the avoid list, dedupes and scores (price fit, review trust,
-keyword match, has-image) and keeps the top 3. Three lookups run in parallel 窶・no
+keyword match, has-image) and keeps the top 3. Three lookups run in parallel — no
 more, Yahoo rate-limits around 1 req/s. `resolve` returns `cached` / `relaxed` /
 `dropped_by_avoid` / `attempts` so a price outside the budget can always be explained.
 
@@ -295,7 +297,7 @@ keeps the voices in a family clip above the music. `apps/ai` only writes the
 storyboard. The engine was ported from the `onemoretime` prototype after 92 smoke
 checks there.
 
-### Where the implementation differs from the draft above 窶・needs a team decision
+### Where the implementation differs from the draft above — needs a team decision
 
 1. **Analysis direction.** The draft has `apps/ai` polling
    `GET /internal/ai/media/pending` and pushing `MediaInsight` back. What runs is
@@ -310,9 +312,9 @@ checks there.
    user's own memos. The implementation currently sends every family member's
    memos about the subject, because design screen 22 shows "From Lan's note" as a
    source chip. This is a privacy boundary, so it is called out here rather than
-   changed quietly 窶・see the PR description.
+   changed quietly — see the PR description.
 4. **Service token.** The draft's seam is `X-AI-Service-Token` / `AI_SERVICE_TOKEN`
-   (AI 竊・NestJS). NestJS 竊・FastAPI uses `x-internal-token` / `AI_INTERNAL_TOKEN`.
+   (AI → NestJS). NestJS → FastAPI uses `x-internal-token` / `AI_INTERNAL_TOKEN`.
    Both exist because they guard opposite directions; worth unifying the naming.
 5. **`/video-jobs` namespace.** `src/video-job` (backend, WBS 2.2.3) and
    `src/video` (AI, screens 27-33) both answer `GET /video-jobs`. Only `src/video`

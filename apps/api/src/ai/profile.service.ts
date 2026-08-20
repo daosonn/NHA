@@ -103,6 +103,7 @@ export class ProfileService {
       select: {
         id: true,
         content: true,
+        eventTitle: true,
         createdAt: true,
         eventDate: true,
         place: true,
@@ -137,7 +138,12 @@ export class ProfileService {
 
     const result = await this.ai.analyzePost({
       post_id: post.id,
-      caption: post.content,
+      // Bài EVENT để tên sự kiện ở eventTitle, content có thể rỗng — ghép cả hai
+      // để analyzer không mất tín hiệu "Ngày hội thể thao" v.v.
+      caption:
+        [post.eventTitle, post.content]
+          .filter((s): s is string => !!s?.trim())
+          .join(' — ') || null,
       author_name: post.author?.name ?? authorMember.displayName,
       author_role: null,
       author_relations: relations,
@@ -370,7 +376,9 @@ export class ProfileService {
           where: { id: ref.slice(5), aboutMemberId: memberId },
           select: {
             id: true,
+            title: true,
             content: true,
+            category: true,
             createdAt: true,
             owner: { select: { name: true } },
           },
@@ -380,12 +388,18 @@ export class ProfileService {
             ? {
                 ref,
                 kind: 'memo',
-                text: memo.content,
+                // `content` là tuỳ chọn kể từ khi memo có title (schema 2026-08-19):
+                // ghi chú chỉ-có-tiêu-đề là hợp lệ, và với người dùng thì TITLE chính
+                // là lời ghi chú — trả null ở đây làm màn 23 nói dối rằng "nguồn đã
+                // bị xoá" trong khi nó vẫn nằm ngay đó (đã dính sau merge).
+                text: memo.content?.trim() || memo.title,
                 author_name: memo.owner.name,
                 created_at: memo.createdAt.toISOString(),
                 post_id: null,
                 media_id: null,
-                topic: null,
+                topic: memo.category
+                  ? `${memo.category} · ${memo.title}`
+                  : memo.title,
               }
             : {
                 ref,

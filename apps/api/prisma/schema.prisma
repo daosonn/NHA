@@ -559,7 +559,10 @@ model VideoJob {
   requester   User   @relation(fields: [requesterUserId], references: [id])
   resultMedia Media? @relation("VideoJobResult", fields: [resultMediaId], references: [id], onDelete: SetNull)
 
-  // Cả hai chiều đọc đều cần: "Your videos" lấy theo người + mới nhất trước.
+  // Cả HAI index tồn tại trong DB, mỗi bên một migration tạo một cái
+  // (20260819011108 tạo composite, 20260819090000 của main tạo single) —
+  // schema phải khai đủ cả hai, thiếu một là `migrate diff` báo drift vĩnh viễn.
+  @@index([requesterUserId])
   @@index([requesterUserId, createdAt])
 }
 

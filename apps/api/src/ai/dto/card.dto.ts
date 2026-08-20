@@ -18,9 +18,13 @@ export class CardRenderDto {
   @MaxLength(40)
   fromName!: string;
 
-  /** dòng nhỏ phía trên "Dear …" — vd "BIRTHDAY" */
+  /**
+   * dòng nhỏ phía trên "Dear …" — vd "BIRTHDAY". Mobile gửi thẳng tên dịp người
+   * dùng tự thêm (tới 80 ký tự) — cap 30 từng làm "Save the card" chết im lặng
+   * vì 400 validation; hiển thị được cắt gọn phía render, không cắt ở validate.
+   */
   @IsOptional()
   @IsString()
-  @MaxLength(30)
+  @MaxLength(80)
   heading?: string;
 }
