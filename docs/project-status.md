@@ -9,6 +9,11 @@ backend side is finished, so `apps/api` work now follows
 `docs/sprints/sprint-02.md` while frontend wires the remaining sprint-1
 screens.
 
+- **Sprint 2's AI side delivered 2026-08-20** on branch
+  `merge/ai-integration` (PR pending): groups 2.2–2.5 end-to-end —
+  `apps/ai` (FastAPI), NestJS `src/ai` + `src/video`, mobile screens
+  21-33. Per-task detail in `docs/sprints/sprint-02.md`; contract and
+  measured latency in `docs/03-ai/architecture.md`.
 - Active sprint docs: `docs/sprints/sprint-01.md` (frontend wiring),
   `docs/sprints/sprint-02.md` (backend + AI team)
 - Later: `docs/sprints/sprint-03.md` (Notification / Settings / Release)
@@ -485,6 +490,25 @@ Raised by the frontend, neither actionable from `apps/mobile`.
     a "choose album" step in Post a Moment). On branch `feature/album`
     (stacked on `feature/gallery`).
 
+### Sprint 2 — AI team (branch `merge/ai-integration`, PR pending)
+
+- AI integration for screens 21-33 (2026-08-20): `apps/ai` (FastAPI,
+  gpt-5.6-luna, structured outputs strict, `AI_MOCK=1` for token-free
+  tests), NestJS `src/ai` (gift / message / card / evidence / two-tier
+  profile pipeline: `InterestSignal` → versioned `MemberProfile`, rollup
+  after every post) + `src/video` (storyboard + 0-token ffmpeg render:
+  6 intro styles, Ken Burns, music ducking under clip voices), and the
+  full mobile flow (AI hub → gift ask/results/sources → message → card →
+  video setup/photos/music/style/plan/making/done). Provenance is
+  end-to-end: every suggestion cites `memo_…`/`sig_…` ids that resolve
+  back to the real note or post. Privacy rule tightened 2026-08-20:
+  suggestion context uses only the requester's own memos. Perf pass
+  measured on real calls (gift 12.3s→~8-9s cold / 43ms repeat, message
+  3.6s / 38ms repeat, storyboard 5.7s, render 49s→~25s) — numbers and
+  method in `docs/03-ai/architecture.md`. Verified: e2e 10/10 (real
+  render), pytest 7/7, tsc/eslint/check:i18n clean. Sprint tasks
+  2.2.1–2.5.2 ticked in `sprint-02.md`; 2.6 (Quality Time) not started.
+
 ### Planning Phase
 
 - MVP scope decided (`docs/00-shared/mvp-scope.md`)
@@ -507,10 +531,10 @@ Raised by the frontend, neither actionable from `apps/mobile`.
 
 ## Not Started
 
-- `apps/ai` (FastAPI service — not yet created)
-- All product features: auth, family, Life Profile, Life Timeline, Memories,
-  Family Tree, memory boxes, personal archive, reminders, notifications,
-  AI-assisted features
+- ~~`apps/ai` (FastAPI service — not yet created)~~ — created 2026-08-20 on
+  branch `merge/ai-integration` (see Current Sprint)
+- Sprint-2 group 2.6 (AI Quality Time) and Sprint 3 (notifications /
+  reminders / settings / release)
 
 ## Important Decisions
 
