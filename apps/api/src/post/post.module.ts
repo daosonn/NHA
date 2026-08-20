@@ -4,6 +4,7 @@ import { FamilyModule } from '../family/family.module';
 import { StorageModule } from '../storage/storage.module';
 import { CommentController } from './comment.controller';
 import { CommentService } from './comment.service';
+import { NotificationModule } from '../notification/notification.module';
 import { FamilyPostsController } from './family-posts.controller';
 import { PostController } from './post.controller';
 import { PostService } from './post.service';
@@ -12,7 +13,7 @@ import { ReactionService } from './reaction.service';
 
 @Module({
   // AiModule: mỗi bài đăng mới được đọc để hiểu người đăng (ProfileService)
-  imports: [StorageModule, FamilyModule, AiModule],
+  imports: [StorageModule, FamilyModule, AiModule, NotificationModule],
   controllers: [
     PostController,
     FamilyPostsController,

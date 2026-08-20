@@ -66,6 +66,10 @@ complete, the system passes end-to-end tests, and the MVP is demoed.
 
 ## Notes
 
-- Notification delivery is in-app only for MVP (list + badge); push/email
-  delivery remains an open decision (`mvp-scope.md`).
+- Notification delivery is in-app only for MVP (list + badge) — **confirmed
+  as a decision 2026-08-20**, push deferred; see `project-status.md` →
+  Important Decisions for why, and for the two things that get most of the
+  value without it (polling while open, local reminders for 3.2).
+  **Backend for 3.1 is done**: the API and the event triggers both ship;
+  what is left in 3.1 is entirely frontend.
 - Deployment target must be decided before 3.7.4 — currently entirely open.

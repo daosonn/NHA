@@ -580,10 +580,25 @@ dev` **did not regenerate the client**, and the stale client survived
   Marking read is idempotent (the first `readAt` is kept). Verified by
   format/lint/build/test + a **26-case live smoke test** (paging across 25
   rows, badge vs page counts, per-user isolation with 404 not 403,
-  idempotent read, read-all not touching another account). Nothing raises
-  notifications yet — wiring the event triggers (new post, comment,
-  reaction, tag, invite) has no task of its own in the WBS and is worth
-  one. On branch `feature/notification-api`.
+  idempotent read, read-all not touching another account).
+
+  **Event triggers wired the same day** — a task the WBS never had, but
+  without it screen 19 would have been built over an empty table.
+  `NotificationEventsService` holds the rules (kept out of
+  `NotificationService`, which stays a dumb store): a new post notifies
+  the families it was shared to except the author, a tagged member gets
+  `MEMBER_TAG` **instead of** `NEW_POST` rather than both, and a comment
+  or a **first** reaction notifies the post's author. Three rules are
+  enforced there and verified: a **private post notifies nobody**, you are
+  never notified about your own action, and **changing a reaction raises
+  nothing** (LIKE → LOVE → HAHA is one notification, not three — that
+  needed an extra existence check before the upsert). Triggers are
+  fire-and-forget on the same contract as `analyzePostInBackground`: a
+  post is published even if writing its notifications fails. Verified by a
+  further **13-case live smoke test** across four accounts (three in one
+  family, one outside). **Invitations raise nothing** — the invitee has no
+  account yet, so who `FAMILY_INVITE` is for is an open product question.
+  On branch `feature/notification-api`.
 
 ### Planning Phase
 
@@ -613,6 +628,32 @@ dev` **did not regenerate the client**, and the stale client survived
   AI-assisted features
 
 ## Important Decisions
+
+- **Notifications are in-app only for the MVP; push deferred (2026-08-20)**
+  — closes the "Notification delivery method" open question in
+  `mvp-scope.md`. The app shows a list and an unread badge, refreshed
+  while it is open; nothing reaches a closed phone yet.
+
+  Two things worth stating so the decision is not re-argued from scratch:
+
+  - **Sound, vibration and a lock-screen banner are the same mechanism**,
+    not three tiers. Choosing "just a sound" does not avoid anything —
+    every one of them is a push delivered by Apple or Google.
+  - **The Apple Developer account is a project cost, not a push cost.**
+    Without it the app cannot go to the App Store at all, and installs on
+    a real iPhone expire after seven days — which also blocks the
+    "nothing has run on a physical device yet" problem below. An
+    **organization** account waits on D-U-N-S verification, days to weeks,
+    which money cannot shorten. **It should be started now as a project
+    task**, in parallel with the code, not when push is scheduled.
+
+  Two things that do not need it, and are worth doing first: **polling**
+  `unread-count` while the app is open (frontend only, the endpoint
+  exists), and **local scheduled notifications** for birthday and special
+  date reminders (WBS 3.2) — the app already knows those dates from
+  `GET /families/:id/special-dates`, so the phone can raise them on its
+  own with no server and no Apple credential. Only unpredictable social
+  events ("Lan just commented") genuinely require push.
 
 - **AI Quality Time dropped (2026-08-20)** — the whole of WBS 2.6, both
   the suggestion (2.6.1–2.6.3) and saving/sharing the result as a `Plan`

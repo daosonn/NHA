@@ -489,8 +489,19 @@ Screen 19. **No migration** — `Notification` shipped in the sprint-0 schema.
 
 - **There is no create route, by design.** A notification is raised by
   something happening — a post, a comment, a reminder — never by a client
-  asking for one. Other modules call `NotificationService.create` /
-  `createMany` directly; the module exports it for reminders (3.2/3.3).
+  asking for one. Other modules call `NotificationEventsService`
+  directly; `NotificationService.create`/`createMany` stays exported for
+  reminders (3.2/3.3), which have no event to hang off.
+- **What raises one today** (wired 2026-08-20): a **new post** notifies
+  every account in the families it was shared to, except the author; a
+  member **tagged** in that post gets `MEMBER_TAG` _instead of_
+  `NEW_POST`, never both. A **comment** and a **first reaction** notify
+  the post's author only. Rules that follow from that, and that the app
+  can rely on: a **private post notifies nobody**; you are never notified
+  about your own action; and **changing a reaction** (LIKE → LOVE) raises
+  nothing, only the first one does. Invitations raise nothing yet — the
+  invitee has no account to notify, so who receives `FAMILY_INVITE` is an
+  open product question.
 - **The server sends no display text.** Only `type` plus a `payload` of
   ids — the app writes the sentence, the same rule the special-date
   widgets follow. A Japanese user must not be handed an English sentence
