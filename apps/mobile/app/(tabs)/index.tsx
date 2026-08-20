@@ -18,7 +18,7 @@ import { useFamilies } from '../../src/features/family/use-families';
 import { takePendingInvite } from '../../src/features/family/pending-invite';
 import { useMemberIdLookup } from '../../src/features/family/use-member-for-user';
 import { useFamilyFeed } from '../../src/features/feed/use-family-feed';
-import { useUpcomingSpecialDates } from '../../src/features/home/use-special-dates';
+import { useSpecialDates } from '../../src/features/ai/use-special-dates';
 import { notificationCount, recommendations } from '../../src/fixtures/home';
 import type { FamilySummary, PostDetail } from '../../src/lib/api';
 import { colors, spacing } from '../../src/theme';
@@ -61,7 +61,7 @@ export default function HomeScreen() {
   const { data: families, isPending, isError, refetch } = useFamilies();
   const feed = useFamilyFeed(familyId);
   const memberIdFor = useMemberIdLookup();
-  const { data: occasions } = useUpcomingSpecialDates(familyId);
+  const { data: occasions } = useSpecialDates(familyId);
 
   // Soonest first from the server, so the head of the list is the next one.
   const nextOccasion = occasions?.items[0];

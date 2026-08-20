@@ -119,14 +119,6 @@
       "today": "今日",
       "tomorrow": "明日",
       "inDays_other": "あと{{count}}日",
-      "birthday": "{{name}}さんの誕生日",
-      "birthdayAge": "{{name}}さんが{{count}}歳になります",
-      "memorial": "{{name}}さんを偲んで",
-      "memorialYears_other": "{{name}}さんの{{count}}回忌",
-      "anniversary": "{{name}}さんの記念日",
-      "anniversaryYears_other": "{{name}}さん・{{count}}周年",
-      "custom": "{{title}}",
-      "generic": "{{name}}",
       "more_other": "ほかに{{count}}件"
     }
   },

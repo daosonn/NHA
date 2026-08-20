@@ -506,60 +506,6 @@ export type UpdateLifeEventRequest = {
   taggedMemberIds?: string[];
 };
 
-// -------------------------------------------------- special dates
-
-/** `apps/api/src/generated/prisma/enums.ts` → `SpecialDateType`. */
-export type SpecialDateType = 'BIRTHDAY' | 'ANNIVERSARY' | 'MEMORIAL' | 'CUSTOM';
-
-/** `apps/api/src/generated/prisma/enums.ts` → `SpecialDateTheme`. */
-export type SpecialDateTheme = 'BUNTING' | 'CONFETTI_CANDLES' | 'FLORAL_BORDER';
-
-export type SpecialDateMemberRef = {
-  memberId: string;
-  displayName: string;
-};
-
-/**
- * One upcoming occasion — `GET /api/families/:familyId/special-dates`
- * (WBS 1.2.5), soonest first.
- *
- * Two sources in one list. `DERIVED` items are computed from `LifeProfile`
- * birth and death dates at request time and **carry no text at all**: the
- * server leaves the wording to the client on purpose, because "turns 63" and
- * 「63歳になります」 are not the same sentence with the words swapped
- * (`special-date.service.ts`). `CUSTOM` items are stored rows and bring
- * their own `title`.
- *
- * `nextOccurrence` is computed per request and never stored, so it is
- * already the *next* one — this year's or next year's, whichever is ahead.
- */
-export type SpecialDateItem = {
-  source: 'DERIVED' | 'CUSTOM';
-  type: SpecialDateType;
-  /** Custom occasions only; null for derived ones. */
-  title: string | null;
-  month: number;
-  day: number;
-  /** Birth year / death year / stored origin — null when unknown. */
-  originYear: number | null;
-  /** Years since origin at the next occurrence: "turns 63", "5th". */
-  ordinal: number | null;
-  theme: SpecialDateTheme;
-  /** `YYYY-MM-DD` of the next occurrence. */
-  nextOccurrence: string;
-  daysUntil: number;
-  members: SpecialDateMemberRef[];
-};
-
-export type UpcomingSpecialDates = {
-  items: SpecialDateItem[];
-};
-
-/** `?limit=` 1–50, default 10. */
-export type UpcomingQuery = {
-  limit?: number;
-};
-
 // -------------------------------------------------------------- gallery
 
 /**

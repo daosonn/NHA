@@ -12,8 +12,6 @@ export const queryKeys = {
   familyTree: (familyId: string) => ['families', familyId, 'tree'] as const,
   familyFeed: (familyId: string) => ['families', familyId, 'posts'] as const,
   familyInvitations: (familyId: string) => ['families', familyId, 'invitations'] as const,
-  /** Upcoming occasions for the home widget. */
-  familySpecialDates: (familyId: string) => ['families', familyId, 'special-dates'] as const,
   /**
    * A preview read by code, not by family: the reader is usually not in that
    * family yet, and often has no account at all, so this cannot hang under

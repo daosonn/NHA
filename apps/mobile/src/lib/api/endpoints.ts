@@ -63,8 +63,6 @@ import type {
   RequestPasswordResetRequest,
   RelationshipSummary,
   SuccessResult,
-  UpcomingQuery,
-  UpcomingSpecialDates,
   UpdateLifeEventRequest,
   UpdateMemoRequest,
   UpdatePostRequest,
@@ -469,18 +467,6 @@ export const memos = {
     apiRequest<MemoDetail>(`/memos/${memoId}`, { method: 'PATCH', body }),
 
   remove: (memoId: string) => apiRequest<SuccessResult>(`/memos/${memoId}`, { method: 'DELETE' }),
-};
-
-/**
- * Birthdays, memorials and stored occasions, soonest first.
- *
- * Derived items arrive without any text — the client words them from the
- * type, the ordinal and the member names, because the phrasing is different
- * in each language rather than translatable after the fact.
- */
-export const specialDates = {
-  upcoming: (familyId: string, params: UpcomingQuery = {}) =>
-    apiRequest<UpcomingSpecialDates>(`/families/${familyId}/special-dates${query(params)}`),
 };
 
 /**

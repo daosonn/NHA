@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Polygon } from 'react-native-svg';
 
-import { countdownLabel, occasionTitle } from '../../features/home/occasion-label';
+import { useOccasionLabel } from '../../features/ai/use-special-dates';
 import type { SpecialDateItem } from '../../lib/api';
 import { formatFullDate } from '../../lib/date';
 import { colors, radius, spacing } from '../../theme';
@@ -10,6 +10,19 @@ import { PhotoPlaceholder } from '../ui/photo-placeholder';
 import { Text } from '../ui/text';
 
 const HEIGHT = 196;
+
+/**
+ * How far off it is.
+ *
+ * Local because this widget is the only thing that says it in a headline
+ * voice. Today and tomorrow get their own words rather than "in 0 days" and
+ * "in 1 day" — nobody says either, in any of the languages here.
+ */
+function countdownLabel(daysUntil: number): { key: string; values: Record<string, number> } {
+  if (daysUntil <= 0) return { key: 'home.occasion.today', values: {} };
+  if (daysUntil === 1) return { key: 'home.occasion.tomorrow', values: {} };
+  return { key: 'home.occasion.inDays', values: { count: daysUntil } };
+}
 const FLAG_W = 20;
 const FLAG_H = 24;
 
@@ -95,8 +108,12 @@ export type EventWidgetProps = {
 export function EventWidget({ occasion, moreCount = 0 }: EventWidgetProps) {
   const { t } = useTranslation();
 
+  // One place words an occasion, and `main` already owns it — the AI hub and
+  // the occasion pickers read the same sentences. A second wording here would
+  // have drifted from theirs the first time either was touched.
+  const occasionLabel = useOccasionLabel();
+
   const countdown = countdownLabel(occasion.daysUntil);
-  const title = occasionTitle(occasion);
   const when = formatFullDate(occasion.nextOccurrence);
 
   return (
@@ -139,7 +156,7 @@ export function EventWidget({ occasion, moreCount = 0 }: EventWidgetProps) {
           {t(countdown.key, countdown.values).toLocaleUpperCase()}
         </Text>
         <Text variant="body2" weight="semibold">
-          {t(title.key, title.values)}
+          {occasionLabel(occasion)}
         </Text>
         {when !== null && <DetailRow>{when}</DetailRow>}
         {moreCount > 0 && <DetailRow>{t('home.occasion.more', { count: moreCount })}</DetailRow>}

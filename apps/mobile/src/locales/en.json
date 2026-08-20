@@ -121,16 +121,6 @@
       "tomorrow": "Tomorrow",
       "inDays": "In {{count}} day",
       "inDays_other": "In {{count}} days",
-      "birthday": "{{name}}'s birthday",
-      "birthdayAge": "{{name}} turns {{count}}",
-      "memorial": "Remembering {{name}}",
-      "memorialYears": "{{count}} year since {{name}} left us",
-      "memorialYears_other": "{{count}} years since {{name}} left us",
-      "anniversary": "{{name}} — anniversary",
-      "anniversaryYears": "{{name}} — {{count}} year together",
-      "anniversaryYears_other": "{{name}} — {{count}} years together",
-      "custom": "{{title}}",
-      "generic": "{{name}}",
       "more": "{{count}} more coming up",
       "more_other": "{{count}} more coming up"
     }
