@@ -6,6 +6,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { resolveLocale } from '../common/locale';
 import { PrismaService } from '../database/prisma/prisma.service';
 import type { VideoJob } from '../generated/prisma/client';
 import { VideoJobStatus } from '../generated/prisma/enums';
@@ -100,7 +101,7 @@ export class VideoJobService {
         body: JSON.stringify({
           jobId: job.id,
           mediaPaths: media.map((item) => item.storageKey),
-          locale: requester.locale ?? 'en',
+          locale: resolveLocale(requester.locale),
           ...(dto.style && { style: dto.style }),
         }),
         signal: AbortSignal.timeout(DISPATCH_TIMEOUT_MS),

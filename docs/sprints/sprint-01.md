@@ -168,9 +168,10 @@ build the family tree, post content with photos, and view member profiles.
       (display rule linked→global / placeholder→wiki; placeholder
       wiki-editable bởi cả nhà, mọi edit ghi `EditHistory`; bio,
       interests, birthDate/deathDate — nguồn cho widget 1.2.5).
-      FE nối xong 2026-08-19; thiếu cột `occupation`/`birthPlace` mà mockup 7 vẽ
+      FE nối xong 2026-08-19; cột `birthPlace`/`occupation` cho mockup 7 thêm
+      2026-08-20 (migration `20260820031808`) — FE chưa đọc
 - [x] 1.6.3 Timeline chung (bài viết/ảnh theo thời gian) — nối `LifeEvent` xong 2026-08-19
-- [x] 1.6.4 Album/Gallery (danh sách ảnh) — API done 2026-08-19 (`GET /me/gallery`, `GET …/members/:memberId/gallery`); FE nối xong 2026-08-19, bỏ bãi quét feed tạm thời
+- [x] 1.6.4 Album/Gallery (danh sách ảnh) — API done 2026-08-19 (`GET /me/gallery`, `GET …/members/:memberId/gallery`, PR #19); FE nối xong 2026-08-19, bỏ bãi quét feed tạm thời
 - [x] 1.6.5 Memo cá nhân (tạo memo — ghi chú về một thành viên, xem `database.md`) — API done 2026-08-19 (schema thêm title/category theo UI; chi tiết: `api-contract.md`); FE nối xong 2026-08-19
 - ~~1.6.6 Quyền riêng tư Memo (private/shared)~~ — dropped 2026-08-14:
   memo luôn private, chỉ chủ xem/sửa (see `database.md`)

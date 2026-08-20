@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { parseIsoDate } from '../common/input';
+import { normalizeText, parseIsoDate } from '../common/input';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { FamilyService } from '../family/family.service';
 import { EditEntityType } from '../generated/prisma/enums';
@@ -20,6 +20,10 @@ export interface ProfileDetail {
   bio: string | null;
   interests: string[];
   birthDate: Date | null;
+  /** Free text — mockup 7 prints it after the birth date. */
+  birthPlace: string | null;
+  /** Free text ("Carpenter, retired since 2021"), not a job title. */
+  occupation: string | null;
   deathDate: Date | null;
   updatedAt: Date;
 }
@@ -31,6 +35,8 @@ interface ProfileRecord {
   bio: string | null;
   interests: unknown;
   birthDate: Date | null;
+  birthPlace: string | null;
+  occupation: string | null;
   deathDate: Date | null;
   updatedAt: Date;
 }
@@ -42,6 +48,8 @@ const profileSelect = {
   bio: true,
   interests: true,
   birthDate: true,
+  birthPlace: true,
+  occupation: true,
   deathDate: true,
   updatedAt: true,
 } as const;
@@ -213,6 +221,12 @@ export class ProfileService {
           ...(dto.bio !== undefined && { bio: dto.bio.trim() || null }),
           ...(dto.interests !== undefined && { interests: dto.interests }),
           ...(dto.birthDate !== undefined && { birthDate: nextBirth }),
+          ...(dto.birthPlace !== undefined && {
+            birthPlace: normalizeText(dto.birthPlace),
+          }),
+          ...(dto.occupation !== undefined && {
+            occupation: normalizeText(dto.occupation),
+          }),
           ...(dto.deathDate !== undefined && { deathDate: nextDeath }),
           updatedById: editorUserId,
         },
@@ -225,10 +239,15 @@ export class ProfileService {
           entityType: EditEntityType.LIFE_PROFILE,
           entityId: profile.id,
           editorUserId,
+          // Every editable field belongs here, or the history silently
+          // stops being a full record — nothing fails when one is left
+          // out. Add a field above, add it here.
           snapshot: {
             bio: updated.bio,
             interests: this.readInterests(updated.interests),
             birthDate: updated.birthDate?.toISOString() ?? null,
+            birthPlace: updated.birthPlace,
+            occupation: updated.occupation,
             deathDate: updated.deathDate?.toISOString() ?? null,
           },
         },
@@ -294,6 +313,8 @@ export class ProfileService {
       bio: profile.bio,
       interests: this.readInterests(profile.interests),
       birthDate: profile.birthDate,
+      birthPlace: profile.birthPlace,
+      occupation: profile.occupation,
       deathDate: profile.deathDate,
       updatedAt: profile.updatedAt,
     };

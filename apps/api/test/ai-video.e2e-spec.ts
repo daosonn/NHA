@@ -238,17 +238,14 @@ describe('AI + Video (screens 21-33)', () => {
     // heading 45 ký tự — cap 30 cũ làm "Save the card" 400 im lặng; chữ Việt
     // có thanh điệu từng ra tofu vì Georgia thiếu glyph Extended Additional
     const card = await json<CardBody>(
-      request(http)
-        .post(`/api/families/${familyId}/cards`)
-        .set(auth())
-        .send({
-          template: 'tet',
-          message:
-            'Chúc mừng năm mới! Cả nhà chúc bà mạnh khoẻ, bình an và thật nhiều niềm vui.',
-          toName: 'Bà Nội',
-          fromName: 'Cháu của bà',
-          heading: 'Kỷ niệm ngày ông bà về thăm quê hương yêu dấu',
-        }),
+      request(http).post(`/api/families/${familyId}/cards`).set(auth()).send({
+        template: 'tet',
+        message:
+          'Chúc mừng năm mới! Cả nhà chúc bà mạnh khoẻ, bình an và thật nhiều niềm vui.',
+        toName: 'Bà Nội',
+        fromName: 'Cháu của bà',
+        heading: 'Kỷ niệm ngày ông bà về thăm quê hương yêu dấu',
+      }),
       201,
     );
     expect(card.media_id).toBeTruthy();

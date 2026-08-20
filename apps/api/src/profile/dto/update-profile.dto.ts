@@ -40,6 +40,32 @@ export class UpdateProfileDto {
   birthDate?: string | null;
 
   @ApiPropertyOptional({
+    maxLength: 200,
+    nullable: true,
+    example: 'Ý Yên, Nam Định',
+    description:
+      'Where they were born — free text, printed after the birth date ' +
+      '(mockup 7). Empty string or null clears it.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  birthPlace?: string | null;
+
+  @ApiPropertyOptional({
+    maxLength: 200,
+    nullable: true,
+    example: 'Carpenter, retired since 2021',
+    description:
+      'Free text, not a job title — the mockup prints a whole phrase. ' +
+      'Empty string or null clears it.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  occupation?: string | null;
+
+  @ApiPropertyOptional({
     nullable: true,
     description: 'Date only, YYYY-MM-DD; null clears it. Deceased members only',
   })
