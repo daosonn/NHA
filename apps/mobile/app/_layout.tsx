@@ -3,6 +3,7 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Imported per weight rather than from the package root: the root index
@@ -111,26 +112,32 @@ export default function RootLayout() {
   if (!fontsLoaded && fontError === null) return null;
 
   return (
-    <SafeAreaProvider>
-      <StatusBar style="dark" />
-      <QueryClientProvider client={queryClient}>
-        {/* Inside the query provider: signing out has to empty the cache, or
-            the next account reads the previous one's data. */}
-        <SessionProvider>
-          {/* Below the session: which family is active is only a question
-              once somebody is signed in. */}
-          <ActiveFamilyProvider>
-            <AuthGate>
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: colors.background.page },
-                }}
-              />
-            </AuthGate>
-          </ActiveFamilyProvider>
-        </SessionProvider>
-      </QueryClientProvider>
-    </SafeAreaProvider>
+    // Outermost on purpose: every gesture handler in the tree resolves against
+    // this view, and one mounted below a screen only works for that screen.
+    // Today it is the family tree's pinch and pan; anything added later gets
+    // it for free rather than rediscovering why its gestures do nothing.
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <QueryClientProvider client={queryClient}>
+          {/* Inside the query provider: signing out has to empty the cache, or
+              the next account reads the previous one's data. */}
+          <SessionProvider>
+            {/* Below the session: which family is active is only a question
+                once somebody is signed in. */}
+            <ActiveFamilyProvider>
+              <AuthGate>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: colors.background.page },
+                  }}
+                />
+              </AuthGate>
+            </ActiveFamilyProvider>
+          </SessionProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

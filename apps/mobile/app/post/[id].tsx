@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
 import { PostCard } from '../../src/components/feed/post-card';
-import { ReactionBar } from '../../src/components/feed/reaction-bar';
+import { LikeButton } from '../../src/components/feed/like-button';
 import { AppHeader } from '../../src/components/layout/app-header';
 import { BackButton } from '../../src/components/layout/header-slots';
 import { Avatar } from '../../src/components/ui/avatar';
@@ -135,9 +135,13 @@ export default function PostDetailScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            <PostCard post={post} onAuthorPress={openAuthor} />
+            {/* `showStats={false}`: the heart and the comment count the card
+                normally draws are both repeated immediately below — once by
+                the button, once by the divider. Two of each on one screen was
+                the second half of what made the reactions confusing. */}
+            <PostCard post={post} onAuthorPress={openAuthor} showStats={false} />
 
-            <ReactionBar
+            <LikeButton
               mine={post.myReaction}
               count={post.reactionCount}
               onChange={(type) => setReaction.mutate(type)}

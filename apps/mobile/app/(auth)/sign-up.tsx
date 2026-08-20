@@ -5,11 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { AuthModeTabs } from '../../src/components/auth/auth-mode-tabs';
-import { FacebookMark, GoogleMark } from '../../src/components/auth/identity-marks';
 import { FormScreen } from '../../src/components/layout/form-screen';
 import { Button } from '../../src/components/ui/button';
 import { Checkbox } from '../../src/components/ui/checkbox';
-import { Divider } from '../../src/components/ui/divider';
 import { Text } from '../../src/components/ui/text';
 import { TextField } from '../../src/components/ui/text-field';
 import { authErrorKey } from '../../src/features/auth/auth-error';
@@ -75,29 +73,6 @@ export default function SignUpScreen() {
             loading={submitting}
             onPress={() => void submit()}
           />
-
-          <Divider label={t('common.or')} />
-
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <Button
-                label={t('auth.google')}
-                variant="neutral"
-                size="large"
-                fullWidth
-                renderIcon={() => <GoogleMark />}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Button
-                label={t('auth.facebook')}
-                variant="neutral"
-                size="large"
-                fullWidth
-                renderIcon={() => <FacebookMark />}
-              />
-            </View>
-          </View>
         </>
       }
     >

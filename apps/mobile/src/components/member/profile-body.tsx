@@ -10,7 +10,6 @@ import type { MemoDetail } from '../../lib/api';
 import { SegmentedTabs } from '../ui/segmented-tabs';
 import { AlbumGrid } from './album-grid';
 import { MemoActionsSheet } from './memo-actions-sheet';
-import { MemoDeleteDialog } from './memo-delete-dialog';
 import { MemoList } from './memo-list';
 import { ProfileFacts } from './profile-facts';
 import { ProfileHero } from './profile-hero';
@@ -70,19 +69,8 @@ export function ProfileBody({
   const gallery = useMemberGallery({ own: ownProfile, familyId, memberId });
 
   const [acting, setActing] = useState<MemoDetail | null>(null);
-  const [confirming, setConfirming] = useState<MemoDetail | null>(null);
 
   const list = memos.data ?? [];
-
-  const confirmDelete = () => {
-    if (confirming === null) return;
-
-    // No undo: a real DELETE takes the media files with it, so putting the
-    // note back would mean writing a new one that has lost its photos. The
-    // dialog carries the weight instead — see `use-memos.ts`.
-    deleteMemo.mutate(confirming);
-    setConfirming(null);
-  };
 
   return (
     <View style={{ gap: 16 }}>
@@ -137,6 +125,9 @@ export function ProfileBody({
         />
       )}
 
+      {/* One sheet for both steps. Deleting used to hand off to a second
+          `Modal`, which meant dismissing one and presenting another on the
+          same tick — they overlapped on screen. */}
       <MemoActionsSheet
         memo={acting}
         onClose={() => setActing(null)}
@@ -145,16 +136,12 @@ export function ProfileBody({
           onEditMemo?.(memo);
         }}
         onDelete={(memo) => {
+          // No undo: a real DELETE takes the media files with it, so putting
+          // the note back would mean writing a new one that has lost its
+          // photos. The confirm step carries that — see `use-memos.ts`.
+          deleteMemo.mutate(memo);
           setActing(null);
-          setConfirming(memo);
         }}
-      />
-
-      <MemoDeleteDialog
-        visible={confirming !== null}
-        photoCount={confirming?.media.length ?? 0}
-        onConfirm={confirmDelete}
-        onCancel={() => setConfirming(null)}
       />
     </View>
   );

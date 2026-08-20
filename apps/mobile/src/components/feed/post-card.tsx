@@ -23,6 +23,13 @@ export type PostCardProps = {
   onPress?: () => void;
   /** Opens the author's Life Profile. Omitted when they are not in this family. */
   onAuthorPress?: () => void;
+  /**
+   * The heart and comment counters along the bottom. On by default, because
+   * in a feed they are the only sign a moment has been read at all — off on
+   * the detail screen, where the same two numbers appear right below in
+   * controls that can act on them.
+   */
+  showStats?: boolean;
 };
 
 /**
@@ -38,7 +45,13 @@ export type PostCardProps = {
  * to its author (`docs/02-backend/database.md`), and that is invisible
  * everywhere else in the card — so it is stated rather than implied.
  */
-export function PostCard({ post, audienceLabel, onPress, onAuthorPress }: PostCardProps) {
+export function PostCard({
+  post,
+  audienceLabel,
+  onPress,
+  onAuthorPress,
+  showStats = true,
+}: PostCardProps) {
   const { t } = useTranslation();
 
   const posted = formatFullDate(post.createdAt.slice(0, 10));
@@ -158,25 +171,28 @@ export function PostCard({ post, audienceLabel, onPress, onAuthorPress }: PostCa
       {/* Counts, not controls. Reacting and commenting happen on the post
           itself; a share icon is absent because there is nothing to share a
           moment to yet. */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Heart
-            size={16}
-            color={post.myReaction === null ? colors.text.lightMuted : colors.coral.primary}
-            strokeWidth={2}
-          />
-          <Text variant="caption" weight="medium" color={colors.text.secondary}>
-            {post.reactionCount}
-          </Text>
-        </View>
+      {showStats && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Heart
+              size={16}
+              color={post.myReaction === null ? colors.text.lightMuted : colors.coral.primary}
+              strokeWidth={2}
+              fill={post.myReaction === null ? 'transparent' : colors.coral.primary}
+            />
+            <Text variant="caption" weight="medium" color={colors.text.secondary}>
+              {post.reactionCount}
+            </Text>
+          </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <MessageCircle size={16} color={colors.text.lightMuted} strokeWidth={2} />
-          <Text variant="caption" weight="medium" color={colors.text.secondary}>
-            {post.commentCount}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <MessageCircle size={16} color={colors.text.lightMuted} strokeWidth={2} />
+            <Text variant="caption" weight="medium" color={colors.text.secondary}>
+              {post.commentCount}
+            </Text>
+          </View>
         </View>
-      </View>
+      )}
     </View>
   );
 }

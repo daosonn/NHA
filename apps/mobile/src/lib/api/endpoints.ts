@@ -25,7 +25,11 @@ import type {
   VideoJob,
 } from './ai-types';
 import type {
+  AddAlbumItemsRequest,
   AddMemberRequest,
+  AlbumDetail,
+  AlbumSummary,
+  CreateAlbumRequest,
   AuthResult,
   CancelInvitationResult,
   CreateFamilyRequest,
@@ -66,6 +70,7 @@ import type {
   UpdateLifeEventRequest,
   UpdateMemoRequest,
   UpdatePostRequest,
+  UpdateAlbumRequest,
   UpdateProfileRequest,
   VerifyResetCodeRequest,
   VerifyResetCodeResult,
@@ -467,6 +472,39 @@ export const memos = {
     apiRequest<MemoDetail>(`/memos/${memoId}`, { method: 'PATCH', body }),
 
   remove: (memoId: string) => apiRequest<SuccessResult>(`/memos/${memoId}`, { method: 'DELETE' }),
+};
+
+/**
+ * Personal albums — a shelf only their owner ever sees (WBS 1.6.7).
+ *
+ * Deleting an album removes the *organisation* and nothing else: the
+ * photographs stay where they were, in the posts and moments they came from.
+ * That is the server's rule, and it is the reason the delete dialog here can
+ * be gentler than the one on a memo.
+ */
+export const albums = {
+  /** Most recently touched first. */
+  list: () => apiRequest<AlbumSummary[]>('/me/albums'),
+
+  create: (body: CreateAlbumRequest) =>
+    apiRequest<AlbumDetail>('/me/albums', { method: 'POST', body }),
+
+  detail: (albumId: string) => apiRequest<AlbumDetail>(`/me/albums/${albumId}`),
+
+  /** Rename, redescribe, or set the cover. The cover must already be inside. */
+  update: (albumId: string, body: UpdateAlbumRequest) =>
+    apiRequest<AlbumDetail>(`/me/albums/${albumId}`, { method: 'PATCH', body }),
+
+  remove: (albumId: string) =>
+    apiRequest<SuccessResult>(`/me/albums/${albumId}`, { method: 'DELETE' }),
+
+  /** Your own uploads only — 400 otherwise. Returns the album, freshly counted. */
+  addItems: (albumId: string, body: AddAlbumItemsRequest) =>
+    apiRequest<AlbumDetail>(`/me/albums/${albumId}/items`, { method: 'POST', body }),
+
+  /** Takes the photograph out of the album. The file itself is untouched. */
+  removeItem: (albumId: string, mediaId: string) =>
+    apiRequest<SuccessResult>(`/me/albums/${albumId}/items/${mediaId}`, { method: 'DELETE' }),
 };
 
 /**

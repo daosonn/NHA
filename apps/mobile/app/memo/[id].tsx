@@ -8,7 +8,6 @@ import { AppHeader } from '../../src/components/layout/app-header';
 import { BackButton } from '../../src/components/layout/header-slots';
 import { MemoActionsSheet } from '../../src/components/member/memo-actions-sheet';
 import { categoryChip } from '../../src/components/member/memo-card';
-import { MemoDeleteDialog } from '../../src/components/member/memo-delete-dialog';
 import { BrandMark } from '../../src/components/ui/brand-mark';
 import { Chip } from '../../src/components/ui/chip';
 import { EmptyState } from '../../src/components/ui/empty-state';
@@ -44,7 +43,6 @@ export default function MemoScreen() {
   const deleteMemo = useDeleteMemo();
 
   const [actionsOpen, setActionsOpen] = useState(false);
-  const [confirming, setConfirming] = useState(false);
 
   const memo = query.data;
 
@@ -55,7 +53,7 @@ export default function MemoScreen() {
   const confirmDelete = () => {
     if (memo === undefined) return;
 
-    setConfirming(false);
+    setActionsOpen(false);
     // Leave first, delete second: the list this note came from is behind us,
     // and the screen would otherwise flash its "gone" state on the way out.
     router.back();
@@ -220,17 +218,7 @@ export default function MemoScreen() {
               setActionsOpen(false);
               openEditor();
             }}
-            onDelete={() => {
-              setActionsOpen(false);
-              setConfirming(true);
-            }}
-          />
-
-          <MemoDeleteDialog
-            visible={confirming}
-            photoCount={memo.media.length}
-            onConfirm={confirmDelete}
-            onCancel={() => setConfirming(false)}
+            onDelete={confirmDelete}
           />
         </>
       )}

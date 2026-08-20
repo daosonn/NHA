@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { FacebookMark, GoogleMark } from '../../src/components/auth/identity-marks';
 import { AvatarStack } from '../../src/components/ui/avatar-stack';
 import { BrandMark } from '../../src/components/ui/brand-mark';
 import { Button } from '../../src/components/ui/button';
@@ -64,21 +63,6 @@ export default function WelcomeScreen() {
           size="large"
           fullWidth
           onPress={() => router.push('/sign-up')}
-        />
-
-        <Button
-          label={t('auth.continueGoogle')}
-          variant="neutral"
-          size="large"
-          fullWidth
-          renderIcon={() => <GoogleMark />}
-        />
-        <Button
-          label={t('auth.continueFacebook')}
-          variant="neutral"
-          size="large"
-          fullWidth
-          renderIcon={() => <FacebookMark />}
         />
       </View>
 
