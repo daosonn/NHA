@@ -63,4 +63,9 @@ export class SaveGiftIdeaDto {
   @IsString()
   @MaxLength(80)
   occasionLabel?: string;
+
+  /** ngôn ngữ cho lần rollup NỀN ngay sau ♡ — thiếu nó hồ sơ gia đình ja bị chưng cất bằng en */
+  @IsOptional()
+  @IsIn(['en', 'ja', 'vi'])
+  locale?: 'en' | 'ja' | 'vi';
 }

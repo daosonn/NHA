@@ -112,14 +112,16 @@ class GiftIdeasRequest(BaseModel):
     giver_relation: str | None = None  # "granddaughter"…
     budget_label: str | None = None  # "3.000〜8.000円"
     locale: Literal["en", "ja", "vi"] = "en"
-    max_ideas: int = 6
+    max_ideas: int = 5
     # Ý tưởng gia đình đã lưu (♡) — prompt yêu cầu đưa lên đầu, không phải loại bỏ.
     saved_ideas: list[str] = Field(default_factory=list)
 
 
 class GiftSource(BaseModel):
+    # CHỈ evidence_id — nhãn hiển thị ("From Lan's note · 2 weeks ago") do NestJS
+    # dựng từ dữ liệu thật (0 token). Bắt model soạn nhãn là ~50-120 output token
+    # mỗi lượt gift, tức ~0.5-1s người dùng ngồi chờ chỉ để viết chữ code viết được.
     evidence_id: str
-    label: str  # "From Lan's note · 2 weeks ago"
 
 
 ExperienceKind = Literal["none", "dining", "onsen_spa", "travel_stay", "craft_workshop", "photo", "general"]

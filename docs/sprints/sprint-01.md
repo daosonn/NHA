@@ -31,8 +31,8 @@ build the family tree, post content with photos, and view member profiles.
 - [x] 1.1.6 Đăng xuất (revoke refresh token) — done 2026-08-17: single-use
       refresh rotation + revoke on logout, merged in PR #2
 - [x] 1.1.7 Khôi phục mật khẩu (quên mật khẩu — `PasswordResetToken`; added 2026-08-14, see `database.md`) — API done 2026-08-18 (PR #12); FE nối xong 2026-08-19 (3 màn: gửi mã, kiểm mã, đặt lại)
-- [x] 1.1.8 Google login (OAuth authorization code, `OAuthAccount` — customer requirement, added 2026-08-17; see `02-backend/architecture.md`) — done 2026-08-18: backend merged in PR #3, happy path verified end-to-end với credentials thật (consent screen External + test user)
-- [ ] 1.1.9 Facebook login (chung flow OAuth với 1.1.8 — added 2026-08-17; LINE deferred chờ quyền email, X phase 2) — backend merged in PR #3; chờ verify E2E (cần accept tester role trên Meta app)
+- [x] 1.1.8 Google login (OAuth authorization code, `OAuthAccount` — customer requirement, added 2026-08-17; see `02-backend/architecture.md`) — done 2026-08-18: backend merged in PR #3, happy path verified end-to-end với credentials thật (consent screen External + test user) — **FE chưa dùng được**: callback trả JSON, không redirect về app (2026-08-20, xem `api-contract.md`); nút social đã gỡ khỏi 3 màn auth
+- [ ] 1.1.9 Facebook login (chung flow OAuth với 1.1.8 — added 2026-08-17; LINE deferred chờ quyền email, X phase 2) — backend merged in PR #3; chờ verify E2E (cần accept tester role trên Meta app); FE chặn cùng lý do với 1.1.8
 
 ### 1.2 Nav1 – Trang chủ — Trang chính sau login
 
@@ -51,8 +51,9 @@ build the family tree, post content with photos, and view member profiles.
       (`app/moments.tsx` đã xoá khi gộp vào Home — xem
       `docs/01-frontend/architecture.md` § Wiring status).
 - [ ] 1.2.4 Empty/loading state (UI đầy đủ) — done cho Home, cây gia phả,
-      post detail và Omoide (2026-08-18). Còn Life Profile và AI — hai màn
-      chưa nối API.
+      post detail, Omoide, Life Profile, album, invite (rà lại 2026-08-20).
+      Còn thiếu trạng thái lỗi: `memo/[id]`, `memo/edit` (của mình) và các
+      màn AI/video merge từ `main` (của tác giả).
 - [x] 1.2.5 Widget dịp đặc biệt trên Home (countdown + theme — sinh nhật/ngày giỗ derived từ LifeProfile; added 2026-08-14, see `database.md`) — API done 2026-08-18 (PR #11: `GET /families/:familyId/special-dates`); FE nối xong 2026-08-19
 
 ### 1.3 Tạo nhóm gia đình — Family Group
@@ -162,7 +163,7 @@ build the family tree, post content with photos, and view member profiles.
 > § Wiring status).
 
 - [x] 1.6.1 UI Profile (avatar + tên) — nối API xong 2026-08-19 (dựng lại theo mockup 7)
-- [ ] 1.6.2 About (thông tin cá nhân) — API done 2026-08-18:
+- [x] 1.6.2 About (thông tin cá nhân) — API done 2026-08-18:
       `GET/PATCH /api/me/profile` +
       `GET/PATCH /api/families/:familyId/members/:memberId/profile`
       (display rule linked→global / placeholder→wiki; placeholder
@@ -175,7 +176,7 @@ build the family tree, post content with photos, and view member profiles.
 - [x] 1.6.5 Memo cá nhân (tạo memo — ghi chú về một thành viên, xem `database.md`) — API done 2026-08-19 (schema thêm title/category theo UI; chi tiết: `api-contract.md`); FE nối xong 2026-08-19
 - ~~1.6.6 Quyền riêng tư Memo (private/shared)~~ — dropped 2026-08-14:
   memo luôn private, chỉ chủ xem/sửa (see `database.md`)
-- [ ] 1.6.7 Album cá nhân (private — tạo album, tự thêm ảnh; added 2026-08-14, see `database.md`)
+- [x] 1.6.7 Album cá nhân (private — tạo album, tự thêm ảnh; added 2026-08-14, see `database.md`) — API done 2026-08-19 (`/me/albums`, 7 route); FE nối xong 2026-08-20 (danh sách + chi tiết, vào từ tab Omoide)
 - [x] 1.6.8 Life Timeline milestones (LifeEvent CRUD + hiển thị theo thời gian; added 2026-08-14, see `database.md`) — API done 2026-08-19 (chi tiết: `api-contract.md`); FE nối xong 2026-08-19
 
 ### 1.7 Test Sprint 1

@@ -506,6 +506,62 @@ export type UpdateLifeEventRequest = {
   taggedMemberIds?: string[];
 };
 
+// --------------------------------------------------------------- albums
+
+/**
+ * A personal album — `GET /api/me/albums` (WBS 1.6.7).
+ *
+ * **Always private.** Never shown on a Life Profile and never shared with a
+ * family; this is one person's own shelf. Not to be confused with the Album
+ * *tab* on a profile, which is derived from posts and life events and which
+ * nobody curates.
+ */
+export type AlbumSummary = {
+  id: string;
+  name: string;
+  description: string | null;
+  /** Must be one of the album's own items. Null until one is chosen. */
+  coverMediaId: string | null;
+  itemCount: number;
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+};
+
+export type AlbumItemDetail = {
+  mediaId: string;
+  mimeType: string;
+  sizeBytes: number;
+  addedAt: IsoDateTime;
+};
+
+export type AlbumDetail = AlbumSummary & {
+  items: AlbumItemDetail[];
+};
+
+/** `POST /api/me/albums` — name ≤ 100, description ≤ 2000. */
+export type CreateAlbumRequest = {
+  name: string;
+  description?: string;
+};
+
+/** `PATCH /api/me/albums/:albumId`. `null` on the cover clears it. */
+export type UpdateAlbumRequest = {
+  name?: string;
+  description?: string;
+  coverMediaId?: string | null;
+};
+
+/**
+ * `POST /api/me/albums/:albumId/items` — 1 to 50 ids, no duplicates.
+ *
+ * Every id must be something **this account uploaded**; the server answers
+ * 400 for anything else. That is why the app adds photos by picking and
+ * uploading them rather than by offering the family's shared pictures.
+ */
+export type AddAlbumItemsRequest = {
+  mediaIds: string[];
+};
+
 // -------------------------------------------------------------- gallery
 
 /**

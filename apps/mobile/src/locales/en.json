@@ -1,6 +1,5 @@
 {
   "common": {
-    "or": "or",
     "close": "Close",
     "back": "Go back",
     "showPassword": "Show password",
@@ -27,8 +26,6 @@
     "modeLabel": "Sign in or create an account",
     "signInTab": "Sign in",
     "signUpTab": "Create account",
-    "continueGoogle": "Continue with Google",
-    "google": "Google",
     "fields": {
       "name": "Full name",
       "namePlaceholder": "Nguyen Minh",
@@ -98,9 +95,7 @@
       "invalidCredentials": "That email and password do not match.",
       "emailTaken": "That email already has an account.",
       "checkFields": "Check the fields above and try again."
-    },
-    "facebook": "Facebook",
-    "continueFacebook": "Continue with Facebook"
+    }
   },
   "home": {
     "recommendations": "Recommendations",
@@ -131,7 +126,7 @@
     "generations_other": "{{count}} generations",
     "members_one": "{{count}} member",
     "members_other": "{{count}} members",
-    "hint": "Tap a person to open their profile",
+    "hint": "Tap a person to open their profile · pinch to zoom, drag to move",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
     "recenter": "Recenter",
@@ -348,7 +343,6 @@
       "cancel": "Cancel"
     },
     "memoDelete": {
-      "dismiss": "Keep the note",
       "title": "Delete this note?",
       "body_one": "This note and its {{count}} photo are gone for good.",
       "body_other": "This note and its {{count}} photos are gone for good.",
@@ -628,11 +622,8 @@
     "unavailableTitle": "Not available",
     "unavailableBody": "This moment was removed, or it was never shared with you.",
     "reactions": {
-      "like": "Like",
-      "love": "Love",
-      "haha": "Haha",
-      "wow": "Wow",
-      "sad": "Sad"
+      "love": "Like",
+      "clear": "Remove your like"
     },
     "families_one": "{{count}} FAMILY",
     "families_other": "{{count}} FAMILIES"
@@ -642,7 +633,9 @@
     "openMoment": "Open the moment this photo belongs to",
     "loadFailed": "Could not load the photos.",
     "emptyTitle": "No photos yet",
-    "emptyBody": "Everything the family shares with a photo or a video shows up here."
+    "emptyBody": "Everything the family shares with a photo or a video shows up here.",
+    "yourAlbums": "Your albums",
+    "yourAlbumsHint": "Private to you — not shared with the family"
   },
   "profileEdit": {
     "title": "Edit profile",
@@ -795,5 +788,35 @@
     "downloaded": "Saved to your device",
     "saveFailed": "Could not save the video — try again.",
     "fullscreen": "Full screen"
+  },
+  "albums": {
+    "title": "Your albums",
+    "private": "Only you can see these. Albums are never shared with a family.",
+    "create": "New album",
+    "photoCount": "{{count}} photo",
+    "photoCount_other": "{{count}} photos",
+    "addPhotos": "Add photos",
+    "loadFailed": "Could not load your albums.",
+    "emptyTitle": "Nothing in here yet",
+    "emptyBody": "Add photos from your phone. They stay private to you.",
+    "form": {
+      "createTitle": "New album",
+      "editTitle": "Album settings",
+      "nameLabel": "Name",
+      "namePlaceholder": "Summer at the old house…",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "What is this album for? (optional)",
+      "create": "Create album",
+      "save": "Save",
+      "delete": "Delete album",
+      "deleteConfirm": "Yes, delete the album",
+      "deleteExplain": "The album goes; the photos stay where they came from."
+    },
+    "item": {
+      "open": "Photo options",
+      "setCover": "Use as cover",
+      "isCover": "This is the cover",
+      "remove": "Remove from album"
+    }
   }
 }

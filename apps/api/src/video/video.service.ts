@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import path from 'node:path';
 import fs from 'node:fs';
+import os from 'node:os';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import {
@@ -434,13 +435,31 @@ export class VideoService {
       bpm,
     );
 
-    const segs: { file: string; durationS: number }[] = [];
     const n = plan.scenes.length;
-    let outroSeg: { file: string; cached: boolean } | null = null;
 
-    // --- card mở đầu + kết (bỏ ở quick) ---
+    // --- render SONG SONG: intro, outro, từng cảnh và trích voice là các process
+    // ffmpeg ĐỘC LẬP — trước đây chạy nối đuôi nhau nên máy 16 luồng ngồi chơi
+    // (filter gblur/zoompan phần lớn đơn luồng, một process không ăn hết CPU).
+    // Pool theo số nhân: đo 20/08 trên i5-1250P (16 luồng) — tuần tự 49s,
+    // pool 3 = 38s, pool 5 = 24s cho cùng video 41s; máy ít nhân tự hạ xuống 2.
+    // Thứ tự LẮP RÁP vẫn tuyệt đối cố định: ghi kết quả theo chỗ ngồi định sẵn,
+    // không theo thứ tự hoàn thành.
+    const defaultConcurrency = Math.max(
+      2,
+      Math.min(5, Math.floor(os.cpus().length / 3)),
+    );
+    const concurrency = Math.max(
+      1,
+      Number(process.env.VIDEO_RENDER_CONCURRENCY ?? defaultConcurrency) ||
+        defaultConcurrency,
+    );
+    const sceneSegs = new Array<{ file: string; durationS: number }>(n);
+    let introSeg: { file: string; durationS: number } | null = null;
+    let outroSeg: { file: string; cached: boolean } | null = null;
+    const voiceTracks: { file: string; startS: number }[] = [];
+
+    const tasks: (() => Promise<void>)[] = [];
     if (!quick) {
-      await setStage('opening', 3);
       const photoScenes = plan.scenes
         .filter((s) => s.kind !== 'video')
         .slice(0, 3);
@@ -457,47 +476,46 @@ export class VideoService {
         ),
         photoIds: photoScenes.map((s) => s.mediaId),
       };
-      const intro = styleTpl
-        ? await renderIntro({
-            template: styleTpl,
-            aspect,
-            durationS: introDur + tailOf(0),
-            ctx: introCtx,
-          })
-        : await renderCard({
-            kind: 'title',
-            title: plan.title,
-            subtitle: plan.subtitle,
-            palette,
-            aspect,
-            fonts,
-            durationS: introDur + tailOf(0),
-          });
-      segs.push({ file: intro.file, durationS: introDur });
-
-      await setStage('closing_prep', 8);
-      outroSeg = styleTpl
-        ? await renderOutro({
-            template: styleTpl,
-            aspect,
-            durationS: outroDur,
-            ctx: introCtx,
-          })
-        : await renderCard({
-            kind: 'outro',
-            title: plan.closing || plan.title || 'NHA',
-            subtitle: '',
-            dedication: plan.dedication,
-            palette,
-            aspect,
-            fonts,
-            durationS: outroDur,
-          });
+      tasks.push(async () => {
+        const intro = styleTpl
+          ? await renderIntro({
+              template: styleTpl,
+              aspect,
+              durationS: introDur + tailOf(0),
+              ctx: introCtx,
+            })
+          : await renderCard({
+              kind: 'title',
+              title: plan.title,
+              subtitle: plan.subtitle,
+              palette,
+              aspect,
+              fonts,
+              durationS: introDur + tailOf(0),
+            });
+        introSeg = { file: intro.file, durationS: introDur };
+      });
+      tasks.push(async () => {
+        outroSeg = styleTpl
+          ? await renderOutro({
+              template: styleTpl,
+              aspect,
+              durationS: outroDur,
+              ctx: introCtx,
+            })
+          : await renderCard({
+              kind: 'outro',
+              title: plan.closing || plan.title || 'NHA',
+              subtitle: '',
+              dedication: plan.dedication,
+              palette,
+              aspect,
+              fonts,
+              durationS: outroDur,
+            });
+      });
     }
-
-    // --- từng cảnh ---
     for (let i = 0; i < n; i++) {
-      await setStage(`scene:${i + 1}/${n}`, 10 + (i / n) * 70);
       const s = plan.scenes[i];
       const segIdx = quick ? i : i + 1;
       const renderDur = bt.durations[i] + tailOf(segIdx);
@@ -513,67 +531,104 @@ export class VideoService {
         reason: '',
       };
       const abs = this.storage.absolutePathOf(byId.get(s.mediaId)!.storageKey);
-      const seg =
-        s.kind === 'video'
-          ? await renderVideoClip({
-              videoAbs: abs,
-              scene,
-              style: 'yasashii',
-              profile: 'memories',
-              aspect,
-              fonts,
-            })
-          : await renderKenBurns({
-              imageAbs: abs,
-              scene,
-              style: 'yasashii',
-              profile: 'memories',
-              aspect,
-              fonts,
-            });
-      segs.push({ file: seg.file, durationS: bt.durations[i] });
+      tasks.push(async () => {
+        const seg =
+          s.kind === 'video'
+            ? await renderVideoClip({
+                videoAbs: abs,
+                scene,
+                style: 'yasashii',
+                profile: 'memories',
+                aspect,
+                fonts,
+              })
+            : await renderKenBurns({
+                imageAbs: abs,
+                scene,
+                style: 'yasashii',
+                profile: 'memories',
+                aspect,
+                fonts,
+              });
+        sceneSegs[i] = { file: seg.file, durationS: bt.durations[i] };
+      });
     }
-    if (outroSeg) segs.push({ file: outroSeg.file, durationS: outroDur });
-
-    // --- tiếng nói trong clip gốc (màn 29: "music fades under the voices in your clips") ---
-    // Trích audio từng cảnh video có tiếng, đặt đúng vị trí timeline: start = card đầu + Σ cảnh trước.
-    const voiceTracks: { file: string; startS: number }[] = [];
+    // Tiếng nói trong clip gốc (màn 29: "music fades under the voices in your clips")
+    // — startS tính từ timing đã chốt, không phụ thuộc file cảnh nên vào chung pool.
     for (let i = 0; i < n; i++) {
       const s = plan.scenes[i];
       if (s.kind !== 'video') continue;
       const abs = this.storage.absolutePathOf(byId.get(s.mediaId)!.storageKey);
-      const probe = await probeMedia(abs).catch(() => null);
-      if (!probe?.hasAudio) continue;
       const startS =
         (quick ? 0 : introDur) +
         bt.durations.slice(0, i).reduce((a, d) => a + d, 0);
-      const voiceFile = path.join(
-        process.cwd(),
-        'uploads',
-        'video_out',
-        'tmp',
-        `${jobId}_voice_${i}.m4a`,
-      );
-      fs.mkdirSync(path.dirname(voiceFile), { recursive: true });
-      await run(FFMPEG, [
-        '-y',
-        '-ss',
-        '0',
-        '-t',
-        String(bt.durations[i]),
-        '-i',
-        abs,
-        '-vn',
-        '-ac',
-        '2',
-        '-ar',
-        '44100',
-        '-c:a',
-        'aac',
-        voiceFile,
-      ]);
-      voiceTracks.push({ file: voiceFile, startS });
+      tasks.push(async () => {
+        const probe = await probeMedia(abs).catch(() => null);
+        if (!probe?.hasAudio) return;
+        const voiceFile = path.join(
+          process.cwd(),
+          'uploads',
+          'video_out',
+          'tmp',
+          `${jobId}_voice_${i}.m4a`,
+        );
+        fs.mkdirSync(path.dirname(voiceFile), { recursive: true });
+        await run(FFMPEG, [
+          '-y',
+          '-ss',
+          '0',
+          '-t',
+          String(bt.durations[i]),
+          '-i',
+          abs,
+          '-vn',
+          '-ac',
+          '2',
+          '-ar',
+          '44100',
+          '-c:a',
+          'aac',
+          voiceFile,
+        ]);
+        voiceTracks.push({ file: voiceFile, startS });
+      });
     }
+
+    // Tiến độ: cùng format 'scene:i/n' mobile đang parse — i = số việc đã xong
+    // quy về thang cảnh, đơn điệu tăng dù các cảnh hoàn thành lộn xộn thứ tự.
+    await setStage(quick ? `scene:1/${n}` : 'opening', 3);
+    let doneCount = 0;
+    const tick = async () => {
+      doneCount++;
+      const shownScene = Math.max(
+        1,
+        Math.min(n, Math.round((doneCount / tasks.length) * n)),
+      );
+      await setStage(
+        `scene:${shownScene}/${n}`,
+        5 + (doneCount / tasks.length) * 78,
+      );
+    };
+    let cursor = 0;
+    await Promise.all(
+      Array.from({ length: Math.min(concurrency, tasks.length) }, async () => {
+        for (;;) {
+          const idx = cursor++;
+          if (idx >= tasks.length) return;
+          await tasks[idx]();
+          await tick();
+        }
+      }),
+    );
+
+    // Cast lại sau pool: TS không thấy các phép gán nằm trong closure của worker
+    const introDone = introSeg as { file: string; durationS: number } | null;
+    const outroDone = outroSeg as { file: string; cached: boolean } | null;
+    const segs: { file: string; durationS: number }[] = [
+      ...(introDone ? [introDone] : []),
+      ...sceneSegs,
+    ];
+    if (outroDone) segs.push({ file: outroDone.file, durationS: outroDur });
 
     // --- ghép + nhạc ---
     await setStage('music', 85);

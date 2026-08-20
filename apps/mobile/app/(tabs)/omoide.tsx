@@ -1,17 +1,18 @@
 import { useRouter } from 'expo-router';
-import { Images, TriangleAlert } from 'lucide-react-native';
+import { ChevronRight, Images, TriangleAlert } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, SectionList, View } from 'react-native';
+import { ActivityIndicator, Pressable, SectionList, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
 import { BrandMark } from '../../src/components/ui/brand-mark';
 import { EmptyState } from '../../src/components/ui/empty-state';
+import { IconBadge } from '../../src/components/ui/icon-badge';
 import { Text } from '../../src/components/ui/text';
 import { GRID_GAP, PhotoRow } from '../../src/components/omoide/photo-row';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { useFamilyPhotos, type PhotoTile } from '../../src/features/omoide/use-family-photos';
 import { formatFullDate } from '../../src/lib/date';
-import { colors, spacing } from '../../src/theme';
+import { colors, radius, spacing } from '../../src/theme';
 
 /** Room for the bottom nav plus the home indicator. */
 const BOTTOM_INSET = 120;
@@ -95,10 +96,50 @@ export default function OmoideScreen() {
           if (feed.hasNextPage && !feed.isFetchingNextPage) void feed.fetchNextPage();
         }}
         ListHeaderComponent={
-          <View style={{ paddingHorizontal: spacing.xl, paddingTop: 14, paddingBottom: 4 }}>
+          <View
+            style={{ paddingHorizontal: spacing.xl, paddingTop: 14, paddingBottom: 4, gap: 10 }}
+          >
             <Text variant="body2" color={colors.text.muted}>
               {t('omoide.summary', { photos: total, people: contributors })}
             </Text>
+
+            {/* The way in to the private shelf, from the tab someone already
+                opens to look at pictures. Kept visually separate from the
+                shelf below it, which is the family's and is shared — one tap
+                between "everyone can see this" and "only I can" needs the
+                line drawn clearly. */}
+            <Pressable
+              onPress={() => router.push('/albums')}
+              accessibilityRole="button"
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+                paddingVertical: 10,
+                paddingHorizontal: 12,
+                borderRadius: radius.xl,
+                backgroundColor: colors.background.card,
+                boxShadow: `inset 0 0 0 1px ${colors.state.borderDefault}`,
+              }}
+            >
+              <IconBadge
+                size={30}
+                background={colors.coral.light}
+                foreground={colors.coral.deep}
+                renderIcon={(props) => <Images {...props} strokeWidth={2.1} />}
+              />
+
+              <View style={{ flex: 1, gap: 1 }}>
+                <Text variant="body2" weight="semibold">
+                  {t('omoide.yourAlbums')}
+                </Text>
+                <Text variant="badge" color={colors.text.subtle}>
+                  {t('omoide.yourAlbumsHint')}
+                </Text>
+              </View>
+
+              <ChevronRight size={17} color={colors.text.lightMuted} strokeWidth={2.2} />
+            </Pressable>
           </View>
         }
         renderSectionHeader={({ section }) => (

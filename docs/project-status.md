@@ -15,6 +15,12 @@ backend side is finished, so `apps/api` work now follows
 `docs/sprints/sprint-02.md` while frontend wires the remaining sprint-1
 screens.
 
+- **Sprint 2's AI side delivered 2026-08-20** — groups 2.2–2.5
+  end-to-end (`apps/ai` FastAPI, NestJS `src/ai` + `src/video`, mobile
+  screens 21-33), **merged to `main` in PR #25**; a perf + privacy pass
+  follows on `merge/ai-integration` (PR pending). Per-task detail in
+  `docs/sprints/sprint-02.md`; contract and measured latency in
+  `docs/03-ai/architecture.md`.
 - Active sprint docs: `docs/sprints/sprint-01.md` (frontend wiring),
   `docs/sprints/sprint-02.md` (backend + AI team)
 - Later: `docs/sprints/sprint-03.md` (Notification / Settings / Release)
@@ -22,33 +28,29 @@ screens.
 
 ## Current Focus
 
-- **Frontend state re-verified against the code (2026-08-19).** Wired to the
-  API: sign in / sign up, Home (families + family feed), create-or-join
-  family, the family tree (read plus adding a member), New moment, post
-  detail with comments and reactions, and **Omoide** — the shared photo
-  shelf, wired 2026-08-18 but described as a placeholder in the docs until
-  today. Still reading `src/fixtures/`: **Life Profile** (both routes), the
-  AI tab and Gift ideas, the Invitation page, and Home's special-date widget
-  and recommendation grid. Per-screen detail:
+- **Frontend state re-verified against the code (2026-08-20).** Everything
+  the server offers is now wired: auth including password reset, Home
+  (families, feed, and the special-date widget), create-or-join family, the
+  family tree with per-spot invitations and pinch/pan, New moment with member
+  tagging, post detail, Omoide, the whole Life Profile (identity, timeline,
+  gallery, memos), personal albums, and the invitation page. **The only
+  fixtures left are Home's recommendation grid** — which has no endpoint at
+  all — and the AI screens' seed data. Per-screen detail:
   `docs/01-frontend/architecture.md` § Wiring status.
-- **Two server routes the app's client mirror does not have (2026-08-19)**:
-  `POST /auth/password-reset/{request,verify,confirm}` (PR #12) and
-  `GET /families/:familyId/special-dates`. Neither is in
-  `apps/mobile/src/lib/api/endpoints.ts`, so Forgot / Verify / Reset still
-  only navigate between themselves and the Home widget still reads a
-  fixture. Nothing blocks either — this is the cheapest frontend work
-  available right now.
-- **Three dead ends found while re-verifying (2026-08-19)**, two of them in
-  the invite flow:
-  `components/family/pending-banner.tsx` is rendered nowhere, because
-  `tree-from-graph.ts` emits `state: 'active'` for every node and no pending
-  spot can exist; and the Join button on `app/invite/[code].tsx` has no
-  handler, which is the one place the app breaks its own "a button that
-  leads nowhere is not rendered" rule. Both trace back to the missing
-  per-spot invitation record, not to anything the frontend can fix alone.
-  A third sits on the Life Profile: `MemoList` accepts an `onAddMemo`
-  handler and `ProfileBody` never passes one, so the memo empty state draws
-  an "Add memo" button that does nothing. That one is ours to fix.
+- **Sprint 1 is one task from done (2026-08-20).** 1.1.9 (Facebook login) is
+  blocked twice over: the OAuth callback cannot return tokens to the app, and
+  the Meta tester invite is unaccepted. 1.2.4 (empty/loading states) is ours
+  and small — `app/memo/[id].tsx` and `app/memo/edit.tsx` have no error
+  state; the AI and video screens merged from `main` are missing several and
+  belong to their author. "Fix lỗi chính" is the remaining sweep.
+- **Four bugs found by hand in one sitting (2026-08-20)**, all of a kind the
+  app should catch itself: a catalogue key printed raw under somebody's name
+  (`family.relation.parent` — the field was called `relation` and documented
+  as translated, and was neither), a `<button>` nested in a `<button>` from a
+  modal scrim wrapping its own dialog, two `Modal`s presented on the same
+  tick and overlapping, and reactions drawn twice in two different shapes.
+  All fixed; a static scan for the nested-button case now exists. The lesson
+  is that the misleading _name_ hid the first one through several readings.
 - **The stack table listed three libraries that are not installed
   (2026-08-19)** — `@gorhom/bottom-sheet`, `d3-hierarchy`, and
   `react-hook-form`+`zod`. Sheets are a plain `Modal`, the tree layout is
@@ -60,7 +62,7 @@ screens.
   `apps/mobile` on Expo SDK 57, Inter/Lora, design-system primitives, app
   icons, and **the whole first-pass screen set against mock data**
   (2026-08-18) — all eight items in the `architecture.md` build order:
-  **Home** (`app/(tabs)/index.tsx`), **Family tree** (`app/family.tsx`),
+  **Home** (`app/(tabs)/index.tsx`), **Family tree** (`app/family/index.tsx`),
   **Life Profile** (`app/member/[id].tsx`) and the **Profile tab** sharing
   one body (`components/member/profile-body.tsx`), **New moment**
   (`app/(tabs)/new.tsx`), the **invite sheet** + **pending spot state** on
@@ -155,12 +157,21 @@ screens.
   shape the backend has to grow into; see Important Decisions.
   **Backend done 2026-08-19** as task 1.4.4 (branch
   `feature/per-spot-invitations`) — `Invitation` model + endpoints, tree
-  nodes carry `pending`; see `api-contract.md` → Invitations. Wiring the
-  invite UI to it is the remaining half.
+  nodes carry `pending`; see `api-contract.md` → Invitations.
+  **Closed 2026-08-19** — the invite sheet, the pending banner and the
+  acceptance page all run on it.
 
 ## For the backend owner
 
 Raised by the frontend, neither actionable from `apps/mobile`.
+
+- **Social login cannot finish in the app (2026-08-20).** The OAuth callback
+  answers `200 { user, accessToken, refreshToken }` as JSON, so the token pair
+  lands in the browser and the app never sees it. The six Google/Facebook
+  buttons have been removed from Welcome, Sign in and Sign up — none of them
+  had a handler, because none could. **Asked for**: redirect to a configurable
+  app URL with the tokens in the fragment instead of returning JSON. Full
+  write-up in `docs/00-shared/api-contract.md` § Requests from the app.
 
 - **Avatars have columns and no endpoints (2026-08-19).**
   `User.avatarKey` and `FamilyMember.avatarKey` are in the schema; nothing
@@ -600,6 +611,32 @@ dev` **did not regenerate the client**, and the stale client survived
   account yet, so who `FAMILY_INVITE` is for is an open product question.
   On branch `feature/notification-api`.
 
+### Sprint 2 — AI team
+
+- AI integration for screens 21-33 (2026-08-20, **merged to `main` in
+  PR #25**): `apps/ai` (FastAPI, gpt-5.6-luna, structured outputs strict,
+  `AI_MOCK=1` for token-free tests), NestJS `src/ai` (gift / message /
+  card / evidence / two-tier profile pipeline: `InterestSignal` →
+  versioned `MemberProfile`, rollup after every post) + `src/video`
+  (storyboard + 0-token ffmpeg render: 6 intro styles, Ken Burns, music
+  ducking under clip voices), and the full mobile flow (AI hub → gift
+  ask/results/sources → message → card → video
+  setup/photos/music/style/plan/making/done). Provenance is end-to-end:
+  every suggestion cites `memo_…`/`sig_…` ids that resolve back to the
+  real note or post.
+- Perf + privacy pass (2026-08-20, on `merge/ai-integration` after
+  PR #25 — PR pending): suggestion context narrowed to **the requester's
+  own memos only** (buildFor, counters, past gifts, evidence resolution;
+  cache keys carry the requester + a memo fingerprint), message
+  suggestions cached like gift, ♡ rolls the profile up in the background,
+  reasoning-effort tuned per feature, gift sources' labels built by code
+  instead of the model, video segments rendered in parallel. Measured on
+  real calls: gift 12.3s→~8-9s cold / 43ms repeat, message 3.6s / 38ms
+  repeat, storyboard 11.1s→5.7s, render 49s→~25s — numbers and method in
+  `docs/03-ai/architecture.md`. Verified: e2e 10/10 (real render),
+  pytest, tsc/eslint/check:i18n clean. Sprint tasks 2.2.1–2.5.2 ticked
+  in `sprint-02.md`; 2.6 (Quality Time) dropped 2026-08-20 (PR #28).
+
 ### Planning Phase
 
 - MVP scope decided (`docs/00-shared/mvp-scope.md`)
@@ -622,10 +659,11 @@ dev` **did not regenerate the client**, and the stale client survived
 
 ## Not Started
 
-- `apps/ai` (FastAPI service — not yet created)
-- All product features: auth, family, Life Profile, Life Timeline, Memories,
-  Family Tree, memory boxes, personal archive, reminders, notifications,
-  AI-assisted features
+- ~~`apps/ai` (FastAPI service — not yet created)~~ — created 2026-08-20,
+  merged to `main` in PR #25 (see Current Sprint)
+- Sprint 3 (notifications / reminders / settings / release).
+  Sprint-2 group 2.6 (AI Quality Time) was **dropped** 2026-08-20 —
+  see Important Decisions / PR #28.
 
 ## Important Decisions
 
@@ -744,6 +782,26 @@ relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
   `FeaturedOccasion` draws an action only when given a handler, so Plan a
   surprise and Video are absent until those screens exist. A dead control
   costs more trust than a visibly missing feature.
+  **Applied again 2026-08-20**: the six Google/Facebook buttons on Welcome,
+  Sign in and Sign up were removed. None had a handler and none could —
+  the OAuth callback returns the token pair as JSON, which an app cannot
+  read. They come back when the server redirects instead; see § For the
+  backend owner.
+- **One heart, not five reactions (2026-08-20)** — `ReactionType` has five
+  values and the app sends one. `PostDetail` returns `reactionCount`, a
+  single total, and `myReaction`, which is only ever your own: there is no
+  per-type breakdown on the wire, so five buttons all fed one
+  undifferentiated number and a star was indistinguishable from a heart once
+  left. Five ways to do the same invisible thing is a puzzle, not a choice.
+  Reversing it is one component (`components/feed/like-button.tsx`) the day
+  the server returns a breakdown.
+- **Personal albums live under Omoide (2026-08-20)** — a product call, made
+  because there was none to follow: `screens.md` lists no "my albums" screen
+  and mentions albums only as "choose album" on screen 11. Omoide is the tab
+  someone already opens to look at pictures, so the way in sits there — as a
+  card held visually apart from the shelf below it, because that shelf is the
+  family's and this one is private, and they are one tap apart. Moving it is
+  a one-line change.
 - ~~**Auth session is a stand-in (2026-08-18)**~~ — **superseded the same
   day; corrected here 2026-08-19.** The session is real: tokens live in
   `expo-secure-store`, refresh-on-401 is collapsed onto one promise in

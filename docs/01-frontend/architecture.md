@@ -295,15 +295,15 @@ this app does with it.
 
 | Screen                  | State                                                                                                                                                                                                                                                                                                                                             |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sign in / Sign up       | **Wired.** Social buttons still render without handlers, pending the OAuth redirect in the app.                                                                                                                                                                                                                                                   |
+| Sign in / Sign up       | **Wired.** The Google/Facebook buttons were removed on 2026-08-20 — the OAuth callback returns the token pair as JSON and an app cannot read it, so none of them could ever have had a handler. See `api-contract.md` § Requests from the app.                                                                                                    |
 | Home                    | **Wired** — families, the family feed, and the special-date widget (2026-08-19). Only the recommendations are still a fixture, and those have no endpoint at all.                                                                                                                                                                                 |
 | Create / join family    | **Wired** (`app/create-family.tsx`). 404 = unknown code, 409 = already a member.                                                                                                                                                                                                                                                                  |
-| Family tree             | **Wired**, including adding a member. See § Family tree below.                                                                                                                                                                                                                                                                                    |
+| Family tree             | **Wired**, including invitations and pinch/pan (2026-08-20). See § Family tree below.                                                                                                                                                                                                                                                             |
 | New moment              | **Wired** — pick media, upload, post, choose audience.                                                                                                                                                                                                                                                                                            |
 | Post detail             | **Wired** — comments and reactions (`app/post/[id].tsx`). The separate `app/moments.tsx` was deleted when the feed moved into Home.                                                                                                                                                                                                               |
 | Omoide                  | **Wired** (2026-08-18) — `GET /families/:id/posts`, every shared photo grouped by the day it was posted. One shelf, not albums; search and sort are deliberately absent until something is behind them.                                                                                                                                           |
 | Life Profile            | **Wired** (2026-08-19), on both routes, with no fixture left. Identity and facts from `GET /me/profile` / `GET …/members/:memberId/profile`, the name and relation word from `GET …/tree`, Timeline from `LifeEvent`, Memo from the `Memo` routes, and Album derived from the family feed. Two mockup fields have no column — see § Life Profile. |
-| AI tab + Gift ideas     | **Fixtures.** `apps/ai` does not exist.                                                                                                                                                                                                                                                                                                           |
+| AI tab + Gift ideas     | **Wired by the AI team** (merged from `main`, PR #25) against the FastAPI service in `apps/ai`. Not reviewed by this side yet; several of those screens have no error state, which is the open half of task 1.2.4.                                                                                                                                |
 | Invitation page         | **Wired** (2026-08-19) — `GET /invitations/:code` unauthenticated, then `POST /invitations/:code/accept`. Signed out it offers registration instead and holds the code across the detour (`features/family/pending-invite.ts`).                                                                                                                   |
 | Verify / Forgot / Reset | **Wired** (2026-08-19) — request, verify, confirm. Verify's _sign-up_ half still has no endpoint and is unreachable: registration returns a token pair straight away.                                                                                                                                                                             |
 
@@ -329,6 +329,27 @@ the deadline can be stale on the wrong side of it.
 
 `empty` is still never produced. An unreserved gap in a tree is a drawing
 idea, not a row in the database.
+
+Pinch and drag landed 2026-08-20, once `react-native-gesture-handler` arrived
+with the AI merge. Both run on the UI thread through Reanimated — a canvas
+redrawn from React state on every finger move stutters the moment there are a
+dozen nodes and their threads.
+
+Three details that are not obvious from the code:
+
+- **Gestures and the zoom buttons share one value.** Pinch to 1.4 and the
+  minus button takes you to 1.2, not back to a remembered 0.8.
+- **The pan has an 8px slop.** Without it the pan wins every touch and tapping
+  a face stops opening anybody — a tap is a press with a pixel or two of
+  travel.
+- **The drag is bounded** to whatever is actually off screen, and not at all
+  on an axis that already fits. Recenter would rescue an unbounded canvas, but
+  needing a button because a finger slipped is a poor trade for a gesture
+  whose whole job is to feel direct.
+
+`GestureHandlerRootView` is mounted at the app root rather than around this
+screen: every handler in the tree resolves against it, and one mounted lower
+only works for its own screen.
 
 Kinship words are base relationships only (decided 2026-08-18). A node with
 no direct edge to the viewer — a grandparent, a cousin — shows its name with
@@ -376,6 +397,54 @@ Forgot/Reset), then AI (hub, Gift ideas). Both done.
 The invite-acceptance page for someone who does **not** have the app yet is
 deferred until the role of `apps/web` is decided. `invite/[code].tsx` is
 the in-app half only.
+
+### Reactions — one heart (2026-08-20)
+
+The bar used to draw five icons, one per `ReactionType`. It draws one.
+
+`PostDetail` carries `reactionCount` — a single total — and `myReaction`,
+which is only ever _your own_. There is no per-type breakdown on the wire. So
+five buttons all fed one undifferentiated number: tapping the star raised the
+total by one exactly as a heart would, and nobody could ever see that a star
+had been left. Five ways to do the same invisible thing is a puzzle, not a
+choice.
+
+The app sends `LOVE`. A reaction set earlier by another client still lights
+the heart, because "you have reacted" is the reading the count agrees with.
+If the server ever returns a breakdown, the five come back and
+`components/feed/like-button.tsx` is where they go.
+
+The post card's own heart/comment counters are hidden on the detail screen
+(`showStats={false}`) — both numbers are repeated immediately below, once by
+the button and once by the comment divider. That duplication was the other
+half of what made the screen confusing.
+
+### Personal albums
+
+`/me/albums` (WBS 1.6.7) — a shelf only its owner sees. **Not** the Album tab
+on a Life Profile: that one is derived from posts and life events and nobody
+curates it. Two screens, `app/albums/index.tsx` and `app/albums/[id].tsx`,
+reached from the Omoide tab.
+
+That entry point is the one product call made here, and it is worth knowing it
+was a call: `screens.md` lists no "my albums" screen, and the only mention of
+albums in the spec is "choose album" on screen 11 (Post a Moment). Omoide is
+where somebody already goes to look at pictures, so the way in sits there — as
+a card visually separated from the shelf below it, because that shelf is the
+family's and this one is not, and they are one tap apart. Moving it is a
+one-line change if the design says otherwise.
+
+Photographs get in by being picked and uploaded, never by choosing from the
+family's shared pictures. That is the server's rule: `POST …/items` accepts
+only media this account uploaded, and nothing on the wire says who uploaded a
+given picture — so an "add from the family photos" list could not tell in
+advance which of them it was allowed to offer.
+
+Two server behaviours the copy leans on, both checked against the running API:
+removing the item that was the cover clears the cover rather than leaving it
+dangling, and deleting an album leaves every photograph exactly where it came
+from. The delete affordance is therefore two taps in the edit sheet rather
+than a full dialog — the weight of one would overstate what happens.
 
 ### Password reset
 
@@ -579,7 +648,15 @@ The Memo tab is author-only (`Memo.ownerUserId`) and says so on screen,
 because a private note that looks public is a privacy incident waiting to
 happen.
 
-Five pieces, matching mockup sections 1c–1h:
+Deleting confirms **inside the actions sheet** rather than in the separate
+dialog mockup 1h draws. Two `Modal`s meant asking React Native to dismiss one
+and present another on the same tick, and they overlapped on screen. The
+dialog's weight — the coral circle, the title, "gone for good" with the photo
+count — is kept as the sheet's second state. Note the memo rule is the
+opposite of the album one: a memo's DELETE takes its media files with it,
+which is why it is worth confirming at all.
+
+Four pieces, matching mockup sections 1c–1g:
 
 | Piece                      | File                                                                  |
 | -------------------------- | --------------------------------------------------------------------- |
@@ -640,32 +717,43 @@ Four pieces, matching mockup sections 8a–8d:
 | Spot preview inside the invitation | `components/family/invite-preview.tsx` |
 | Invitation page (receiver)         | `app/invite/[code].tsx`                |
 
-**What it does today is add a member, not send an invitation.** The sheet's
-submit runs `features/family/use-add-member.ts` — create the placeholder,
-then create the edge — so the spot card, the delivery tabs and the link are
-drawn from `src/fixtures/invite.ts` while only the name and the kinship
-option reach the server. The receiver's page (`app/invite/[code].tsx`) is
-fixtures end to end. Both stay that way until the invitation record exists.
+**Wired end to end 2026-08-19.** The sheet posts to
+`POST /families/:id/invitations`, which creates the placeholder member, its
+relationship edge and the invitation in **one transaction** — replacing an
+add-member-then-add-edge pair that could leave an unconnected person in the
+tree when the second call failed.
 
-The sheet is opened two ways from `app/family.tsx`: the floating
-add-member button (spot chosen for you) and tapping an **Empty** node (that
-node becomes the spot). Both feed the same `TreeSpot`, so the sheet always
-knows which position it is filling and can say so in words —
-"Gen 3 · beside Minh · child of Mai & Hoang".
+The sheet has two states: the form, then the code that comes back. The code
+cannot exist before the request, which is why it is a second state rather
+than something shown alongside the form.
 
-**The sheet hands out a code, not a link** (2026-08-19, mockup 8a). The code
-is the 8-character `Family.inviteCode` (alphabet
-`ABCDEFGHJKLMNPQRSTUVWXYZ23456789` — no I/O/0/1, so it survives being read
-aloud), shown split 4+4 and copied unspaced. A link would have to open a web
-page that does not exist while the role of `apps/web` is undecided; a code
-also works read down a phone line to someone who does not have the app yet,
-which is most of the people this screen is for. Copy uses `expo-clipboard`;
-share uses the RN `Share` API and carries the code.
+**The sheet hands out a code, not a link** (2026-08-19, mockup 8a). It is now
+the **invitation's own** code, not `Family.inviteCode` — same 8-character
+alphabet (`ABCDEFGHJKLMNPQRSTUVWXYZ23456789`, no I/O/0/1, so it survives
+being read aloud), shown split 4+4 and copied unspaced. That difference is
+the whole point of the endpoint: a family code lets somebody in the door,
+while this one carries the reserved spot, so the copy can finally promise
+what the mockup always claimed — that the receiver lands where the inviter
+put them. A link would need a web page that does not exist while the role of
+`apps/web` is undecided; a code also works read down a phone line to someone
+who does not have the app yet, which is most of the people this screen is
+for.
 
-The line under the card says what the code actually does — joins the family —
-and **not** what the mockup promised, that the receiver lands in the reserved
-spot. A family-wide code cannot do that: `POST /families/join` takes a
-`linkMemberId`, but a bare code does not carry one.
+The spot card describes **what the inviter has typed and picked**, not a
+fixture. It used to read "Gen 3 · beside Minh · child of Mai & Hoang" on
+every invite, whoever was being invited; the spot does not exist until the
+request is sent, so the only honest thing to show beforehand is the form's
+own contents — which is also the thing they might have got wrong.
+
+Pending nodes and the banner are fed from `GET …/invitations`; outstanding is
+recomputed on the client too, because `EXPIRED` is derived server-side at read
+time and a cached `PENDING` can be stale on the wrong side of the deadline.
+
+The receiver's page reads `GET /invitations/:code` **unauthenticated** — the
+one public route in the API — so it can make its case before asking anyone to
+register. Signed out, the Join button offers registration instead and the
+code waits in `features/family/pending-invite.ts` until Home hands it back;
+carrying it as a route param loses a race with the auth group's redirect.
 
 Two deviations from this document's stack table, both deliberate:
 

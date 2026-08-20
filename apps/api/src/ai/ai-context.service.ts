@@ -23,8 +23,10 @@ import type {
  * Authorization ở đây (NestJS), FastAPI chỉ nhận context đã lọc:
  *  - requester phải là thành viên của family (membership-based như mọi module khác);
  *  - posts: chỉ bài requester được xem (đăng vào family này);
- *  - memos: ghi chú CỦA MỌI THÀNH VIÊN về người này — theo design màn 22
- *    ("From Lan's note"), nguồn note của người khác được hiển thị cho người hỏi quà.
+ *  - memos: CHỈ ghi chú CỦA CHÍNH NGƯỜI HỎI về người này (chốt 2026-08-20).
+ *    Memo là sổ tay riêng của người viết — module memo chỉ cho tác giả xem, nên
+ *    gợi ý quà cho người khác không được rò nội dung memo của họ qua prompt hay
+ *    qua chip nguồn. Hệ quả: context (và cache) khác nhau THEO NGƯỜI HỎI.
  */
 
 /** Memo là nguồn tin cậy cao nhất và rất ngắn → gửi hết (demo cũng không cắt). */
@@ -122,17 +124,22 @@ export class AiContextService {
       select: { interests: true, birthDate: true },
     });
 
-    // Memo về người này từ các thành viên trong CÙNG family (xem ghi chú đầu file về quyền riêng tư)
+    // CHỈ memo của chính người hỏi về người này (xem ghi chú đầu file về quyền riêng tư)
     const memos = await this.prisma.memo.findMany({
-      where: { aboutMemberId: memberId },
+      where: { aboutMemberId: memberId, ownerUserId: userId },
       orderBy: { createdAt: 'desc' },
       take: MAX_MEMOS,
       include: { owner: { select: { name: true } } },
     });
 
-    // Quà đã lưu về người này (mọi ý user Save ở màn Ideas) — cũng là "không gợi lại món cũ"
+    // Quà TÔI đã lưu về người này — Plan cũng riêng tư theo người tạo, và
+    // "không gợi lại món cũ" chỉ có nghĩa với món chính tôi từng chọn
     const savedGiftPlans = await this.prisma.plan.findMany({
-      where: { aboutMemberId: memberId, title: { startsWith: 'gift:' } },
+      where: {
+        aboutMemberId: memberId,
+        ownerUserId: userId,
+        title: { startsWith: 'gift:' },
+      },
       orderBy: { createdAt: 'desc' },
       take: 10,
       select: { title: true },
@@ -178,7 +185,9 @@ export class AiContextService {
     // "12 photos and 4 notes about her" là lời hứa về những gì app đang có,
     // không phải về những gì vừa được gửi cho model.
     const [notesTotal, photoCount] = await Promise.all([
-      this.prisma.memo.count({ where: { aboutMemberId: memberId } }),
+      this.prisma.memo.count({
+        where: { aboutMemberId: memberId, ownerUserId: userId },
+      }),
       this.prisma.media.count({
         where: {
           post: {

@@ -9,6 +9,7 @@ export {
 } from './client';
 export {
   ai,
+  albums,
   auth,
   comments,
   families,

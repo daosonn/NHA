@@ -36,8 +36,17 @@ export type Editability = 'self' | 'locked';
  */
 export type MemberProfile = {
   displayName: string;
-  /** Already translated. Null for yourself, and for anyone more than one edge away. */
-  relation: string | null;
+  /**
+   * Catalogue key for the relation word — `family.relation.parent` — not the
+   * word itself. Null for yourself, and for anyone more than one edge away.
+   *
+   * A key, because `祖母` is not a translation a string table can reach once
+   * "grandmother" has been baked in (`relationship-label.ts`). The screen
+   * calls `t()` on it; this used to say "already translated" and be wrong,
+   * which is how `family.relation.parent` ended up printed under somebody's
+   * name.
+   */
+  relationKey: string | null;
   /** The family being looked through. Null when none is active. */
   familyName: string | null;
   tone: 'light' | 'dark';
@@ -73,7 +82,7 @@ export function toMemberProfile(input: MemberProfileInput): MemberProfile {
     // The tree row wins: for a placeholder it is the only name there is, and
     // for a linked account it is the same `User.name` the profile carries.
     displayName: member?.displayName ?? detail?.displayName ?? input.fallbackName ?? '',
-    relation: relationKey,
+    relationKey,
     familyName,
     tone: toneFor(member?.id ?? null),
     bio: detail?.bio ?? null,

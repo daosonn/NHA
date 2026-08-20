@@ -1,6 +1,5 @@
 {
   "common": {
-    "or": "または",
     "close": "閉じる",
     "back": "戻る",
     "showPassword": "パスワードを表示",
@@ -26,8 +25,6 @@
     "modeLabel": "ログインまたは新規登録",
     "signInTab": "ログイン",
     "signUpTab": "新規登録",
-    "continueGoogle": "Googleで続ける",
-    "google": "Google",
     "fields": {
       "name": "お名前",
       "namePlaceholder": "山田 花子",
@@ -97,9 +94,7 @@
       "invalidCredentials": "メールアドレスまたはパスワードが正しくありません。",
       "emailTaken": "このメールアドレスは既に登録されています。",
       "checkFields": "入力内容を確認してもう一度お試しください。"
-    },
-    "facebook": "Facebook",
-    "continueFacebook": "Facebook で続ける"
+    }
   },
   "home": {
     "recommendations": "おすすめ",
@@ -126,7 +121,7 @@
     "title": "家系図",
     "generations_other": "{{count}}世代",
     "members_other": "{{count}}人",
-    "hint": "タップするとその人のプロフィールが開きます",
+    "hint": "タップでプロフィール・つまんで拡大、ドラッグで移動",
     "zoomIn": "拡大",
     "zoomOut": "縮小",
     "recenter": "中央に戻す",
@@ -336,7 +331,6 @@
       "cancel": "キャンセル"
     },
     "memoDelete": {
-      "dismiss": "メモを残す",
       "title": "このメモを削除しますか？",
       "body_other": "このメモと写真{{count}}枚が完全になくなります。",
       "confirm": "メモを削除",
@@ -602,11 +596,8 @@
     "unavailableTitle": "表示できません",
     "unavailableBody": "この投稿は削除されたか、共有されていません。",
     "reactions": {
-      "like": "いいね",
-      "love": "大好き",
-      "haha": "うける",
-      "wow": "すごい",
-      "sad": "悲しい"
+      "love": "いいね",
+      "clear": "いいねを取り消す"
     },
     "families_other": "{{count}} 家族"
   },
@@ -615,7 +606,9 @@
     "openMoment": "この写真の投稿を開く",
     "loadFailed": "写真を読み込めませんでした。",
     "emptyTitle": "まだ写真がありません",
-    "emptyBody": "家族が写真や動画を共有すると、ここに集まります。"
+    "emptyBody": "家族が写真や動画を共有すると、ここに集まります。",
+    "yourAlbums": "あなたのアルバム",
+    "yourAlbumsHint": "あなただけ・家族には共有されません"
   },
   "profileEdit": {
     "title": "プロフィールを編集",
@@ -768,5 +761,34 @@
     "downloaded": "端末に保存しました",
     "saveFailed": "動画を保存できませんでした。もう一度お試しください。",
     "fullscreen": "全画面表示"
+  },
+  "albums": {
+    "title": "あなたのアルバム",
+    "private": "あなただけが見られます。家族には共有されません。",
+    "create": "新しいアルバム",
+    "photoCount_other": "写真{{count}}枚",
+    "addPhotos": "写真を追加",
+    "loadFailed": "アルバムを読み込めませんでした。",
+    "emptyTitle": "まだ何も入っていません",
+    "emptyBody": "端末から写真を追加してください。あなただけのものです。",
+    "form": {
+      "createTitle": "新しいアルバム",
+      "editTitle": "アルバムの設定",
+      "nameLabel": "名前",
+      "namePlaceholder": "実家の夏…",
+      "descriptionLabel": "説明",
+      "descriptionPlaceholder": "何のアルバムですか？（任意）",
+      "create": "アルバムを作成",
+      "save": "保存",
+      "delete": "アルバムを削除",
+      "deleteConfirm": "はい、削除します",
+      "deleteExplain": "アルバムだけが消えます。写真は元の場所に残ります。"
+    },
+    "item": {
+      "open": "写真の操作",
+      "setCover": "表紙にする",
+      "isCover": "表紙になっています",
+      "remove": "アルバムから外す"
+    }
   }
 }
