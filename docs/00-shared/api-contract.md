@@ -473,6 +473,41 @@ Semantics:
 - Deleting an album deletes only the organization — the underlying media
   rows and files are untouched.
 
+### Notifications — `apps/api/src/notification/` (WBS 3.1.1, added 2026-08-20)
+
+Screen 19. **No migration** — `Notification` shipped in the sprint-0 schema.
+
+| Route                                | Returns              |
+| ------------------------------------ | -------------------- |
+| `GET /me/notifications`              | `NotificationPage`   |
+| `GET /me/notifications/unread-count` | `{ count }`          |
+| `PATCH /me/notifications/:id/read`   | `NotificationDetail` |
+| `POST /me/notifications/read-all`    | `{ updated }`        |
+
+`NotificationPage` is `{ items, nextCursor, unreadCount }`;
+`NotificationDetail` is `{ id, type, payload, readAt, createdAt }`.
+
+- **There is no create route, by design.** A notification is raised by
+  something happening — a post, a comment, a reminder — never by a client
+  asking for one. Other modules call `NotificationService.create` /
+  `createMany` directly; the module exports it for reminders (3.2/3.3).
+- **The server sends no display text.** Only `type` plus a `payload` of
+  ids — the app writes the sentence, the same rule the special-date
+  widgets follow. A Japanese user must not be handed an English sentence
+  assembled server-side.
+- `type` is `NEW_POST | COMMENT | REACTION | MEMBER_TAG | FAMILY_INVITE |
+BIRTHDAY_REMINDER | EVENT_REMINDER | CARE_REMINDER | AI_SUGGESTION`.
+  `payload` shape is per type (`{ postId }`, `{ memberId }`, …).
+- Newest first, cursor-paginated exactly like the family feed (`limit`
+  1–50 default 20, echo `nextCursor`). `?unreadOnly=true` narrows it.
+- `unreadCount` on the page counts **everything unread**, not the page —
+  so the list and the badge (3.1.4) arrive together and cannot disagree.
+  `unread-count` is the same number on its own, for drawing the badge
+  without fetching rows.
+- Marking read is **idempotent**: the first `readAt` is kept, so "when did
+  I first see this" stays true. Everything is scoped to the caller —
+  someone else's notification is a 404, never a 403.
+
 ### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side)
 
 | Route                                   | Returns                |

@@ -2,6 +2,12 @@
 
 ## Current Sprint
 
+**Backend moved to Sprint 3 on 2026-08-20** — `docs/sprints/sprint-03.md`
+(Notification / Settings / Release). Sprint 2's backend is code-complete;
+sprint 2 itself is **not closed**: 2.1.3–2.1.5 (trang Memories) is unbuilt
+and undecided, ten items in 2.2–2.5 are built but never ticked, and 2.6
+was dropped (see Important Decisions).
+
 **Sprint 1 — Core Features** (in progress — PRs #1–#9 merged; the
 "pending team review before start" note was stale and is removed
 2026-08-18). **Backend has moved on to Sprint 2 (2026-08-19)**: sprint 1's
@@ -557,6 +563,27 @@ dev` **did not regenerate the client**, and the stale client survived
   check. FE work remaining: read the two fields
   (`components/member/profile-facts.tsx`). On branch
   `feature/profile-facts` (stacked on `fix/backend-doc-accuracy`).
+
+- Notification API (2026-08-20, sprint 3, WBS 3.1.1): in-app notifications
+  for screen 19 — `GET /me/notifications` (cursor-paginated, newest first,
+  `?unreadOnly`), `GET /me/notifications/unread-count`,
+  `PATCH /me/notifications/:id/read`, `POST /me/notifications/read-all`.
+  **No migration** — `Notification` shipped in the sprint-0 schema.
+  Two design decisions worth keeping: **no create route** (a notification
+  is raised by an event, never requested by a client — other modules call
+  the exported `create`/`createMany`, which is how reminders in 3.2/3.3
+  will make theirs), and **no display text on the wire** — only `type`
+  plus a payload of ids, so the app writes the sentence. That follows the
+  rule the special-date widgets already set, and it is what keeps Japanese
+  copy out of the server. The list response carries `unreadCount` for the
+  whole account, so the badge (3.1.4) and the list cannot disagree.
+  Marking read is idempotent (the first `readAt` is kept). Verified by
+  format/lint/build/test + a **26-case live smoke test** (paging across 25
+  rows, badge vs page counts, per-user isolation with 404 not 403,
+  idempotent read, read-all not touching another account). Nothing raises
+  notifications yet — wiring the event triggers (new post, comment,
+  reaction, tag, invite) has no task of its own in the WBS and is worth
+  one. On branch `feature/notification-api`.
 
 ### Planning Phase
 
