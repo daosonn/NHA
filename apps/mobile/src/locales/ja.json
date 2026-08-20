@@ -70,7 +70,8 @@
       "verify": "確認する",
       "continue": "次へ",
       "changeEmail": "メールアドレスを変更",
-      "differentEmail": "別のメールアドレスを使う"
+      "differentEmail": "別のメールアドレスを使う",
+      "wrongCode": "コードが違います。確認してもう一度お試しください。"
     },
     "forgot": {
       "title": "パスワードをお忘れの方",
@@ -83,7 +84,11 @@
       "newPassword": "新しいパスワード",
       "confirmPassword": "パスワードの確認",
       "mismatch": "パスワードが一致しません",
-      "submit": "保存してログイン"
+      "submit": "保存してログイン",
+      "errors": {
+        "noCode": "コードの画面からやり直してください。この画面には送るものがありません。",
+        "codeExpired": "コードの有効期限が切れたか、すでに使用されています。新しいコードを取得してください。"
+      }
     },
     "errors": {
       "invalidCredentials": "メールアドレスまたはパスワードが正しくありません。",
@@ -98,7 +103,6 @@
     "seeAll": "すべて見る",
     "familyTree": "家系図",
     "openFamilyTree": "家系図を開く",
-    "join": "参加",
     "moreGroups": "+{{count}}",
     "swipeCue": "上にスワイプで思い出へ",
     "noFamilyTitle": "まだ家族がありません",
@@ -107,7 +111,21 @@
     "loadFailed": "家族の一覧を読み込めませんでした。",
     "retry": "もう一度",
     "switchToGroup": "{{name}}に切り替える",
-    "newGroup": "新しい家族グループを作る"
+    "newGroup": "新しい家族グループを作る",
+    "occasion": {
+      "today": "今日",
+      "tomorrow": "明日",
+      "inDays_other": "あと{{count}}日",
+      "birthday": "{{name}}さんの誕生日",
+      "birthdayAge": "{{name}}さんが{{count}}歳になります",
+      "memorial": "{{name}}さんを偲んで",
+      "memorialYears_other": "{{name}}さんの{{count}}回忌",
+      "anniversary": "{{name}}さんの記念日",
+      "anniversaryYears_other": "{{name}}さん・{{count}}周年",
+      "custom": "{{title}}",
+      "generic": "{{name}}",
+      "more_other": "ほかに{{count}}件"
+    }
   },
   "family": {
     "title": "家系図",
@@ -334,15 +352,15 @@
     "moments": {
       "heading": "一緒の思い出",
       "counts_other": "写真{{photos}}枚・{{count}}件の思い出",
-      "partial": "この家族に共有された最近の思い出から表示しています。",
       "empty": "まだ思い出がありません",
       "emptyBody": "{{name}}さんがタグ付けされた思い出が投稿されると、ここに表示されます。",
       "failed": "思い出を読み込めませんでした",
       "video": "動画",
-      "openMoment_other": "{{title}}を開く・{{count}}件",
+      "openMoment_other": "この思い出を開く・{{count}}件",
       "headingOwn": "あなたの思い出",
       "emptyBodyOwn": "思い出を投稿するか、誰かにタグ付けされると、ここに表示されます。",
-      "noFamily": "まず家族に参加するか作成してください。思い出は家族と共有するものです。"
+      "milestone": "節目",
+      "openMilestone_other": "年表を開く・節目の写真{{count}}枚"
     },
     "facts": {
       "born": "{{date}}生まれ",

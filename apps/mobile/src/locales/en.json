@@ -71,7 +71,8 @@
       "verify": "Verify",
       "continue": "Continue",
       "changeEmail": "Change email address",
-      "differentEmail": "Use a different email"
+      "differentEmail": "Use a different email",
+      "wrongCode": "That code is not right. Check it and try again."
     },
     "forgot": {
       "title": "Forgot your password",
@@ -84,7 +85,11 @@
       "newPassword": "New password",
       "confirmPassword": "Confirm password",
       "mismatch": "The two do not match",
-      "submit": "Save and sign in"
+      "submit": "Save and sign in",
+      "errors": {
+        "noCode": "Start again from the code screen — this one has nothing to send.",
+        "codeExpired": "That code has expired or has already been used. Ask for a new one."
+      }
     },
     "errors": {
       "invalidCredentials": "That email and password do not match.",
@@ -99,7 +104,6 @@
     "seeAll": "See all",
     "familyTree": "Family tree",
     "openFamilyTree": "Open family tree",
-    "join": "Join",
     "moreGroups": "+{{count}}",
     "swipeCue": "Swipe up for moments",
     "noFamilyTitle": "No family yet",
@@ -108,7 +112,25 @@
     "loadFailed": "Could not load your families.",
     "retry": "Try again",
     "switchToGroup": "Switch to {{name}}",
-    "newGroup": "Start a new family group"
+    "newGroup": "Start a new family group",
+    "occasion": {
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "inDays": "In {{count}} day",
+      "inDays_other": "In {{count}} days",
+      "birthday": "{{name}}'s birthday",
+      "birthdayAge": "{{name}} turns {{count}}",
+      "memorial": "Remembering {{name}}",
+      "memorialYears": "{{count}} year since {{name}} left us",
+      "memorialYears_other": "{{count}} years since {{name}} left us",
+      "anniversary": "{{name}} — anniversary",
+      "anniversaryYears": "{{name}} — {{count}} year together",
+      "anniversaryYears_other": "{{name}} — {{count}} years together",
+      "custom": "{{title}}",
+      "generic": "{{name}}",
+      "more": "{{count}} more coming up",
+      "more_other": "{{count}} more coming up"
+    }
   },
   "family": {
     "title": "Family tree",
@@ -346,16 +368,17 @@
       "heading": "Moments together",
       "counts": "{{photos}} photos · {{count}} moment",
       "counts_other": "{{photos}} photos · {{count}} moments",
-      "partial": "From the most recent moments shared with this family.",
       "empty": "No moments yet",
       "emptyBody": "Photos appear here when somebody posts a moment and tags {{name}} in it.",
       "failed": "Could not load the moments",
       "video": "Video",
-      "openMoment": "Open {{title}}, {{count}} item",
-      "openMoment_other": "Open {{title}}, {{count}} items",
+      "openMoment": "Open this moment, {{count}} item",
+      "openMoment_other": "Open this moment, {{count}} items",
       "headingOwn": "Your moments",
       "emptyBodyOwn": "Photos appear here when you post a moment, or when somebody tags you in theirs.",
-      "noFamily": "Join or create a family first — moments are shared with one."
+      "milestone": "Milestone",
+      "openMilestone": "Open the timeline, {{count}} photo from a milestone",
+      "openMilestone_other": "Open the timeline, {{count}} photos from a milestone"
     },
     "facts": {
       "born": "Born {{date}}",

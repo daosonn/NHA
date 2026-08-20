@@ -18,7 +18,8 @@ import { useFamilies } from '../../src/features/family/use-families';
 import { takePendingInvite } from '../../src/features/family/pending-invite';
 import { useMemberIdLookup } from '../../src/features/family/use-member-for-user';
 import { useFamilyFeed } from '../../src/features/feed/use-family-feed';
-import { notificationCount, recommendations, upcomingEvent } from '../../src/fixtures/home';
+import { useUpcomingSpecialDates } from '../../src/features/home/use-special-dates';
+import { notificationCount, recommendations } from '../../src/fixtures/home';
 import type { FamilySummary, PostDetail } from '../../src/lib/api';
 import { colors, spacing } from '../../src/theme';
 
@@ -28,16 +29,10 @@ const BOTTOM_INSET = 140;
 /** How many faces the strip draws before it collapses the rest into "+N". */
 const VISIBLE_GROUPS = 3;
 
-/**
- * Alternating tones are decoration, not data: the avatars are placeholders
- * until members have photos, and two identical stripe patterns side by side
- * read as one wide blob.
- */
 function toStripGroups(families: FamilySummary[]): FamilyGroupSummary[] {
-  return families.slice(0, VISIBLE_GROUPS).map((family, index) => ({
+  return families.slice(0, VISIBLE_GROUPS).map((family) => ({
     id: family.id,
     name: family.name,
-    tone: index % 2 === 0 ? 'light' : 'dark',
   }));
 }
 
@@ -66,6 +61,10 @@ export default function HomeScreen() {
   const { data: families, isPending, isError, refetch } = useFamilies();
   const feed = useFamilyFeed(familyId);
   const memberIdFor = useMemberIdLookup();
+  const { data: occasions } = useUpcomingSpecialDates(familyId);
+
+  // Soonest first from the server, so the head of the list is the next one.
+  const nextOccasion = occasions?.items[0];
 
   const posts: PostDetail[] = feed.data?.pages.flatMap((page) => page.items) ?? [];
 
@@ -100,10 +99,15 @@ export default function HomeScreen() {
         onAddPress={() => router.push('/family/new')}
       />
 
-      {/* Both still read fixtures. Recommendations have no endpoint at all;
-          `GET /families/:id/special-dates` does exist, but it is not in
-          `src/lib/api/endpoints.ts` yet (`docs/00-shared/api-contract.md`). */}
-      <EventWidget event={upcomingEvent} />
+      {/* Drawn only when there is an occasion. Birthdays are derived from
+          the birth dates on people's profiles, so a family who have not
+          filled any in has nothing coming up — and an empty celebration
+          card would be a strange thing to look at. */}
+      {nextOccasion !== undefined && (
+        <EventWidget occasion={nextOccasion} moreCount={(occasions?.items.length ?? 1) - 1} />
+      )}
+
+      {/* Recommendations are still a fixture: no endpoint exists for them. */}
 
       <SectionHeader title={t('home.recommendations')} actionLabel={t('home.seeAll')} />
 

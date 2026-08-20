@@ -17,6 +17,7 @@ import type {
   CreateInvitationRequest,
   CreateMemoRequest,
   CommentBody,
+  ConfirmPasswordResetRequest,
   CommentList,
   CommentSummary,
   CreatePostRequest,
@@ -27,6 +28,7 @@ import type {
   FamilySummary,
   FamilyTree,
   FeedQuery,
+  GalleryMediaItem,
   InvitationPreview,
   InvitationSummary,
   JoinFamilyRequest,
@@ -43,12 +45,17 @@ import type {
   ReactionType,
   RefreshTokenRequest,
   RegisterRequest,
+  RequestPasswordResetRequest,
   RelationshipSummary,
   SuccessResult,
+  UpcomingQuery,
+  UpcomingSpecialDates,
   UpdateLifeEventRequest,
   UpdateMemoRequest,
   UpdatePostRequest,
   UpdateProfileRequest,
+  VerifyResetCodeRequest,
+  VerifyResetCodeResult,
 } from './types';
 
 /** Builds `?a=1&b=2`, skipping anything not set. */
@@ -78,6 +85,41 @@ export const auth = {
 
   logout: (body: RefreshTokenRequest) =>
     apiRequest<SuccessResult>('/auth/logout', { method: 'POST', body }),
+
+  /**
+   * Step one of three. Unauthenticated — the whole point is that the person
+   * cannot get in.
+   */
+  requestPasswordReset: (body: RequestPasswordResetRequest) =>
+    apiRequest<SuccessResult>('/auth/password-reset/request', {
+      method: 'POST',
+      body,
+      authenticated: false,
+    }),
+
+  /**
+   * Step two. Checks the code **without consuming it**, so the person can be
+   * told they mistyped before they have chosen a new password — and the code
+   * still works on the screen after.
+   */
+  verifyResetCode: (body: VerifyResetCodeRequest) =>
+    apiRequest<VerifyResetCodeResult>('/auth/password-reset/verify', {
+      method: 'POST',
+      body,
+      authenticated: false,
+    }),
+
+  /**
+   * Step three, which spends the code. Every existing session is revoked
+   * server-side, so whoever did this has to sign in again — including on the
+   * device they are holding.
+   */
+  confirmPasswordReset: (body: ConfirmPasswordResetRequest) =>
+    apiRequest<SuccessResult>('/auth/password-reset/confirm', {
+      method: 'POST',
+      body,
+      authenticated: false,
+    }),
 
   /**
    * Social login is a browser redirect, not a fetch: the app opens this URL,
@@ -326,6 +368,34 @@ export const memos = {
     apiRequest<MemoDetail>(`/memos/${memoId}`, { method: 'PATCH', body }),
 
   remove: (memoId: string) => apiRequest<SuccessResult>(`/memos/${memoId}`, { method: 'DELETE' }),
+};
+
+/**
+ * Birthdays, memorials and stored occasions, soonest first.
+ *
+ * Derived items arrive without any text — the client words them from the
+ * type, the ordinal and the member names, because the phrasing is different
+ * in each language rather than translatable after the fact.
+ */
+export const specialDates = {
+  upcoming: (familyId: string, params: UpcomingQuery = {}) =>
+    apiRequest<UpcomingSpecialDates>(`/families/${familyId}/special-dates${query(params)}`),
+};
+
+/**
+ * The Album tab: every photograph that belongs to one person.
+ *
+ * Replaced a client-side scan of the family feed (2026-08-19). That scan
+ * could only read a bounded slice, could not see life-event media at all,
+ * and re-derived a visibility rule that is the server's to decide. This
+ * route does all three properly and answers in one request.
+ */
+export const gallery = {
+  /** Works with no family at all — a person's gallery is global. */
+  mine: () => apiRequest<GalleryMediaItem[]>('/me/gallery'),
+
+  forMember: (familyId: string, memberId: string) =>
+    apiRequest<GalleryMediaItem[]>(`/families/${familyId}/members/${memberId}/gallery`),
 };
 
 /**

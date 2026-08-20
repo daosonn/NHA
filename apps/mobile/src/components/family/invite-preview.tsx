@@ -123,7 +123,7 @@ export function InvitePreview({ invitation }: { invitation: InvitationPreviewDat
       {first !== undefined && (
         <>
           <View style={{ position: 'absolute', left: lx - NODE / 2, top: PARENT_Y - NODE / 2 }}>
-            <Avatar size={NODE} tone="light" ring={RING} />
+            <Avatar size={NODE} name={first.name} ring={RING} />
           </View>
           <NodeLabel x={lx} y={PARENT_Y + NODE / 2 + 6}>
             <Text variant="caption" weight="semibold" numberOfLines={1}>
@@ -136,7 +136,7 @@ export function InvitePreview({ invitation }: { invitation: InvitationPreviewDat
       {second !== undefined && (
         <>
           <View style={{ position: 'absolute', left: rx - NODE / 2, top: PARENT_Y - NODE / 2 }}>
-            <Avatar size={NODE} tone="dark" ring={RING} />
+            <Avatar size={NODE} name={second.name} ring={RING} />
           </View>
           <NodeLabel x={rx} y={PARENT_Y + NODE / 2 + 6}>
             <Text variant="caption" weight="semibold" numberOfLines={1}>
@@ -149,7 +149,7 @@ export function InvitePreview({ invitation }: { invitation: InvitationPreviewDat
       {sibling !== undefined && (
         <>
           <View style={{ position: 'absolute', left: lx - NODE / 2, top: CHILD_Y - NODE / 2 }}>
-            <Avatar size={NODE} tone="dark" ring={RING} />
+            <Avatar size={NODE} name={sibling.name} ring={RING} />
           </View>
           <NodeLabel x={lx} y={CHILD_Y + NODE / 2 + 6}>
             <Text variant="caption" weight="semibold" numberOfLines={1}>

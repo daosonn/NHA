@@ -210,7 +210,11 @@ function MemberSheetBody({
         keyboardShouldPersistTaps="handled"
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Avatar size={48} ring={`0 0 0 2px ${colors.background.page}`} />
+          <Avatar
+            size={48}
+            name={member.displayName}
+            ring={`0 0 0 2px ${colors.background.page}`}
+          />
 
           <View style={{ flex: 1, gap: 2 }}>
             <Text variant="h2" weight="bold" style={{ letterSpacing: -0.3 }}>

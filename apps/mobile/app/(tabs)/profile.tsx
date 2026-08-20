@@ -85,9 +85,7 @@ export default function ProfileScreen() {
           }
           onOpenMemo={(memo) => router.push({ pathname: '/memo/[id]', params: { id: memo.id } })}
           onEditMemo={(memo) => router.push({ pathname: '/memo/edit', params: { id: memo.id } })}
-          onOpenMoment={(moment) =>
-            router.push({ pathname: '/post/[id]', params: { id: moment.id } })
-          }
+          onOpenMoment={(postId) => router.push({ pathname: '/post/[id]', params: { id: postId } })}
         />
       </ScrollView>
     </View>

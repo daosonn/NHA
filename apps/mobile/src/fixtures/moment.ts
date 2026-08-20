@@ -1,4 +1,3 @@
-import type { AudienceGroup } from '../components/moment/audience-picker';
 import type { DraftMedia } from '../components/moment/media-strip';
 
 /**
@@ -16,19 +15,6 @@ import type { DraftMedia } from '../components/moment/media-strip';
  * - each attachment is a `Media` row; `mimeType` is what separates a photo
  *   from a video, so the draft carries `kind` rather than two lists.
  */
-
-/**
- * Every family the author belongs to. The picker starts with all of them
- * selected, which matches the mockup: sharing widely is the normal case and
- * narrowing is the deliberate act.
- */
-export const audienceGroups: AudienceGroup[] = [
-  { id: 'g1', name: 'Nguyen family', tone: 'light', memberCount: 12 },
-  { id: 'g2', name: 'Cousins', tone: 'dark', memberCount: 8 },
-  { id: 'g3', name: 'Hue side', tone: 'light', memberCount: 5 },
-  { id: 'g4', name: 'Grandma', tone: 'dark', memberCount: 4 },
-  { id: 'g5', name: 'Bac Ninh', tone: 'light', memberCount: 9 },
-];
 
 export const draftMedia: DraftMedia[] = [
   { id: 'm1', kind: 'photo', tone: 'light' },

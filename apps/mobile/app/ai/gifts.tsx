@@ -41,7 +41,7 @@ function PersonChip({ person, selected, onPress }: PersonChipProps) {
         borderColor: colors.state.borderNeutral,
       }}
     >
-      <Avatar size={26} tone={person.tone} />
+      <Avatar size={26} name={person.name} />
 
       <Text
         variant="caption"

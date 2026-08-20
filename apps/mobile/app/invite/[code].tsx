@@ -170,7 +170,11 @@ export default function InvitationScreen() {
       >
         <View style={{ alignItems: 'center', gap: 14 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Avatar size={HERO_AVATAR} tone="light" ring={`0 0 0 3px ${colors.background.page}`} />
+            <Avatar
+              size={HERO_AVATAR}
+              name={invitation.inviterName}
+              ring={`0 0 0 3px ${colors.background.page}`}
+            />
             <BrandMark size={34} />
             <View
               style={{

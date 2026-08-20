@@ -2,9 +2,10 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Polygon } from 'react-native-svg';
 
+import { countdownLabel, occasionTitle } from '../../features/home/occasion-label';
+import type { SpecialDateItem } from '../../lib/api';
+import { formatFullDate } from '../../lib/date';
 import { colors, radius, spacing } from '../../theme';
-import type { UpcomingEvent } from '../../fixtures/home';
-import { Button } from '../ui/button';
 import { PhotoPlaceholder } from '../ui/photo-placeholder';
 import { Text } from '../ui/text';
 
@@ -71,13 +72,32 @@ function DetailRow({ children }: { children: string }) {
 }
 
 export type EventWidgetProps = {
-  event: UpcomingEvent;
-  onJoin?: () => void;
+  occasion: SpecialDateItem;
+  /** How many more are coming up behind this one. */
+  moreCount?: number;
 };
 
-/** The next thing the family has to show up for. */
-export function EventWidget({ event, onJoin }: EventWidgetProps) {
+/**
+ * The next occasion the family has coming up.
+ *
+ * Three things the mockup drew are gone, because `SpecialDateItem` has no
+ * field behind any of them and a birthday is not an event you RSVP to:
+ *
+ * - **a place.** Occasions are dates, not gatherings; there is nowhere to be.
+ * - **a "Join" button.** There is nothing to join — see above.
+ * - **paging dots.** They were decoration pretending to be a control. The
+ *   count of what is behind this one is said in words instead.
+ *
+ * The decoration stays bunting whatever `theme` says. `CONFETTI_CANDLES` and
+ * `FLORAL_BORDER` have no drawing yet, and a plain white box for a memorial
+ * would read as a widget that failed to load.
+ */
+export function EventWidget({ occasion, moreCount = 0 }: EventWidgetProps) {
   const { t } = useTranslation();
+
+  const countdown = countdownLabel(occasion.daysUntil);
+  const title = occasionTitle(occasion);
+  const when = formatFullDate(occasion.nextOccurrence);
 
   return (
     <View
@@ -116,39 +136,13 @@ export function EventWidget({ event, onJoin }: EventWidgetProps) {
           color={colors.coral.deep}
           style={{ letterSpacing: 0.2 }}
         >
-          {event.countdown}
+          {t(countdown.key, countdown.values).toLocaleUpperCase()}
         </Text>
         <Text variant="body2" weight="semibold">
-          {event.title}
+          {t(title.key, title.values)}
         </Text>
-        <DetailRow>{event.when}</DetailRow>
-        <DetailRow>{event.where}</DetailRow>
-      </View>
-
-      <View style={{ position: 'absolute', left: 14, bottom: 14 }}>
-        <Button label={t('home.join')} size="small" onPress={onJoin} />
-      </View>
-
-      <View
-        style={{
-          position: 'absolute',
-          right: 14,
-          bottom: 16,
-          flexDirection: 'row',
-          gap: 5,
-        }}
-      >
-        {Array.from({ length: event.total }, (_, i) => (
-          <View
-            key={i}
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: radius.full,
-              backgroundColor: i === event.index ? colors.text.white : 'rgba(255,255,255,0.5)',
-            }}
-          />
-        ))}
+        {when !== null && <DetailRow>{when}</DetailRow>}
+        {moreCount > 0 && <DetailRow>{t('home.occasion.more', { count: moreCount })}</DetailRow>}
       </View>
     </View>
   );

@@ -12,6 +12,8 @@ export const queryKeys = {
   familyTree: (familyId: string) => ['families', familyId, 'tree'] as const,
   familyFeed: (familyId: string) => ['families', familyId, 'posts'] as const,
   familyInvitations: (familyId: string) => ['families', familyId, 'invitations'] as const,
+  /** Upcoming occasions for the home widget. */
+  familySpecialDates: (familyId: string) => ['families', familyId, 'special-dates'] as const,
   /**
    * A preview read by code, not by family: the reader is usually not in that
    * family yet, and often has no account at all, so this cannot hang under
@@ -29,12 +31,14 @@ export const queryKeys = {
   memberProfile: (familyId: string, memberId: string) =>
     ['families', familyId, 'members', memberId, 'profile'] as const,
   /**
-   * The moments one member appears in. Under the family because it is built
-   * from that family's feed — posting a moment invalidates `['families', id]`
-   * and this goes stale with it, which is exactly right.
+   * A member's derived photo gallery, read through the family you are
+   * viewing them from — so it drops out of the cache with everything else
+   * about that family when you leave it.
    */
-  memberMoments: (familyId: string, memberId: string) =>
-    ['families', familyId, 'members', memberId, 'moments'] as const,
+  memberGallery: (familyId: string, memberId: string) =>
+    ['families', familyId, 'members', memberId, 'gallery'] as const,
+  /** Your own, which exists before you belong to any family. */
+  myGallery: () => ['me', 'gallery'] as const,
   /**
    * Notes the viewer wrote about one member. Under `families` so leaving a
    * family drops them from the cache with everything else about it.

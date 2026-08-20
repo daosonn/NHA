@@ -24,10 +24,9 @@ import { colors, spacing } from '../../src/theme';
 const BOTTOM_INSET = 140;
 
 function toAudience(families: FamilySummary[]): AudienceGroup[] {
-  return families.map((family, index) => ({
+  return families.map((family) => ({
     id: family.id,
     name: family.name,
-    tone: index % 2 === 0 ? 'light' : 'dark',
     memberCount: family.memberCount,
   }));
 }

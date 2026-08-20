@@ -11,6 +11,7 @@ export {
   auth,
   comments,
   families,
+  gallery,
   invitations,
   lifeEvents,
   media,
@@ -18,6 +19,7 @@ export {
   posts,
   profiles,
   reactions,
+  specialDates,
 } from './endpoints';
 export { ApiError, OFFLINE_STATUS, type ApiErrorBody } from './errors';
 export type * from './types';
