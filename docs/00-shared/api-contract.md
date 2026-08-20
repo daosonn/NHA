@@ -541,8 +541,11 @@ message screen). Saving a plan is a separate feature (WBS 2.6.4).
 
 - `evidence` is `{ notes, photos, posts, lifeEvents }` — **counted by the
   server**, stating what the answer was read out of. Show it _before_ the
-  ideas, as the mockup does. `photos` counts photos the AI has actually
-  analysed, so it reads 0 until the background vision pass has run.
+  ideas, as the mockup does. These are what the request carried, not the
+  size of the archive behind it — each is capped (`notes` 30, `photos`
+  50, `posts` 20, `lifeEvents` 20), so a big family never inflates the
+  number. `photos` counts photos the AI has actually analysed, so it
+  reads 0 until the background vision pass has run.
 - Each suggestion always carries `title`, **`why`** and **`source`**, and
   never appears without them: the server drops any idea the AI service
   returns without provenance. Per feature it also carries `price` +

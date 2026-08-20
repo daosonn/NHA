@@ -138,7 +138,7 @@ service:
     "photoInsights": [
       { "insight": { "scene": "outing", "labels": ["beach"] }, "model": "…", "photoDate": "…" },
     ],
-    "counts": { "notes": 12, "photos": 248, "posts": 20, "lifeEvents": 14 },
+    "counts": { "notes": 12, "photos": 47, "posts": 20, "lifeEvents": 14 },
   },
 }
 ```
@@ -161,7 +161,7 @@ every idea carries its provenance (shape mirrors the shipped UI,
 
 ```jsonc
 {
-  "evidence": { "notes": 12, "photos": 248, "posts": 20, "lifeEvents": 14 },
+  "evidence": { "notes": 12, "photos": 47, "posts": 20, "lifeEvents": 14 },
   "suggestions": [
     {
       "title": "Clay teapot from Bát Tràng",
