@@ -540,8 +540,15 @@ holds the short facts.
 
 Two of the mockup's three fact rows are drawn. The third, occupation
 ("Carpenter, retired since 2021"), and the birthplace half of the first
-("Born 14 March 1964, **Y Yen, Nam Dinh**") have no columns anywhere in the
-schema, so they are not invented. Both are backend work to schedule.
+("Born 14 March 1964, **Y Yen, Nam Dinh**") had no columns in the schema, so
+they were not invented.
+
+**The columns landed 2026-08-20** — `ProfileDetail` now carries `birthPlace`
+and `occupation` (free text, nullable, max 200 chars; see `api-contract.md`).
+Drawing the third row and the place after the birth date is now frontend
+work: read the two fields, and drop the explanatory comment in
+`profile-facts.tsx`. Both stay nullable, so the rows still have to survive
+being absent.
 
 The biography is in the identity card rather than the facts block. The mockup
 draws no biography at all — its example person has none — but the field is

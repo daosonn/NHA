@@ -253,7 +253,16 @@ reconcile.
 | `PATCH /families/:familyId/members/:memberId/profile` | `ProfileDetail` |
 
 `ProfileDetail` is `{ id, userId, memberId, displayName, bio,
-interests: string[], birthDate, deathDate, updatedAt }`.
+interests: string[], birthDate, birthPlace, occupation, deathDate,
+updatedAt }`.
+
+`birthPlace` and `occupation` (added 2026-08-20) are the two fields
+mockup 7's fact rows needed: the place printed after the birth date
+("Born 14 March 1964, Ý Yên, Nam Định") and the third row
+("Carpenter, retired since 2021"). Both are **free text, max 200 chars**,
+nullable, and neither is structured — `occupation` is a phrase, not a job
+title, so nothing can be derived from it. If a retirement year ever has
+to drive a timeline entry or a reminder, that needs its own field.
 
 Display rule (domain-model.md): a **linked** member's route serves their
 **global** profile — the same one `/me/profile` edits — while a
@@ -265,8 +274,9 @@ family; a linked member's profile is editable only by that member (403
 otherwise). Every successful PATCH writes an `EditHistory` row (editor +
 snapshot) — no history UI yet, but the log exists from day one.
 
-PATCH semantics: omitted = unchanged, `null` clears a date, `''` clears
-the bio, `interests` replaces the whole list. Dates are **date-only
+PATCH semantics: omitted = unchanged, `null` clears a date, `''` (or
+whitespace, or `null`) clears the bio, `birthPlace` and `occupation`,
+`interests` replaces the whole list. Dates are **date-only
 `YYYY-MM-DD`** (2026-08-19 — the columns are DATEs; an offset datetime
 shifted the stored day, same guard as `LifeEvent.eventDate`);
 `deathDate` before `birthDate` is a 400. `birthDate`/`deathDate` here are
@@ -534,24 +544,32 @@ Gaps found while building the Life Profile against mockup 7. None block a
 screen — the app ships without them and says on screen what it does not know
 — but each costs something visible.
 
-**1. ~~A member's media has to be found by reading the whole feed.~~**
-**Resolved 2026-08-19** — `GET /me/gallery` and
-`GET /families/:familyId/members/:memberId/gallery` (WBS 1.6.4). The app
-dropped its bounded feed scan the same morning and now reads these. Thank
-you: the endpoint also carries life-event media, which the scan could not
-reach at all.
+**1. ~~A member's media has to be found by reading the whole feed.~~ —
+closed on both sides.** The ask was for either shape; **both exist**:
+
+- `GET /me/gallery` and
+  `GET /families/:familyId/members/:memberId/gallery` — the dedicated
+  route (task 1.6.4, PR #19). Not paginated, and it also carries
+  life-event media, which the feed scan could not reach at all.
+- `?memberId` on `GET /families/:familyId/posts` — the feed filter (task
+  2.1.2, PR #22), matching any of a linked member's rows.
+
+**The app switched on 2026-08-19**, dropping its bounded four-pages-of-fifty
+scan for the gallery route.
 
 One small ask if the shape is ever revisited: `GalleryMediaItem` has no
 title, so the Album grid cannot write an event's name across its cover the
 way mockup 7 does. Not worth a round trip per tile; worth a field if one is
 cheap.
 
-**2. `LifeProfile` has no occupation and no birthplace.**
-Mockup 7 draws three fact rows: born _with a place_ ("Born 14 March 1964, Y
-Yen, Nam Dinh"), occupation ("Carpenter, retired since 2021"), and interests.
-Only the date and the interests have columns, so the app draws two rows and
-leaves the third out rather than inventing fields. Two nullable strings on
-`LifeProfile` — `birthPlace`, `occupation` — would complete the design.
+**2. ~~`LifeProfile` has no occupation and no birthplace.~~ — done
+2026-08-20.** Both columns exist now (migration
+`20260820031808_add_profile_birthplace_occupation`, nullable, no backfill)
+and `ProfileDetail` carries them — see the Life Profiles section above.
+Mockup 7's third fact row and the place after the birth date can be drawn;
+**the app has not read them yet**
+(`components/member/profile-facts.tsx` still explains why the row is
+missing).
 
 **3. `PostMediaSummary` has no duration.**
 The mockup puts a running time on a video cover ("0:24"). The summary is
