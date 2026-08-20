@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { AuthModeTabs } from '../../src/components/auth/auth-mode-tabs';
+import { SocialButtons } from '../../src/components/auth/social-buttons';
 import { FormScreen } from '../../src/components/layout/form-screen';
 import { Button } from '../../src/components/ui/button';
 import { Checkbox } from '../../src/components/ui/checkbox';
@@ -73,6 +74,8 @@ export default function SignUpScreen() {
             loading={submitting}
             onPress={() => void submit()}
           />
+
+          <SocialButtons />
         </>
       }
     >

@@ -25,6 +25,11 @@ export interface ProfileDetail {
   /** Free text ("Carpenter, retired since 2021"), not a job title. */
   occupation: string | null;
   deathDate: Date | null;
+  /** A Media id the app streams via GET /media/:id; null = no avatar
+   *  (the app draws an initial). Stored on User/FamilyMember, not on
+   *  LifeProfile — surfaced here because the profile is where it is
+   *  edited (WBS 3.4.2). */
+  avatarMediaId: string | null;
   updatedAt: Date;
 }
 
@@ -67,10 +72,10 @@ export class ProfileService {
       this.ensureGlobalProfile(userId),
       this.prisma.user.findUniqueOrThrow({
         where: { id: userId },
-        select: { name: true },
+        select: { name: true, avatarKey: true },
       }),
     ]);
-    return this.toDetail(profile, user.name);
+    return this.toDetail(profile, user.name, user.avatarKey);
   }
 
   async updateOwn(
@@ -95,10 +100,16 @@ export class ProfileService {
     const member = await this.findMember(userId, familyId, memberId);
     if (member.userId) {
       const profile = await this.ensureGlobalProfile(member.userId);
-      return this.toDetail(profile, member.user?.name ?? member.displayName);
+      return this.toDetail(
+        profile,
+        member.user?.name ?? member.displayName,
+        // A linked person has one avatar, wherever they appear — the
+        // account's; the member row's copy only matters for placeholders.
+        member.avatarKey ?? member.user?.avatarKey ?? null,
+      );
     }
     const profile = await this.ensurePlaceholderProfile(member.id);
-    return this.toDetail(profile, member.displayName);
+    return this.toDetail(profile, member.displayName, member.avatarKey);
   }
 
   /**
@@ -214,7 +225,30 @@ export class ProfileService {
       throw new BadRequestException('deathDate cannot precede birthDate');
     }
 
+    // Avatar (WBS 3.4.2). The column lives on User (global profile) or
+    // FamilyMember (placeholder), not on LifeProfile — but it is edited
+    // here because the profile is the once-per-person object the app
+    // edits, and the wiki rule above is exactly the authorization an
+    // avatar needs. The media must be the *editor's* own upload — on a
+    // placeholder the editor and the profile differ, and pointing at
+    // somebody else's photo must not work. One message for "missing" and
+    // "not yours": no existence oracle, same as attach-media.
+    const nextAvatar = await this.resolveNextAvatar(profile, editorUserId, dto);
+
     await this.prisma.$transaction(async (tx) => {
+      if (dto.avatarMediaId !== undefined) {
+        if (profile.userId) {
+          await tx.user.update({
+            where: { id: profile.userId },
+            data: { avatarKey: dto.avatarMediaId },
+          });
+        } else if (profile.memberId) {
+          await tx.familyMember.update({
+            where: { id: profile.memberId },
+            data: { avatarKey: dto.avatarMediaId },
+          });
+        }
+      }
       const updated = await tx.lifeProfile.update({
         where: { id: profile.id },
         data: {
@@ -249,10 +283,56 @@ export class ProfileService {
             birthPlace: updated.birthPlace,
             occupation: updated.occupation,
             deathDate: updated.deathDate?.toISOString() ?? null,
+            avatarMediaId: nextAvatar,
           },
         },
       });
     });
+  }
+
+  /**
+   * Validates an incoming avatar and answers what the avatar will be
+   * after this edit — the snapshot above records the full post-edit
+   * state, so an untouched avatar still has to be read.
+   */
+  private async resolveNextAvatar(
+    profile: ProfileRecord,
+    editorUserId: string,
+    dto: UpdateProfileDto,
+  ): Promise<string | null> {
+    if (dto.avatarMediaId === undefined) {
+      if (profile.userId) {
+        const user = await this.prisma.user.findUniqueOrThrow({
+          where: { id: profile.userId },
+          select: { avatarKey: true },
+        });
+        return user.avatarKey;
+      }
+      if (profile.memberId) {
+        const member = await this.prisma.familyMember.findUniqueOrThrow({
+          where: { id: profile.memberId },
+          select: { avatarKey: true },
+        });
+        return member.avatarKey;
+      }
+      return null;
+    }
+    if (dto.avatarMediaId === null) {
+      return null;
+    }
+    const media = await this.prisma.media.findFirst({
+      where: { id: dto.avatarMediaId, uploaderUserId: editorUserId },
+      select: { mimeType: true },
+    });
+    if (!media) {
+      throw new BadRequestException(
+        'avatarMediaId must be an image you uploaded yourself',
+      );
+    }
+    if (!media.mimeType.startsWith('image/')) {
+      throw new BadRequestException('An avatar must be an image');
+    }
+    return dto.avatarMediaId;
   }
 
   /** Public because LifeEventService resolves members the same way. */
@@ -264,7 +344,8 @@ export class ProfileService {
     id: string;
     userId: string | null;
     displayName: string;
-    user: { name: string } | null;
+    avatarKey: string | null;
+    user: { name: string; avatarKey: string | null } | null;
   }> {
     await this.familyService.requireMembership(familyId, userId);
     const member = await this.prisma.familyMember.findFirst({
@@ -273,7 +354,8 @@ export class ProfileService {
         id: true,
         userId: true,
         displayName: true,
-        user: { select: { name: true } },
+        avatarKey: true,
+        user: { select: { name: true, avatarKey: true } },
       },
     });
     if (!member) {
@@ -304,7 +386,11 @@ export class ProfileService {
     });
   }
 
-  private toDetail(profile: ProfileRecord, displayName: string): ProfileDetail {
+  private toDetail(
+    profile: ProfileRecord,
+    displayName: string,
+    avatarMediaId: string | null,
+  ): ProfileDetail {
     return {
       id: profile.id,
       userId: profile.userId,
@@ -316,6 +402,7 @@ export class ProfileService {
       birthPlace: profile.birthPlace,
       occupation: profile.occupation,
       deathDate: profile.deathDate,
+      avatarMediaId,
       updatedAt: profile.updatedAt,
     };
   }

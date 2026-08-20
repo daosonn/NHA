@@ -4,12 +4,24 @@ import {
   IsArray,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
 } from 'class-validator';
 import { IsDateOnly } from '../../common/is-date-only';
 
 /** Omitted fields stay unchanged; `null` clears a date, `''` clears the bio. */
 export class UpdateProfileDto {
+  @ApiPropertyOptional({
+    nullable: true,
+    description:
+      'Avatar: the id of an image the CALLER uploaded via POST /media ' +
+      '(WBS 3.4.2). Read it back on ProfileDetail/FamilyMemberSummary as ' +
+      'avatarKey and stream it via GET /media/:id. null clears it.',
+  })
+  @IsOptional()
+  @IsUUID()
+  avatarMediaId?: string | null;
+
   @ApiPropertyOptional({
     maxLength: 5000,
     description: 'Empty string clears the bio',

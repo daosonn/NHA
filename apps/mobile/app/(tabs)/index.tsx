@@ -18,8 +18,10 @@ import { useFamilies } from '../../src/features/family/use-families';
 import { takePendingInvite } from '../../src/features/family/pending-invite';
 import { useMemberIdLookup } from '../../src/features/family/use-member-for-user';
 import { useFamilyFeed } from '../../src/features/feed/use-family-feed';
+import { useAlbums } from '../../src/features/album/use-albums';
 import { useSpecialDates } from '../../src/features/ai/use-special-dates';
-import { notificationCount, recommendations } from '../../src/fixtures/home';
+import { useRecommendations } from '../../src/features/home/use-recommendations';
+import { notificationCount } from '../../src/fixtures/home';
 import type { FamilySummary, PostDetail } from '../../src/lib/api';
 import { colors, spacing } from '../../src/theme';
 
@@ -68,6 +70,11 @@ export default function HomeScreen() {
 
   const posts: PostDetail[] = feed.data?.pages.flatMap((page) => page.items) ?? [];
 
+  // The feed is already loaded above; the album list is one small request
+  // and is what lets a shelf the viewer built turn up here too.
+  const { data: albums } = useAlbums();
+  const suggestions = useRecommendations(posts, albums);
+
   /** The pill on a card: which family this reached, in that family's own name. */
   const audienceLabel = (post: PostDetail): string | undefined => {
     if (post.familyIds.length === 0 || families === undefined) return undefined;
@@ -109,9 +116,23 @@ export default function HomeScreen() {
 
       {/* Recommendations are still a fixture: no endpoint exists for them. */}
 
-      <SectionHeader title={t('home.recommendations')} actionLabel={t('home.seeAll')} />
+      {/* Hidden until the family has something old enough to resurface. An
+          empty "look what turned up" is worse than no shelf, and a shelf of
+          bundled stock photographs would be a claim about their life. */}
+      {suggestions.length > 0 && (
+        <>
+          <SectionHeader title={t('home.recommendations')} />
 
-      <RecommendationGrid feature={recommendations.feature} secondary={recommendations.secondary} />
+          <RecommendationGrid
+            tiles={suggestions}
+            onSelect={(tile) =>
+              tile.target.kind === 'album'
+                ? router.push({ pathname: '/albums/[id]', params: { id: tile.target.id } })
+                : router.push({ pathname: '/post/[id]', params: { id: tile.target.id } })
+            }
+          />
+        </>
+      )}
 
       <SwipeCue />
     </View>
