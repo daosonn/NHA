@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SocialButtons } from '../../src/components/auth/social-buttons';
 import { AvatarStack } from '../../src/components/ui/avatar-stack';
 import { BrandMark } from '../../src/components/ui/brand-mark';
 import { Button } from '../../src/components/ui/button';
@@ -64,6 +65,8 @@ export default function WelcomeScreen() {
           fullWidth
           onPress={() => router.push('/sign-up')}
         />
+
+        <SocialButtons layout="stack" continueWording />
       </View>
 
       <View
