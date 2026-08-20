@@ -52,7 +52,7 @@ photos, and get AI suggestions (gifts, messages, quality time).
 - [ ] 2.6.1 Chọn thành viên (family member)
 - [ ] 2.6.2 Nhập thời gian/sở thích (context)
 - [ ] 2.6.3 Generate kế hoạch (danh sách hoạt động)
-- [ ] 2.6.4 Lưu & chia sẻ plan (bảng `Plan` + `PlanShare` — chỉ chủ sửa/chia sẻ, người được chia sẻ chỉ xem; added 2026-08-14, see `database.md`)
+- [ ] 2.6.4 Lưu & chia sẻ plan (bảng `Plan` + `PlanShare` — chỉ chủ sửa/chia sẻ, người được chia sẻ chỉ xem) — UI; API `/me/plans` + shares sẵn 2026-08-20 (chi tiết: `api-contract.md`)
 
 ### 2.7 Test Sprint 2
 

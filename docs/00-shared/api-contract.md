@@ -463,6 +463,58 @@ Semantics:
 - Deleting an album deletes only the organization — the underlying media
   rows and files are untouched.
 
+### Plans — `apps/api/src/plan/` (WBS 2.6.4, added 2026-08-20)
+
+Saved quality-time / surprise plans (decided 2026-08-14). This is the one
+AI output that is **persisted**: a gift idea is read once, but a plan is
+followed over days. Gift and message suggestions stay request/response.
+No AI is involved in these routes.
+
+| Route                                     | Returns         |
+| ----------------------------------------- | --------------- |
+| `GET /me/plans`                           | `PlanSummary[]` |
+| `POST /me/plans`                          | `PlanDetail`    |
+| `GET /me/plans/:planId`                   | `PlanDetail`    |
+| `PATCH /me/plans/:planId`                 | `PlanDetail`    |
+| `DELETE /me/plans/:planId`                | `{ success }`   |
+| `POST /me/plans/:planId/shares`           | `PlanDetail`    |
+| `DELETE /me/plans/:planId/shares/:userId` | `{ success }`   |
+
+`PlanSummary` is `{ id, title, aboutMemberId, aboutMemberName,
+occasionDate, ownerUserId, ownerName, canEdit, canDelete, shareCount,
+createdAt, updatedAt }`; `PlanDetail` adds `content` and `sharedWith`.
+
+- **`GET /me/plans` returns both** the plans you own and the plans shared
+  with you, most recently touched first. **`canEdit` is what tells them
+  apart** — draw what you are told rather than comparing `ownerUserId`
+  yourself (the rule settled for comments on 2026-08-19).
+- **Only the owner edits, deletes or shares.** A shared viewer gets 403 on
+  all three; a stranger gets 404 everywhere, because a plan's existence is
+  private (same as a memo or an album). Sharing is view-only, by design:
+  the co-conspirators of a surprise need to see it, and exactly one person
+  needs to be able to change it.
+- `sharedWith` (`{ userId, name, sharedAt }[]`) is returned **to the owner
+  only** — `null` for a viewer, who was let in on the plan, not on the
+  guest list. `shareCount` is visible to both.
+- `content` is a JSON **object** (400 for a string, an array or null),
+  stored and returned without the server reading inside it — saving a
+  quality-time suggestion typically means `{ steps, why, source }`, and
+  the owner rewrites it from there. Values and array order round-trip
+  exactly; **object key order does not**, because the column is `jsonb`.
+- Share with `{ userId }` — an account, since viewing requires login, so
+  take it from `FamilyMemberSummary.userId` (a placeholder member has
+  none). It must be **someone in one of your families**: anyone else 404s,
+  which also avoids confirming whether that account exists. Sharing with
+  yourself is a 400. Both share and un-share are **idempotent**.
+- `aboutMemberId` must be a member of one of your families (400 otherwise,
+  404 if unknown). `occasionDate` is a solar date only. On PATCH, `null`
+  clears either one, and a PATCH that changes nothing does **not** bump
+  `updatedAt` — so a retry cannot reorder the list.
+- Removing that member from the family leaves the plan alive with
+  `aboutMemberId: null`. **Known gap**: unlike a memo, a plan keeps no
+  name snapshot, so who it was for is lost. Fixing it is a migration and
+  a team call — see `project-status.md`.
+
 ### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side)
 
 | Route                                   | Returns                |

@@ -446,6 +446,34 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   untouched. Verified by lint/build/test + 13-case live smoke (filters,
   combinations, cursor pagination under filter, 400/404 matrix). On
   branch `feature/memory-list`. Details in `api-contract.md`.
+- Plan API (2026-08-20, sprint 2, WBS 2.6.4): saved quality-time /
+  surprise plans — `GET/POST/PATCH/DELETE /api/me/plans` plus
+  `POST /:planId/shares` and `DELETE /:planId/shares/:userId`. **No
+  migration** — `Plan`/`PlanShare` shipped in the sprint-0 schema, and no
+  AI is involved: the app posts what the owner chose to keep and
+  `content` is stored without the server reading inside it. The rule from
+  `database.md` holds end to end: **only the owner edits, deletes or
+  shares; a shared viewer can only look** (403), and a stranger gets 404
+  everywhere because a plan's existence is private, like a memo.
+  `GET /me/plans` returns owned and shared-with-me together with
+  `canEdit`/`canDelete` flags, so the app draws what it is told.
+  `sharedWith` goes to the owner only — a viewer was let in on the plan,
+  not the guest list. Share/un-share are idempotent. Verified by
+  format/lint/build/test + a **49-case live smoke test**. One real bug
+  caught by that test and fixed: the no-op-PATCH guard compared
+  `JSON.stringify(content)`, but `jsonb` does not preserve key order, so
+  an unchanged body looked changed and kept bumping `updatedAt` (which
+  orders the list) — now compared canonically, with a regression case.
+  **Two things for the team**: (1) sharing is restricted to someone in
+  one of your families — `database.md` says only "shared with users", so
+  this boundary is my assumption and needs confirming; (2) removing a
+  member leaves the plan with `aboutMemberId: null` and **no name
+  snapshot**, so who it was for is lost — the same defect the team fixed
+  for memos on 2026-08-19 with `aboutName`. Fixing it here is a migration
+  I did not take unasked. On branch `feature/plans`. Together with the AI
+  suggestions proxy on `feature/ai-suggestions` (also unmerged), this
+  **closes the backend side of sprint 2** — everything still open there is
+  UI, or belongs to the AI team.
 - AI insight pipe (2026-08-19, sprint 2): the backend half of the
   two-phase photo pipeline — `MediaInsight` hidden store (migration
   `20260819071710`, table 26) + internal routes
