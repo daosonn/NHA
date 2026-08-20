@@ -2,6 +2,12 @@
 
 ## Current Sprint
 
+**Backend moved to Sprint 3 on 2026-08-20** — `docs/sprints/sprint-03.md`
+(Notification / Settings / Release). Sprint 2's backend is code-complete;
+sprint 2 itself is **not closed**: 2.1.3–2.1.5 (trang Memories) is unbuilt
+and undecided, ten items in 2.2–2.5 are built but never ticked, and 2.6
+was dropped (see Important Decisions).
+
 **Sprint 1 — Core Features** (in progress — PRs #1–#9 merged; the
 "pending team review before start" note was stale and is removed
 2026-08-18). **Backend has moved on to Sprint 2 (2026-08-19)**: sprint 1's
@@ -569,6 +575,42 @@ dev` **did not regenerate the client**, and the stale client survived
   (`components/member/profile-facts.tsx`). On branch
   `feature/profile-facts` (stacked on `fix/backend-doc-accuracy`).
 
+- Notification API (2026-08-20, sprint 3, WBS 3.1.1): in-app notifications
+  for screen 19 — `GET /me/notifications` (cursor-paginated, newest first,
+  `?unreadOnly`), `GET /me/notifications/unread-count`,
+  `PATCH /me/notifications/:id/read`, `POST /me/notifications/read-all`.
+  **No migration** — `Notification` shipped in the sprint-0 schema.
+  Two design decisions worth keeping: **no create route** (a notification
+  is raised by an event, never requested by a client — other modules call
+  the exported `create`/`createMany`, which is how reminders in 3.2/3.3
+  will make theirs), and **no display text on the wire** — only `type`
+  plus a payload of ids, so the app writes the sentence. That follows the
+  rule the special-date widgets already set, and it is what keeps Japanese
+  copy out of the server. The list response carries `unreadCount` for the
+  whole account, so the badge (3.1.4) and the list cannot disagree.
+  Marking read is idempotent (the first `readAt` is kept). Verified by
+  format/lint/build/test + a **26-case live smoke test** (paging across 25
+  rows, badge vs page counts, per-user isolation with 404 not 403,
+  idempotent read, read-all not touching another account).
+
+  **Event triggers wired the same day** — a task the WBS never had, but
+  without it screen 19 would have been built over an empty table.
+  `NotificationEventsService` holds the rules (kept out of
+  `NotificationService`, which stays a dumb store): a new post notifies
+  the families it was shared to except the author, a tagged member gets
+  `MEMBER_TAG` **instead of** `NEW_POST` rather than both, and a comment
+  or a **first** reaction notifies the post's author. Three rules are
+  enforced there and verified: a **private post notifies nobody**, you are
+  never notified about your own action, and **changing a reaction raises
+  nothing** (LIKE → LOVE → HAHA is one notification, not three — that
+  needed an extra existence check before the upsert). Triggers are
+  fire-and-forget on the same contract as `analyzePostInBackground`: a
+  post is published even if writing its notifications fails. Verified by a
+  further **13-case live smoke test** across four accounts (three in one
+  family, one outside). **Invitations raise nothing** — the invitee has no
+  account yet, so who `FAMILY_INVITE` is for is an open product question.
+  On branch `feature/notification-api`.
+
 ### Sprint 2 — AI team
 
 - AI integration for screens 21-33 (2026-08-20, **merged to `main` in
@@ -624,6 +666,37 @@ dev` **did not regenerate the client**, and the stale client survived
   see Important Decisions / PR #28.
 
 ## Important Decisions
+
+- **Notifications are in-app only for the MVP; push deferred (2026-08-20)**
+  — closes the "Notification delivery method" open question in
+  `mvp-scope.md`. The app shows a list and an unread badge, refreshed
+  while it is open; nothing reaches a closed phone yet.
+
+  Two things worth stating so the decision is not re-argued from scratch:
+
+  - **Sound, vibration and a lock-screen banner are the same mechanism**,
+    not three tiers. Choosing "just a sound" does not avoid anything —
+    every one of them is a push delivered by Apple or Google.
+  - **The Apple Developer account is a project cost, not a push cost.**
+    Without it the app cannot go to the App Store at all, and installs on
+    a real iPhone expire after seven days — which also blocks the
+    "nothing has run on a physical device yet" problem below. An
+    **organization** account waits on D-U-N-S verification, days to weeks,
+    which money cannot shorten. **It should be started now as a project
+    task**, in parallel with the code, not when push is scheduled.
+
+  Two things that do not need it, and are worth doing first: **polling**
+  `unread-count` while the app is open (frontend only, the endpoint
+  exists), and **local scheduled notifications** for birthday and special
+  date reminders (WBS 3.2) — the app already knows those dates from
+  `GET /families/:id/special-dates`, so the phone can raise them on its
+  own with no server and no Apple credential. Only unpredictable social
+  events ("Lan just commented") genuinely require push.
+
+  **Polling cadence settled the same day: 5–10s** on the notifications
+  screen and Home, slower elsewhere, stop in background, refetch on
+  foreground. SSE/WebSocket considered and rejected for now. Full FE
+  guidance in `api-contract.md` → Notifications.
 
 - **AI Quality Time dropped (2026-08-20)** — the whole of WBS 2.6, both
   the suggestion (2.6.1–2.6.3) and saving/sharing the result as a `Plan`

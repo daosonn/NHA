@@ -473,6 +473,70 @@ Semantics:
 - Deleting an album deletes only the organization — the underlying media
   rows and files are untouched.
 
+### Notifications — `apps/api/src/notification/` (WBS 3.1.1, added 2026-08-20)
+
+Screen 19. **No migration** — `Notification` shipped in the sprint-0 schema.
+
+| Route                                | Returns              |
+| ------------------------------------ | -------------------- |
+| `GET /me/notifications`              | `NotificationPage`   |
+| `GET /me/notifications/unread-count` | `{ count }`          |
+| `PATCH /me/notifications/:id/read`   | `NotificationDetail` |
+| `POST /me/notifications/read-all`    | `{ updated }`        |
+
+`NotificationPage` is `{ items, nextCursor, unreadCount }`;
+`NotificationDetail` is `{ id, type, payload, readAt, createdAt }`.
+
+- **There is no create route, by design.** A notification is raised by
+  something happening — a post, a comment, a reminder — never by a client
+  asking for one. Other modules call `NotificationEventsService`
+  directly; `NotificationService.create`/`createMany` stays exported for
+  reminders (3.2/3.3), which have no event to hang off.
+- **What raises one today** (wired 2026-08-20): a **new post** notifies
+  every account in the families it was shared to, except the author; a
+  member **tagged** in that post gets `MEMBER_TAG` _instead of_
+  `NEW_POST`, never both. A **comment** and a **first reaction** notify
+  the post's author only. Rules that follow from that, and that the app
+  can rely on: a **private post notifies nobody**; you are never notified
+  about your own action; and **changing a reaction** (LIKE → LOVE) raises
+  nothing, only the first one does. Invitations raise nothing yet — the
+  invitee has no account to notify, so who receives `FAMILY_INVITE` is an
+  open product question.
+- **The server sends no display text.** Only `type` plus a `payload` of
+  ids — the app writes the sentence, the same rule the special-date
+  widgets follow. A Japanese user must not be handed an English sentence
+  assembled server-side.
+- `type` is `NEW_POST | COMMENT | REACTION | MEMBER_TAG | FAMILY_INVITE |
+BIRTHDAY_REMINDER | EVENT_REMINDER | CARE_REMINDER | AI_SUGGESTION`.
+  `payload` shape is per type (`{ postId }`, `{ memberId }`, …).
+- Newest first, cursor-paginated exactly like the family feed (`limit`
+  1–50 default 20, echo `nextCursor`). `?unreadOnly=true` narrows it.
+- `unreadCount` on the page counts **everything unread**, not the page —
+  so the list and the badge (3.1.4) arrive together and cannot disagree.
+  `unread-count` is the same number on its own, for drawing the badge
+  without fetching rows.
+- Marking read is **idempotent**: the first `readAt` is kept, so "when did
+  I first see this" stays true. Everything is scoped to the caller —
+  someone else's notification is a 404, never a 403.
+
+**How the app should refresh (decided 2026-08-20 — polling, no socket).**
+Delivery is in-app only for the MVP, and while the app is open it
+**polls**: `refetchInterval` of **5–10s on the notifications screen and
+Home** (where the bell lives), 30–60s elsewhere, and a refetch on
+returning to the foreground — that focus refetch is the moment that
+actually feels instant, since it fires exactly when the person looks at
+the bell. Two things are load-bearing: **React Native does not wire focus
+by itself** — hook `AppState` into react-query's `focusManager` once,
+app-wide, or polling keeps running in the background and burns battery
+(the video-progress hook `use-video.ts` already shows the interval
+pattern); and after `PATCH .../read`, invalidate the query so the badge
+drops immediately instead of waiting a tick. Server-side this cadence is
+already paid for: the unread count runs on the `(recipientUserId,
+readAt)` index. SSE/WebSocket was considered and deliberately rejected
+for now — it buys ~1s over ~10s at the price of reconnect logic today
+and Redis the day there are two API instances; revisit only if chat or
+another genuinely two-way feature arrives.
+
 ### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side)
 
 | Route                                   | Returns                |

@@ -1,7 +1,11 @@
 # Sprint 3 — Notification / Setting / Release
 
-> Status: planned (defined 2026-08-13). Starts after Sprint 2.
+> Status: **backend started 2026-08-20** (defined 2026-08-13).
 > Source: team WBS. IDs kept from the WBS for traceability.
+>
+> Sprint 2 chưa đóng hẳn khi sprint này bắt đầu — xem `project-status.md`:
+> nhóm 2.1.3–2.1.5 (trang Memories) chưa làm và chưa quyết, và mười mục
+> 2.2–2.5 đã code xong nhưng chưa ai tick.
 
 ## Sprint Goal
 
@@ -12,10 +16,10 @@ complete, the system passes end-to-end tests, and the MVP is demoed.
 
 ### 3.1 Thông báo — Notification
 
-- [ ] 3.1.1 Notification DB/API (notification model)
-- [ ] 3.1.2 Notification UI (danh sách thông báo)
-- [ ] 3.1.3 Read/Unread (update trạng thái)
-- [ ] 3.1.4 Badge notification (hiện số chưa đọc)
+- [x] 3.1.1 Notification DB/API (notification model) — done 2026-08-20, không cần migration (bảng có từ sprint 0); chi tiết: `api-contract.md`
+- [ ] 3.1.2 Notification UI (danh sách thông báo) — UI; `GET /me/notifications` sẵn (cursor, `?unreadOnly`)
+- [ ] 3.1.3 Read/Unread (update trạng thái) — UI; `PATCH /me/notifications/:id/read` + `POST .../read-all` sẵn
+- [ ] 3.1.4 Badge notification (hiện số chưa đọc) — UI; `GET /me/notifications/unread-count` sẵn, và `unreadCount` cũng nằm sẵn trong response danh sách
 
 ### 3.2 Nhắc ngày đặc biệt — Birthday/Event
 
@@ -62,6 +66,10 @@ complete, the system passes end-to-end tests, and the MVP is demoed.
 
 ## Notes
 
-- Notification delivery is in-app only for MVP (list + badge); push/email
-  delivery remains an open decision (`mvp-scope.md`).
+- Notification delivery is in-app only for MVP (list + badge) — **confirmed
+  as a decision 2026-08-20**, push deferred; see `project-status.md` →
+  Important Decisions for why, and for the two things that get most of the
+  value without it (polling while open, local reminders for 3.2).
+  **Backend for 3.1 is done**: the API and the event triggers both ship;
+  what is left in 3.1 is entirely frontend.
 - Deployment target must be decided before 3.7.4 — currently entirely open.
