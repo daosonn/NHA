@@ -1,4 +1,10 @@
-import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 /** Màn 24-25 (11e/11f) — 3 biến thể + "Say it differently" (đổi tone → gọi lại) */
 export class MessageRequestDto {
@@ -19,4 +25,9 @@ export class MessageRequestDto {
   @IsOptional()
   @IsIn(['en', 'ja', 'vi'])
   locale?: 'en' | 'ja' | 'vi';
+
+  /** true = bỏ qua cache (nút "Say it differently" phải RA BẢN MỚI, không trả lại bản cũ) */
+  @IsOptional()
+  @IsBoolean()
+  force?: boolean;
 }

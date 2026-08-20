@@ -32,8 +32,12 @@ import { AiContextService } from './ai-context.service';
  * rằng MẸ được con về thăm — không phải mẹ thích đi thăm ai.
  */
 
-/** Ảnh gửi model: 768px, JPEG q82, detail="low" — đủ để nhận bối cảnh, ~85 token/ảnh. */
-const VISION_MAX_PX = 768;
+/**
+ * Ảnh gửi model: 512px, JPEG q82, detail="low" — đủ để nhận bối cảnh, ~85 token/ảnh.
+ * 512 chứ không phải 768: detail="low" chỉ nhìn lưới 512px, gửi to hơn là băng
+ * thông thừa thuần tuý (không thêm token, không thêm chi tiết model thấy được).
+ */
+const VISION_MAX_PX = 512;
 const VISION_MAX_IMAGES = 6;
 
 /** Trần confidence theo nguồn: suy từ caption yếu hơn suy từ ảnh có mặt bằng chứng. */
@@ -332,23 +336,37 @@ export class ProfileService {
     return { ran: true, oldVersion, newVersion, signalsUsed: signals.length };
   }
 
+  /** Rollup đang bay theo member — chống hai rollup chạy đua đọc cùng đống signal
+   *  (call thứ hai tốn nguyên một lượt LLM rồi vỡ transaction trên PK version). */
+  private readonly inflightRollups = new Map<
+    string,
+    Promise<RollupOutcome | null>
+  >();
+
   /**
-   * Gọi NGAY TRƯỚC khi gợi ý: nếu có bằng chứng mới thì gộp trước, để lời gợi ý
-   * dùng hiểu biết mới nhất chứ không phải bản chưng cất của tuần trước.
+   * Gọi NGAY TRƯỚC khi gợi ý (và trong NỀN ngay sau ♡): nếu có bằng chứng mới
+   * thì gộp trước, để lời gợi ý dùng hiểu biết mới nhất chứ không phải bản
+   * chưng cất của tuần trước. Cùng member gọi chồng nhau thì NỐI vào promise
+   * đang chạy thay vì mở call trùng.
    */
   async ensureFreshProfile(
     memberId: string,
     locale = 'en',
   ): Promise<RollupOutcome | null> {
+    const inflight = this.inflightRollups.get(memberId);
+    if (inflight) return inflight;
     if (!(await this.hasUnprocessed(memberId))) return null;
-    try {
-      return await this.rollupMember(memberId, locale);
-    } catch (error) {
-      this.logger.warn(
-        `pre-suggest rollup ${memberId} lỗi: ${String((error as Error)?.message ?? error)}`,
-      );
-      return null; // gợi ý vẫn chạy với profile hiện tại
-    }
+
+    const run = this.rollupMember(memberId, locale)
+      .catch((error: unknown) => {
+        this.logger.warn(
+          `pre-suggest rollup ${memberId} lỗi: ${String((error as Error)?.message ?? error)}`,
+        );
+        return null; // gợi ý vẫn chạy với profile hiện tại
+      })
+      .finally(() => this.inflightRollups.delete(memberId));
+    this.inflightRollups.set(memberId, run);
+    return run;
   }
 
   /**
@@ -372,8 +390,14 @@ export class ProfileService {
 
     for (const ref of [...new Set(refs)].slice(0, 12)) {
       if (ref.startsWith('memo_')) {
+        // ownerUserId: memo là sổ riêng của người viết — chip nguồn chỉ mở được
+        // memo CỦA CHÍNH người đang hỏi (đồng bộ với buildFor, chốt 2026-08-20)
         const memo = await this.prisma.memo.findFirst({
-          where: { id: ref.slice(5), aboutMemberId: memberId },
+          where: {
+            id: ref.slice(5),
+            aboutMemberId: memberId,
+            ownerUserId: userId,
+          },
           select: {
             id: true,
             title: true,
@@ -541,33 +565,42 @@ export class ProfileService {
     return this.rollupMember(memberId, locale);
   }
 
-  /** Ảnh của bài, thu nhỏ + base64. Bỏ qua video: keyframe là việc của bước sau. */
+  /**
+   * Ảnh của bài, thu nhỏ + base64. Bỏ qua video: keyframe là việc của bước sau.
+   *
+   * Resize SONG SONG nhưng giữ đúng ngữ nghĩa của vòng for cũ: slice(0,6) TRƯỚC
+   * khi lọc image/*, ảnh lỗi đọc bị BỎ khỏi kết quả (không giữ lỗ hổng), và thứ
+   * tự mảng giữ nguyên — basis của model trả về "photo N" theo thứ tự này và
+   * được dùng để gán sourceType, tức là một phần của provenance.
+   */
   private async imagesFor(
     media: { storageKey: string; mimeType: string }[],
   ): Promise<string[]> {
-    const out: string[] = [];
-    for (const m of media.slice(0, VISION_MAX_IMAGES)) {
-      if (!m.mimeType.startsWith('image/')) continue;
-      try {
-        const raw = await readFile(this.storage.absolutePathOf(m.storageKey));
-        const buf = await sharp(raw)
-          .rotate() // tôn trọng EXIF orientation, rồi bỏ toàn bộ metadata (gồm GPS)
-          .resize({
-            width: VISION_MAX_PX,
-            height: VISION_MAX_PX,
-            fit: 'inside',
-            withoutEnlargement: true,
-          })
-          .jpeg({ quality: 82 })
-          .toBuffer();
-        out.push(buf.toString('base64'));
-      } catch (error) {
-        this.logger.warn(
-          `không đọc được media ${m.storageKey}: ${String(error)}`,
-        );
-      }
-    }
-    return out;
+    const encoded = await Promise.all(
+      media.slice(0, VISION_MAX_IMAGES).map(async (m) => {
+        if (!m.mimeType.startsWith('image/')) return null;
+        try {
+          const raw = await readFile(this.storage.absolutePathOf(m.storageKey));
+          const buf = await sharp(raw)
+            .rotate() // tôn trọng EXIF orientation, rồi bỏ toàn bộ metadata (gồm GPS)
+            .resize({
+              width: VISION_MAX_PX,
+              height: VISION_MAX_PX,
+              fit: 'inside',
+              withoutEnlargement: true,
+            })
+            .jpeg({ quality: 82 })
+            .toBuffer();
+          return buf.toString('base64');
+        } catch (error) {
+          this.logger.warn(
+            `không đọc được media ${m.storageKey}: ${String(error)}`,
+          );
+          return null;
+        }
+      }),
+    );
+    return encoded.filter((b): b is string => b !== null);
   }
 
   /** "X is the parent of Y" — nguyên liệu để model giải nghĩa "mẹ", "bà", "con"… */
