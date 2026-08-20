@@ -24,6 +24,8 @@ export type TextFieldProps = Omit<TextInputProps, 'style'> & {
   secure?: boolean;
   /** Rendered left of the input. Follows the focus colour. */
   renderIcon?: (props: { size: number; color: string }) => React.ReactNode;
+  /** The tiny uppercase section style of the AI mockups (ANYTHING TO ADD, EDIT…). */
+  uppercaseLabel?: boolean;
 };
 
 /**
@@ -43,6 +45,7 @@ export function TextField({
   secure = false,
   renderIcon,
   multiline = false,
+  uppercaseLabel = false,
   ...rest
 }: TextFieldProps) {
   const { t } = useTranslation();
@@ -63,9 +66,20 @@ export function TextField({
 
   return (
     <View style={{ gap: 6 }}>
-      <Text variant="caption" weight="semibold" color={colors.text.secondary}>
-        {label}
-      </Text>
+      {uppercaseLabel ? (
+        <Text
+          variant="badge"
+          weight="semibold"
+          color={colors.text.lightMuted}
+          style={{ letterSpacing: 0.8, textTransform: 'uppercase' }}
+        >
+          {label}
+        </Text>
+      ) : (
+        <Text variant="caption" weight="semibold" color={colors.text.secondary}>
+          {label}
+        </Text>
+      )}
 
       <View
         style={[

@@ -156,16 +156,28 @@ screens.
 
 Raised by the frontend, neither actionable from `apps/mobile`.
 
+- **Avatars have columns and no endpoints (2026-08-19).**
+  `User.avatarKey` and `FamilyMember.avatarKey` are in the schema; nothing
+  writes them and nothing serves them. Verified: `PATCH …/members/:memberId`
+  with an `avatarKey` answers **200** and leaves the column `null`, because
+  `whitelist: true` strips the unknown field. The app therefore ships **no
+  upload button** — one that looks like it worked is worse than none — and
+  draws an initial on a per-person tint instead. **Asked for**: an
+  `avatarMediaId` on `UpdateProfileDto` pointing at a `Media` row; if the
+  stored value is a `Media.id` then `GET /media/:id` already serves it and the
+  client needs nothing further. Full write-up in
+  `docs/00-shared/api-contract.md` § Requests from the app.
+
 - **Three gaps found building the Life Profile against mockup 7
   (2026-08-19; status re-checked against the code 2026-08-20).** Written up
   in full in `docs/00-shared/api-contract.md` § Requests from the app.
 
   1. ~~A member's media can only be found by paging the whole family
-     feed~~ — **done, and in both shapes the app asked for**:
-     `GET /families/:familyId/members/:memberId/gallery` (task 1.6.4,
-     PR #19) and `?memberId` on the family feed (task 2.1.2, PR #22). The
-     Album tab has not switched to either yet, so it still scans a bounded
-     200 moments and warns when it stops short.
+     feed~~ — **closed on both sides**: the server landed
+     `GET /me/gallery` + `GET …/members/:memberId/gallery` (task 1.6.4,
+     PR #19) and `?memberId` on the family feed (task 2.1.2, PR #22), and
+     **the app switched to the gallery route on 2026-08-19**, dropping its
+     bounded 200-moment scan.
   2. ~~`LifeProfile` has no `occupation` and no `birthPlace`~~ — **done
      2026-08-20**, migration `20260820031808`. Both are on
      `ProfileDetail`; the app has not read them yet.

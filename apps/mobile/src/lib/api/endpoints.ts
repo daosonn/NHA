@@ -10,6 +10,21 @@ import { Platform } from 'react-native';
 
 import { apiBaseUrl, apiRequest } from './client';
 import type {
+  CreateVideoJobRequest,
+  EvidenceRef,
+  EvidenceStats,
+  GiftIdeasRequest,
+  GiftIdeasResponse,
+  MessageRequest,
+  MessageResponse,
+  MusicCatalog,
+  SavedGiftIdea,
+  StoryboardRequest,
+  StoryboardResponse,
+  UpcomingSpecialDates,
+  VideoJob,
+} from './ai-types';
+import type {
   AddMemberRequest,
   AuthResult,
   CancelInvitationResult,
@@ -17,6 +32,7 @@ import type {
   CreateInvitationRequest,
   CreateMemoRequest,
   CommentBody,
+  ConfirmPasswordResetRequest,
   CommentList,
   CommentSummary,
   CreatePostRequest,
@@ -27,6 +43,7 @@ import type {
   FamilySummary,
   FamilyTree,
   FeedQuery,
+  GalleryMediaItem,
   InvitationPreview,
   InvitationSummary,
   JoinFamilyRequest,
@@ -43,12 +60,15 @@ import type {
   ReactionType,
   RefreshTokenRequest,
   RegisterRequest,
+  RequestPasswordResetRequest,
   RelationshipSummary,
   SuccessResult,
   UpdateLifeEventRequest,
   UpdateMemoRequest,
   UpdatePostRequest,
   UpdateProfileRequest,
+  VerifyResetCodeRequest,
+  VerifyResetCodeResult,
 } from './types';
 
 /** Builds `?a=1&b=2`, skipping anything not set. */
@@ -78,6 +98,41 @@ export const auth = {
 
   logout: (body: RefreshTokenRequest) =>
     apiRequest<SuccessResult>('/auth/logout', { method: 'POST', body }),
+
+  /**
+   * Step one of three. Unauthenticated — the whole point is that the person
+   * cannot get in.
+   */
+  requestPasswordReset: (body: RequestPasswordResetRequest) =>
+    apiRequest<SuccessResult>('/auth/password-reset/request', {
+      method: 'POST',
+      body,
+      authenticated: false,
+    }),
+
+  /**
+   * Step two. Checks the code **without consuming it**, so the person can be
+   * told they mistyped before they have chosen a new password — and the code
+   * still works on the screen after.
+   */
+  verifyResetCode: (body: VerifyResetCodeRequest) =>
+    apiRequest<VerifyResetCodeResult>('/auth/password-reset/verify', {
+      method: 'POST',
+      body,
+      authenticated: false,
+    }),
+
+  /**
+   * Step three, which spends the code. Every existing session is revoked
+   * server-side, so whoever did this has to sign in again — including on the
+   * device they are holding.
+   */
+  confirmPasswordReset: (body: ConfirmPasswordResetRequest) =>
+    apiRequest<SuccessResult>('/auth/password-reset/confirm', {
+      method: 'POST',
+      body,
+      authenticated: false,
+    }),
 
   /**
    * Social login is a browser redirect, not a fetch: the app opens this URL,
@@ -273,6 +328,92 @@ export const reactions = {
     apiRequest<ReactionState>(`/posts/${postId}/reactions/me`, { method: 'DELETE' }),
 };
 
+export const specialDates = {
+  /** Hub "Coming up" + occasion pickers — soonest first, derived from profiles + custom rows. */
+  upcoming: (familyId: string, limit?: number) =>
+    apiRequest<UpcomingSpecialDates>(`/families/${familyId}/special-dates${query({ limit })}`),
+};
+
+export const ai = {
+  /** Screen 21 — "12 photos and 4 notes about her" before asking (0 tokens). */
+  evidenceStats: (familyId: string, memberId: string) =>
+    apiRequest<EvidenceStats>(`/families/${familyId}/members/${memberId}/evidence-stats`),
+
+  /** Screen 23 — follow the sources an idea cited back to the real note or post. */
+  evidence: (familyId: string, memberId: string, refs: string[]) =>
+    apiRequest<EvidenceRef[]>(
+      `/families/${familyId}/members/${memberId}/evidence${query({ refs: refs.join(',') })}`,
+    ),
+
+  /** Screen 21→22 — grounded gift ideas with provenance; response includes saved ideas. */
+  giftIdeas: (familyId: string, memberId: string, body: GiftIdeasRequest) =>
+    apiRequest<GiftIdeasResponse>(`/families/${familyId}/members/${memberId}/gift-ideas`, {
+      method: 'POST',
+      body,
+    }),
+
+  /** Screen 22 — Save one idea. Also recorded as direct human feedback for the profile. */
+  saveGiftIdea: (
+    familyId: string,
+    memberId: string,
+    body: { title: string; why?: string; priceRange?: string; occasionLabel?: string },
+  ) =>
+    apiRequest<SavedGiftIdea>(`/families/${familyId}/members/${memberId}/gift-ideas/save`, {
+      method: 'POST',
+      body,
+    }),
+
+  /** Screen 21 — "Two ideas you saved last year". */
+  savedGiftIdeas: (familyId: string, memberId: string) =>
+    apiRequest<SavedGiftIdea[]>(`/families/${familyId}/members/${memberId}/gift-ideas/saved`),
+
+  /** Screens 24-25 — three variants; call again with a different tone to "say it differently". */
+  messageSuggestions: (familyId: string, memberId: string, body: MessageRequest) =>
+    apiRequest<MessageResponse>(`/families/${familyId}/members/${memberId}/message-suggestions`, {
+      method: 'POST',
+      body,
+    }),
+
+  /** Screen 26 — render the card PNG server-side; view it via `media.streamUrl(media_id)`. */
+  renderCard: (
+    familyId: string,
+    body: { template: string; message: string; toName: string; fromName: string; heading?: string },
+  ) => apiRequest<{ media_id: string }>(`/families/${familyId}/cards`, { method: 'POST', body }),
+};
+
+export const video = {
+  /** Screen 29 — built-in music grouped by mood. */
+  music: () => apiRequest<MusicCatalog>('/video-music'),
+
+  /** Screen 29 — preview URL of a LIBRARY track (public, so a plain <audio> can play it). */
+  musicFileUrl: (trackId: string) => `${apiBaseUrl()}/video-music/${trackId}/file`,
+
+  /** Screen 27→31 — storyboard to review before the job exists (1 AI call, mockable). */
+  storyboard: (familyId: string, body: StoryboardRequest) =>
+    apiRequest<StoryboardResponse>(`/families/${familyId}/video-jobs/storyboard`, {
+      method: 'POST',
+      body,
+    }),
+
+  create: (familyId: string, body: CreateVideoJobRequest) =>
+    apiRequest<VideoJob>(`/families/${familyId}/video-jobs`, { method: 'POST', body }),
+
+  render: (jobId: string) =>
+    apiRequest<{ ok: boolean }>(`/video-jobs/${jobId}/render`, { method: 'POST' }),
+
+  /** Poll from screen 32 — progress + stage. */
+  job: (jobId: string) => apiRequest<VideoJob>(`/video-jobs/${jobId}`),
+
+  /** Screen 33 — "Your videos". */
+  list: () => apiRequest<VideoJob[]>('/video-jobs'),
+
+  share: (jobId: string, body: { caption?: string } = {}) =>
+    apiRequest<{ post_id: string }>(`/video-jobs/${jobId}/share`, { method: 'POST', body }),
+
+  /** Authenticated + Range-capable — hand to the video player with the bearer header. */
+  fileUrl: (jobId: string) => `${apiBaseUrl()}/video-jobs/${jobId}/file`,
+};
+
 export const profiles = {
   mine: () => apiRequest<ProfileDetail>('/me/profile'),
 
@@ -326,6 +467,22 @@ export const memos = {
     apiRequest<MemoDetail>(`/memos/${memoId}`, { method: 'PATCH', body }),
 
   remove: (memoId: string) => apiRequest<SuccessResult>(`/memos/${memoId}`, { method: 'DELETE' }),
+};
+
+/**
+ * The Album tab: every photograph that belongs to one person.
+ *
+ * Replaced a client-side scan of the family feed (2026-08-19). That scan
+ * could only read a bounded slice, could not see life-event media at all,
+ * and re-derived a visibility rule that is the server's to decide. This
+ * route does all three properly and answers in one request.
+ */
+export const gallery = {
+  /** Works with no family at all — a person's gallery is global. */
+  mine: () => apiRequest<GalleryMediaItem[]>('/me/gallery'),
+
+  forMember: (familyId: string, memberId: string) =>
+    apiRequest<GalleryMediaItem[]>(`/families/${familyId}/members/${memberId}/gallery`),
 };
 
 /**

@@ -26,15 +26,18 @@ export const queryKeys = {
    * they belong to (`docs/00-shared/domain-model.md`).
    */
   myProfile: () => ['me', 'profile'] as const,
+  /** Cũng là khoá màn Ask dùng để đọc ngày sinh của người nhận quà. */
   memberProfile: (familyId: string, memberId: string) =>
     ['families', familyId, 'members', memberId, 'profile'] as const,
   /**
-   * The moments one member appears in. Under the family because it is built
-   * from that family's feed — posting a moment invalidates `['families', id]`
-   * and this goes stale with it, which is exactly right.
+   * A member's derived photo gallery, read through the family you are
+   * viewing them from — so it drops out of the cache with everything else
+   * about that family when you leave it.
    */
-  memberMoments: (familyId: string, memberId: string) =>
-    ['families', familyId, 'members', memberId, 'moments'] as const,
+  memberGallery: (familyId: string, memberId: string) =>
+    ['families', familyId, 'members', memberId, 'gallery'] as const,
+  /** Your own, which exists before you belong to any family. */
+  myGallery: () => ['me', 'gallery'] as const,
   /**
    * Notes the viewer wrote about one member. Under `families` so leaving a
    * family drops them from the cache with everything else about it.
@@ -47,4 +50,14 @@ export const queryKeys = {
   myLifeEvents: () => ['me', 'life-events'] as const,
   memberLifeEvents: (familyId: string, memberId: string) =>
     ['families', familyId, 'members', memberId, 'life-events'] as const,
+
+  // Khu AI (màn 21-33)
+  specialDates: (familyId: string) => ['families', familyId, 'special-dates'] as const,
+  evidenceStats: (familyId: string, memberId: string) =>
+    ['families', familyId, 'members', memberId, 'evidence-stats'] as const,
+  savedGiftIdeas: (familyId: string, memberId: string) =>
+    ['families', familyId, 'members', memberId, 'saved-gift-ideas'] as const,
+  videoMusic: () => ['video-music'] as const,
+  videoJobs: () => ['video-jobs'] as const,
+  videoJob: (jobId: string) => ['video-jobs', jobId] as const,
 } as const;

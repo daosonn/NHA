@@ -296,7 +296,7 @@ this app does with it.
 | Screen                  | State                                                                                                                                                                                                                                                                                                                                             |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Sign in / Sign up       | **Wired.** Social buttons still render without handlers, pending the OAuth redirect in the app.                                                                                                                                                                                                                                                   |
-| Home                    | **Wired** — families and the family feed, with loading, error and a "no family yet" empty state. The special-date widget and the recommendations still read `src/fixtures/home.ts`: recommendations have no endpoint, and `GET /families/:id/special-dates` exists on the server but is not in `src/lib/api/endpoints.ts` yet.                    |
+| Home                    | **Wired** — families, the family feed, and the special-date widget (2026-08-19). Only the recommendations are still a fixture, and those have no endpoint at all.                                                                                                                                                                                 |
 | Create / join family    | **Wired** (`app/create-family.tsx`). 404 = unknown code, 409 = already a member.                                                                                                                                                                                                                                                                  |
 | Family tree             | **Wired**, including adding a member. See § Family tree below.                                                                                                                                                                                                                                                                                    |
 | New moment              | **Wired** — pick media, upload, post, choose audience.                                                                                                                                                                                                                                                                                            |
@@ -305,7 +305,7 @@ this app does with it.
 | Life Profile            | **Wired** (2026-08-19), on both routes, with no fixture left. Identity and facts from `GET /me/profile` / `GET …/members/:memberId/profile`, the name and relation word from `GET …/tree`, Timeline from `LifeEvent`, Memo from the `Memo` routes, and Album derived from the family feed. Two mockup fields have no column — see § Life Profile. |
 | AI tab + Gift ideas     | **Fixtures.** `apps/ai` does not exist.                                                                                                                                                                                                                                                                                                           |
 | Invitation page         | **Wired** (2026-08-19) — `GET /invitations/:code` unauthenticated, then `POST /invitations/:code/accept`. Signed out it offers registration instead and holds the code across the detour (`features/family/pending-invite.ts`).                                                                                                                   |
-| Verify / Forgot / Reset | **Not wired.** The three screens only navigate. `POST /auth/password-reset/{request,verify,confirm}` landed on the server in PR #12, but `src/lib/api/endpoints.ts` does not mirror them yet. Verify's sign-up half still has no endpoint at all.                                                                                                 |
+| Verify / Forgot / Reset | **Wired** (2026-08-19) — request, verify, confirm. Verify's _sign-up_ half still has no endpoint and is unreachable: registration returns a token pair straight away.                                                                                                                                                                             |
 
 ### Family tree
 
@@ -376,6 +376,51 @@ Forgot/Reset), then AI (hub, Gift ideas). Both done.
 The invite-acceptance page for someone who does **not** have the app yet is
 deferred until the role of `apps/web` is decided. `invite/[code].tsx` is
 the in-app half only.
+
+### Password reset
+
+Three screens, three calls, and one shape worth knowing about.
+
+`POST /auth/password-reset/verify` **checks the code without spending it**,
+which is the whole reason the middle screen exists: the person is told they
+mistyped before choosing a password, and the same code still works on the next
+screen. Verified against the running server — the same code verifies twice,
+then `confirm` spends it and a third attempt is refused.
+
+Two things the contract does not say out loud, both found by running it:
+
+- **A wrong code is a 400, not `{ valid: false }`.** The response type allows
+  the latter and the app handles both, but the real path is the error. Routed
+  through the generic mapper it would have printed "check the fields" under a
+  six-digit box with nothing else on the screen.
+- **`request` answers `{ success: true }` for an address that has no
+  account.** Deliberate on the server's part — a different answer would turn
+  the form into a way to ask who is registered — so the screen moves on either
+  way and never says "no such account".
+
+Confirming revokes every refresh token the account has, so the flow ends on
+sign-in rather than signing anybody in.
+
+### Home — the occasion widget
+
+`GET /families/:id/special-dates` (WBS 1.2.5). Birthdays and memorials are
+**derived from `LifeProfile` dates at request time**, so the widget fills
+itself in as people put their birth dates on their profiles, and a family who
+have not is shown nothing rather than an empty celebration card.
+
+Derived items arrive with **no text at all** — the server sends a type, an
+ordinal and the member names and leaves the wording to the client, because
+"turns 63" and 「63歳になります」 are not the same sentence with the words
+exchanged. `features/home/occasion-label.ts` holds that wording as catalogue
+keys.
+
+Three things the mockup drew are gone, because `SpecialDateItem` has no field
+behind any of them: a place (an occasion is a date, not a gathering), a "Join"
+button (there is nothing to join), and paging dots (decoration pretending to
+be a control — the count behind the first one is said in words instead). The
+bunting stays for every theme: `CONFETTI_CANDLES` and `FLORAL_BORDER` have no
+drawing yet, and a plain white box for a memorial would read as a widget that
+failed to load.
 
 ### Life Profile
 
@@ -471,17 +516,62 @@ here yet. Those photographs are currently invisible everywhere — the Timeline
 shows a count and nothing else — but a tile in this grid would have nowhere to
 open, and there is no life-event detail screen to build one against.
 
-There is no per-member media endpoint and no server-side filter on the feed
-(`FeedQueryDto` takes a limit and a cursor), so `use-member-moments.ts` reads
-the feed and filters on `taggedMemberIds`. That read is **bounded**: four
-pages of fifty, the two hundred most recent moments. When it stops short the
-grid says so on screen rather than presenting a partial album as the whole of
-someone's life.
+`GET /me/gallery` and `GET …/members/:memberId/gallery` (WBS 1.6.4, landed
+2026-08-19) do the work. The server assembles the media, includes life-event
+photographs, and filters to what the viewer may see — all three of which the
+client had been approximating.
 
-A tile shows the cover, the author's initial, and a count when the moment has
-more than one attachment. The mockup also puts a running time on video
-covers; `PostMediaSummary` carries id, mime type and size and no duration, so
-a video tile says "Video" instead of a made-up number.
+This replaced a scan of the family feed the same morning it was written.
+That scan read a bounded four pages of fifty and said so on screen, could not
+see life-event media at all, and re-derived a visibility rule that was never
+the client's to decide.
+
+The endpoint returns loose media newest-first, so `use-member-gallery.ts`
+groups it back into moments on `postId` / `lifeEventId` — exactly one of
+which is set on every item. A post group opens the post; a milestone group
+has no screen of its own and switches to the Timeline tab, which is where
+that milestone is written down. Neither is a dead tile.
+
+A tile shows the cover and a count when the moment has more than one
+attachment. Two departures from the mockup, both for the same reason —
+`GalleryMediaItem` is `{ id, mimeType, sizeBytes, createdAt, postId,
+lifeEventId }` and carries nothing else:
+
+- It writes an event's title across the cover ("TẾT 2019"). Fetching one post
+  per tile to find that title would trade a legible grid for a burst of
+  requests, so the tiles say how many and what kind instead.
+- It puts a running time on a video cover. There is no duration, so a video
+  tile says "Video" rather than a made-up number.
+
+#### Faces
+
+Every avatar in the app was the same grey stripe pattern, so a tree of nine
+people was nine identical blobs. `components/ui/avatar.tsx` now draws the
+person's initial on a tint derived from their name, and every call site says
+whose face it is drawing.
+
+Two decisions worth keeping:
+
+- **Both ends of the name, not one.** Which end holds the given name cannot
+  be told from the string: Vietnamese and Japanese write the family name first
+  — Nguyễn Văn An, 山田 太郎 — but plenty of Vietnamese users type their own
+  name the other way round, and this app has both. Either single-word rule
+  collapses for half the cases and gives a whole family the same letter, which
+  is the exact thing an avatar exists to prevent. First + last stays distinct
+  under both orders: NA / NM / NH one way, XN / MN / HN the other.
+- **The tint comes from the name, not a render index.** The same person
+  appears in the tree, the feed, a comment and the album; a colour that
+  changed between them would read as a different person. The palette is the
+  five category themes, minus `destructive` — a person is not a warning.
+
+There are still **no photographs**. `User.avatarKey` and
+`FamilyMember.avatarKey` exist as columns and nothing writes or serves them,
+so the app has no upload button: `PATCH …/members/:memberId` answers 200 and
+silently drops the field (`whitelist: true` on the global `ValidationPipe`),
+which is the worst kind of button — one that looks like it worked. See
+`docs/00-shared/api-contract.md` § Requests from the app. When the endpoints
+land, `Avatar` grows one prop and every caller is already passing the name it
+needs.
 
 #### Memo
 
