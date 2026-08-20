@@ -537,11 +537,31 @@ for now — it buys ~1s over ~10s at the price of reconnect logic today
 and Redis the day there are two API instances; revisit only if chat or
 another genuinely two-way feature arrives.
 
-### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side)
+### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side; CRUD = WBS 3.2.3, added 2026-08-20)
 
-| Route                                   | Returns                |
-| --------------------------------------- | ---------------------- |
-| `GET /families/:familyId/special-dates` | `UpcomingSpecialDates` |
+| Route                                                     | Returns                |
+| --------------------------------------------------------- | ---------------------- |
+| `GET /families/:familyId/special-dates`                   | `UpcomingSpecialDates` |
+| `GET /families/:familyId/special-dates/custom`            | `SpecialDateDetail[]`  |
+| `POST /families/:familyId/special-dates`                  | `SpecialDateDetail`    |
+| `PATCH /families/:familyId/special-dates/:specialDateId`  | `SpecialDateDetail`    |
+| `DELETE /families/:familyId/special-dates/:specialDateId` | `{ success }`          |
+
+**CRUD (WBS 3.2.3).** `SpecialDateDetail` is `{ id, type, title, month,
+day, originYear, theme, members[], createdById, createdAt, updatedAt }` —
+the stored row **with its id**, which the merged widget items below never
+carry; the management side of screen 17 reads `GET .../custom` (calendar
+order), never the widget GET. Any family member creates, edits and
+deletes (no roles in the MVP — `createdById` is provenance, not
+ownership). Create body: `{ type, title (≤120, trimmed), month, day,
+originYear?, theme, memberIds? }`; `memberIds` must belong to this family
+and **replaces** on PATCH; `originYear: null` clears the ordinal. The
+month/day pair must be a real date — validated as the _resulting_ pair on
+PATCH, so changing only the month cannot leave Feb 31 behind; **Feb 29 is
+legal** and rolls to Mar 1 in non-leap years at display time. Deleting
+removes the occasion from the widgets; derived birthdays/memorials are
+untouched (edit those on the profile). A row addressed through another
+family's URL is a 404.
 
 `UpcomingSpecialDates` is `{ items: SpecialDateItem[] }`, soonest first,
 `?limit` 1–50 (default 10). Each item:
@@ -553,9 +573,8 @@ items `{ memberId, displayName }`.
   member with a `birthDate` (theme `CONFETTI_CANDLES`), a memorial per
   member with a `deathDate` (theme `FLORAL_BORDER`). A deceased member
   gets a memorial only, no birthday. No rows are stored.
-- **CUSTOM** items are `SpecialDate` rows (anniversaries etc.). Their
-  CRUD ships with Sprint 3 (task 3.2.3) — until then the table is
-  normally empty.
+- **CUSTOM** items are `SpecialDate` rows (anniversaries etc.), managed
+  through the CRUD above (task 3.2.3, done 2026-08-20).
 - `title` is only set on CUSTOM items. **Derived items carry no text**:
   build the label client-side from `type`, `members` and `ordinal`
   ("Dad turns 63", 三回忌) — i18n lives in the app, per the
