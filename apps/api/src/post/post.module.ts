@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AiModule } from '../ai/ai.module';
 import { FamilyModule } from '../family/family.module';
 import { StorageModule } from '../storage/storage.module';
 import { CommentController } from './comment.controller';
@@ -10,7 +11,8 @@ import { ReactionController } from './reaction.controller';
 import { ReactionService } from './reaction.service';
 
 @Module({
-  imports: [StorageModule, FamilyModule],
+  // AiModule: mỗi bài đăng mới được đọc để hiểu người đăng (ProfileService)
+  imports: [StorageModule, FamilyModule, AiModule],
   controllers: [
     PostController,
     FamilyPostsController,

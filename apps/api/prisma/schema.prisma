@@ -211,6 +211,9 @@ model FamilyMember {
   memosAbout         Memo[]
   plansFor           Plan[]
   invitations        Invitation[]
+  interestSignals    InterestSignal[]
+  profiles           MemberProfile[]
+  counter            MemberCounter?
 
   @@unique([familyId, userId])
 }
@@ -530,9 +533,18 @@ model Notification {
 model VideoJob {
   id               String         @id @default(uuid())
   requesterUserId  String
+  familyId         String? // family nguồn media (authorization + share về timeline)
+  aboutMemberId    String? // video nói về ai (màn 27 "the video is about her")
+  title            String? // "おばあちゃんの一年" — set sau khi có storyboard
   status           VideoJobStatus @default(PENDING)
+  mode             String         @default("ai") // 'ai' = Build the story | 'quick' = stitch in my order
+  options          Json? // { targetSec, mood, aspect, style, musicId, storyRequest, locale }
+  plan             Json? // storyboard đã duyệt/sửa ở màn 31 (title/subtitle/opening/closing/dedication/scenes/palette)
+  progress         Int            @default(0) // 0-100 — màn 32 "Almost there · 80%"
+  stage            String? // "opening" | "scene:5" | "closing" | "music" — checklist màn 32
   inputMediaIds    Json
-  resultStorageKey String? // raw path the AI service reported (audit trail)
+  resultStorageKey String? // set when DONE — raw path of the rendered file (audit trail)
+  durationS        Float? // thời lượng file kết quả
   // The registered result row — written in the same transaction that
   // creates it (review 2026-08-19: deriving it back from storageKey was
   // an unindexed, non-unique lookup that could resolve to someone
@@ -547,7 +559,11 @@ model VideoJob {
   requester   User   @relation(fields: [requesterUserId], references: [id])
   resultMedia Media? @relation("VideoJobResult", fields: [resultMediaId], references: [id], onDelete: SetNull)
 
+  // Cả HAI index tồn tại trong DB, mỗi bên một migration tạo một cái
+  // (20260819011108 tạo composite, 20260819090000 của main tạo single) —
+  // schema phải khai đủ cả hai, thiếu một là `migrate diff` báo drift vĩnh viễn.
   @@index([requesterUserId])
+  @@index([requesterUserId, createdAt])
 }
 
 model Plan {
@@ -574,4 +590,91 @@ model PlanShare {
   sharedWith User @relation(fields: [sharedWithUserId], references: [id], onDelete: Cascade)
 
   @@id([planId, sharedWithUserId])
+}
+
+/// Sản phẩm sàn đã tra cho một (từ khoá, dải giá, tuần) — 0 token, chỉ để khỏi
+/// gọi lại Yahoo API. Không phải dữ liệu gia đình: khoá không chứa member nào.
+model ProductCache {
+  cacheKey  String   @id
+  keyword   String
+  products  Json
+  createdAt DateTime @default(now())
+}
+
+/// Cả LƯỢT gợi ý đã sinh ra, khoá theo (người + dịp + version hồ sơ + ngân sách).
+///
+/// Tầng cache thứ hai bên trên ProductCache: mở lại đúng màn hình đó không tốn
+/// token nào, và vì khoá chứa version hồ sơ nên có bằng chứng mới là tự miss.
+/// Hết hạn theo ngày diễn ra dịp (qua dịp rồi thì gợi ý cũ vô nghĩa).
+model AiSuggestionCache {
+  cacheKey  String   @id
+  memberId  String
+  kind      String // gift | message
+  payload   Json
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([memberId, kind])
+}
+
+/// BẰNG CHỨNG NGUYÊN TỬ về một người — append-only, không bao giờ sửa nội dung.
+///
+/// Đây là tầng dưới của cặp "signal → profile": mỗi bài đăng được phân tích sinh
+/// ra 0-4 signal về CHÍNH TÁC GIẢ (bài đăng nói lên sở thích của người đăng, không
+/// phải của người trong ảnh). Profile là bản chưng cất có thể dựng lại từ đây,
+/// nên tầng này là nguồn sự thật và không bị ghi đè khi rollup.
+model InterestSignal {
+  id       String @id @default(uuid())
+  memberId String
+
+  /// photo | video_transcript | caption | memo | manual_chip | gift_feedback
+  sourceType String
+  /// id của bài đăng / memo / suggestion sinh ra signal này
+  sourceId String?
+  /// like | dislike | wish | habit | health | milestone | gift_idea
+  signalType String
+  /// cụm từ khoá ngắn, đã chuẩn hoá theo góc nhìn của người đăng
+  topic  String
+  detail String
+  /// 0-1; suy từ ảnh trần 0.85, từ caption trần 0.75, feedback người dùng 0.9+
+  confidence Float
+  /// căn cứ model nêu ra ("caption", "ảnh 2", "transcript")
+  basis Json?
+  /// ngày SỰ VIỆC xảy ra (ngày chụp), không phải ngày ghi nhận
+  observedAt DateTime @db.Date
+  /// đã được gộp vào một version profile chưa
+  processed Boolean @default(false)
+  /// bài gốc bị xoá trước khi rollup → thu hồi, mọi chỗ đọc phải lọc revoked=false
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  member FamilyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, processed, revoked])
+}
+
+/// Bản CHƯNG CẤT ~1k token của một người, version hoá.
+///
+/// Mỗi lần rollup là một version MỚI (không sửa version cũ) → xem lại được hồ sơ
+/// tại thời điểm bất kỳ, và một gợi ý luôn truy được về đúng hồ sơ đã sinh ra nó.
+model MemberProfile {
+  memberId String
+  version  Int
+  /// { summary, interests[], avoid[], wishes[], giftIdeasPending[], giftHistory[], conversationTopics[], styleHints }
+  profile   Json
+  createdAt DateTime @default(now())
+
+  member FamilyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([memberId, version])
+}
+
+/// Đếm bài đăng của MỖI người kể từ lần rollup gần nhất — chạm ngưỡng thì gộp.
+/// Đếm theo người, không theo gia đình: hồ sơ là của một người.
+model MemberCounter {
+  memberId         String   @id
+  postsSinceRollup Int      @default(0)
+  updatedAt        DateTime @updatedAt
+
+  member FamilyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 }

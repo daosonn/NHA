@@ -204,9 +204,118 @@ Documented in `docs/00-shared/api-contract.md` as each lands:
   `X-AI-Service-Token`; a user bearer token does not open them, and with
   `AI_SERVICE_TOKEN` unset they answer `503 { code: "AI_UNAVAILABLE" }`.
 
-## Open items for the AI team to record here
+## What the AI team built (answers the open items above)
 
-- Final model choices per feature (and cost ceiling).
-- Prompt/versioning conventions.
-- Video render approach inside `apps/ai` (tooling is theirs; the seam
-  above does not change with it).
+Written by the AI team 2026-08-19, after the contract draft above. Everything here
+is running and covered by `pnpm verify`; the contract's non-negotiables (1-5) hold.
+
+### Models
+
+`gpt-5.6-luna` for every call — analysis, rollup, gift, message, storyboard —
+set through `MODEL_ANALYSIS` / `MODEL_SUGGEST` in `apps/ai/.env`, plus
+`max_completion_tokens: 8192`. Measured 2026-08-19: `gpt-5` (reasoning) needed
+77.9s for one gift round against luna's 14-16s, and that call is ~80% of the
+latency the family feels. Do not switch models without re-measuring.
+
+Latency is roughly linear in OUTPUT tokens (out 1420 → 13.4s · out 2359 → 24.3s),
+so the prompts carry hard length caps per field and ask for exactly 5 ideas.
+Both services log it: FastAPI writes `suggest_gift gpt-5.6-luna 15.0s in=2439
+out=1520`, NestJS writes `gift ideas: AI 15.0s · shops 0.4s`.
+
+### FastAPI surface (`apps/ai`, stateless, never touches Postgres)
+
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /v1/gift-ideas` | 5 ideas + insights + `note_to_giver`, each idea with `why`, sources, JP search keywords |
+| `POST /v1/message-suggestions` | three variants (short/standard/heartfelt) |
+| `POST /v1/video-storyboard` | title/subtitle/opening/closing/dedication + scenes (caption, duration, reason) + palette |
+| `POST /v1/analyze-post` | one post (caption + up to 6 photos) → 0-4 interest signals about its AUTHOR |
+| `POST /v1/profile-rollup` | pending signals + current profile → the next profile version |
+| `GET /health` | reachability + whether a key is configured |
+
+Every call uses OpenAI Structured Outputs (`json_schema`, `strict: true`) generated
+from pydantic. `AI_MOCK=1` answers all of them with schema-correct data for 0 tokens,
+which is how `pnpm test:ai` runs in CI.
+
+### Understanding a person — two layers
+
+    post created ──analyze (1 call, ≤6 photos)──►  InterestSignal
+                                                   atomic evidence, append-only
+                                                          │ rollup (1 call)
+                                                          ▼
+                                                   MemberProfile v+1
+                                                   distilled ~1k tokens, versioned
+
+- `analyzePost` runs in the background when a post is created (retried once after
+  8s on a provider error), and the rollup follows immediately —
+  `ROLLUP_EVERY_N_POSTS` defaults to **1**. Rolling up at suggestion time is the
+  one moment the user is actually waiting.
+- The analysis prompt fills `context_analysis` FIRST: who did what to whom, and
+  whether the author was ACTOR / RECIPIENT / OBSERVER. "Con trai về quê thăm mẹ"
+  posted by the mother means the MOTHER was visited — not that she likes visiting.
+- Signals belong to the post's AUTHOR, never to a tagged person. Code (not the
+  model) decides `sourceType`, caps confidence (caption 0.75 · photo 0.85 · a
+  human's ♡ 0.9) and stamps `observedAt` with the day it happened.
+- The rollup follows six rules (never invent · human sources override machine
+  ones · newer beats older, health goes to `avoid hard` · merge near-synonyms ·
+  ≤12 interests · set trend). `gift_history` is re-merged in code, not trusted to
+  the model. Old versions are never overwritten, so a suggestion is always
+  traceable to the profile that produced it.
+
+### Gift and message read the profile, not the captions again
+
+Each post is analysed once. Suggestion prompts carry the distilled profile plus
+relatives' notes **verbatim** — no captions a second time, which is both faster
+and cheaper. Provenance survives because the model cites `sig_…` ids from the
+profile: `GET /families/:familyId/members/:memberId/evidence?refs=sig_…,memo_…`
+resolves each one back to its signal → original post → photo, so screen 23
+("Where this came from") still opens the real picture. If the post was deleted,
+the signal's own detail is returned rather than silence.
+
+Two independent caches: `AiSuggestionCache` (a whole round, keyed with the profile
+version so new evidence invalidates it; the ↻ button sends `force`) and
+`ProductCache` (marketplace results by week + keyword + price band).
+
+### Real products, 0 tokens
+
+`src/ai/shops.service.ts` calls Yahoo!ショッピング `itemSearch V3`. The model only
+supplies `search_keywords_ja`; "together" ideas map to a hard-coded 体験ギフト
+keyword per `experience_kind`. When a query returns nothing the service widens in
+steps (as-is → wider budget → shorter keyword → both), then filters price ±10%,
+drops titles hitting the avoid list, dedupes and scores (price fit, review trust,
+keyword match, has-image) and keeps the top 3. Three lookups run in parallel — no
+more, Yahoo rate-limits around 1 req/s. `resolve` returns `cached` / `relaxed` /
+`dropped_by_avoid` / `attempts` so a price outside the budget can always be explained.
+
+### Video render lives in NestJS, not in `apps/ai`
+
+Rendering is ffmpeg work with no model call, so it sits in `src/video` beside the
+data it needs (`VideoJob`, media on the shared volume) instead of crossing the
+service boundary for every frame: cut on the music's beat, linear Ken Burns,
+counter-slide/bloom/whip punctuation, six opening styles, and audio ducking that
+keeps the voices in a family clip above the music. `apps/ai` only writes the
+storyboard. The engine was ported from the `onemoretime` prototype after 92 smoke
+checks there.
+
+### Where the implementation differs from the draft above — needs a team decision
+
+1. **Analysis direction.** The draft has `apps/ai` polling
+   `GET /internal/ai/media/pending` and pushing `MediaInsight` back. What runs is
+   the opposite: NestJS calls `POST /v1/analyze-post` when a post is created, and
+   stores `InterestSignal` + `MemberProfile`. The internal routes and
+   `MediaInsight` are kept intact and still guarded; they simply have no caller
+   yet. One of the two should eventually be retired.
+2. **Provider.** The draft records Claude API as the direction; the implementation
+   runs OpenAI (`gpt-5.6-luna`) because that is what the prototype was validated
+   against. Provider choice is one constant in `apps/ai/app/config.py`.
+3. **Memo scope.** Non-negotiable 5 says the context carries only the requesting
+   user's own memos. The implementation currently sends every family member's
+   memos about the subject, because design screen 22 shows "From Lan's note" as a
+   source chip. This is a privacy boundary, so it is called out here rather than
+   changed quietly — see the PR description.
+4. **Service token.** The draft's seam is `X-AI-Service-Token` / `AI_SERVICE_TOKEN`
+   (AI → NestJS). NestJS → FastAPI uses `x-internal-token` / `AI_INTERNAL_TOKEN`.
+   Both exist because they guard opposite directions; worth unifying the naming.
+5. **`/video-jobs` namespace.** `src/video-job` (backend, WBS 2.2.3) and
+   `src/video` (AI, screens 27-33) both answer `GET /video-jobs`. Only `src/video`
+   is registered in `AppModule`; the other is left in the tree untouched.

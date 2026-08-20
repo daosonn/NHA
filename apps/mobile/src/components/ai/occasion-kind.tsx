@@ -1,5 +1,6 @@
 import { Cake, Flower, GraduationCap, Heart, Sparkles } from 'lucide-react-native';
 
+import type { SpecialDateItem } from '../../lib/api';
 import type { OccasionKind } from '../../fixtures/ai';
 
 type IconProps = { size: number; color: string };
@@ -27,4 +28,20 @@ export function occasionIcon(kind: OccasionKind): (props: IconProps) => React.Re
 
 export function occasionLabelKey(kind: OccasionKind): string {
   return LABEL_KEYS[kind];
+}
+
+/** The API speaks SpecialDateType; the icons/labels stay the same five. */
+const API_KIND: Record<SpecialDateItem['type'], OccasionKind> = {
+  BIRTHDAY: 'birthday',
+  ANNIVERSARY: 'anniversary',
+  MEMORIAL: 'memorial',
+  CUSTOM: 'holiday',
+};
+
+export function specialDateIcon(type: SpecialDateItem['type']): (props: IconProps) => React.ReactNode {
+  return ICONS[API_KIND[type]];
+}
+
+export function specialDateKindKey(type: SpecialDateItem['type']): string {
+  return LABEL_KEYS[API_KIND[type]];
 }

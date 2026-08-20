@@ -123,6 +123,15 @@ export class StorageService {
     );
   }
 
+  /**
+   * Absolute path cho pipeline render video và cho bước phân tích ảnh (ffmpeg và
+   * sharp cần đường dẫn file thật, không dùng được stream). Vẫn đi qua
+   * resolvePath nên không thoát khỏi rootDir.
+   */
+  absolutePathOf(storageKey: string): string {
+    return this.resolvePath(storageKey);
+  }
+
   /** Best-effort removal of an upload temp file. */
   async discardTemp(path: string): Promise<void> {
     try {
