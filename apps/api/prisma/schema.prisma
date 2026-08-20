@@ -222,6 +222,8 @@ model LifeProfile {
   bio         String?
   interests   Json?
   birthDate   DateTime? @db.Date
+  birthPlace  String? // free text — mockup 7 prints it after the birth date
+  occupation  String? // free text ("Carpenter, retired since 2021"), not a job title
   deathDate   DateTime? @db.Date
   updatedById String? // last editor (wiki edit tracking)
   createdAt   DateTime  @default(now())

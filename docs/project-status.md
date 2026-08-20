@@ -166,9 +166,9 @@ Raised by the frontend, neither actionable from `apps/mobile`.
      PR #19) and `?memberId` on the family feed (task 2.1.2, PR #22). The
      Album tab has not switched to either yet, so it still scans a bounded
      200 moments and warns when it stops short.
-  2. `LifeProfile` has no `occupation` and no `birthPlace` — **still
-     true**, so one of the mockup's three fact rows is not drawn and the
-     first is missing its place. Two nullable columns and a migration.
+  2. ~~`LifeProfile` has no `occupation` and no `birthPlace`~~ — **done
+     2026-08-20**, migration `20260820031808`. Both are on
+     `ProfileDetail`; the app has not read them yet.
   3. `PostMediaSummary` has no duration — **still true**, so a video tile
      says "Video" where the mockup shows a running time. Note this is not
      just a column: reading a duration server-side means probing the file
@@ -525,6 +525,26 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   `feature/ai-suggestions`**: its `SuggestionRequestDto` declares its own
   `SUGGESTION_LOCALES` and its service repeats the same unchecked
   fallback — point both at this helper.
+
+- LifeProfile gained `birthPlace` + `occupation` (2026-08-20): the two
+  columns mockup 7's fact rows needed — the place after the birth date and
+  "Carpenter, retired since 2021". Migration
+  `20260820031808_add_profile_birthplace_occupation`, two nullable TEXT
+  columns, **no backfill**, so it deploys on a populated table. Free text,
+  max 200, cleared by `''`/whitespace/`null` like `bio`; both routes
+  (`/me/profile` and the family one) carry them because they share one
+  DTO. Deliberately **not structured** — `occupation` is a phrase, so
+  nothing can derive "retired since 2021" from it; that would need its own
+  field. Verified by lint/build/test + a 20-case live smoke test **plus a
+  direct DB check of the `EditHistory` snapshots**, because that is the one
+  place a new field can be forgotten with nothing failing. Two operational
+  findings, written up in `04-devops/local-environment.md`: `prisma migrate
+dev` **did not regenerate the client**, and the stale client survived
+  lint, build and tests before 500ing on the first request — because an
+  extracted `as const` select object escapes TypeScript's excess-property
+  check. FE work remaining: read the two fields
+  (`components/member/profile-facts.tsx`). On branch
+  `feature/profile-facts` (stacked on `fix/backend-doc-accuracy`).
 
 ### Planning Phase
 
