@@ -186,6 +186,7 @@ export class MediaService {
     const media = await this.prisma.media.findUnique({
       where: { id: mediaId },
       select: {
+        id: true,
         storageKey: true,
         mimeType: true,
         uploaderUserId: true,
@@ -233,6 +234,7 @@ export class MediaService {
   private async canView(
     userId: string,
     media: {
+      id: string;
       uploaderUserId: string;
       memo: { ownerUserId: string } | null;
       post: { authorUserId: string; families: { familyId: string }[] } | null;
@@ -246,21 +248,59 @@ export class MediaService {
     }
     if (media.memo) {
       // Memos are always private to their author (domain-model.md).
-      return media.memo.ownerUserId === userId;
-    }
-    if (media.post) {
+      if (media.memo.ownerUserId === userId) {
+        return true;
+      }
+    } else if (media.post) {
       // One home for the post-visibility rule — never a second copy here.
-      return this.postService.canViewPost(userId, media.post);
-    }
-    if (media.lifeEvent) {
+      if (await this.postService.canViewPost(userId, media.post)) {
+        return true;
+      }
+    } else if (media.lifeEvent) {
       // Profile-attached content shares one visibility rule, homed on
       // ProfileService (the gallery task 1.6.4 will use the same one).
-      return this.profileService.canViewProfileContent(
-        userId,
-        media.lifeEvent.profile,
-      );
+      if (
+        await this.profileService.canViewProfileContent(
+          userId,
+          media.lifeEvent.profile,
+        )
+      ) {
+        return true;
+      }
     }
-    // Standalone media stays uploader-only.
-    return false;
+    // Not visible through its parent (or standalone, which stays
+    // uploader-only) — but an avatar is as visible as the person it
+    // belongs to (WBS 3.4.2): a user's to anyone sharing a family with
+    // them, a placeholder's to that family's members. Setting a photo as
+    // your avatar is the deliberate act that widens it this far.
+    return this.isViewableAsAvatar(userId, media.id);
+  }
+
+  /** No index sits on `avatarKey`; both tables are small (people, not
+   *  content) and this only runs after every parent check said no. */
+  private async isViewableAsAvatar(
+    userId: string,
+    mediaId: string,
+  ): Promise<boolean> {
+    const asUserAvatar = await this.prisma.user.findFirst({
+      where: {
+        avatarKey: mediaId,
+        memberships: {
+          some: { family: { members: { some: { userId } } } },
+        },
+      },
+      select: { id: true },
+    });
+    if (asUserAvatar) {
+      return true;
+    }
+    const asMemberAvatar = await this.prisma.familyMember.findFirst({
+      where: {
+        avatarKey: mediaId,
+        family: { members: { some: { userId } } },
+      },
+      select: { id: true },
+    });
+    return asMemberAvatar !== null;
   }
 }

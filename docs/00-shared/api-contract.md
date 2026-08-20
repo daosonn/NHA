@@ -254,7 +254,23 @@ reconcile.
 
 `ProfileDetail` is `{ id, userId, memberId, displayName, bio,
 interests: string[], birthDate, birthPlace, occupation, deathDate,
-updatedAt }`.
+avatarMediaId, updatedAt }`.
+
+**Avatar (WBS 3.4.2, added 2026-08-20).** Write: PATCH `avatarMediaId` —
+the id of an **image the caller uploaded** via `POST /media` (any own
+image, attached or standalone; 400 for someone else's media, a non-image,
+or a missing id — one message, no existence oracle); `null` clears. On a
+placeholder it is wiki-set like the rest of the profile, and the photo
+must still be the _editor's_ own upload. Read: `ProfileDetail.avatarMediaId`
+here, and `FamilyMemberSummary.avatarKey` everywhere members appear
+(family detail, tree, join/add/update results) — for a linked member that
+field now **coalesces to the account's avatar**, so one person has one
+avatar in every family. The value is a Media id: stream it with
+`GET /media/:id`. Setting a photo as an avatar deliberately **widens that
+photo's visibility** to everyone who can see the person (family members;
+for a user, anyone sharing a family) — clearing the avatar withdraws that
+again. Every avatar change lands in the `EditHistory` snapshot like any
+other profile field.
 
 `birthPlace` and `occupation` (added 2026-08-20) are the two fields
 mockup 7's fact rows needed: the place printed after the birth date
@@ -659,30 +675,16 @@ already set as `expo.scheme`). The fragment keeps the tokens out of server
 logs and out of the `Referer`. The app then completes the flow with
 `expo-web-browser`; putting the buttons back is one screen edit each.
 
-**4. Avatars have columns and no endpoints (added 2026-08-19).**
-`User.avatarKey` and `FamilyMember.avatarKey` are in the schema, and nothing
-reads or writes them: no DTO accepts an avatar, and no route turns a key into
-bytes. `family.service.ts` selects `avatarKey` into `FamilyMemberSummary`, so
-the app receives a field that is always `null`.
-
-Verified rather than assumed: `PATCH /families/:familyId/members/:memberId`
-with `{"avatarKey": "<a real media id>"}` answers **200** and leaves the
-column `null` — `whitelist: true` on the global `ValidationPipe` strips the
-unknown key silently. That is why the app has **no avatar upload button**: one
-that looks like it worked is worse than none.
-
-**Asked for**, and the app is ready for both halves the moment they exist:
-
-- A write. Simplest shape that fits what is already there: accept
-  `avatarMediaId` on `UpdateProfileDto` (the profile is the global,
-  once-per-person object the app already edits), pointing at a `Media` row
-  the caller uploaded through `POST /media`.
-- A read. If the value is a `Media.id`, `GET /media/:id` already serves it
-  and the client needs nothing new — `lib/media-source.ts` handles the
-  authenticated fetch today. If it stays an opaque storage key, it needs a
-  route of its own.
-
-Until then `components/ui/avatar.tsx` draws an initial on a per-person tint.
+**4. ~~Avatars have columns and no endpoints~~ (added 2026-08-19) — done
+2026-08-20, in exactly the asked-for shape.** `avatarMediaId` on
+`UpdateProfileDto` (both profile routes), value is a `Media.id` served by
+the existing `GET /media/:id`, read back on `ProfileDetail.avatarMediaId`
+and on `FamilyMemberSummary.avatarKey` everywhere members appear. Full
+semantics in § Life Profiles above. One thing the request did not name and
+the server now handles: an avatar's bytes are visible to everyone who can
+see the person (before, a standalone upload streamed uploader-only, so
+everyone else's avatar would have 404'd). FE work remaining: the upload
+button, and reading the field in `components/ui/avatar.tsx`.
 
 Also still open from an earlier decision, and worth grouping here: **the
 profile PATCH is wider than the app.** `PATCH …/members/:memberId/profile`

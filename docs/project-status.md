@@ -611,6 +611,30 @@ dev` **did not regenerate the client**, and the stale client survived
   account yet, so who `FAMILY_INVITE` is for is an open product question.
   On branch `feature/notification-api`.
 
+- Avatar API (2026-08-20, sprint 3, WBS 3.4.2 API side): the write the
+  frontend asked for on 2026-08-19, in exactly the requested shape —
+  `avatarMediaId` on `UpdateProfileDto` (both profile routes, so the wiki
+  rule is the authorization), value stored into the existing
+  `User.avatarKey` / `FamilyMember.avatarKey` columns as a **Media id**
+  the existing `GET /media/:id` already streams. **No migration.** Read
+  side: `ProfileDetail.avatarMediaId`, plus `FamilyMemberSummary.avatarKey`
+  now **coalesces to the account's avatar for linked members** — one
+  person, one avatar, every family, tree included. Two rules enforced:
+  the photo must be the _editor's own uploaded image_ (400 otherwise, one
+  message, no existence oracle — on a placeholder the editor and the
+  subject differ, and pointing at somebody else's photo must not work),
+  and **avatar bytes are as visible as the person**: `MediaService.canView`
+  gained an avatar fallback, since a standalone upload used to stream
+  uploader-only and everyone else's avatar would have 404'd. Clearing the
+  avatar withdraws that widened visibility again. Avatar changes land in
+  the `EditHistory` snapshot. No index on `avatarKey` — the lookup only
+  runs after every parent check says no, on people-sized tables; add one
+  if it ever shows up in profiles. Verified by lint/build/test + a
+  **21-case live smoke test** (summary coalescing, visibility matrix
+  incl. outsider 404 and clear-withdraws-access, steal/audio/ghost 400s,
+  linked-profile 403, EditHistory in the DB). FE work remaining: upload
+  button + reading the field. On branch `feature/avatar-api`.
+
 ### Sprint 2 — AI team
 
 - AI integration for screens 21-33 (2026-08-20, **merged to `main` in

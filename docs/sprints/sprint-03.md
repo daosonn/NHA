@@ -35,7 +35,9 @@ complete, the system passes end-to-end tests, and the MVP is demoed.
 ### 3.4 Cài đặt Account — Account settings
 
 - [ ] 3.4.1 Sửa thông tin (update profile)
-- [ ] 3.4.2 Đổi avatar (upload avatar)
+- [ ] 3.4.2 Đổi avatar (upload avatar) — API done 2026-08-20 (`avatarMediaId`
+      trên profile PATCH, đọc qua `avatarKey`/`GET /media/:id`; chi tiết:
+      `api-contract.md` → Life Profiles); UI chưa nối
 - [ ] 3.4.3 Đổi password (update password)
 - [ ] 3.4.4 Privacy settings (thiết lập quyền riêng tư)
 - [ ] 3.4.5 Notification settings (bật/tắt nhắc)
