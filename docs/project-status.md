@@ -611,6 +611,26 @@ dev` **did not regenerate the client**, and the stale client survived
   account yet, so who `FAMILY_INVITE` is for is an open product question.
   On branch `feature/notification-api`.
 
+- SpecialDate CRUD (2026-08-20, sprint 3, WBS 3.2.3 API side):
+  `POST/PATCH/DELETE /families/:id/special-dates(/:id)` plus
+  `GET .../custom` — the stored rows **with their ids**, which the merged
+  widget GET (1.2.5) deliberately never carried, so the management side
+  of screen 17 finally has something to edit. **No migration** —
+  `SpecialDate`/`SpecialDateMember` shipped in sprint 0. Any family
+  member creates/edits/deletes (no roles in the MVP; `createdById` is
+  provenance, not ownership — same wiki spirit as placeholder profiles,
+  noted as an assumption to confirm). Rules: month/day must be a real
+  date, validated as the **resulting pair** on PATCH so changing only the
+  month cannot leave Feb 31 behind; **Feb 29 stays legal** (display rolls
+  it to Mar 1 in non-leap years, same as derived birthdays);
+  `memberIds` must belong to the family and replaces on PATCH;
+  `originYear: null` clears the ordinal; cross-family ids 404. Verified
+  by lint/build/test + a **23-case live smoke test** (create→widget
+  round-trip incl. ordinal, wiki edit by another member, date-pair
+  validation, family isolation, delete removes it from the widget).
+  Remaining in group 3.2: the reminder generator (3.2.2) that turns these
+  plus profile dates into Notification rows, and the screen-17 UI. On
+  branch `feature/special-date-crud`.
 - Avatar API (2026-08-20, sprint 3, WBS 3.4.2 API side): the write the
   frontend asked for on 2026-08-19, in exactly the requested shape —
   `avatarMediaId` on `UpdateProfileDto` (both profile routes, so the wiki
