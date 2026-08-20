@@ -587,6 +587,27 @@ dev` **did not regenerate the client**, and the stale client survived
 
 ## Important Decisions
 
+- **AI Quality Time dropped (2026-08-20)** — the whole of WBS 2.6, both
+  the suggestion (2.6.1–2.6.3) and saving/sharing the result as a `Plan`
+  (2.6.4). Sprint-2 AI is now the two features that actually run end to
+  end: **gift ideas (2.4) and message suggestions (2.5)**. Consequences,
+  recorded so nobody re-derives them:
+  - **Every AI suggestion the product ships is read-once.** Nothing is
+    persisted; the "AI output you follow over days" case is gone.
+  - **`Plan` and `PlanShare` stay in the schema, unused.** They shipped in
+    the sprint-0 migration and are empty; dropping them costs a migration
+    for something that may come back. Nothing reads or writes them.
+  - The Plan API was **written and verified** (49-case live smoke test,
+    2026-08-20) but deliberately **not merged** — branch `feature/plans`
+    if this is revived. Same for `feature/ai-suggestions`, which had the
+    quality-time route and was superseded by the AI module already on
+    `main`.
+  - The **"Plan a surprise" data-source question** in `domain-model.md`
+    (availability, distances, a possible `MemberAvailability` table) is
+    closed by this decision rather than answered.
+  - Worth noting for the next scope review: Quality Time was in the WBS
+    but **never in `mvp-scope.md`'s AI table** — the gap between the two
+    documents is likely why it went unbuilt while 2.4 and 2.5 shipped.
 - PostgreSQL is the primary database.
 - Prisma is used for database access, via the `pg` driver adapter (required
   for SQL providers in Prisma 7).
@@ -771,8 +792,9 @@ relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
 - **Full-MVP DB design + domain decisions (2026-08-14)**: 25 tables.
   Albums split (family library = derived, rendered as Omoide "books" /
   personal albums private / profile gallery derived); Memo = private
-  notes about a member (author-only, always); AI plans are saved
-  (`Plan` + `PlanShare` — owner edits, view-only sharing); birth/death
+  notes about a member (author-only, always); ~~AI plans are saved
+  (`Plan` + `PlanShare` — owner edits, view-only sharing)~~ — **the
+  feature was dropped 2026-08-20, tables kept unused**; birth/death
   dates live on LifeProfile; wiki edits logged (`EditHistory`); diverse
   reactions (base LIKE/LOVE/HAHA/WOW/SAD); solar-only dates (product
   targets the Japanese market); special-date widgets (`SpecialDate`).

@@ -681,7 +681,18 @@ rows here — no standalone Reminder table. Delivery is in-app only for MVP
 | error                 | string?  | set when FAILED                      |
 | createdAt / updatedAt | datetime |                                      |
 
-### Plan + PlanShare — saved AI plans (decided 2026-08-14; Sprint 2.6)
+### Plan + PlanShare — saved AI plans (designed 2026-08-14; **feature dropped 2026-08-20**)
+
+> **The feature these two tables exist for is not being built.** Quality
+> Time (WBS 2.6) was dropped on 2026-08-20 —
+> `project-status.md` → Important Decisions. **The tables stay in the
+> schema**: they shipped in the sprint-0 migration, they are empty, and
+> dropping them would cost a migration for something that may come back.
+> Nothing reads or writes them. The API was written and verified but not
+> merged — branch `feature/plans`, if this is ever revived.
+>
+> The design below is kept as the record of what was decided, not as a
+> description of anything running.
 
 AI-drafted surprise / quality-time plans are **saved** — they are followed
 over days, unlike read-once gift ideas. **Private to the creator; only the
@@ -753,9 +764,10 @@ All items from the 2026-08-14 design review are resolved:
   migration).
 - **Memo is always private** (2026-08-14): only the author views/edits —
   `isShared` removed, WBS task 1.6.6 dropped.
-- **Plans are saved** (2026-08-14): `Plan` + `PlanShare` — private to the
-  creator; sharing = view-only to chosen users (task 2.6.4). Gift/message
-  suggestions stay request/response.
+- ~~**Plans are saved** (2026-08-14)~~ — **superseded 2026-08-20: the
+  Quality Time feature was dropped**, so nothing creates a `Plan`. The two
+  tables stay in the schema unused (see the section above). Gift/message
+  suggestions stay request/response, which is now the only mode.
 - Earlier same-day resolutions: albums split (family library derived /
   personal albums private / profile gallery derived); Memo = private
   notes about a member; `birthDate`/`deathDate` on `LifeProfile`;
