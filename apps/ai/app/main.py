@@ -110,7 +110,9 @@ def _member_block(req: GiftIdeasRequest | MessageRequest | StoryboardRequest) ->
 
     profile_block = (
         f"\n\n## DISTILLED PROFILE (version {m.profile_version} — written by the rollup step, verbatim JSON;"
-        " the sig_… ids inside `evidence`, `source` fields are citable)\n" + m.profile.model_dump_json(indent=2)
+        # KHÔNG indent: thụt lề đốt ~300 token input ở profile lớn (đo 20/08:
+        # 5.963 vs 4.906 chars) mà model đọc JSON nén không hề kém đi.
+        " the sig_… ids inside `evidence`, `source` fields are citable)\n" + m.profile.model_dump_json()
         if m.profile is not None
         else "\n\n## DISTILLED PROFILE\n(nothing distilled yet — say what you can from the notes alone)"
     )
@@ -165,15 +167,29 @@ def gift_ideas(req: GiftIdeasRequest) -> GiftIdeasResponse:
     s = settings()
     if s.ai_mock:
         return mock.mock_gift_ideas(req)
+    # Giver: chỉ mở ngoặc quan hệ khi CÓ quan hệ — trước đây relation null làm chữ
+    # 'None' của Python lọt nguyên văn vào prompt ('Giver: Sơn (None)').
+    giver = (
+        f"\nGiver: {req.giver_name} ({req.giver_relation})"
+        if req.giver_name and req.giver_relation
+        else (f"\nGiver: {req.giver_name}" if req.giver_name else "")
+    )
     user = (
         f"{_member_block(req)}\n\nOccasion: {req.occasion_label}"
         + (f" ({req.occasion_date})" if req.occasion_date else "")
-        + (f"\nGiver: {req.giver_name} ({req.giver_relation})" if req.giver_name else "")
+        + giver
         + (f"\nBudget: {req.budget_label}" if req.budget_label else "")
         + (f"\nIdeas the family already saved (put these first): {', '.join(req.saved_ideas)}" if req.saved_ideas else "")
-        + f"\nLocale: {req.locale}\nReturn {min(req.max_ideas, 4)}–{req.max_ideas} ideas."
+        # "exactly N" thay vì "4–6": GIFT_SYSTEM rule 4 đã nói EXACTLY 5 — hai chỉ
+        # dẫn vênh nhau bắt model hoà giải, và idea thứ 6 thừa tốn ~1s sinh token.
+        + f"\nLocale: {req.locale}\nReturn exactly {req.max_ideas} ideas."
     )
-    payload = chat_json(s.model_suggest, prompts.GIFT_SYSTEM, user, _GiftPayload, feature="suggest_gift")
+    # effort/verbosity low: việc là ĐIỀN FORM theo luật + trần độ dài có sẵn trong
+    # GIFT_SYSTEM rule 11, không cần suy luận sâu (đo 20/08: reasoning ẩn ~30-40%).
+    payload = chat_json(
+        s.model_suggest, prompts.GIFT_SYSTEM, user, _GiftPayload,
+        feature="suggest_gift", effort="low", verbosity="low",
+    )
     counts = {"notes": 0, "photos": 0, "past_gifts": len(req.member.past_gifts)}
     for e in req.member.evidence:
         counts["notes" if e.kind == "memo" else "photos"] = counts.get("notes" if e.kind == "memo" else "photos", 0) + 1
@@ -200,12 +216,22 @@ def message_suggestions(req: MessageRequest) -> MessageResponse:
     s = settings()
     if s.ai_mock:
         return mock.mock_message(req)
+    giver = (
+        f"\nGiver: {req.giver_name} ({req.giver_relation})"
+        if req.giver_name and req.giver_relation
+        else (f"\nGiver: {req.giver_name}" if req.giver_name else "")
+    )
     user = (
         f"{_member_block(req)}\n\nOccasion: {req.occasion_label}"
-        + (f"\nGiver: {req.giver_name} ({req.giver_relation})" if req.giver_name else "")
+        + giver
         + f"\nTone: {req.tone}\nLocale: {req.locale}"
     )
-    payload = chat_json(s.model_suggest, prompts.MESSAGE_SYSTEM, user, _MessagePayload, feature="suggest_message")
+    # effort low nhưng GIỮ verbosity mặc định: MESSAGE_SYSTEM bắt heartfelt 5-7 câu,
+    # verbosity=low xung đột trực tiếp với yêu cầu đó (phản biện 20/08).
+    payload = chat_json(
+        s.model_suggest, prompts.MESSAGE_SYSTEM, user, _MessagePayload,
+        feature="suggest_message", effort="low",
+    )
     valid_ids = _citable_ids(req.member)
     for v in payload.variants:
         v.memories_used = [i for i in v.memories_used if i in valid_ids]
@@ -228,7 +254,12 @@ def video_storyboard(req: StoryboardRequest) -> StoryboardResponse:
         f"Target length: {req.target_sec}s · Mood: {req.mood} · Locale for on-screen text: {req.locale}\n"
         f"Media ({len(req.media)}):\n{media_lines}"
     )
-    payload = chat_json(s.model_suggest, prompts.STORYBOARD_SYSTEM, user, _StoryboardPayload, feature="video_storyboard")
+    # effort low là thắng lớn nhất ở đây: storyboard "nghĩ nhiều - viết ít"
+    # (đo 20/08: reasoning ẩn ~60% output, 11.0s cho chỉ ~400 tok hiển thị).
+    payload = chat_json(
+        s.model_suggest, prompts.STORYBOARD_SYSTEM, user, _StoryboardPayload,
+        feature="video_storyboard", effort="low", verbosity="low",
+    )
     valid = {m.media_id for m in req.media}
     scenes = [sc for sc in payload.scenes if sc.media_id in valid] or mock.mock_storyboard(req).scenes
     music = payload.music_theme if payload.music_theme in ("birthday", "family", "nostalgia", "gentle", "wafu") else "family"
@@ -313,7 +344,7 @@ def profile_rollup(req: RollupRequest) -> RollupResponse:
         + (f" — {req.role_label}" if req.role_label else "")
         + (f", born {req.birth_date}" if req.birth_date else "")
         + f". Family relationships: {', '.join(req.relations) or '(not declared)'}. Today: {req.today}."
-        + f"\n\n## CURRENT PROFILE (version {req.current_version})\n{current.model_dump_json(indent=2)}"
+        + f"\n\n## CURRENT PROFILE (version {req.current_version})\n{current.model_dump_json()}"
         + f"\n\n## UNPROCESSED SIGNALS ({len(req.signals)})\n{signal_lines or '(none)'}"
         + f"\n\nLocale: {req.locale}\nRewrite the whole profile now."
     )

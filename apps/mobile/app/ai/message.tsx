@@ -85,8 +85,16 @@ export default function MessageScreen() {
     const useTone = nextTone ?? tone;
     if (nextTone) setTone(nextTone);
     if (!occasion) return;
-    // lời nhắn phải viết bằng ngôn ngữ người dùng đang dùng app
-    suggest.mutate({ occasionLabel: occasion.label, extraNote: extraNote.trim() || undefined, tone: useTone, locale });
+    // lời nhắn phải viết bằng ngôn ngữ người dùng đang dùng app.
+    // force khi màn ĐÃ có kết quả: server giờ cache lời nhắn theo (người, dịp, tone)
+    // — "Say it differently" cùng tone mà không force sẽ trả lại nguyên bản cũ.
+    suggest.mutate({
+      occasionLabel: occasion.label,
+      extraNote: extraNote.trim() || undefined,
+      tone: useTone,
+      locale,
+      force: suggest.data != null,
+    });
   };
 
   const copy = (v: MessageVariant) => {

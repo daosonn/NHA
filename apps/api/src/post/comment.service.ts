@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma/prisma.service';
+import { NotificationEventsService } from '../notification/notification-events.service';
 import { CommentBodyDto } from './dto/comment-body.dto';
 import { PostService } from './post.service';
 
@@ -48,6 +49,7 @@ export class CommentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly postService: PostService,
+    private readonly notificationEvents: NotificationEventsService,
   ) {}
 
   /** Anyone who can view the post can comment (family-visible content). */
@@ -61,6 +63,7 @@ export class CommentService {
       data: { postId, authorUserId: userId, content: dto.content.trim() },
       include: commentInclude,
     });
+    this.notificationEvents.commentCreated(postId, userId);
     return this.toSummary(userId, comment);
   }
 

@@ -64,7 +64,8 @@ export interface GiftIdeaDto {
   kind: 'gift' | 'together';
   category: string;
   why: string;
-  sources: { evidence_id: string; label: string }[];
+  /** FastAPI chỉ trả evidence_id; `label` do AiService dựng từ dữ liệu thật (0 token) */
+  sources: { evidence_id: string; label?: string }[];
   price_range: string | null;
   /** từ khoá tra sàn Nhật — nguồn duy nhất để tìm SẢN PHẨM THẬT */
   search_keywords_ja: string;
@@ -75,7 +76,7 @@ export interface GiftIdeaDto {
 
 export interface GiftInsightDto {
   text: string;
-  sources: { evidence_id: string; label: string }[];
+  sources: { evidence_id: string; label?: string }[];
 }
 
 export interface GiftIdeasResult {

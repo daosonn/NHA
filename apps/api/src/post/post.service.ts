@@ -12,6 +12,7 @@ import { assertTaggedMembers, ownFamilyIds } from '../family/member-tags';
 import type { Prisma } from '../generated/prisma/client';
 import { PostType, ReactionType } from '../generated/prisma/enums';
 import { assertAttachableMedia, attachMediaInTx } from '../media/attach-media';
+import { NotificationEventsService } from '../notification/notification-events.service';
 import { StorageService } from '../storage/storage.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -80,6 +81,7 @@ export class PostService {
     private readonly storage: StorageService,
     private readonly familyService: FamilyService,
     private readonly profiles: ProfileService,
+    private readonly notificationEvents: NotificationEventsService,
   ) {}
 
   /** The include every PostDetail read uses — viewer-dependent because it
@@ -146,6 +148,9 @@ export class PostService {
     // Đọc bài để hiểu người đăng (0-4 interest signal) — chạy nền, KHÔNG chặn
     // response và không được làm đăng bài thất bại nếu AI hỏng.
     this.profiles.analyzePostInBackground(postId);
+    // Same contract: the post is published whether or not the family is
+    // told about it (WBS 3.1).
+    this.notificationEvents.postCreated(postId, userId);
 
     return this.getPost(userId, postId);
   }

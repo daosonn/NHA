@@ -128,6 +128,8 @@ export type MessageRequest = {
   extraNote?: string;
   tone?: 'warm' | 'formal' | 'playful';
   locale?: 'en' | 'ja' | 'vi';
+  /** bỏ qua cache server — bắt buộc khi regenerate cùng (người, dịp, tone) */
+  force?: boolean;
 };
 
 // ---------------------------------------------------------------- video (màn 27-33)

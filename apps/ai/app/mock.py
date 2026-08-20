@@ -44,8 +44,7 @@ def _src(req: GiftIdeasRequest, i: int) -> list[GiftSource]:
     if not ev:
         return []
     e = ev[i % len(ev)]
-    who = f"{e.author_name}'s {e.kind}" if e.author_name else e.kind
-    return [GiftSource(evidence_id=e.id, label=f"(mock) From {who}")]
+    return [GiftSource(evidence_id=e.id)]
 
 
 def mock_gift_ideas(req: GiftIdeasRequest) -> GiftIdeasResponse:
