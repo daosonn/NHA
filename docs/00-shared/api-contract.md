@@ -540,17 +540,20 @@ Three gaps found while building the Life Profile against mockup 7. None
 block a screen — the app ships without them and says on screen what it does
 not know — but each costs something visible.
 
-**1. A member's media has to be found by reading the whole feed.**
-There is no per-member media route and `FeedQueryDto` filters on nothing but
-a cursor, so the Album tab pages `GET /families/:id/posts` and filters on
-`taggedMemberIds` in the client. The scan is bounded at four pages of fifty —
-the two hundred most recent moments — because an unbounded one would fire an
-unknown number of requests every time a profile opens. Past that the grid
-tells the reader it is showing a partial album.
+**1. ~~A member's media has to be found by reading the whole feed.~~ —
+resolved on the server, twice (noted 2026-08-20).** The ask was for either
+shape; **both now exist**:
 
-Either shape would fix it: a `memberId` filter on the feed query, or
-`GET /families/:familyId/members/:memberId/media`. This is WBS 1.6.4, still
-open.
+- `GET /families/:familyId/members/:memberId/gallery` — the dedicated
+  route (task 1.6.4, PR #19). Not paginated, and it already includes
+  life-event media, which the feed scan never saw.
+- `?memberId` on `GET /families/:familyId/posts` — the feed filter (task
+  2.1.2, PR #22), matching any of a linked member's rows.
+
+**The app has not switched yet**: the Album tab still pages the feed and
+filters on `taggedMemberIds` client-side, bounded at four pages of fifty,
+telling the reader when it stopped short. Moving it to the gallery route
+removes both the bound and the warning.
 
 **2. `LifeProfile` has no occupation and no birthplace.**
 Mockup 7 draws three fact rows: born _with a place_ ("Born 14 March 1964, Y

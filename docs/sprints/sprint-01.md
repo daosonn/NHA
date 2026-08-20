@@ -170,7 +170,7 @@ build the family tree, post content with photos, and view member profiles.
       interests, birthDate/deathDate — nguồn cho widget 1.2.5).
       FE nối xong 2026-08-19; thiếu cột `occupation`/`birthPlace` mà mockup 7 vẽ
 - [x] 1.6.3 Timeline chung (bài viết/ảnh theo thời gian) — nối `LifeEvent` xong 2026-08-19
-- [ ] 1.6.4 Album/Gallery (danh sách ảnh) — FE dựng "Moments together" 2026-08-19 từ feed + `taggedMemberIds`, quét giới hạn 4×50; vẫn cần endpoint riêng (xem `api-contract.md` → Requests from the app)
+- [ ] 1.6.4 Album/Gallery (danh sách ảnh) — API done 2026-08-19 (`GET /families/:familyId/members/:memberId/gallery`, PR #19); FE vẫn dựng "Moments together" từ feed + `taggedMemberIds` (quét giới hạn 4×50) nên còn phải chuyển sang endpoint này
 - [x] 1.6.5 Memo cá nhân (tạo memo — ghi chú về một thành viên, xem `database.md`) — API done 2026-08-19 (schema thêm title/category theo UI; chi tiết: `api-contract.md`); FE nối xong 2026-08-19
 - ~~1.6.6 Quyền riêng tư Memo (private/shared)~~ — dropped 2026-08-14:
   memo luôn private, chỉ chủ xem/sửa (see `database.md`)

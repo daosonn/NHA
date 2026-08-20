@@ -157,28 +157,52 @@ screens.
 Raised by the frontend, neither actionable from `apps/mobile`.
 
 - **Three gaps found building the Life Profile against mockup 7
-  (2026-08-19).** Written up in full in `docs/00-shared/api-contract.md`
-  § Requests from the app; in short: (1) a member's media can only be found
-  by paging the whole family feed and filtering on `taggedMemberIds`, so the
-  Album tab scans a bounded 200 moments and tells the reader when it stopped
-  short — a `memberId` filter on the feed, or WBS 1.6.4's own route, fixes
-  it; (2) `LifeProfile` has no `occupation` and no `birthPlace`, so one of
-  the mockup's three fact rows is not drawn and the first is missing its
-  place; (3) `PostMediaSummary` has no duration, so a video tile says
-  "Video" where the mockup shows a running time. None block a screen — the
-  app ships without them and says on screen what it does not know.
+  (2026-08-19; status re-checked against the code 2026-08-20).** Written up
+  in full in `docs/00-shared/api-contract.md` § Requests from the app.
 
-- **Profile editing narrowed to self, and the server still disagrees
-  (2026-08-19).** The app now draws the Edit affordance only on your own
-  profile: a life story written about someone by someone else is a different
-  object from one they wrote themselves, and the screen could not tell the
-  reader which they were reading. What the family edits about another person
-  is their place in the tree, not their biography. **The server has not
-  changed** — `PATCH /families/:familyId/members/:memberId/profile` still
-  accepts an edit from any member of the family, so the rule is currently
-  enforced only by the UI not offering it. **Asked for**: narrow that route to
-  the profile's owner, or say the wiki rule stands and the app should put the
-  affordance back. Decision recorded in
+  1. ~~A member's media can only be found by paging the whole family
+     feed~~ — **done, and in both shapes the app asked for**:
+     `GET /families/:familyId/members/:memberId/gallery` (task 1.6.4,
+     PR #19) and `?memberId` on the family feed (task 2.1.2, PR #22). The
+     Album tab has not switched to either yet, so it still scans a bounded
+     200 moments and warns when it stops short.
+  2. `LifeProfile` has no `occupation` and no `birthPlace` — **still
+     true**, so one of the mockup's three fact rows is not drawn and the
+     first is missing its place. Two nullable columns and a migration.
+  3. `PostMediaSummary` has no duration — **still true**, so a video tile
+     says "Video" where the mockup shows a running time. Note this is not
+     just a column: reading a duration server-side means probing the file
+     (an ffmpeg/ffprobe dependency), so the cheaper path is the client
+     sending it at upload, consistent with the existing "client-declared
+     MIME type is trusted for now" decision. Worth deciding before doing.
+
+  Neither remaining gap blocks a screen — the app ships without them and
+  says on screen what it does not know.
+
+- **Profile editing: half of this was already true on the server
+  (2026-08-19; corrected 2026-08-20 after reading the code).** The app
+  draws the Edit affordance only on your own profile: a life story written
+  about someone by someone else is a different object from one they wrote
+  themselves, and the screen could not tell the reader which they were
+  reading. **The original note here said "the server has not changed" —
+  that was wrong.** `ProfileService.resolveForMember({ forEdit: true })`
+  already throws `403 Linked members manage their own profile content`, so
+  `PATCH /families/:familyId/members/:memberId/profile` on a member **who
+  has an account** is owner-only and has been since the route shipped
+  (task 1.6.2). The app and the server agree there.
+
+  What is left is **placeholder** profiles, and narrowing those is not a
+  fix — it contradicts a recorded decision. A placeholder has no account,
+  so "only the owner may edit" would mean **nobody** may ever edit, while
+  `domain-model.md` (2026-08-13) says placeholder profiles are
+  wiki-editable by any family member with no manager ACL in the MVP. That
+  is also the only way a deceased or elderly relative's profile gets
+  written at all.
+
+  **So the real question for the team is narrower than it looked**: should
+  the app offer Edit on a _placeholder_ profile? The wiki rule says yes;
+  the app currently says no, which leaves placeholders un-editable from the
+  UI even though the server allows it. Decision recorded in
   `docs/01-frontend/architecture.md` § Life Profile; reversing it on the
   client is one function (`features/member/member-profile.ts` →
   `editability`).
@@ -484,6 +508,23 @@ Raised by the frontend, neither actionable from `apps/mobile`.
     19-case live smoke test. No UI exists yet (screens.md #11 sketches only
     a "choose album" step in Post a Moment). On branch `feature/album`
     (stacked on `feature/gallery`).
+
+- Locale sent to the AI service is now validated (2026-08-20): `User.locale`
+  is a plain nullable string with no column constraint, and
+  `VideoJobService` forwarded it as `requester.locale ?? 'en'` — so the day
+  a Settings screen writes `"ja-JP"` (or anything else) there, it would
+  travel straight to FastAPI, whose contract names only `en`/`ja`/`vi`.
+  Latent today because **nothing writes that column yet**; found while
+  reviewing the AI proxy, fixed at the source instead. New
+  `common/locale.ts` → `resolveLocale(...candidates)`: first supported
+  value wins, a region subtag is honoured by its primary language
+  (`ja-JP` → `ja`), anything unrecognised falls back to `en`. Verified by
+  lint/build + **the repo's first service-level unit test**
+  (`common/locale.spec.ts`, 6 cases) — jest already picked up `*.spec.ts`
+  under `src/`, so no config change. **Note for whoever merges
+  `feature/ai-suggestions`**: its `SuggestionRequestDto` declares its own
+  `SUGGESTION_LOCALES` and its service repeats the same unchecked
+  fallback — point both at this helper.
 
 ### Planning Phase
 
