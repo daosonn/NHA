@@ -1,10 +1,13 @@
 # AI Architecture
 
-> Status: **contract draft** (2026-08-19, backend-authored at sprint-2
-> start per `sprint-02.md` Notes). The AI team owns `apps/ai` and
-> everything model-side; this document is the seam both teams build
-> against. Change it by agreement, not silently — the NestJS proxy and
-> the FastAPI service move together.
+> Status: **the NestJS side of the seam is built; `apps/ai` is not**
+> (drafted 2026-08-19, proxy shipped 2026-08-20). The AI team owns
+> `apps/ai` and everything model-side; this document is the seam both
+> teams build against. Change it by agreement, not silently — the NestJS
+> proxy and the FastAPI service move together. Where the request and
+> response shapes below are marked as shipped, they describe code that
+> exists and was verified against a mock service, so a FastAPI written to
+> them will connect without a second round of edits.
 
 ## Ownership
 
@@ -102,35 +105,55 @@ NestJS proxy pings.
 
 ### `POST /suggestions/gifts` · `POST /suggestions/messages` · `POST /suggestions/quality-time`
 
-Request (built entirely by NestJS):
+Request (built entirely by NestJS) — **this is what the shipped proxy
+actually sends** (2026-08-20), verified field by field against a mock
+service:
 
 ```jsonc
 {
-  "locale": "ja",
+  "locale": "ja", // "en" | "ja" | "vi" — request field, else the account locale, else "en"
   "kind": "gifts", // matches the route; present for logging symmetry
   "subject": {
     // who the suggestion is about — no ids the model could leak, names only
     "name": "Dad",
-    "birthDate": "1964-03-14", // nullable
+    "bio": "Carpenter, retired since 2021.", // nullable — the profile's life story
+    "birthDate": "1964-03-14", // nullable, date only
+    "deathDate": null, // set for a deceased member: a memorial is not a birthday
     "interests": ["Bonsai", "Bát Tràng pottery"],
     "lifeEvents": [{ "title": "Opened the shop", "date": "1975-06-01", "place": "Huế" }],
   },
-  "occasion": { "title": "62nd birthday", "date": "2026-03-14" }, // nullable
-  "userContext": "He mentioned his shears are getting dull", // free text from the form, nullable
-  "constraints": { "budget": "under 1,500,000₫", "count": 3 }, // per-feature, nullable fields
+  "occasion": { "title": "62nd birthday", "date": "2026-03-14" }, // null when not given
+  "userContext": "He mentioned his shears are getting dull", // free text from the form, null when not given
+  "constraints": { "budget": "under 1,500,000₫", "count": 3 }, // budget nullable; count defaults to 3
   "evidence": {
     // the requesting user's own private notes about the subject + shared content
     "memos": [
       { "title": "Likes chrysanthemums", "content": "…", "category": "gift", "updatedAt": "…" },
     ],
-    "recentPosts": [{ "content": "…", "place": "…", "createdAt": "…" }],
+    "recentPosts": [{ "author": "Lan", "content": "…", "place": "…", "createdAt": "…" }],
     // phase-1 facts, already filtered by the requester's visibility of
-    // the source photos (anti-laundering rule above)
-    "photoInsights": [{ "scene": "outing", "labels": ["beach", "family"], "photoDate": "…" }],
-    "counts": { "notes": 12, "photos": 248, "gifts": 3 }, // echoed back verbatim
+    // the source photos (anti-laundering rule above). `insight` is the
+    // AI team's own JSON, passed through whole — NestJS does not own that
+    // shape and must not reshape it.
+    "photoInsights": [
+      { "insight": { "scene": "outing", "labels": ["beach"] }, "model": "…", "photoDate": "…" },
+    ],
+    "counts": { "notes": 12, "photos": 248, "posts": 20, "lifeEvents": 14 },
   },
 }
 ```
+
+`counts` states **what this request carries**, not the size of the corpus
+it was drawn from — a bundle that hit a cap never overstates itself. The
+caps are `lifeEvents` 20 (most recent), `memos` 30, `recentPosts` 20,
+`photoInsights` 50 (scanned over the 200 most recent visible photos).
+
+Two notes on `counts` for the AI team and the app: the field `gifts` from
+the mockup (`fixtures/ai.ts`) is **gone** — nothing in the schema records
+a gift that was given, so the number had no source and would have been
+invented. `posts` and `lifeEvents` replace it. And `photos` counts
+**analysed** photos, so it reads 0 until phase 1 has run — which is
+honest: with no vision pass, no photo was read.
 
 Response — the envelope states the evidence **before** the ideas, and
 every idea carries its provenance (shape mirrors the shipped UI,
@@ -138,7 +161,7 @@ every idea carries its provenance (shape mirrors the shipped UI,
 
 ```jsonc
 {
-  "evidence": { "notes": 12, "photos": 248, "gifts": 3 },
+  "evidence": { "notes": 12, "photos": 248, "posts": 20, "lifeEvents": 14 },
   "suggestions": [
     {
       "title": "Clay teapot from Bát Tràng",
@@ -156,6 +179,26 @@ every idea carries its provenance (shape mirrors the shipped UI,
 `quality-time` returns `steps: string[]` per suggestion — the app may
 save one as a `Plan` via the NestJS Plan endpoints (2.6.4, pure NestJS,
 no AI involvement in the save).
+
+**How the proxy treats this response** (shipped 2026-08-20 — worth
+knowing before the FastAPI side is written):
+
+- `evidence` in the reply is **ignored**. NestJS answers the app with its
+  own counts, because it is the side that knows what it sent. Return it
+  or don't; it changes nothing.
+- **A suggestion with no `title`, `why` or `source` is dropped.** The
+  product rule is that every idea can be traced back to a note, a photo
+  or the timeline, so the proxy enforces it structurally rather than
+  hoping. If nothing in the array survives, the app is told the AI is
+  unavailable — an untraceable idea is never shown.
+- Unknown extra fields on a suggestion are dropped too; `price`, `text`,
+  `steps` and `tags` are the ones carried through. `steps` entries that
+  are blank are removed.
+- Anything else that stops a real answer — non-2xx, a body that is not a
+  JSON object, a connection refusal, or more than 30s of silence —
+  becomes `503 { code: "AI_UNAVAILABLE" }` for the app. There is **no
+  retry**: the user can ask again, and a struggling service should not be
+  hammered.
 
 ### `POST /videos` + status
 
@@ -187,9 +230,11 @@ polls NestJS (`GET /api/video-jobs/:id`).
 
 Documented in `docs/00-shared/api-contract.md` as each lands:
 
-- `POST /api/ai/gifts` · `/api/ai/messages` · `/api/ai/quality-time` —
+- **Shipped 2026-08-20** — `POST /api/ai/gifts` · `/api/ai/messages` ·
+  `/api/ai/quality-time` (WBS 2.3.2 API side, plus 2.4.3 / 2.5.2 / 2.6.3):
   auth'd; NestJS resolves the member, checks family membership, gathers
   the context above (own memos only), forwards, returns the envelope.
+  Details and the app-facing shape: `api-contract.md` → AI suggestions.
 - `GET/POST/PATCH/DELETE /api/me/plans` + share endpoints (2.6.4) —
   `Plan`/`PlanShare` tables from sprint 0; owner edits, shares are
   view-only.

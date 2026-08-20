@@ -33,25 +33,26 @@ photos, and get AI suggestions (gifts, messages, quality time).
 ### 2.3 Nav3 – AI — AI Assistant
 
 - [ ] 2.3.1 UI AI (form + result)
-- [ ] 2.3.2 Tích hợp AI API (request hoạt động — `apps/ai` FastAPI contract,
-      design in `docs/03-ai/` at sprint start)
+- [ ] 2.3.2 Tích hợp AI API (request hoạt động) — NestJS proxy done 2026-08-20
+      (`POST /api/ai/{gifts,messages,quality-time}`, chi tiết: `api-contract.md`);
+      chưa tick vì `apps/ai` chưa tồn tại nên chưa chạy end-to-end
 
 ### 2.4 AI gợi ý quà — Gift suggestion
 
-- [ ] 2.4.1 Chọn người nhận (member)
-- [ ] 2.4.2 Nhập dịp/sở thích (context)
-- [ ] 2.4.3 Generate gợi ý quà (≥3 gợi ý)
+- [ ] 2.4.1 Chọn người nhận (member) — UI; API nhận `memberId` sẵn (2.3.2)
+- [ ] 2.4.2 Nhập dịp/sở thích (context) — UI; API nhận `occasion`/`userContext` sẵn
+- [ ] 2.4.3 Generate gợi ý quà (≥3 gợi ý) — UI; `POST /api/ai/gifts` sẵn 2026-08-20 (mặc định 3)
 
 ### 2.5 AI gợi ý lời nhắn — Message suggestion
 
-- [ ] 2.5.1 Chọn người/dịp (context)
-- [ ] 2.5.2 Generate lời nhắn (có regenerate)
+- [ ] 2.5.1 Chọn người/dịp (context) — UI; API sẵn (2.3.2)
+- [ ] 2.5.2 Generate lời nhắn (có regenerate) — UI; `POST /api/ai/messages` sẵn 2026-08-20 (regenerate = gọi lại)
 
 ### 2.6 AI Quality Time — Gợi ý hoạt động
 
-- [ ] 2.6.1 Chọn thành viên (family member)
-- [ ] 2.6.2 Nhập thời gian/sở thích (context)
-- [ ] 2.6.3 Generate kế hoạch (danh sách hoạt động)
+- [ ] 2.6.1 Chọn thành viên (family member) — UI; API sẵn (2.3.2)
+- [ ] 2.6.2 Nhập thời gian/sở thích (context) — UI; API sẵn (2.3.2)
+- [ ] 2.6.3 Generate kế hoạch (danh sách hoạt động) — UI; `POST /api/ai/quality-time` sẵn 2026-08-20 (mỗi gợi ý có `steps[]`)
 - [ ] 2.6.4 Lưu & chia sẻ plan (bảng `Plan` + `PlanShare` — chỉ chủ sửa/chia sẻ, người được chia sẻ chỉ xem; added 2026-08-14, see `database.md`)
 
 ### 2.7 Test Sprint 2

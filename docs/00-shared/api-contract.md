@@ -510,6 +510,58 @@ video/audio player. Life-event media (2026-08-19) follows the profile it
 hangs off: the owner and anyone sharing a family with them for a global
 profile, the family's members for a placeholder.
 
+### AI suggestions — `apps/api/src/ai/` (WBS 2.3.2 / 2.4.3 / 2.5.2 / 2.6.3, added 2026-08-20)
+
+| Route                   | Auth | Returns              |
+| ----------------------- | ---- | -------------------- |
+| `POST /ai/gifts`        | ✔    | `SuggestionEnvelope` |
+| `POST /ai/messages`     | ✔    | `SuggestionEnvelope` |
+| `POST /ai/quality-time` | ✔    | `SuggestionEnvelope` |
+
+All three take the **same body** — they differ in what the model is asked
+for, not in what the app has to say:
+
+```jsonc
+{
+  "familyId": "…", // required
+  "memberId": "…", // required — who it is for (WBS 2.4.1 / 2.6.1)
+  "occasion": { "title": "62nd birthday", "date": "2026-03-14" }, // optional; date is YYYY-MM-DD
+  "userContext": "His shears are getting dull", // optional, ≤1000 chars — the form's free text
+  "constraints": { "budget": "under ¥15,000", "count": 3 }, // optional; count 1–10, default 3
+  "locale": "ja", // optional, "en" | "ja" | "vi" — defaults to the account locale, then "en"
+}
+```
+
+They are `POST` because the body does not fit in a query string, not
+because anything is created — hence **200, not 201**. Nothing is stored:
+ask again and you get a fresh answer (that is what "regenerate" is on the
+message screen). Saving a plan is a separate feature (WBS 2.6.4).
+
+`SuggestionEnvelope` is `{ evidence, suggestions[], model }`.
+
+- `evidence` is `{ notes, photos, posts, lifeEvents }` — **counted by the
+  server**, stating what the answer was read out of. Show it _before_ the
+  ideas, as the mockup does. `photos` counts photos the AI has actually
+  analysed, so it reads 0 until the background vision pass has run.
+- Each suggestion always carries `title`, **`why`** and **`source`**, and
+  never appears without them: the server drops any idea the AI service
+  returns without provenance. Per feature it also carries `price` +
+  `tags` (gifts), `text` (messages) or `steps: string[]` (quality-time).
+- `model` is for bug reports and logs — **do not render it**.
+
+`403` if you are not in the family, `404` if the member is not in it,
+`400` for a datetime where a date-only occasion is expected. **`503`
+`{ code: "AI_UNAVAILABLE" }`** whenever the AI cannot answer — the
+service is switched off, unreachable, slow (30s ceiling) or returned
+nothing traceable. That is one state for the app to handle: say AI is
+unavailable and leave the rest of the screen working. Everything else on
+the app keeps working with AI down, by design.
+
+Note the counts changed shape from `fixtures/ai.ts`: the mockup's
+`gifts: 3` is gone, because nothing in the schema records a gift that was
+given and the number would have been invented. `posts` and `lifeEvents`
+take its place.
+
 ## What does not exist yet
 
 This is the part that decides what can actually be wired. Nothing below has
@@ -517,22 +569,16 @@ an endpoint, so no amount of frontend work will connect these screens.
 
 ### Blocking a screen that is already built
 
-| Screen                               | Needs                                                                                                                                                                                                                                                                                         |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Family tree** (`family.tsx`)       | ~~`GET` for relationships~~ — **resolved**: `GET /families/:familyId/tree` returns nodes + edges (task 1.4.1). Remaining: the kinship-label derivation below.                                                                                                                                 |
-| **Verify code** (`verify.tsx`)       | Send / confirm an email code for **sign-up**. Registration returns tokens immediately today, so that half of the screen has nothing to call. The reset half now has endpoints — see the row below.                                                                                            |
-| **Forgot + reset password**          | ~~WBS 1.1.7~~ — **resolved on the server**: `POST /auth/password-reset/{request,verify,confirm}` (email infrastructure decided 2026-08-18: SMTP/Gmail). **The app is not wired to them**: `endpoints.ts` has no password-reset group, and the three screens only navigate between themselves. |
-| <<<<<<< HEAD                         |
-| **Invitation** (`invite/[code].tsx`) | ~~A public read of an invite code~~ — **resolved** (task 1.4.4, PR #16) **and wired 2026-08-19**: preview, accept, create, list and resend. Nothing outstanding.                                                                                                                              |
-| **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~, ~~LifeEvent~~, ~~Memo~~ — all **resolved and wired 2026-08-19**. The gallery (1.6.4) is built from the family feed instead; see § Requests from the app below for what that costs and what two profile fields the design needs.                                              |
-| =======                              |
-| **Invitation** (`invite/[code].tsx`) | ~~A public read of an invite code~~ — **resolved**: `GET /invitations/:code` previews and `POST /invitations/:code/accept` joins on the reserved spot (task 1.4.4, PR #16). The app is not wired to them yet.                                                                                 |
-| **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~ — **resolved** (task 1.6.2). ~~LifeEvent~~ — **resolved** (task 1.6.8). ~~Memo~~ — **resolved** (task 1.6.5). ~~Gallery~~ — **resolved** (task 1.6.4). All three tabs plus the header now have an endpoint; none of it is wired.                                              |
-
-> > > > > > > main
-> > > > > > > | **New moment** (`(tabs)/new.tsx`) | ~~Post + media upload~~ — **resolved**: `POST /media` then `POST /posts` (tasks 1.5.2–1.5.5, PR #5). |
-> > > > > > > | **Home** | ~~moments feed~~ — **resolved and wired**. `GET .../special-dates` exists but the app does not call it, so the widget is still a fixture. Recommendations have no endpoint at all. |
-> > > > > > > | **AI tab + gift ideas** | The whole of `apps/ai` — the FastAPI service does not exist. |
+| Screen                               | Needs                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Family tree** (`family.tsx`)       | ~~`GET` for relationships~~ — **resolved**: `GET /families/:familyId/tree` returns nodes + edges (task 1.4.1). Remaining: the kinship-label derivation below.                                                                                                                                                |
+| **Verify code** (`verify.tsx`)       | Send / confirm an email code for **sign-up**. Registration returns tokens immediately today, so that half of the screen has nothing to call. The reset half now has endpoints — see the row below.                                                                                                           |
+| **Forgot + reset password**          | ~~WBS 1.1.7~~ — **resolved on the server**: `POST /auth/password-reset/{request,verify,confirm}` (email infrastructure decided 2026-08-18: SMTP/Gmail). **The app is not wired to them**: `endpoints.ts` has no password-reset group, and the three screens only navigate between themselves.                |
+| **Invitation** (`invite/[code].tsx`) | ~~A public read of an invite code~~ — **resolved** (task 1.4.4, PR #16): `GET /invitations/:code` previews and `POST /invitations/:code/accept` joins on the reserved spot. **Wired 2026-08-19** — preview, accept, create, list and resend. Nothing outstanding.                                            |
+| **Life Profile** (`member/[id].tsx`) | ~~LifeProfile~~ (1.6.2), ~~LifeEvent~~ (1.6.8), ~~Memo~~ (1.6.5) — **resolved and wired 2026-08-19**. ~~Gallery~~ (1.6.4) also has an endpoint (`GET /families/:familyId/members/:memberId/gallery`, PR #19), but the Album tab still derives it from the family feed — see § Requests from the app.         |
+| **New moment** (`(tabs)/new.tsx`)    | ~~Post + media upload~~ — **resolved**: `POST /media` then `POST /posts` (tasks 1.5.2–1.5.5, PR #5).                                                                                                                                                                                                         |
+| **Home**                             | ~~moments feed~~ — **resolved and wired**. `GET .../special-dates` exists but the app does not call it, so the widget is still a fixture. Recommendations have no endpoint at all.                                                                                                                           |
+| **AI tab + gift ideas**              | ~~No endpoint at all~~ — **resolved on the server 2026-08-20**: `POST /ai/{gifts,messages,quality-time}` (see above). Still blocked end to end by `apps/ai` — the FastAPI service does not exist, so every call answers 503 until the AI team ships it. Wiring the screens against the shape is not blocked. |
 
 ### Requests from the app (added 2026-08-19)
 

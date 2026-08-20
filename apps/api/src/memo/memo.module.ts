@@ -12,5 +12,6 @@ import { MemoService } from './memo.service';
   imports: [ProfileModule, StorageModule],
   controllers: [MemberMemoController, MeMemoController, MemoController],
   providers: [MemoService],
+  exports: [MemoService],
 })
 export class MemoModule {}

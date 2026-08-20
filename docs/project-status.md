@@ -16,6 +16,12 @@ screens.
 
 ## Current Focus
 
+- **Backend sprint 2 is down to one feature (2026-08-20).** Memories,
+  video jobs, the phase-1 insight pipe and now the AI suggestions proxy
+  are all built; what is left on the backend side is **`Plan`/`PlanShare`
+  (WBS 2.6.4)** — saving and sharing a quality-time plan, pure NestJS with
+  no AI involvement and tables that already exist. Everything else in
+  sprint 2 is UI, or belongs to the AI team.
 - **Frontend state re-verified against the code (2026-08-19).** Wired to the
   API: sign in / sign up, Home (families + family feed), create-or-join
   family, the family tree (read plus adding a member), New moment, post
@@ -446,6 +452,30 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   untouched. Verified by lint/build/test + 13-case live smoke (filters,
   combinations, cursor pagination under filter, 400/404 matrix). On
   branch `feature/memory-list`. Details in `api-contract.md`.
+- AI suggestions proxy (2026-08-20, sprint 2, WBS 2.3.2 API side plus
+  2.4.3 / 2.5.2 / 2.6.3): `POST /api/ai/gifts` · `/messages` ·
+  `/quality-time` — one body, three asks. NestJS resolves the member,
+  enforces family membership, gathers the context from Postgres and
+  forwards to FastAPI; **phase 2 of the pipeline is now real code**.
+  Reuses the existing gates rather than re-deriving them: `MemoService`
+  (own memos only), `GalleryService` (which is what enforces the
+  anti-laundering rule — insights are reached only through media the
+  requester may already see), `PostService.listFamilyFeed`,
+  `ProfileService` and `LifeEventService`. Two rules the proxy enforces
+  itself: **a suggestion without `why`/`source` is dropped** (an
+  untraceable idea is never shown, and if none survive the answer is 503),
+  and the evidence counts returned to the app are **NestJS's own**, not
+  the AI service's echo. Every failure — off, unreachable, non-2xx,
+  malformed, 30s timeout — is one `503 { code: 'AI_UNAVAILABLE' }`, with
+  no retry. `MemoModule`/`GalleryModule` gained an `exports` line; no
+  migration, no new table, no new dependency. Verified by
+  format/lint/build/test + a **48-case live smoke test against a mock AI
+  service**, including the two that matter most: another member's private
+  memo never enters the bundle, and an insight from a photo the requester
+  cannot open never does either. **Not verified end to end** — `apps/ai`
+  does not exist, so every real call answers 503 until the AI team ships
+  it; the request/response shapes in `docs/03-ai/architecture.md` are now
+  what the code actually sends. On branch `feature/ai-suggestions`.
 - AI insight pipe (2026-08-19, sprint 2): the backend half of the
   two-phase photo pipeline — `MediaInsight` hidden store (migration
   `20260819071710`, table 26) + internal routes
