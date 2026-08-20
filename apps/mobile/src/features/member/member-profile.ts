@@ -36,11 +36,6 @@ export type Editability = 'self' | 'locked';
  */
 export type MemberProfile = {
   displayName: string;
-  /**
-   * The account behind this member, or null for a placeholder. Needed to
-   * recognise the moments they posted themselves — see `use-member-moments.ts`.
-   */
-  userId: string | null;
   /** Already translated. Null for yourself, and for anyone more than one edge away. */
   relation: string | null;
   /** The family being looked through. Null when none is active. */
@@ -78,7 +73,6 @@ export function toMemberProfile(input: MemberProfileInput): MemberProfile {
     // The tree row wins: for a placeholder it is the only name there is, and
     // for a linked account it is the same `User.name` the profile carries.
     displayName: member?.displayName ?? detail?.displayName ?? input.fallbackName ?? '',
-    userId: member?.userId ?? detail?.userId ?? null,
     relation: relationKey,
     familyName,
     tone: toneFor(member?.id ?? null),

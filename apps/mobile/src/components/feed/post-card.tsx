@@ -65,7 +65,7 @@ export function PostCard({ post, audienceLabel, onPress, onAuthorPress }: PostCa
         accessibilityLabel={t('post.openProfile', { name: post.authorName })}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
       >
-        <Avatar size={40} />
+        <Avatar size={40} name={post.authorName} />
 
         <View style={{ flex: 1, gap: 1 }}>
           <Text variant="body1" weight="semibold" numberOfLines={1}>

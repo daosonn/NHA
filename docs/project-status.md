@@ -156,17 +156,28 @@ screens.
 
 Raised by the frontend, neither actionable from `apps/mobile`.
 
-- **Three gaps found building the Life Profile against mockup 7
-  (2026-08-19).** Written up in full in `docs/00-shared/api-contract.md`
-  § Requests from the app; in short: (1) a member's media can only be found
-  by paging the whole family feed and filtering on `taggedMemberIds`, so the
-  Album tab scans a bounded 200 moments and tells the reader when it stopped
-  short — a `memberId` filter on the feed, or WBS 1.6.4's own route, fixes
-  it; (2) `LifeProfile` has no `occupation` and no `birthPlace`, so one of
-  the mockup's three fact rows is not drawn and the first is missing its
-  place; (3) `PostMediaSummary` has no duration, so a video tile says
-  "Video" where the mockup shows a running time. None block a screen — the
-  app ships without them and says on screen what it does not know.
+- **Avatars have columns and no endpoints (2026-08-19).**
+  `User.avatarKey` and `FamilyMember.avatarKey` are in the schema; nothing
+  writes them and nothing serves them. Verified: `PATCH …/members/:memberId`
+  with an `avatarKey` answers **200** and leaves the column `null`, because
+  `whitelist: true` strips the unknown field. The app therefore ships **no
+  upload button** — one that looks like it worked is worse than none — and
+  draws an initial on a per-person tint instead. **Asked for**: an
+  `avatarMediaId` on `UpdateProfileDto` pointing at a `Media` row; if the
+  stored value is a `Media.id` then `GET /media/:id` already serves it and the
+  client needs nothing further. Full write-up in
+  `docs/00-shared/api-contract.md` § Requests from the app.
+
+- **Gaps found building the Life Profile against mockup 7 (2026-08-19).**
+  Written up in full in `docs/00-shared/api-contract.md` § Requests from the
+  app. (1) ~~A member's media could only be found by paging the family feed~~
+  — **resolved the same day**: WBS 1.6.4 landed `GET /me/gallery` and
+  `GET …/members/:memberId/gallery`, and the app dropped its bounded scan.
+  (2) `LifeProfile` has no `occupation` and no `birthPlace`, so one of the
+  mockup's three fact rows is not drawn and the first is missing its place.
+  (3) Media summaries carry no duration, so a video tile says "Video" where
+  the mockup shows a running time. Neither remaining gap blocks a screen —
+  the app ships without them and says on screen what it does not know.
 
 - **Profile editing narrowed to self, and the server still disagrees
   (2026-08-19).** The app now draws the Edit affordance only on your own

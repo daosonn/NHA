@@ -16,7 +16,6 @@ const RING_ACTIVE = `${RING}, 0 0 0 3px rgba(240,112,95,0.35)`;
 export type FamilyGroupSummary = {
   id: string;
   name: string;
-  tone: 'light' | 'dark';
 };
 
 export type GroupStripProps = {
@@ -71,7 +70,7 @@ export function GroupStrip({
     const style = { marginLeft: index === 0 ? 0 : OVERLAP };
 
     if (onSelectGroup === undefined) {
-      return <Avatar key={group.id} size={AVATAR} tone={group.tone} ring={ring} style={style} />;
+      return <Avatar key={group.id} size={AVATAR} name={group.name} ring={ring} style={style} />;
     }
 
     return (
@@ -83,7 +82,7 @@ export function GroupStrip({
         accessibilityLabel={t('home.switchToGroup', { name: group.name })}
         style={style}
       >
-        <Avatar size={AVATAR} tone={group.tone} ring={ring} />
+        <Avatar size={AVATAR} name={group.name} ring={ring} />
       </Pressable>
     );
   });

@@ -30,7 +30,7 @@ build the family tree, post content with photos, and view member profiles.
       — done 2026-08-17: merged in PR #2
 - [x] 1.1.6 Đăng xuất (revoke refresh token) — done 2026-08-17: single-use
       refresh rotation + revoke on logout, merged in PR #2
-- [ ] 1.1.7 Khôi phục mật khẩu (quên mật khẩu — `PasswordResetToken`; added 2026-08-14, see `database.md`) — API done 2026-08-18 (PR #12); 3 màn UI đã có nhưng **chưa nối**
+- [x] 1.1.7 Khôi phục mật khẩu (quên mật khẩu — `PasswordResetToken`; added 2026-08-14, see `database.md`) — API done 2026-08-18 (PR #12); FE nối xong 2026-08-19 (3 màn: gửi mã, kiểm mã, đặt lại)
 - [x] 1.1.8 Google login (OAuth authorization code, `OAuthAccount` — customer requirement, added 2026-08-17; see `02-backend/architecture.md`) — done 2026-08-18: backend merged in PR #3, happy path verified end-to-end với credentials thật (consent screen External + test user)
 - [ ] 1.1.9 Facebook login (chung flow OAuth với 1.1.8 — added 2026-08-17; LINE deferred chờ quyền email, X phase 2) — backend merged in PR #3; chờ verify E2E (cần accept tester role trên Meta app)
 
@@ -53,7 +53,7 @@ build the family tree, post content with photos, and view member profiles.
 - [ ] 1.2.4 Empty/loading state (UI đầy đủ) — done cho Home, cây gia phả,
       post detail và Omoide (2026-08-18). Còn Life Profile và AI — hai màn
       chưa nối API.
-- [ ] 1.2.5 Widget dịp đặc biệt trên Home (countdown + theme — sinh nhật/ngày giỗ derived từ LifeProfile; added 2026-08-14, see `database.md`) — API done 2026-08-18 (PR #11: `GET /families/:familyId/special-dates`); UI chưa nối
+- [x] 1.2.5 Widget dịp đặc biệt trên Home (countdown + theme — sinh nhật/ngày giỗ derived từ LifeProfile; added 2026-08-14, see `database.md`) — API done 2026-08-18 (PR #11: `GET /families/:familyId/special-dates`); FE nối xong 2026-08-19
 
 ### 1.3 Tạo nhóm gia đình — Family Group
 
@@ -170,7 +170,7 @@ build the family tree, post content with photos, and view member profiles.
       interests, birthDate/deathDate — nguồn cho widget 1.2.5).
       FE nối xong 2026-08-19; thiếu cột `occupation`/`birthPlace` mà mockup 7 vẽ
 - [x] 1.6.3 Timeline chung (bài viết/ảnh theo thời gian) — nối `LifeEvent` xong 2026-08-19
-- [ ] 1.6.4 Album/Gallery (danh sách ảnh) — FE dựng "Moments together" 2026-08-19 từ feed + `taggedMemberIds`, quét giới hạn 4×50; vẫn cần endpoint riêng (xem `api-contract.md` → Requests from the app)
+- [x] 1.6.4 Album/Gallery (danh sách ảnh) — API done 2026-08-19 (`GET /me/gallery`, `GET …/members/:memberId/gallery`); FE nối xong 2026-08-19, bỏ bãi quét feed tạm thời
 - [x] 1.6.5 Memo cá nhân (tạo memo — ghi chú về một thành viên, xem `database.md`) — API done 2026-08-19 (schema thêm title/category theo UI; chi tiết: `api-contract.md`); FE nối xong 2026-08-19
 - ~~1.6.6 Quyền riêng tư Memo (private/shared)~~ — dropped 2026-08-14:
   memo luôn private, chỉ chủ xem/sửa (see `database.md`)

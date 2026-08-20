@@ -18,7 +18,6 @@ export type AudienceGroup = {
   id: string;
   /** `Family.name`. */
   name: string;
-  tone: 'light' | 'dark';
   memberCount: number;
 };
 
@@ -64,7 +63,7 @@ export function AudiencePicker({ groups, selected, onToggle }: AudiencePickerPro
               {/* Real photos will also want desaturating when off; the
                   placeholder stripes are already grey, so opacity carries it
                   for now. */}
-              <Avatar size={CIRCLE} tone={group.tone} ring={on ? RING_ON : RING_OFF} />
+              <Avatar size={CIRCLE} name={group.name} ring={on ? RING_ON : RING_OFF} />
 
               {on && (
                 <View

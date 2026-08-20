@@ -4,9 +4,9 @@ import { View } from 'react-native';
 
 import type { MemberProfile } from '../../features/member/member-profile';
 import { useLifeEvents } from '../../features/member/use-life-events';
-import { useMemberMoments } from '../../features/member/use-member-moments';
+import { useMemberGallery } from '../../features/member/use-member-gallery';
 import { useDeleteMemo, useMemberMemos } from '../../features/member/use-memos';
-import type { MemoDetail, PostDetail } from '../../lib/api';
+import type { MemoDetail } from '../../lib/api';
 import { SegmentedTabs } from '../ui/segmented-tabs';
 import { AlbumGrid } from './album-grid';
 import { MemoActionsSheet } from './memo-actions-sheet';
@@ -30,7 +30,7 @@ export type ProfileBodyProps = {
   onAddMemo?: () => void;
   onOpenMemo?: (memo: MemoDetail) => void;
   onEditMemo?: (memo: MemoDetail) => void;
-  onOpenMoment?: (moment: PostDetail) => void;
+  onOpenMoment?: (postId: string) => void;
 };
 
 /**
@@ -67,7 +67,7 @@ export function ProfileBody({
   const timeline = useLifeEvents({ own: ownProfile, familyId, memberId });
   const events = timeline.data ?? [];
 
-  const moments = useMemberMoments(familyId, memberId, profile.userId);
+  const gallery = useMemberGallery({ own: ownProfile, familyId, memberId });
 
   const [acting, setActing] = useState<MemoDetail | null>(null);
   const [confirming, setConfirming] = useState<MemoDetail | null>(null);
@@ -96,7 +96,7 @@ export function ProfileBody({
         onChange={setTab}
         options={[
           { value: 'timeline', label: t('member.timeline'), count: events.length },
-          { value: 'album', label: t('member.album'), count: moments.data?.items.length ?? 0 },
+          { value: 'album', label: t('member.album'), count: gallery.data?.photoCount ?? 0 },
           { value: 'memo', label: t('member.memo'), count: list.length },
         ]}
       />
@@ -111,17 +111,17 @@ export function ProfileBody({
       )}
       {tab === 'album' && (
         <AlbumGrid
-          moments={moments.data}
+          gallery={gallery.data}
           memberName={profile.displayName}
           own={ownProfile}
-          // Distinct from "nothing to show": with no family on screen there
-          // is no feed to read, and the empty state should not blame the
-          // absence of photographs for the absence of a family.
-          noFamily={familyId === null || memberId === null}
-          loading={moments.isPending && familyId !== null && memberId !== null}
-          failed={moments.isError}
-          onRetry={() => void moments.refetch()}
+          loading={gallery.isPending && (ownProfile || memberId !== null)}
+          failed={gallery.isError}
+          onRetry={() => void gallery.refetch()}
           onOpenMoment={onOpenMoment}
+          // A milestone's photographs are not a post and have nowhere of
+          // their own to open, but they are not a dead end either — the
+          // Timeline is where that milestone is written down.
+          onOpenTimeline={() => setTab('timeline')}
         />
       )}
       {tab === 'memo' && (

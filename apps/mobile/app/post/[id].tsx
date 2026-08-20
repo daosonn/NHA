@@ -46,7 +46,7 @@ function CommentRow({ comment }: { comment: CommentSummary }) {
         accessibilityLabel={t('post.openProfile', { name: comment.authorName })}
         hitSlop={6}
       >
-        <Avatar size={32} />
+        <Avatar size={32} name={comment.authorName} />
       </Pressable>
 
       <View style={{ flex: 1, gap: 2 }}>
