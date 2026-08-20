@@ -519,6 +519,24 @@ BIRTHDAY_REMINDER | EVENT_REMINDER | CARE_REMINDER | AI_SUGGESTION`.
   I first see this" stays true. Everything is scoped to the caller —
   someone else's notification is a 404, never a 403.
 
+**How the app should refresh (decided 2026-08-20 — polling, no socket).**
+Delivery is in-app only for the MVP, and while the app is open it
+**polls**: `refetchInterval` of **5–10s on the notifications screen and
+Home** (where the bell lives), 30–60s elsewhere, and a refetch on
+returning to the foreground — that focus refetch is the moment that
+actually feels instant, since it fires exactly when the person looks at
+the bell. Two things are load-bearing: **React Native does not wire focus
+by itself** — hook `AppState` into react-query's `focusManager` once,
+app-wide, or polling keeps running in the background and burns battery
+(the video-progress hook `use-video.ts` already shows the interval
+pattern); and after `PATCH .../read`, invalidate the query so the badge
+drops immediately instead of waiting a tick. Server-side this cadence is
+already paid for: the unread count runs on the `(recipientUserId,
+readAt)` index. SSE/WebSocket was considered and deliberately rejected
+for now — it buys ~1s over ~10s at the price of reconnect logic today
+and Redis the day there are two API instances; revisit only if chat or
+another genuinely two-way feature arrives.
+
 ### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side)
 
 | Route                                   | Returns                |

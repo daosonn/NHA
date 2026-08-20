@@ -655,6 +655,11 @@ dev` **did not regenerate the client**, and the stale client survived
   own with no server and no Apple credential. Only unpredictable social
   events ("Lan just commented") genuinely require push.
 
+  **Polling cadence settled the same day: 5–10s** on the notifications
+  screen and Home, slower elsewhere, stop in background, refetch on
+  foreground. SSE/WebSocket considered and rejected for now. Full FE
+  guidance in `api-contract.md` → Notifications.
+
 - **AI Quality Time dropped (2026-08-20)** — the whole of WBS 2.6, both
   the suggestion (2.6.1–2.6.3) and saving/sharing the result as a `Plan`
   (2.6.4). Sprint-2 AI is now the two features that actually run end to
