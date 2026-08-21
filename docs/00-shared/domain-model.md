@@ -132,6 +132,16 @@ starting point if this is revived.
 
 ## Open Questions
 
+- **What is a "care reminder"?** (raised 2026-08-21, WBS 3.3 suspended on
+  this). The WBS names the feature and the `CARE_REMINDER` enum value
+  exists, but no document defines the rule. Proposal on the table: a
+  member appearing in no post/tag for 30 days → remind the family (minus
+  that member), at most once per 30 days, excluding the deceased and the
+  newly joined. To decide with the customer: the trigger, the window, and
+  above all the **tone** — a clumsy reminder reads as an accusation, and
+  the sensitivity is higher in the Japanese market. The plumbing already
+  exists (`ReminderService`, 3.2.2); only the rule is missing.
+
 - **Leave semantics**: when a member's node is removed, what happens to
   (a) relationships that routed through them (e.g. the link between their
   parents and children), and (b) content they had posted to that family?

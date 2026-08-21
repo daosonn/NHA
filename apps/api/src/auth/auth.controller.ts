@@ -6,6 +6,7 @@ import {
   type AuthUser,
 } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { ConfirmPasswordResetDto } from './dto/confirm-password-reset.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -96,5 +97,21 @@ export class AuthController {
     @Body() dto: RefreshTokenDto,
   ): Promise<{ success: boolean }> {
     return this.authService.logout(user.userId, dto.refreshToken);
+  }
+
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @Post('change-password')
+  @ApiOperation({
+    summary:
+      'Change the password while signed in (WBS 3.4.3) — requires the ' +
+      'current password; signs every other device out and returns a fresh ' +
+      'token pair for this one (store it, like a refresh)',
+  })
+  changePassword(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: ChangePasswordDto,
+  ): Promise<AuthResult> {
+    return this.authService.changePassword(user.userId, dto);
   }
 }

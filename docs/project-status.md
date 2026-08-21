@@ -680,6 +680,26 @@ dev` **did not regenerate the client**, and the stale client survived
   Group 3.2 backend is now **fully closed** (3.2.1 widget GET, 3.2.2
   reminders, 3.2.3 CRUD). On branch `feature/reminders`.
 
+- Change password API (2026-08-21, sprint 3, WBS 3.4.3):
+  `POST /auth/change-password` — requires the **current password even with
+  a valid token** (an unlocked phone must not lock its owner out), applies
+  the register password rules, and on success **revokes every refresh
+  token then returns a fresh `AuthResult` for this device** — the person
+  who changed it stays signed in, every other device is out, same
+  session-ending contract as the reset flow. Social-only accounts (empty
+  hash) get a clear 400 — "set a password" belongs to a future
+  account-linking flow. No migration, no new module — one method in
+  AuthService reusing argon2 + `issueTokens`. Verified by
+  lint/build/test + a **13-case live smoke test** (two-device revocation
+  matrix incl. the caller's own old pair dying, wrong/same/short password,
+  social-only via a DB-forced empty hash).
+
+  **WBS 3.3 (care reminder) suspended the same day** — the rule is
+  defined nowhere and it is the most culturally sensitive feature in the
+  sprint; question + proposal recorded in `domain-model.md` → Open
+  Questions, section marked in `sprint-03.md`. The plumbing (3.2.2's
+  `ReminderService`) is ready the day the team decides.
+
 ### Sprint 2 — AI team
 
 - AI integration for screens 21-33 (2026-08-20, **merged to `main` in
