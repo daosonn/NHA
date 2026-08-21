@@ -566,7 +566,35 @@
     "noEmail": "—",
     "signOut": "Sign out",
     "language": "Language",
-    "languageTitle": "Choose a language"
+    "languageTitle": "Choose a language",
+    "password": {
+      "title": "Change password",
+      "row": "Requires your current one",
+      "subtitle": "Your current password is required, even though you are signed in.",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Change password",
+      "changed": "Password changed",
+      "signsOutOthers": "Your other devices will be signed out. This one stays signed in.",
+      "errors": {
+        "rejected": "That current password is not right. If you signed up with Google, this account has no password to change.",
+        "same": "Choose a password different from your current one."
+      }
+    },
+    "notifications": {
+      "title": "Notifications",
+      "row": "Choose what reaches you",
+      "newPosts": "New moments",
+      "newPostsBody": "When someone shares a moment with one of your families.",
+      "reminders": "Birthdays and occasions",
+      "remindersBody": "A week before, and again on the day.",
+      "aboutMe": "About you",
+      "aboutMeBody": "Comments and reactions on your moments, and being tagged in one.",
+      "mutedMeaning": "Turning a group off stops those notifications being created. You will not find them waiting here later.",
+      "saveFailed": "That did not save. Try again.",
+      "loadFailed": "Could not load your notification settings."
+    }
   },
   "date": {
     "dayMonth": "{{day}} {{month}}",

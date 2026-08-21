@@ -297,8 +297,8 @@ this app does with it.
 
 | Screen                  | State                                                                                                                                                                                                                                                                                                                                             |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sign in / Sign up       | **Wired.** The Google/Facebook buttons were removed on 2026-08-20 — the OAuth callback returns the token pair as JSON and an app cannot read it, so none of them could ever have had a handler. See `api-contract.md` § Requests from the app.                                                                                                    |
-| Home                    | **Wired** — families, the family feed, and the special-date widget (2026-08-19). Only the recommendations are still a fixture, and those have no endpoint at all.                                                                                                                                                                                 |
+| Sign in / Sign up       | **Wired**, Google included again since 2026-08-21: the callback redirects with the token pair in the fragment, which `app/auth/callback.tsx` reads. `SocialButtons` draws **nothing on native** — that path needs a deep-link scheme nobody has registered. Facebook waits on the Meta tester invite (1.1.9).                                     |
+| Home                    | **Wired** — families, the family feed, and the special-date widget (2026-08-19). The recommendation shelf has no endpoint and is derived on the client from this family's own posts and albums (2026-08-20), seeded by the day so it is stable while somebody looks at it. The strip is pinned and condenses on scroll (2026-08-21).              |
 | Create / join family    | **Wired** (`app/create-family.tsx`). 404 = unknown code, 409 = already a member.                                                                                                                                                                                                                                                                  |
 | Family tree             | **Wired**, including invitations and pinch/pan (2026-08-20). See § Family tree below.                                                                                                                                                                                                                                                             |
 | New moment              | **Wired** — pick media, upload, post, choose audience.                                                                                                                                                                                                                                                                                            |
@@ -308,6 +308,8 @@ this app does with it.
 | AI tab + Gift ideas     | **Wired by the AI team** (merged from `main`, PR #25) against the FastAPI service in `apps/ai`. Not reviewed by this side yet; several of those screens have no error state, which is the open half of task 1.2.4.                                                                                                                                |
 | Invitation page         | **Wired** (2026-08-19) — `GET /invitations/:code` unauthenticated, then `POST /invitations/:code/accept`. Signed out it offers registration instead and holds the code across the detour (`features/family/pending-invite.ts`).                                                                                                                   |
 | Verify / Forgot / Reset | **Wired** (2026-08-19) — request, verify, confirm. Verify's _sign-up_ half still has no endpoint and is unreachable: registration returns a token pair straight away.                                                                                                                                                                             |
+| Notifications           | **Wired** (2026-08-21) — `app/notifications.tsx`, cursor-paginated, tap marks read then navigates. The bell and its count live in the header of Home, Omoide, AI and other people's profiles. One gap is the server's: post notifications carry `actorUserId` and no name, so they read "somebody commented".                                     |
+| Settings                | **Mostly wired** (2026-08-21). Account card, language, sign out, plus **change password** (`app/settings/password.tsx`) and **notification toggles** (`app/settings/notifications.tsx`). Left: privacy (3.4.4, the API exists) and "leave this family" — the endpoint for that is `DELETE …/members/:memberId` on your own member.                |
 
 ### Family tree
 
@@ -809,12 +811,61 @@ before a reset are the same act to the person typing, so `intent` changes
 only where they land afterwards. Reset is three steps (email → code → new
 password) rather than an emailed link, because a link has to open
 somewhere and the role of `apps/web` is still undecided. The server grew
-those three steps in PR #12; the screens have not been connected to them
-yet.
+those three steps in PR #12 and the screens were connected to them on
+2026-08-19.
+
+**Google is web-only.** `components/auth/social-buttons.tsx` returns
+`null` unless `Platform.OS === 'web'`: the callback hands the token pair
+back through a URL fragment, which needs a registered deep-link scheme to
+reach a native build, and nobody has registered one. A button that opens a
+browser the app can never hear back from is worse than no button. A 409
+from the callback means the address already has a password account, and
+that comes back as `email_taken` — the sign-in screen says so rather than
+failing silently.
 
 The six OTP boxes are a drawing over one real input. Six separate fields
 would each need focus juggling and would break paste, autofill and the
 one-time-code suggestion strip.
+
+### Notifications, and saying something happened
+
+Two things that look alike and are not. **Notifications** are rows the
+server wrote (`app/notifications.tsx`, screen 19); **toasts** are this
+app's own confirmation that a tap did something
+(`components/ui/toast.tsx`).
+
+One list for two kinds of notification, because that is how the server
+stores them: somebody commenting is a `Notification` row and so is "her
+birthday is on Thursday". Reminders have no table of their own. Unread is
+a **row tint** rather than a dot — the whole row changes weight, which
+reads down a long list at a glance. Tapping marks read _and then_
+navigates, in that order, or coming back shows the row still lit; a row
+with nowhere to go is not pressable rather than pressable and inert.
+
+`NotificationBell` takes no props. It reads its own count and routes
+itself, so a screen adds it by writing it — that is why the four main tabs
+finally agree with each other. The count is its own small request on a
+one-minute timer: nothing pushes, the MVP has neither sockets nor push
+notifications, and pulling twenty rows behind the header of four screens
+to render a digit would be a lot of bytes.
+
+**No names on the post notifications.** `NEW_POST`, `COMMENT`,
+`REACTION` and `MEMBER_TAG` carry `actorUserId` and nothing else, and an
+id is not a name — resolving it would mean holding every family's tree in
+memory on the chance somebody from one of them commented. The reminders
+show how it should look: they snapshot `displayName` into the payload when
+the row is written. An `actorName` alongside `actorUserId` would let these
+read "Mai commented on your moment"; asked for in `project-status.md`.
+
+Toasts exist because the app used to complete a save in total silence: a
+memo, an album, a resent invitation all finished with no sign, and the
+only difference between "it worked" and "nothing happened when I pressed
+that" was whether the list underneath changed. For anything that does not
+visibly change the screen, that is no difference at all. One at a time,
+never a queue — if a second thing happens, the second thing is what
+matters. Failures get a toast too, but only the kind that means "try
+again"; anything somebody must act on belongs in the screen, next to the
+thing that needs acting on.
 
 ### AI
 

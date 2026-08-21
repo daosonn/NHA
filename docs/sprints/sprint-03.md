@@ -17,9 +17,9 @@ complete, the system passes end-to-end tests, and the MVP is demoed.
 ### 3.1 Thông báo — Notification
 
 - [x] 3.1.1 Notification DB/API (notification model) — done 2026-08-20, không cần migration (bảng có từ sprint 0); chi tiết: `api-contract.md`
-- [ ] 3.1.2 Notification UI (danh sách thông báo) — UI; `GET /me/notifications` sẵn (cursor, `?unreadOnly`)
-- [ ] 3.1.3 Read/Unread (update trạng thái) — UI; `PATCH /me/notifications/:id/read` + `POST .../read-all` sẵn
-- [ ] 3.1.4 Badge notification (hiện số chưa đọc) — UI; `GET /me/notifications/unread-count` sẵn, và `unreadCount` cũng nằm sẵn trong response danh sách
+- [x] 3.1.2 Notification UI (danh sách thông báo) — done 2026-08-21 (`app/notifications.tsx`, màn 19, cursor + unreadOnly)
+- [x] 3.1.3 Read/Unread (update trạng thái) — done 2026-08-21 (chạm để đọc rồi mới điều hướng; có "đánh dấu tất cả")
+- [x] 3.1.4 Badge notification (hiện số chưa đọc) — done 2026-08-21 (`NotificationBell` tự đọc số, có ở Home/Omoide/AI/profile người khác)
 
 ### 3.2 Nhắc ngày đặc biệt — Birthday/Event
 
@@ -48,21 +48,26 @@ thêm một rule là chạy.
 
 ### 3.4 Cài đặt Account — Account settings
 
-- [ ] 3.4.1 Sửa thông tin (update profile)
-- [ ] 3.4.2 Đổi avatar (upload avatar) — API done 2026-08-20 (`avatarMediaId`
-      trên profile PATCH, đọc qua `avatarKey`/`GET /media/:id`; chi tiết:
-      `api-contract.md` → Life Profiles); UI chưa nối
+- [x] 3.4.1 Sửa thông tin (update profile) — done 2026-08-21 (`app/profile/edit.tsx`, vào từ Profile và Life Profile)
+- [x] 3.4.2 Đổi avatar (upload avatar) — done 2026-08-21 (badge máy ảnh trên
+      avatar ở Profile; ảnh hiện ở feed, post detail, comment, cây gia phả,
+      member sheet, Settings). API done 2026-08-20 — chi tiết:
+      `api-contract.md` → Life Profiles
 - [ ] 3.4.3 Đổi password (update password) — API done 2026-08-21
       (`POST /auth/change-password`, trả cặp token mới cho thiết bị này,
-      thu hồi mọi thiết bị khác; chi tiết: `api-contract.md` → Auth);
-      UI chưa nối
+      thu hồi mọi thiết bị khác; chi tiết: `api-contract.md` → Auth).
+      **UI xong + đã nối 2026-08-21** (`app/settings/password.tsx`);
+      chưa tick vì chưa chạy thử live — API đang chạy bản trước merge nên
+      route còn trả 404, restart rồi thử là tick được
 - [ ] 3.4.4 Privacy settings (thiết lập quyền riêng tư) — API done
       2026-08-21 (`GET/PATCH /me/settings/privacy`, một flag
       `allowAiPhotoAnalysis` **có ép luật thật**: rút ảnh khỏi pending feed + xoá insight đã trích; chi tiết: `api-contract.md` → Settings);
       UI chưa nối. Ba mục còn lại của màn 20 cố ý chưa lưu — xem contract.
 - [ ] 3.4.5 Notification settings (bật/tắt nhắc) — API done 2026-08-21
       (`GET/PATCH /me/settings/notifications`, 3 nhóm toggle ép tại phễu
-      tạo notification; chi tiết: `api-contract.md` → Settings); UI chưa nối
+      tạo notification; chi tiết: `api-contract.md` → Settings).
+      **UI xong + đã nối 2026-08-21** (`app/settings/notifications.tsx`,
+      toggle lạc quan, rollback khi lỗi); chưa tick — cùng lý do 3.4.3
 
 ### 3.5 System Integration Test — Test end-to-end
 
