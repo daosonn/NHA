@@ -554,7 +554,35 @@
     "noEmail": "—",
     "signOut": "ログアウト",
     "language": "言語",
-    "languageTitle": "言語を選ぶ"
+    "languageTitle": "言語を選ぶ",
+    "password": {
+      "title": "パスワードの変更",
+      "row": "現在のパスワードが必要です",
+      "subtitle": "ログイン中でも、現在のパスワードの入力が必要です。",
+      "current": "現在のパスワード",
+      "new": "新しいパスワード",
+      "confirm": "新しいパスワード（確認）",
+      "submit": "パスワードを変更",
+      "changed": "パスワードを変更しました",
+      "signsOutOthers": "他の端末はログアウトされます。この端末はログインしたままです。",
+      "errors": {
+        "rejected": "現在のパスワードが違います。Googleで登録した場合、このアカウントには変更するパスワードがありません。",
+        "same": "現在のパスワードとは別のものにしてください。"
+      }
+    },
+    "notifications": {
+      "title": "通知",
+      "row": "受け取る通知を選ぶ",
+      "newPosts": "新しい思い出",
+      "newPostsBody": "家族の誰かが思い出を共有したとき。",
+      "reminders": "誕生日と記念日",
+      "remindersBody": "1週間前と当日にお知らせします。",
+      "aboutMe": "あなたに関すること",
+      "aboutMeBody": "あなたの思い出へのコメント・リアクション、タグ付けされたとき。",
+      "mutedMeaning": "オフにすると、その通知は作成されません。あとからここに残ることはありません。",
+      "saveFailed": "保存できませんでした。もう一度お試しください。",
+      "loadFailed": "通知設定を読み込めませんでした。"
+    }
   },
   "date": {
     "dayMonth": "{{month}}{{day}}日",

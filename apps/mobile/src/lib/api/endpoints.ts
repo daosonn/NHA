@@ -25,6 +25,9 @@ import type {
   VideoJob,
 } from './ai-types';
 import type {
+  ChangePasswordRequest,
+  NotificationSettings,
+  UpdateNotificationSettingsRequest,
   AddAlbumItemsRequest,
   AddMemberRequest,
   AlbumDetail,
@@ -113,6 +116,14 @@ export const auth = {
 
   logout: (body: RefreshTokenRequest) =>
     apiRequest<SuccessResult>('/auth/logout', { method: 'POST', body }),
+
+  /**
+   * `POST /auth/change-password` — answers a **fresh pair for this device**
+   * and revokes every other one, so the result must be stored exactly like a
+   * refresh: the tokens that made this call are dead by the time it returns.
+   */
+  changePassword: (body: ChangePasswordRequest) =>
+    apiRequest<AuthResult>('/auth/change-password', { method: 'POST', body }),
 
   /**
    * Step one of three. Unauthenticated — the whole point is that the person
@@ -605,4 +616,12 @@ export const lifeEvents = {
     apiRequest<SuccessResult>(`/families/${familyId}/members/${memberId}/life-events/${eventId}`, {
       method: 'DELETE',
     }),
+};
+
+/** Screen 20. Privacy (3.4.4) lives on the same controller, unwired so far. */
+export const settings = {
+  notifications: () => apiRequest<NotificationSettings>('/me/settings/notifications'),
+
+  updateNotifications: (body: UpdateNotificationSettingsRequest) =>
+    apiRequest<NotificationSettings>('/me/settings/notifications', { method: 'PATCH', body }),
 };

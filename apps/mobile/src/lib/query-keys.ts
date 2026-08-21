@@ -51,6 +51,12 @@ export const queryKeys = {
   notifications: () => ['me', 'notifications'] as const,
   unreadCount: () => ['me', 'notifications', 'unread'] as const,
   /**
+   * Deliberately **not** under `notifications`: muting a group changes
+   * which rows the server writes from now on, not which rows already exist,
+   * so invalidating the list from here would refetch for nothing.
+   */
+  notificationSettings: () => ['me', 'settings', 'notifications'] as const,
+  /**
    * Notes the viewer wrote about one member. Under `families` so leaving a
    * family drops them from the cache with everything else about it.
    */

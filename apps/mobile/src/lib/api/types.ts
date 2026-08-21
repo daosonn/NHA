@@ -742,3 +742,38 @@ export type UpdateMemoRequest = {
 export type SuccessResult = {
   success: boolean;
 };
+
+/**
+ * `POST /auth/change-password` (WBS 3.4.3).
+ *
+ * The current password is required even though the request is authenticated:
+ * an unlocked phone should not be enough to lock its owner out.
+ */
+export type ChangePasswordRequest = {
+  currentPassword: string;
+  newPassword: string;
+};
+
+/**
+ * `GET/PATCH /me/settings/notifications` (WBS 3.4.5).
+ *
+ * Grouped by *why* a notification arrived rather than one switch per type,
+ * because that is the question somebody muting them is actually answering.
+ * All default `true`, and the server applies the defaults on read, so a
+ * missing key never reaches here.
+ *
+ * Muting means the row is **never created** — it does not appear in the
+ * list, the badge never counts it, and turning the group back on does not
+ * resurrect what was missed.
+ */
+export type NotificationSettings = {
+  /** `NEW_POST` — a moment shared to one of my families. */
+  newPosts: boolean;
+  /** `COMMENT` / `REACTION` / `MEMBER_TAG` — things aimed at me. */
+  aboutMe: boolean;
+  /** `BIRTHDAY_REMINDER` / `EVENT_REMINDER` — the "bật/tắt nhắc" of 3.4.5. */
+  reminders: boolean;
+};
+
+/** Partial merge: omitted flags keep their stored value. */
+export type UpdateNotificationSettingsRequest = Partial<NotificationSettings>;
