@@ -27,6 +27,8 @@ export interface PostDetail {
   id: string;
   authorUserId: string;
   authorName: string;
+  /** Ảnh của người đăng (id Media) — thẻ bài hiện mặt thay chữ viết tắt */
+  authorAvatarKey: string | null;
   type: PostType;
   content: string | null;
   eventDate: Date | null;
@@ -63,7 +65,7 @@ interface PostRecord {
   place: string | null;
   createdAt: Date;
   updatedAt: Date;
-  author: { name: string };
+  author: { name: string; avatarKey: string | null };
   families: { familyId: string }[];
   memberTags: { memberId: string }[];
   media: PostMediaSummary[];
@@ -88,7 +90,7 @@ export class PostService {
    *  carries the viewer's own reaction. */
   private detailInclude(userId: string) {
     return {
-      author: { select: { name: true } },
+      author: { select: { name: true, avatarKey: true } },
       families: { select: { familyId: true } },
       memberTags: { select: { memberId: true } },
       media: {
@@ -474,6 +476,7 @@ export class PostService {
       id: post.id,
       authorUserId: post.authorUserId,
       authorName: post.author.name,
+      authorAvatarKey: post.author.avatarKey,
       type: post.type,
       content: post.content,
       eventDate: post.eventDate,

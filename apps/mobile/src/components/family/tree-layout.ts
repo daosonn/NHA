@@ -24,6 +24,8 @@ export type TreeMember = {
   state: NodeState;
   /** The signed-in user. Exactly one node per tree. */
   isViewer?: boolean;
+  /** Ảnh thật của người này (id Media) — không có thì node vẽ chữ cái đầu. */
+  avatarKey?: string | null;
 };
 
 export type TreeGeneration = {

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import type { GalleryGroup, MemberGallery } from '../../features/member/use-member-gallery';
-import { mediaSource } from '../../lib/media-source';
+import { thumbnailSource } from '../../lib/media-source';
 import { colors, radius } from '../../theme';
 import { EmptyState } from '../ui/empty-state';
 import { Text } from '../ui/text';
@@ -71,7 +71,7 @@ function MomentTile({
       }}
     >
       <Image
-        source={mediaSource(cover.id)}
+        source={thumbnailSource(cover.id, cover.mimeType)}
         recyclingKey={cover.id}
         contentFit="cover"
         transition={160}

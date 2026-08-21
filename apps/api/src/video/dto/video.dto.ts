@@ -3,6 +3,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsIn,
   IsNumber,
   IsOptional,
@@ -73,6 +74,16 @@ export class PlanSceneDto {
   @IsString()
   @MaxLength(160)
   reason?: string;
+
+  /**
+   * Giữ tiếng gốc của clip này hay không (màn 31 có nút loa cho từng cảnh).
+   * Mặc định GIỮ — tiếng thật của khoảnh khắc là một phần của nó, và nó đã
+   * được hạ xuống 20% khi trộn nên không át nhạc. Chỉ áp cho cảnh là clip;
+   * ảnh tĩnh vốn không có tiếng.
+   */
+  @IsOptional()
+  @IsBoolean()
+  keepAudio?: boolean;
 }
 
 /** Plan đã duyệt/sửa ở màn 31 — gửi kèm khi tạo job mode 'ai' */

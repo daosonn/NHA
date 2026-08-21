@@ -29,6 +29,7 @@ function toAudience(families: FamilySummary[]): AudienceGroup[] {
     id: family.id,
     name: family.name,
     memberCount: family.memberCount,
+    coverMediaId: family.coverMediaId,
   }));
 }
 

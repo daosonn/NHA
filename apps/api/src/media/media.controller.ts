@@ -20,6 +20,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
+import { createReadStream } from 'node:fs';
 import {
   CurrentUser,
   type AuthUser,
@@ -56,6 +57,26 @@ export class MediaController {
     @UploadedFile() file?: UploadedMediaFile,
   ): Promise<MediaSummary> {
     return this.mediaService.upload(user.userId, file);
+  }
+
+  @Get(':mediaId/poster')
+  @ApiOperation({
+    summary:
+      'Ảnh xem trước (khung đầu) của một video — thẻ bài đăng và lưới ảnh cần một tấm ảnh để vẽ',
+  })
+  async poster(
+    @CurrentUser() user: AuthUser,
+    @Param('mediaId', ParseUUIDPipe) mediaId: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const { path } = await this.mediaService.posterForViewer(
+      user.userId,
+      mediaId,
+    );
+    // Khung này không bao giờ đổi với một video đã tải lên
+    res.setHeader('Cache-Control', 'private, max-age=86400');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    return new StreamableFile(createReadStream(path), { type: 'image/jpeg' });
   }
 
   @Get(':mediaId')

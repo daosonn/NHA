@@ -33,6 +33,8 @@ export interface FamilySummary {
   inviteCode: string;
   createdAt: Date;
   memberCount: number;
+  /** Ảnh đại diện gia đình (id Media) — mặt cả nhà trong dải chuyển gia đình */
+  coverMediaId: string | null;
 }
 
 export interface FamilyDetail {
@@ -65,6 +67,8 @@ export interface TreeMemberSummary extends FamilyMemberSummary {
 export interface FamilyTree {
   id: string;
   name: string;
+  /** Ảnh cả nhà — id Media, stream qua `GET /media/:id` như mọi ảnh khác */
+  coverMediaId: string | null;
   members: TreeMemberSummary[];
   relationships: RelationshipSummary[];
 }
@@ -140,6 +144,7 @@ export class FamilyService {
         name: true,
         inviteCode: true,
         createdAt: true,
+        coverMediaId: true,
         _count: { select: { members: true } },
       },
     });
@@ -175,6 +180,7 @@ export class FamilyService {
       select: {
         id: true,
         name: true,
+        coverMediaId: true,
         members: { select: memberSelect, orderBy: { joinedAt: 'asc' } },
         relationships: {
           select: {

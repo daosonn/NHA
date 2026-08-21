@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { Film, Gift, Mail } from 'lucide-react-native';
 import { useState } from 'react';
@@ -16,8 +17,9 @@ import { IconBadge } from '../../src/components/ui/icon-badge';
 import { Text } from '../../src/components/ui/text';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { useOccasionLabel, useSpecialDates } from '../../src/features/ai/use-special-dates';
-import type { SpecialDateItem } from '../../src/lib/api';
+import { families, type SpecialDateItem } from '../../src/lib/api';
 import { formatDayMonth } from '../../src/lib/date';
+import { queryKeys } from '../../src/lib/query-keys';
 import { colors, radius, spacing } from '../../src/theme';
 
 /** Clears the bottom nav (56pt plus the home indicator). */
@@ -66,6 +68,12 @@ export default function AiScreen() {
   const router = useRouter();
   const { familyId } = useActiveFamily();
   const dates = useSpecialDates(familyId);
+  // Danh sách thành viên chỉ để lấy ảnh: mốc ngày chỉ mang id và tên người
+  const family = useQuery({
+    queryKey: queryKeys.family(familyId ?? 'none'),
+    queryFn: () => families.detail(familyId as string),
+    enabled: familyId !== null,
+  });
   const occasionLabel = useOccasionLabel();
   const [showAll, setShowAll] = useState(false);
 
@@ -147,7 +155,16 @@ export default function AiScreen() {
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <Avatar size={46} />
+              {/* Ảnh người của dịp này. `SpecialDateItem.members` chỉ mang id và
+                  tên, nên ảnh tra từ danh sách thành viên của gia đình. */}
+              <Avatar
+                size={46}
+                name={featuredMember.displayName}
+                mediaId={
+                  family.data?.members.find((m) => m.id === featuredMember.memberId)?.avatarKey ??
+                  null
+                }
+              />
               <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
                 <Text
                   variant="subtitle"

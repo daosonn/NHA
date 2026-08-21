@@ -47,7 +47,11 @@ function CommentRow({ comment }: { comment: CommentSummary }) {
         accessibilityLabel={t('post.openProfile', { name: comment.authorName })}
         hitSlop={6}
       >
-        <Avatar size={32} name={comment.authorName} mediaId={member?.avatarKey} />
+        <Avatar
+          size={32}
+          name={comment.authorName}
+          mediaId={comment.authorAvatarKey ?? member?.avatarKey}
+        />
       </Pressable>
 
       <View style={{ flex: 1, gap: 2 }}>
@@ -140,6 +144,9 @@ export default function PostDetailScreen() {
             <PostCard
               post={post}
               onAuthorPress={openAuthor}
+              onMediaPress={(m) =>
+                router.push({ pathname: '/media/[id]', params: { id: m.id, mime: m.mimeType } })
+              }
               authorAvatarId={author?.avatarKey}
               showStats={false}
             />

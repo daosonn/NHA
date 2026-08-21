@@ -132,6 +132,17 @@ export class StorageService {
     return this.resolvePath(storageKey);
   }
 
+  /**
+   * Nơi để ảnh xem trước của một video. Nằm dưới `posters/` chứ không cạnh
+   * file gốc: nó là thứ dựng lại được, xoá lúc nào cũng an toàn, và không được
+   * lẫn vào thư mục file người dùng tải lên.
+   */
+  posterPathFor(storageKey: string): string {
+    return this.resolvePath(
+      join('posters', `${storageKey.replace(/[\\/]/g, '_')}.jpg`),
+    );
+  }
+
   /** Best-effort removal of an upload temp file. */
   async discardTemp(path: string): Promise<void> {
     try {

@@ -72,6 +72,8 @@ type PlanJson = {
     durationS: number;
     caption: string;
     reason?: string;
+    /** Giữ tiếng gốc của clip (mặc định giữ) — nút loa từng cảnh ở màn 31 */
+    keepAudio?: boolean;
   }[];
 };
 
@@ -190,6 +192,9 @@ export class VideoService {
           durationS: Math.min(10, Math.max(2, s.durationS)),
           caption: s.caption.trim(),
           reason: s.reason?.trim() || undefined,
+          // Nút loa từng cảnh ở màn 31. Không mang theo thì lựa chọn của người
+          // dùng biến mất giữa đường và mọi clip đều giữ tiếng.
+          keepAudio: s.keepAudio,
         }));
       if (scenes.length === 0)
         throw new BadRequestException('Plan không còn cảnh hợp lệ');
@@ -558,6 +563,8 @@ export class VideoService {
     for (let i = 0; i < n; i++) {
       const s = plan.scenes[i];
       if (s.kind !== 'video') continue;
+      // Người dùng tắt tiếng cảnh này ở màn duyệt → không trích tiếng của nó
+      if (s.keepAudio === false) continue;
       const abs = this.storage.absolutePathOf(byId.get(s.mediaId)!.storageKey);
       const startS =
         (quick ? 0 : introDur) +

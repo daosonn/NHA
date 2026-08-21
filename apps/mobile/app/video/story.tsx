@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { ArrowDown, ArrowUp, Minus, PenLine, Plus, X } from 'lucide-react-native';
+import { ArrowDown, ArrowUp, Minus, PenLine, Plus, Volume2, VolumeX, X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
@@ -13,7 +13,7 @@ import { Text } from '../../src/components/ui/text';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { useVideoDraft } from '../../src/features/video/draft';
 import { useCreateAndRender } from '../../src/features/video/use-video';
-import { mediaSource } from '../../src/lib/media-source';
+import { thumbnailSource } from '../../src/lib/media-source';
 import { colors, radius, spacing } from '../../src/theme';
 import { useTypeface } from '../../src/theme/typeface';
 
@@ -212,7 +212,7 @@ export default function VideoStoryScreen() {
           <Card key={`${s.mediaId}_${i}`} padding={12} style={{ gap: 9 }}>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Image
-                source={mediaSource(s.mediaId)}
+                source={thumbnailSource(s.mediaId, isClip(s.mediaId) ? 'video/mp4' : 'image/jpeg')}
                 style={{
                   width: 62,
                   height: 62,
@@ -227,6 +227,46 @@ export default function VideoStoryScreen() {
                     {t('video.sceneN', { n: i + 1 })}
                   </Text>
                   <Chip label={isClip(s.mediaId) ? t('video.clipBadge') : t('video.photoBadge')} />
+
+                  {/* Chỉ clip mới có tiếng để giữ hay tắt. Tiếng gốc được hạ
+                      xuống 20% khi trộn nên nó nằm dưới nhạc, không át nhạc. */}
+                  {isClip(s.mediaId) && (
+                    <Pressable
+                      onPress={() => patchScene(i, { keepAudio: s.keepAudio === false })}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: s.keepAudio !== false }}
+                      accessibilityLabel={
+                        s.keepAudio === false ? t('video.clipAudioOn') : t('video.clipAudioOff')
+                      }
+                      hitSlop={8}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                        borderRadius: radius.full,
+                        borderWidth: 1,
+                        borderColor:
+                          s.keepAudio === false ? colors.state.borderDefault : colors.coral.border,
+                        backgroundColor:
+                          s.keepAudio === false ? colors.background.subtle : colors.coral.soft,
+                      }}
+                    >
+                      {s.keepAudio === false ? (
+                        <VolumeX size={13} color={colors.text.muted} strokeWidth={2.1} />
+                      ) : (
+                        <Volume2 size={13} color={colors.coral.deep} strokeWidth={2.1} />
+                      )}
+                      <Text
+                        variant="badge"
+                        weight="semibold"
+                        color={s.keepAudio === false ? colors.text.muted : colors.coral.deep}
+                      >
+                        {s.keepAudio === false ? t('video.clipMuted') : t('video.clipSound')}
+                      </Text>
+                    </Pressable>
+                  )}
                 </View>
                 {/* caption trong khung, có bút — "tap any line to rewrite" */}
                 <View

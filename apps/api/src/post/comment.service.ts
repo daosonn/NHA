@@ -13,6 +13,8 @@ export interface CommentSummary {
   postId: string;
   authorUserId: string;
   authorName: string;
+  /** Ảnh người viết (id Media) — hàng bình luận hiện mặt thay chữ viết tắt */
+  authorAvatarKey: string | null;
   content: string;
   /** Whether the requesting user may edit/delete — the client renders
    *  these instead of re-deriving the permission rule from authorUserId. */
@@ -31,7 +33,7 @@ export interface CommentList {
 const COMMENT_DEFAULT_LIMIT = 20;
 
 const commentInclude = {
-  author: { select: { name: true } },
+  author: { select: { name: true, avatarKey: true } },
 };
 
 interface CommentRecord {
@@ -41,7 +43,7 @@ interface CommentRecord {
   content: string;
   createdAt: Date;
   updatedAt: Date;
-  author: { name: string };
+  author: { name: string; avatarKey: string | null };
 }
 
 @Injectable()
@@ -150,6 +152,7 @@ export class CommentService {
       postId: comment.postId,
       authorUserId: comment.authorUserId,
       authorName: comment.author.name,
+      authorAvatarKey: comment.author.avatarKey,
       content: comment.content,
       canEdit: isAuthor,
       canDelete: isAuthor,

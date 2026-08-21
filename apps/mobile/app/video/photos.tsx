@@ -15,7 +15,7 @@ import { useSession } from '../../src/features/auth/session';
 import { useVideoDraft } from '../../src/features/video/draft';
 import { useVideoPhotos } from '../../src/features/video/use-video-photos';
 import { media } from '../../src/lib/api';
-import { mediaSource } from '../../src/lib/media-source';
+import { thumbnailSource } from '../../src/lib/media-source';
 import { colors, radius, spacing } from '../../src/theme';
 
 /**
@@ -229,8 +229,10 @@ export default function VideoPhotosScreen() {
                   overflow: 'hidden',
                 }}
               >
+                {/* A clip has no image of its own to draw: `thumbnailSource`
+                    asks for its poster frame instead, or the tile is blank. */}
                 <Image
-                  source={mediaSource(p.id)}
+                  source={thumbnailSource(p.id, p.mimeType)}
                   style={{ width: '100%', height: '100%' }}
                   contentFit="cover"
                 />

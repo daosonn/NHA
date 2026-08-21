@@ -38,8 +38,10 @@ export default function OmoideScreen() {
   const { days, total, contributors, isPending, isError, refetch, ...feed } =
     useFamilyPhotos(familyId);
 
+  // Chạm vào một ô ở đây là muốn XEM tấm đó, không phải đọc bài đăng của nó —
+  // đường vào bài vẫn còn ở dòng thời gian trên Home.
   const openMoment = (tile: PhotoTile) =>
-    router.push({ pathname: '/post/[id]', params: { id: tile.postId } });
+    router.push({ pathname: '/media/[id]', params: { id: tile.id, mime: tile.mimeType } });
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.page }}>

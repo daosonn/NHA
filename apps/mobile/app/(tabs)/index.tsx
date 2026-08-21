@@ -19,6 +19,7 @@ import { useFamilies } from '../../src/features/family/use-families';
 import { takePendingInvite } from '../../src/features/family/pending-invite';
 import { useMemberLookup } from '../../src/features/family/use-member-for-user';
 import { useFamilyFeed } from '../../src/features/feed/use-family-feed';
+import { useSetReaction } from '../../src/features/feed/use-post';
 import { useAlbums } from '../../src/features/album/use-albums';
 import { useSpecialDates } from '../../src/features/ai/use-special-dates';
 import { useRecommendations } from '../../src/features/home/use-recommendations';
@@ -31,10 +32,25 @@ const BOTTOM_INSET = 140;
 /** How many faces the strip draws before it collapses the rest into "+N". */
 const VISIBLE_GROUPS = 3;
 
+/**
+ * Một thẻ trên dòng thời gian, có trái tim bấm được.
+ *
+ * Là component riêng vì mỗi bài cần một `useSetReaction` của chính nó — hook
+ * không gọi được trong `renderItem` của FlatList.
+ */
+function FeedCard({
+  post,
+  ...rest
+}: { post: PostDetail } & Omit<React.ComponentProps<typeof PostCard>, 'post' | 'onToggleLike'>) {
+  const setReaction = useSetReaction(post.id);
+  return <PostCard post={post} onToggleLike={(type) => setReaction.mutate(type)} {...rest} />;
+}
+
 function toStripGroups(families: FamilySummary[]): FamilyGroupSummary[] {
   return families.slice(0, VISIBLE_GROUPS).map((family) => ({
     id: family.id,
     name: family.name,
+    coverMediaId: family.coverMediaId,
   }));
 }
 
@@ -235,11 +251,14 @@ export default function HomeScreen() {
           ) : null
         }
         renderItem={({ item }: { item: PostDetail }) => (
-          <PostCard
+          <FeedCard
             post={item}
             audienceLabel={audienceLabel(item)}
             onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
             onAuthorPress={openAuthor(item)}
+            onMediaPress={(m) =>
+              router.push({ pathname: '/media/[id]', params: { id: m.id, mime: m.mimeType } })
+            }
             authorAvatarId={memberFor(item.authorUserId)?.avatarKey}
           />
         )}

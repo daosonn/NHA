@@ -129,6 +129,8 @@ export type FamilySummary = {
   inviteCode: string;
   createdAt: IsoDateTime;
   memberCount: number;
+  /** Ảnh đại diện gia đình (id Media) — hiện trong dải chuyển gia đình */
+  coverMediaId: string | null;
 };
 
 /** `GET /api/families/:familyId` and `POST /api/families`. */
@@ -202,6 +204,8 @@ export type CreateRelationshipRequest = {
 export type FamilyTree = {
   id: string;
   name: string;
+  /** Ảnh cả nhà — id Media, xem qua `mediaSource()` như mọi ảnh khác */
+  coverMediaId: string | null;
   members: FamilyMemberSummary[];
   relationships: RelationshipSummary[];
 };
@@ -304,11 +308,12 @@ export type PostMediaSummary = {
   sizeBytes: number;
 };
 
-/** `PostService.PostDetail`. */
+/** `PostService.PostDetail`. `authorAvatarKey` = ảnh của người đăng (id Media). */
 export type PostDetail = {
   id: string;
   authorUserId: string;
   authorName: string;
+  authorAvatarKey: string | null;
   type: PostType;
   content: string | null;
   /** Only set for `EVENT`. */
@@ -391,6 +396,7 @@ export type CommentSummary = {
   postId: string;
   authorUserId: string;
   authorName: string;
+  authorAvatarKey: string | null;
   content: string;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;

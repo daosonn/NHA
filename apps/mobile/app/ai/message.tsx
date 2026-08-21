@@ -135,7 +135,7 @@ export default function MessageScreen() {
         <Card padding={8} style={{ gap: 0 }}>
           <SelectRow
             bare
-            leading={<Avatar size={38} />}
+            leading={<Avatar size={38} name={target?.displayName} mediaId={target?.avatarKey} />}
             title={t('ai.message.toName', { name: target?.displayName ?? '' })}
             subtitle={user?.name ? t('ai.message.fromName', { name: user.name }) : null}
             trailing={<ChevronDown size={16} color={colors.text.lightMuted} strokeWidth={2.2} />}

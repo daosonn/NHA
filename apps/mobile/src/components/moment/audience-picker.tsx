@@ -19,6 +19,8 @@ export type AudienceGroup = {
   /** `Family.name`. */
   name: string;
   memberCount: number;
+  /** `Family.coverMediaId` — ảnh đại diện gia đình, thay chữ viết tắt */
+  coverMediaId?: string | null;
 };
 
 export type AudiencePickerProps = {
@@ -60,10 +62,14 @@ export function AudiencePicker({ groups, selected, onToggle }: AudiencePickerPro
             style={{ width: ITEM_WIDTH, alignItems: 'center', gap: 8 }}
           >
             <View style={{ opacity: on ? 1 : 0.42 }}>
-              {/* Real photos will also want desaturating when off; the
-                  placeholder stripes are already grey, so opacity carries it
-                  for now. */}
-              <Avatar size={CIRCLE} name={group.name} ring={on ? RING_ON : RING_OFF} />
+              {/* Ảnh thật cũng chỉ mờ đi khi tắt — cùng cách với vòng tròn
+                  chữ viết tắt, nên không cần xử lý riêng. */}
+              <Avatar
+                size={CIRCLE}
+                name={group.name}
+                mediaId={group.coverMediaId}
+                ring={on ? RING_ON : RING_OFF}
+              />
 
               {on && (
                 <View

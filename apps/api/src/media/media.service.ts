@@ -1,4 +1,7 @@
 import type { ReadStream } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import {
   BadRequestException,
   Injectable,
@@ -7,6 +10,7 @@ import {
   UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma/prisma.service';
+import { FFMPEG } from '../video/engine/exec';
 import { PostService } from '../post/post.service';
 import { ProfileService } from '../profile/profile.service';
 import { StorageService } from '../storage/storage.service';
@@ -175,6 +179,57 @@ export class MediaService {
       ]),
     );
     return mediaIds.map((id) => byId.get(id)!);
+  }
+
+  /**
+   * Ảnh xem trước của một video, cho người được phép xem video đó.
+   *
+   * Vì sao cần: thẻ bài đăng, lưới Omoide và album đều vẽ media bằng thành
+   * phần ảnh — một file mp4 đưa vào đó chỉ ra ô trống. Khung đầu tiên được
+   * trích một lần rồi để lại trên đĩa, nên lần sau chỉ là đọc file.
+   *
+   * Quyền: đi qua đúng cái chốt của luồng stream (`assertViewableBatch`), nên
+   * không thể xem trước một video mà mình không được xem.
+   */
+  async posterForViewer(
+    userId: string,
+    mediaId: string,
+  ): Promise<{ path: string }> {
+    const [media] = await this.assertViewableBatch(userId, [mediaId]);
+    if (!media.mimeType.startsWith('video/')) {
+      throw new BadRequestException('Not a video');
+    }
+
+    const poster = this.storage.posterPathFor(media.storageKey);
+    if (!existsSync(poster)) {
+      mkdirSync(path.dirname(poster), { recursive: true });
+      const source = this.storage.absolutePathOf(media.storageKey);
+      // -ss 0.5: khung đúng số 0 của video quay bằng điện thoại thường là
+      // một khung xám lúc cảm biến chưa kịp phơi sáng.
+      execFileSync(
+        FFMPEG,
+        [
+          '-hide_banner',
+          '-loglevel',
+          'error',
+          '-y',
+          '-ss',
+          '0.5',
+          '-i',
+          source,
+          '-frames:v',
+          '1',
+          '-vf',
+          "scale='min(1080,iw)':-2",
+          '-q:v',
+          '4',
+          poster,
+        ],
+        { stdio: 'ignore' },
+      );
+      this.logger.log(`đã trích ảnh xem trước cho video ${mediaId}`);
+    }
+    return { path: poster };
   }
 
   /** Streams a media file (optionally a byte range) to an allowed viewer. */

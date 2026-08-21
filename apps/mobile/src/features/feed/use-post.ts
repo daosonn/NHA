@@ -50,17 +50,71 @@ export function useSetReaction(postId: string) {
         });
       }
 
-      return { previous };
+      // Thẻ trên dòng thời gian là CÙNG bài đó: trái tim bấm ở feed phải đổi
+      // ngay tại chỗ, nên vá luôn mọi trang feed đang có bài này.
+      const feeds = patchFeeds(queryClient, postId, (post) => {
+        const had = post.myReaction !== null;
+        const has = type !== null;
+        return {
+          ...post,
+          myReaction: type,
+          reactionCount: post.reactionCount + (has ? 1 : 0) - (had ? 1 : 0),
+        };
+      });
+
+      return { previous, feeds };
     },
 
     onError: (_error, _type, context) => {
       if (context?.previous !== undefined) queryClient.setQueryData(key, context.previous);
+      // Trả từng trang feed về đúng nội dung trước khi bấm
+      for (const [feedKey, data] of context?.feeds ?? []) {
+        queryClient.setQueryData(feedKey, data);
+      }
     },
 
     onSuccess: (state) => {
       queryClient.setQueryData<PostDetail>(key, (current) =>
         current === undefined ? current : { ...current, ...state },
       );
+      // Con số của server thắng phỏng đoán lạc quan
+      patchFeeds(queryClient, postId, (post) => ({ ...post, ...state }));
     },
   });
+}
+
+type FeedPage = { items: PostDetail[]; nextCursor: string | null };
+type FeedData = { pages: FeedPage[]; pageParams: unknown[] };
+
+/**
+ * Sửa một bài trong mọi trang của mọi feed đang nằm trong cache.
+ *
+ * Trả về ảnh chụp trước khi sửa để `onError` hoàn nguyên. Quét theo tiền tố
+ * khoá thay vì đòi `familyId`: cùng một bài có thể đang nằm trong feed của
+ * nhiều gia đình mà nút tim không cần biết điều đó.
+ */
+function patchFeeds(
+  queryClient: ReturnType<typeof useQueryClient>,
+  postId: string,
+  update: (post: PostDetail) => PostDetail,
+): [readonly unknown[], FeedData][] {
+  const snapshots: [readonly unknown[], FeedData][] = [];
+
+  const entries = queryClient.getQueriesData<FeedData>({
+    predicate: ({ queryKey }) => queryKey[0] === 'families' && queryKey[2] === 'posts',
+  });
+
+  for (const [queryKey, data] of entries) {
+    if (!data?.pages?.some((page) => page.items.some((p) => p.id === postId))) continue;
+    snapshots.push([queryKey, data]);
+    queryClient.setQueryData<FeedData>(queryKey, {
+      ...data,
+      pages: data.pages.map((page) => ({
+        ...page,
+        items: page.items.map((p) => (p.id === postId ? update(p) : p)),
+      })),
+    });
+  }
+
+  return snapshots;
 }

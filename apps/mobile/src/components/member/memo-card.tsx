@@ -1,8 +1,10 @@
+import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
-import { Pressable, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { MemoDetail } from '../../lib/api';
 import { relativeTime } from '../../lib/date';
+import { thumbnailSource } from '../../lib/media-source';
 import { colors, elevation, radius } from '../../theme';
 import { Chip } from '../ui/chip';
 import { PhotoPlaceholder } from '../ui/photo-placeholder';
@@ -60,6 +62,11 @@ export function categoryLabel(t: (key: string) => string, category: string | nul
 
 export type MemoCardProps = {
   memo: MemoDetail;
+  /**
+   * Ghi chú này viết về ai — chỉ cần trên hồ sơ của chính bạn, nơi sổ tay gộp
+   * ghi chú về nhiều người. Ở hồ sơ một người thì cả trang đã nói về họ rồi.
+   */
+  aboutLabel?: string | null;
   onPress?: () => void;
   onLongPress?: () => void;
 };
@@ -72,7 +79,7 @@ export type MemoCardProps = {
  * keeps the same order whether or not the photo is there, so a column of mixed
  * cards still reads down the category chips.
  */
-export function MemoCard({ memo, onPress, onLongPress }: MemoCardProps) {
+export function MemoCard({ memo, aboutLabel, onPress, onLongPress }: MemoCardProps) {
   const { t } = useTranslation();
 
   const cover = memo.media[0];
@@ -96,10 +103,26 @@ export function MemoCard({ memo, onPress, onLongPress }: MemoCardProps) {
         elevation.card,
       ]}
     >
-      {/* Striped stand-in until media is fetched by id with the auth header —
-          `GET /media/:id` needs one, so an `<Image src>` cannot reach it. */}
+      {/* Ảnh thật: `GET /media/:id` cần bearer nên đi qua `thumbnailSource`,
+          cùng đường mà dòng thời gian và album dùng. Vệt sọc nằm dưới làm nền
+          trong lúc ảnh đang giải mã. */}
       {cover !== undefined && (
-        <PhotoPlaceholder period={12} style={{ height: 88, borderRadius: radius.md }} />
+        <View style={{ height: 88, borderRadius: radius.md, overflow: 'hidden' }}>
+          <PhotoPlaceholder period={12} style={StyleSheet.absoluteFill} />
+          <Image
+            source={thumbnailSource(cover.id, cover.mimeType)}
+            recyclingKey={cover.id}
+            style={{ width: '100%', height: '100%' }}
+            contentFit="cover"
+            transition={140}
+          />
+        </View>
+      )}
+
+      {aboutLabel !== undefined && aboutLabel !== null && aboutLabel !== '' && (
+        <Text variant="caption" weight="semibold" color={colors.coral.deep}>
+          {aboutLabel}
+        </Text>
       )}
 
       {chip.label !== null && (

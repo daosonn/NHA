@@ -1,4 +1,9 @@
 {
+  "media": {
+    "mute": "音を消す",
+    "unmute": "音を出す",
+    "mutedHint": "音が消えています"
+  },
   "common": {
     "close": "閉じる",
     "back": "戻る",
@@ -313,6 +318,11 @@
     "memoEmptyBody": "{{name}}さんについて覚えておきたいこと — アレルギー、贈り物のヒント、聞いてみたい話。あなただけが見られます。",
     "memoEmptyAction": "メモを書く",
     "memoPrivate": "あなただけのメモです。{{name}}さんには表示されません。",
+    "memoOwnHeading": "あなたのメモ",
+    "memoGroupCount": "{{count}}件",
+    "memoFilterAll": "全員",
+    "memoOwnPrivate": "家族についてのメモ。書いた本人にしか表示されません。",
+    "memoOwnEmptyBody": "家族のプロフィールを開いて、覚えておきたいことを書いておけます — アレルギー、贈り物のヒント、聞いてみたい話。",
     "memoCategories": {
       "hobbies": "好きなもの",
       "health": "健康",
@@ -636,6 +646,8 @@
     "title": "思い出",
     "openLabel": "{{name}}さんの投稿を開く",
     "openProfile": "{{name}}さんのプロフィールを開く",
+    "openPhoto": "写真を大きく見る",
+    "openClip": "動画を再生する",
     "private": "非公開",
     "comments_other": "コメント {{count}}件",
     "noComments": "まだコメントはありません。",
@@ -713,6 +725,10 @@
     "photosTitle": "写真とクリップ",
     "chooseForMe": "おまかせで選ぶ",
     "clipBadge": "クリップ",
+    "clipSound": "音あり",
+    "clipMuted": "音なし",
+    "clipAudioOn": "このクリップの音を使う",
+    "clipAudioOff": "このクリップの音を消す",
     "orderHint": "数字は登場する順番です。もう一度タップで解除。",
     "chosenSummary_one": "{{count}}枚をこの順で",
     "chosenSummary_other": "{{count}}枚をこの順で",

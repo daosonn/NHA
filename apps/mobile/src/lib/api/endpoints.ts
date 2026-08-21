@@ -318,6 +318,9 @@ export const media = {
    * authenticated and supports Range requests.
    */
   streamUrl: (mediaId: string) => `${apiBaseUrl()}/media/${mediaId}`,
+
+  /** Ảnh xem trước của một video — thẻ bài đăng và lưới ảnh vẽ tấm này. */
+  posterUrl: (mediaId: string) => `${apiBaseUrl()}/media/${mediaId}/poster`,
 };
 
 export const comments = {
