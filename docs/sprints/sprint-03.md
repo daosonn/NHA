@@ -24,7 +24,9 @@ complete, the system passes end-to-end tests, and the MVP is demoed.
 ### 3.2 Nhắc ngày đặc biệt — Birthday/Event
 
 - [ ] 3.2.1 Lấy birthday/event (query DB — LifeProfile.birthDate, Event)
-- [ ] 3.2.2 Tạo reminder (tự động tạo notification)
+- [x] 3.2.2 Tạo reminder (tự động tạo notification) — done 2026-08-20:
+      job server 2 lần/ngày, nhắc trước 7 ngày + đúng ngày, idempotent
+      (chi tiết: `api-contract.md` → Notifications → Reminders)
 - [ ] 3.2.3 CRUD `SpecialDate` (kỷ niệm / dịp tùy chỉnh + nhắc; added 2026-08-14, see `database.md`) — API done 2026-08-20 (POST/PATCH/DELETE + `GET .../custom`; chi tiết: `api-contract.md`); UI + phần "nhắc" (3.2.2) chưa làm
 
 ### 3.3 Nhắc quan tâm — Care reminder

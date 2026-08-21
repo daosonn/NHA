@@ -655,6 +655,31 @@ dev` **did not regenerate the client**, and the stale client survived
   linked-profile 403, EditHistory in the DB). FE work remaining: upload
   button + reading the field. On branch `feature/avatar-api`.
 
+- Reminder generator (2026-08-20, sprint 3, WBS 3.2.2): a twice-daily
+  in-process job (`ReminderService`, plain `setInterval` + startup run —
+  a cron package is not worth "twice a day") that turns LifeProfile
+  birth/death dates and SpecialDate rows into Notification rows via the
+  `createMany` the notification module exported for exactly this.
+  **No migration, no dependency, no new route.** Lead times **7 days and
+  day-of** — an assumption to confirm, nothing was written down; per-user
+  tuning belongs to 3.4.5. Rules enforced and verified: nobody is
+  reminded of **their own** birthday; a deceased member gets memorial
+  reminders only; custom occasions notify the whole family including the
+  people they are about; one reminder per person per occurrence per lead
+  even across shared families. Idempotent by a `dedupeKey` in the payload
+  (occasion + occurrence + lead) checked against the last 9 days — the
+  same restart-safety contract as everything else, and the reason the
+  smoke test could simply restart the API twice. Payloads carry ids +
+  data snapshots (name, custom title), never composed sentences. Same
+  calendar rules as the widgets (UTC days, Feb 29 → Mar 1) — the JST
+  question applies here too. Known limit, same as the video renderer:
+  check-then-insert means two instances could double-create; fine
+  single-instance, noted for the scale-out day. Verified by
+  lint/build/test + a **12-case staged smoke test** (seed → restart →
+  assert → restart → assert-no-duplicates), counts exact per recipient.
+  Group 3.2 backend is now **fully closed** (3.2.1 widget GET, 3.2.2
+  reminders, 3.2.3 CRUD). On branch `feature/reminders`.
+
 ### Sprint 2 — AI team
 
 - AI integration for screens 21-33 (2026-08-20, **merged to `main` in
