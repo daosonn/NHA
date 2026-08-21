@@ -60,6 +60,15 @@ screens.
   destination), and a centred, shrunken Welcome card (the coral header is
   meant to _stretch_, not float).
 
+  A third was reverted the same day too, and this one is worth naming:
+  **the bottom bar's labels were removed and then put back**. "The icons
+  carry it" was borrowed from apps whose icons everybody already knows, and
+  was never checked against _these_ icons — a clock for 思い出 and a sparkle
+  for the AI tab carry nothing. The `design-system.md` spec had labels all
+  along, so dropping them was a silent deviation from it, which is how it
+  went unnoticed. The bar also grew from 58 to 68px and floats 20px up
+  rather than 10.
+
 - **Frontend state re-verified against the code (2026-08-20).** Everything
   the server offers is now wired: auth including password reset, Home
   (families, feed, and the special-date widget), create-or-join family, the
@@ -214,6 +223,14 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   avatar is as visible as the person. The app wired it 2026-08-21: a camera
   badge on your own face, and the picture drawn everywhere a person appears
   (`architecture.md` § Avatars).
+
+- **Nobody can moderate a comment (2026-08-21).** `PATCH` and `DELETE` on
+  a comment are author-only, so a post's author cannot remove a comment left
+  on their own moment, and there is no hide, no report and no block. For a
+  family album that is probably the right default — but it means the only
+  remedy for something upsetting is asking the person who wrote it. Worth a
+  product call before release rather than after. The app now offers edit and
+  delete on your own comments and nothing else, because nothing else exists.
 
 - **Removing a member has no admin and no floor (2026-08-21).** Read while
   wiring the delete UI, not a bug report — the rule may well be deliberate,

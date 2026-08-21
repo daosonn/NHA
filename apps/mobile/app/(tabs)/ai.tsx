@@ -23,7 +23,7 @@ import { queryKeys } from '../../src/lib/query-keys';
 import { colors, radius, spacing } from '../../src/theme';
 
 /** Clears the bottom nav (56pt plus the home indicator). */
-const BOTTOM_INSET = 120;
+const BOTTOM_INSET = 140;
 
 /** Icon-tile colours of the MAKE SOMETHING rows — straight from the mockup. */
 const MAKE_TILES = {

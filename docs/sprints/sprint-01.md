@@ -141,7 +141,10 @@ build the family tree, post content with photos, and view member profiles.
       chỉ tác giả comment sửa/xóa — quyền xóa của chủ post là product
       call chưa quyết). **UI done 2026-08-18**: `app/post/[id].tsx`, thread
       cũ-trước (ngược với feed, do server quyết), phân trang cursor, viết
-      comment mới. Sửa/xóa comment chưa có UI.
+      comment mới. **Sửa/xóa comment done 2026-08-21**: nút ⋯ chỉ hiện trên
+      comment của chính mình, sheet Edit/Delete, sửa dùng lại ô soạn ở dưới,
+      xóa xác nhận ngay trong sheet. Ẩn/gỡ comment người khác vẫn chưa có —
+      server chưa cho chủ post quyền đó.
 - [x] 1.5.7 Reaction bài đăng (đa dạng loại — added 2026-08-14, see
       `database.md`) — API done 2026-08-18: `PUT/DELETE
 /api/posts/:postId/reactions/me` (upsert 1 reaction/người/bài,

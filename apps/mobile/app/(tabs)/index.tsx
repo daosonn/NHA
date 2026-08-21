@@ -27,7 +27,7 @@ import type { FamilySummary, PostDetail } from '../../src/lib/api';
 import { colors, spacing } from '../../src/theme';
 
 /** Room for the bottom nav plus the home indicator. */
-const BOTTOM_INSET = 140;
+const BOTTOM_INSET = 160;
 
 /** How many faces the strip draws before it collapses the rest into "+N". */
 const VISIBLE_GROUPS = 3;
