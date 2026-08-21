@@ -579,6 +579,33 @@ for now — it buys ~1s over ~10s at the price of reconnect logic today
 and Redis the day there are two API instances; revisit only if chat or
 another genuinely two-way feature arrives.
 
+### Settings — `apps/api/src/settings/` (WBS 3.4.4, added 2026-08-21)
+
+| Route                        | Returns           |
+| ---------------------------- | ----------------- |
+| `GET /me/settings/privacy`   | `PrivacySettings` |
+| `PATCH /me/settings/privacy` | `PrivacySettings` |
+
+`PrivacySettings` is `{ allowAiPhotoAnalysis: boolean }` — defaults
+applied on read, so the app never sees a missing key. PATCH is a partial
+merge; unknown stored keys survive, so an old client cannot wipe a future
+flag.
+
+**`allowAiPhotoAnalysis`** (default `true`) is screen 20's "AI
+permissions", and it is **enforced, not decorative**: turning it off
+(1) removes the user's photos from the phase-1 pending feed — the only
+door photos leave through for the AI service — including photos uploaded
+later, and (2) **deletes every insight already extracted** from their
+photos (opting out withdraws the traces, the same principle as insights
+cascade-deleting with a deleted photo). Turning it back on re-queues
+their photos for analysis; the deleted insights do not resurrect.
+
+The other three screen-20 privacy items are **deliberately not stored
+yet**: the personal archive is already private, the sharing scope is
+chosen per post in the composer, and profile visibility has no product
+definition — a stored toggle the server does not enforce would be a lie
+the UI tells. Notification settings (3.4.5) will join this controller.
+
 ### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side; CRUD = WBS 3.2.3, added 2026-08-20)
 
 | Route                                                     | Returns                |

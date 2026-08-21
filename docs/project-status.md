@@ -700,6 +700,31 @@ dev` **did not regenerate the client**, and the stale client survived
   Questions, section marked in `sprint-03.md`. The plumbing (3.2.2's
   `ReminderService`) is ready the day the team decides.
 
+- Privacy settings API (2026-08-21, sprint 3, WBS 3.4.4):
+  `GET/PATCH /me/settings/privacy` on a new `settings/` module (3.4.5
+  will join it). **One flag, fully enforced**: `allowAiPhotoAnalysis`
+  (default true, screen 20's "AI permissions") — turning it off removes
+  the user's photos from the phase-1 pending feed at the only door photos
+  leave through (`InsightService.listPending`), covers photos uploaded
+  later, and **deletes every insight already extracted** from their
+  photos; opting back in re-queues them, deleted insights stay deleted.
+  This gives the recorded customer concern ("family photos leave the
+  server for the Claude API — Japanese market, privacy-sensitive",
+  `03-ai/architecture.md`) a real per-user answer. Stored as a partial
+  object in the sprint-0 `User.privacySettings` Json column — defaults
+  applied on read, **unknown keys preserved on write** so future flags
+  survive old clients. The other three screen-20 items (sharing scope,
+  profile visibility, archive access) are **deliberately not stored**: the
+  archive is already private, the scope is chosen per post, visibility has
+  no product definition — an unenforced privacy toggle is a lie the UI
+  tells; recorded in the contract so nobody "completes" them as dumb
+  storage. No migration. Verified by lint/build/test + a **14-case live
+  smoke test** (default, opt-out pulls pending + deletes traces incl. a
+  pre-existing insight checked in the DB, new uploads stay excluded,
+  opt-in re-queues without resurrecting, unknown-key survival, non-boolean
+  400). On branch `feature/privacy-settings` (stacked on
+  `feature/change-password`).
+
 ### Sprint 2 — AI team
 
 - AI integration for screens 21-33 (2026-08-20, **merged to `main` in

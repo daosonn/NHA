@@ -111,7 +111,11 @@ Two consequences stated plainly:
   note is superseded for photos by this team decision (2026-08-19).
 - In phase 1 **family photos leave the server for the Claude API**. That
   is inherent to vision analysis and should be confirmed with the
-  customer (Japanese market, privacy-sensitive).
+  customer (Japanese market, privacy-sensitive). **Per-user opt-out
+  shipped 2026-08-21** (WBS 3.4.4, `allowAiPhotoAnalysis`): an opted-out
+  user's photos never enter the pending feed and their existing insights
+  are deleted — so the AI team's poller can rely on the feed already
+  being consent-filtered, and must not cache media lists across polls.
 
 ## FastAPI contract (what the AI team implements)
 
