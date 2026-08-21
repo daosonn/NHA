@@ -93,6 +93,7 @@ export function treeFromGraph(tree: FamilyTree, options: TreeFromGraphOptions): 
       tone: row.length % 2 === 0 ? 'light' : 'dark',
       state: pendingMemberIds?.has(member.id) === true ? 'pending' : 'active',
       isViewer: member.id === viewerMemberId ? true : undefined,
+      avatarKey: member.avatarKey,
     });
 
     byDepth.set(depth, row);

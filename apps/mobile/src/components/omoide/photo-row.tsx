@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import type { PhotoTile } from '../../features/omoide/use-family-photos';
-import { mediaSource } from '../../lib/media-source';
+import { thumbnailSource } from '../../lib/media-source';
 import { colors, radius } from '../../theme';
 
 /** Mockup 10b: four across, hairline gaps, barely-rounded corners. */
@@ -39,7 +39,7 @@ export function PhotoRow({ tiles, onPress }: PhotoRowProps) {
           style={{ flex: 1, aspectRatio: 1 }}
         >
           <Image
-            source={mediaSource(tile.id)}
+            source={thumbnailSource(tile.id, tile.mimeType)}
             style={{
               width: '100%',
               height: '100%',

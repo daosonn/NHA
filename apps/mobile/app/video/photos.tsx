@@ -15,7 +15,7 @@ import { useSession } from '../../src/features/auth/session';
 import { useVideoDraft } from '../../src/features/video/draft';
 import { useVideoPhotos } from '../../src/features/video/use-video-photos';
 import { media } from '../../src/lib/api';
-import { mediaSource } from '../../src/lib/media-source';
+import { thumbnailSource } from '../../src/lib/media-source';
 import { colors, radius, spacing } from '../../src/theme';
 
 /**
@@ -183,7 +183,7 @@ export default function VideoPhotosScreen() {
                 accessibilityState={{ selected }}
                 style={{ width: '23.5%', aspectRatio: 1, borderRadius: radius.lg, overflow: 'hidden' }}
               >
-                <Image source={mediaSource(p.id)} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                <Image source={thumbnailSource(p.id, p.mimeType)} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                 {p.mimeType.startsWith('video/') && (
                   <View
                     style={{

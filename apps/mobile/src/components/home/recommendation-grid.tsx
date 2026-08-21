@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -35,7 +36,12 @@ function Tile({ item, height, scrimHeight, onPress, children }: TileProps) {
         overflow: 'hidden',
       }}
     >
+      {/* Placeholder nằm dưới cùng: nó là thứ người dùng thấy trong lúc ảnh
+          giải mã, và là thứ còn lại nếu banner thiếu. */}
       <PhotoPlaceholder tone={item.tone} style={StyleSheet.absoluteFill} />
+      {item.image !== undefined && (
+        <Image source={item.image} style={StyleSheet.absoluteFill} contentFit="cover" />
+      )}
       <LinearGradient
         colors={SCRIM}
         style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: scrimHeight }}

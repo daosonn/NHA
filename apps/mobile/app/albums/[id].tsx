@@ -21,7 +21,7 @@ import {
   useUpdateAlbum,
 } from '../../src/features/album/use-albums';
 import { ApiError, type AlbumItemDetail } from '../../src/lib/api';
-import { mediaSource } from '../../src/lib/media-source';
+import { mediaSource, thumbnailSource } from '../../src/lib/media-source';
 import { colors, elevation, radius, spacing } from '../../src/theme';
 
 const COLUMNS = 3;
@@ -296,7 +296,7 @@ export default function AlbumScreen() {
                 style={{ width: CELL }}
               >
                 <Image
-                  source={mediaSource(item.mediaId)}
+                  source={thumbnailSource(item.mediaId, item.mimeType)}
                   recyclingKey={item.mediaId}
                   contentFit="cover"
                   transition={140}

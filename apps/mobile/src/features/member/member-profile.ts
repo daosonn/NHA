@@ -50,6 +50,8 @@ export type MemberProfile = {
   /** The family being looked through. Null when none is active. */
   familyName: string | null;
   tone: 'light' | 'dark';
+  /** Ảnh của người này (id Media) — hàng thành viên trước, rồi hồ sơ */
+  avatarKey: string | null;
   bio: string | null;
   birthDate: string | null;
   deathDate: string | null;
@@ -85,6 +87,7 @@ export function toMemberProfile(input: MemberProfileInput): MemberProfile {
     relationKey,
     familyName,
     tone: toneFor(member?.id ?? null),
+    avatarKey: member?.avatarKey ?? detail?.avatarKey ?? null,
     bio: detail?.bio ?? null,
     birthDate: detail?.birthDate ?? null,
     deathDate: detail?.deathDate ?? null,

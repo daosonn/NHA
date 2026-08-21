@@ -24,6 +24,22 @@ export function useMemberMemos(familyId: string | null, memberId: string | null)
   });
 }
 
+/**
+ * Mọi ghi chú bạn từng viết, về bất kỳ ai.
+ *
+ * Dùng cho tab メモ trên hồ sơ CỦA CHÍNH BẠN. Ở đó danh sách "ghi chú về người
+ * này" luôn rỗng — không ai viết ghi chú về bản thân — nên trước đây tab ấy chỉ
+ * hiện trạng thái trống dù sổ tay có cả chục cái. Hồ sơ của bạn là nơi hợp lý
+ * để thấy toàn bộ sổ, kể cả ghi chú về người đã rời gia đình.
+ */
+export function useMyMemos(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.myMemos(),
+    queryFn: () => memos.mine(),
+    enabled,
+  });
+}
+
 /** One note by id. Works for an orphaned note, whose member route is gone. */
 export function useMemo(memoId: string | null) {
   return useQuery({

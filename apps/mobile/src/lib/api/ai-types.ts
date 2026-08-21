@@ -165,7 +165,14 @@ export type StoryboardRequest = {
   locale?: 'en' | 'ja' | 'vi';
 };
 
-export type VideoPlanScene = { mediaId: string; durationS: number; caption: string; reason?: string };
+export type VideoPlanScene = {
+  mediaId: string;
+  durationS: number;
+  caption: string;
+  reason?: string;
+  /** Giữ tiếng gốc của clip. Bỏ trống = giữ (tiếng đã hạ 20% khi trộn với nhạc). */
+  keepAudio?: boolean;
+};
 
 export type VideoPlan = {
   title: string;

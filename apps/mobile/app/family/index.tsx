@@ -42,6 +42,7 @@ function toStripGroups(families: FamilySummary[]): FamilyGroupSummary[] {
   return families.map((family) => ({
     id: family.id,
     name: family.name,
+    coverMediaId: family.coverMediaId,
   }));
 }
 
@@ -203,6 +204,9 @@ export default function FamilyTreeScreen() {
           />
         ) : (
           <>
+            {/* Ảnh cả nhà KHÔNG vẽ ở đây: nó là ảnh đại diện của gia đình, nên
+                chỗ của nó là vòng tròn trong dải chuyển gia đình phía trên
+                (thay chữ viết tắt), không phải một tấm bìa riêng. */}
             <SectionHeader title={tree.name} subtitle={subtitle} size="lg" />
 
             <View className="flex-1">

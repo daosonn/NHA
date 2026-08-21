@@ -31,6 +31,23 @@ let cachedToken: string | null = null;
  * header of its own.
  */
 export function mediaSource(mediaId: string): ImageSource {
+  return build(mediaId, media.streamUrl(mediaId));
+}
+
+/**
+ * Ảnh để VẼ cho một media, dù nó là ảnh hay video.
+ *
+ * Một file mp4 đưa vào thành phần ảnh chỉ ra ô trống, nên video lấy ảnh xem
+ * trước (`GET /media/:id/poster` — server trích khung đầu và giữ lại). Chỗ nào
+ * cần chính file gốc để phát thì vẫn gọi `mediaSource`.
+ */
+export function thumbnailSource(mediaId: string, mimeType: string): ImageSource {
+  return mimeType.startsWith('video/')
+    ? build(`poster:${mediaId}`, media.posterUrl(mediaId))
+    : mediaSource(mediaId);
+}
+
+function build(cacheKey: string, uri: string): ImageSource {
   const token = apiAccessToken();
 
   if (token !== cachedToken) {
@@ -38,14 +55,14 @@ export function mediaSource(mediaId: string): ImageSource {
     cachedToken = token;
   }
 
-  const cached = cache.get(mediaId);
+  const cached = cache.get(cacheKey);
   if (cached !== undefined) return cached;
 
   const source: ImageSource = {
-    uri: media.streamUrl(mediaId),
+    uri,
     headers: token === null ? undefined : { Authorization: `Bearer ${token}` },
   };
 
-  cache.set(mediaId, source);
+  cache.set(cacheKey, source);
   return source;
 }

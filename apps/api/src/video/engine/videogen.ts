@@ -1005,6 +1005,16 @@ export function extraTailFor(joinAfter: Join | undefined): number {
 /** Tiếng nói trong clip gốc, đặt đúng vị trí timeline — nhạc sẽ tự nhỏ xuống dưới nó */
 export type VoiceTrack = { file: string; startS: number };
 
+/**
+ * Tiếng gốc của clip chỉ còn 20% âm lượng.
+ *
+ * Ở mức 100% nó át hẳn nhạc: clip điện thoại quay ngoài trời phần lớn là gió và
+ * tiếng đám đông, to hơn nhiều so với một bản nhạc nền. 20% đủ để nghe ra
+ * "đây là tiếng thật của khoảnh khắc" mà không giành chỗ của nhạc — và nhạc vẫn
+ * cúi xuống dưới nó nhờ sidechaincompress, nên câu nói vẫn nổi lên.
+ */
+const CLIP_AUDIO_GAIN = 0.2;
+
 async function concatMemories(opts: {
   /** durationS = thời lượng TRÊN TIMELINE (đã quantize nhịp); file thật dài hơn extraTailFor(join sau) */
   segs: { file: string; durationS: number }[];
@@ -1095,7 +1105,7 @@ async function concatMemories(opts: {
     voices.forEach((v, k) => {
       const delayMs = Math.max(0, Math.round(v.startS * 1000));
       audioParts.push(
-        `[${firstVoiceIdx + k}:a]aresample=44100,adelay=${delayMs}|${delayMs},apad[vc${k}]`,
+        `[${firstVoiceIdx + k}:a]aresample=44100,volume=${CLIP_AUDIO_GAIN},adelay=${delayMs}|${delayMs},apad[vc${k}]`,
       );
     });
     const vAll = voices.map((_, k) => `[vc${k}]`).join('');
@@ -1109,9 +1119,11 @@ async function concatMemories(opts: {
       audioParts.push(
         `[${musicIdx}:a]aresample=44100,volume=1.0,afade=t=in:st=0:d=0.8,afade=t=out:st=${Math.max(0, totalDur - 2.5).toFixed(2)}:d=2.5[mus]`,
       );
-      // nhạc cúi xuống dưới tiếng nói: threshold thấp + ratio mạnh + release dài cho tự nhiên
+      // Nhạc cúi xuống dưới tiếng nói: threshold thấp + ratio mạnh + release dài
+      // cho tự nhiên. Ngưỡng phải theo mức tiếng clip ĐÃ GIẢM (0.2), nếu giữ
+      // 0.03 như khi tiếng còn 100% thì gần như không bao giờ chạm ngưỡng nữa.
       audioParts.push(
-        `[mus][voiceKey]sidechaincompress=threshold=0.03:ratio=12:attack=80:release=600[duck]`,
+        `[mus][voiceKey]sidechaincompress=threshold=${(0.03 * CLIP_AUDIO_GAIN).toFixed(4)}:ratio=12:attack=80:release=600[duck]`,
       );
       audioParts.push(`[duck][voiceMix]amix=inputs=2:normalize=0[aout]`);
     } else {

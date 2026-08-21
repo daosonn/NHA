@@ -1,6 +1,8 @@
+import { Image } from 'expo-image';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View } from 'react-native';
 
+import { mediaSource } from '../../lib/media-source';
 import { colors, radius } from '../../theme';
 import { PhotoPlaceholder } from './photo-placeholder';
 import { Text } from './text';
@@ -67,6 +69,11 @@ export type AvatarProps = {
    * — which is right for decoration, and wrong for a real person.
    */
   name?: string;
+  /**
+   * Ảnh thật của người này — id của một Media (`FamilyMember.avatarKey`).
+   * Có thì vẽ ảnh, không thì rơi về chữ cái đầu như trước.
+   */
+  avatarKey?: string | null;
   /** Only used by the stripe fallback. */
   tone?: 'light' | 'dark';
   /**
@@ -91,8 +98,40 @@ export type AvatarProps = {
  * When the upload lands this component grows one prop and nothing else
  * changes: every caller already says who it is drawing.
  */
-export function Avatar({ size, name, tone = 'light', ring, style }: AvatarProps) {
+export function Avatar({ size, name, avatarKey, tone = 'light', ring, style }: AvatarProps) {
   const letters = name === undefined ? null : initials(name);
+
+  // Ảnh thật thắng chữ cái đầu. `GET /media/:id` cần token nên phải đi qua
+  // `mediaSource` — cùng đường mà feed và album đang dùng.
+  if (avatarKey !== undefined && avatarKey !== null && avatarKey !== '') {
+    // Ảnh nằm trong một View tròn: ring là box-shadow của khung, và
+    // `ImageStyle` không nhận ViewStyle nên không thể đặt trực tiếp lên ảnh.
+    return (
+      <View
+        accessible
+        accessibilityLabel={name}
+        style={[
+          {
+            width: size,
+            height: size,
+            borderRadius: radius.full,
+            overflow: 'hidden',
+            backgroundColor: colors.background.subtle,
+          },
+          ring !== undefined && { boxShadow: ring },
+          style,
+        ]}
+      >
+        <Image
+          source={mediaSource(avatarKey)}
+          recyclingKey={avatarKey}
+          contentFit="cover"
+          transition={140}
+          style={{ width: '100%', height: '100%' }}
+        />
+      </View>
+    );
+  }
 
   if (letters === null) {
     return (

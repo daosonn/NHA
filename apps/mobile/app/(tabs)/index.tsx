@@ -18,21 +18,44 @@ import { useFamilies } from '../../src/features/family/use-families';
 import { takePendingInvite } from '../../src/features/family/pending-invite';
 import { useMemberIdLookup } from '../../src/features/family/use-member-for-user';
 import { useFamilyFeed } from '../../src/features/feed/use-family-feed';
+import { useSetReaction } from '../../src/features/feed/use-post';
 import { useSpecialDates } from '../../src/features/ai/use-special-dates';
-import { notificationCount, recommendations } from '../../src/fixtures/home';
+import { defaultOccasion, notificationCount, recommendations } from '../../src/fixtures/home';
 import type { FamilySummary, PostDetail } from '../../src/lib/api';
 import { colors, spacing } from '../../src/theme';
 
 /** Room for the bottom nav plus the home indicator. */
 const BOTTOM_INSET = 140;
 
+/**
+ * Banner behind the occasion card. An app asset, not family media: the
+ * occasion is a date on the calendar and owns no photo. Same reason the
+ * recommendation tiles carry their own banners in `fixtures/home`.
+ */
+const OCCASION_BANNER = require('../../assets/banners/anniversary.jpg') as number;
+
 /** How many faces the strip draws before it collapses the rest into "+N". */
 const VISIBLE_GROUPS = 3;
+
+/**
+ * Một thẻ trên dòng thời gian, có trái tim bấm được.
+ *
+ * Là component riêng vì mỗi bài cần một `useSetReaction` của chính nó — hook
+ * không gọi được trong `renderItem` của FlatList.
+ */
+function FeedCard({
+  post,
+  ...rest
+}: { post: PostDetail } & Omit<React.ComponentProps<typeof PostCard>, 'post' | 'onToggleLike'>) {
+  const setReaction = useSetReaction(post.id);
+  return <PostCard post={post} onToggleLike={(type) => setReaction.mutate(type)} {...rest} />;
+}
 
 function toStripGroups(families: FamilySummary[]): FamilyGroupSummary[] {
   return families.slice(0, VISIBLE_GROUPS).map((family) => ({
     id: family.id,
     name: family.name,
+    coverMediaId: family.coverMediaId,
   }));
 }
 
@@ -99,13 +122,15 @@ export default function HomeScreen() {
         onAddPress={() => router.push('/family/new')}
       />
 
-      {/* Drawn only when there is an occasion. Birthdays are derived from
-          the birth dates on people's profiles, so a family who have not
-          filled any in has nothing coming up — and an empty celebration
-          card would be a strange thing to look at. */}
-      {nextOccasion !== undefined && (
-        <EventWidget occasion={nextOccasion} moreCount={(occasions?.items.length ?? 1) - 1} />
-      )}
+      {/* Mốc thật của gia đình luôn thắng; khi chưa có mốc nào (chưa có gia
+          đình, hoặc chưa ai khai ngày sinh) thì card vẫn vẽ với mốc mặc định
+          của app — cùng lý do các thẻ おすすめ luôn có mặt. Trước đây khối này
+          biến mất và màn Home khuyết một mảng lớn. */}
+      <EventWidget
+        occasion={nextOccasion ?? defaultOccasion()}
+        moreCount={Math.max(0, (occasions?.items.length ?? 0) - 1)}
+        image={OCCASION_BANNER}
+      />
 
       {/* Recommendations are still a fixture: no endpoint exists for them. */}
 
@@ -195,11 +220,14 @@ export default function HomeScreen() {
           ) : null
         }
         renderItem={({ item }) => (
-          <PostCard
+          <FeedCard
             post={item}
             audienceLabel={audienceLabel(item)}
             onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
             onAuthorPress={openAuthor(item)}
+            onMediaPress={(m) =>
+              router.push({ pathname: '/media/[id]', params: { id: m.id, mime: m.mimeType } })
+            }
           />
         )}
       />

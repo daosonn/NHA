@@ -22,6 +22,7 @@ import { Text } from '../../src/components/ui/text';
 import { useSession } from '../../src/features/auth/session';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { useEvidenceStats, useSavedGiftIdeas } from '../../src/features/ai/use-gift-ideas';
+import { useMyProfile } from '../../src/features/member/use-profile';
 import { useSpecialDates } from '../../src/features/ai/use-special-dates';
 import { families, profiles } from '../../src/lib/api';
 import { formatFullDate } from '../../src/lib/date';
@@ -35,6 +36,8 @@ export default function GiftAskScreen() {
   const router = useRouter();
   const { familyId } = useActiveFamily();
   const { user } = useSession();
+  // Ảnh của chính mình đọc từ hồ sơ: phiên đăng nhập chỉ giữ tên và email
+  const myProfile = useMyProfile();
   const params = useLocalSearchParams<{
     memberId?: string;
     memberName?: string;
@@ -104,7 +107,7 @@ export default function GiftAskScreen() {
         {/* FOR */}
         <SectionLabel label={t('ai.gifts.for')} />
         <SelectRow
-          leading={<Avatar size={38} name={target?.displayName} />}
+          leading={<Avatar size={38} name={target?.displayName} avatarKey={target?.avatarKey} />}
           title={target?.displayName ?? t('ai.gifts.pickPerson')}
           subtitle={born ? t('ai.gifts.bornOn', { date: born }) : (family.data?.name ?? null)}
           onPress={() => setMemberSheet(true)}
@@ -152,7 +155,7 @@ export default function GiftAskScreen() {
         <View style={{ height: 6 }} />
         <SectionLabel label={t('ai.gifts.from')} />
         <SelectRow
-          leading={<Avatar size={38} name={user?.name} />}
+          leading={<Avatar size={38} name={user?.name} avatarKey={myProfile.data?.avatarKey} />}
           title={user?.name ?? ''}
           subtitle={family.data?.name ?? null}
           trailing="lock"

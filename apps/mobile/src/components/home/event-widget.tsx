@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Polygon } from 'react-native-svg';
@@ -5,7 +6,7 @@ import Svg, { Polygon } from 'react-native-svg';
 import { useOccasionLabel } from '../../features/ai/use-special-dates';
 import type { SpecialDateItem } from '../../lib/api';
 import { formatFullDate } from '../../lib/date';
-import { colors, radius, spacing } from '../../theme';
+import { colors, radius } from '../../theme';
 import { PhotoPlaceholder } from '../ui/photo-placeholder';
 import { Text } from '../ui/text';
 
@@ -88,6 +89,12 @@ export type EventWidgetProps = {
   occasion: SpecialDateItem;
   /** How many more are coming up behind this one. */
   moreCount?: number;
+  /**
+   * Banner behind the card — an app asset (`assets/banners/`), not family
+   * media: this widget draws an occasion, and an occasion has no photo of its
+   * own. Omitted → the striped placeholder stays.
+   */
+  image?: number;
 };
 
 /**
@@ -105,7 +112,7 @@ export type EventWidgetProps = {
  * `FLORAL_BORDER` have no drawing yet, and a plain white box for a memorial
  * would read as a widget that failed to load.
  */
-export function EventWidget({ occasion, moreCount = 0 }: EventWidgetProps) {
+export function EventWidget({ occasion, moreCount = 0, image }: EventWidgetProps) {
   const { t } = useTranslation();
 
   // One place words an occasion, and `main` already owns it — the AI hub and
@@ -130,17 +137,30 @@ export function EventWidget({ occasion, moreCount = 0 }: EventWidgetProps) {
       ]}
     >
       <PhotoPlaceholder style={StyleSheet.absoluteFill} />
+      {image !== undefined && (
+        // Neo lên đỉnh: khung rộng hơn tỉ lệ ảnh nên phần bị cắt là trên-dưới,
+        // và mặt người luôn ở nửa trên — cắt từ dưới giữ được ánh mắt.
+        <Image
+          source={image}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          contentPosition="top"
+        />
+      )}
       <Bunting />
 
       <View
         style={[
           {
+            // Neo ĐÁY phải, hẹp hơn và trong hơn: ở góc trên phải nó đè đúng vào
+            // mặt người trong ảnh (đã dính với banner kỷ niệm). Ở đáy nó chỉ nằm
+            // trên mặt bàn, và 0.84 đủ đục để chữ đen còn đọc được trên ảnh sáng.
             position: 'absolute',
-            top: 36,
-            right: spacing.md,
-            width: 150,
+            bottom: 10,
+            right: 10,
+            width: 138,
             borderRadius: radius.md,
-            backgroundColor: 'rgba(255,255,255,0.92)',
+            backgroundColor: 'rgba(255,255,255,0.84)',
             padding: 10,
             gap: 6,
           },

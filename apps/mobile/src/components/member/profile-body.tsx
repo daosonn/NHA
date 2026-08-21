@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import type { MemberProfile } from '../../features/member/member-profile';
 import { useLifeEvents } from '../../features/member/use-life-events';
 import { useMemberGallery } from '../../features/member/use-member-gallery';
-import { useDeleteMemo, useMemberMemos } from '../../features/member/use-memos';
-import type { MemoDetail } from '../../lib/api';
+import { useDeleteMemo, useMemberMemos, useMyMemos } from '../../features/member/use-memos';
+import { families, type MemoDetail } from '../../lib/api';
+import { queryKeys } from '../../lib/query-keys';
 import { SegmentedTabs } from '../ui/segmented-tabs';
 import { AlbumGrid } from './album-grid';
 import { MemoActionsSheet } from './memo-actions-sheet';
@@ -60,8 +62,32 @@ export function ProfileBody({
 
   const [tab, setTab] = useState<Tab>('timeline');
 
-  const memos = useMemberMemos(familyId, memberId);
+  /**
+   * Trên hồ sơ của CHÍNH BẠN, tab メモ hiện TOÀN BỘ sổ tay của bạn; trên hồ sơ
+   * người khác thì chỉ những ghi chú bạn viết về người đó. Lý do: "ghi chú về
+   * chính mình" không tồn tại, nên bản cũ luôn hiện trạng thái trống ở đây dù
+   * sổ có cả chục ghi chú về người trong nhà.
+   */
+  const memberMemos = useMemberMemos(ownProfile ? null : familyId, ownProfile ? null : memberId);
+  const myMemos = useMyMemos(ownProfile === true);
+  const memos = ownProfile ? myMemos : memberMemos;
   const deleteMemo = useDeleteMemo();
+
+  // Ảnh cho tiêu đề từng nhóm ghi chú — chỉ cần trên hồ sơ của chính mình
+  const family = useQuery({
+    queryKey: queryKeys.family(familyId ?? 'none'),
+    queryFn: () => families.detail(familyId as string),
+    enabled: ownProfile === true && familyId !== null,
+  });
+  const people = useMemo(
+    () =>
+      (family.data?.members ?? []).map((m) => ({
+        memberId: m.id,
+        displayName: m.displayName,
+        avatarKey: m.avatarKey,
+      })),
+    [family.data],
+  );
 
   const timeline = useLifeEvents({ own: ownProfile, familyId, memberId });
   const events = timeline.data ?? [];
@@ -116,7 +142,9 @@ export function ProfileBody({
         <MemoList
           memos={list}
           memberName={profile.displayName}
-          loading={memos.isPending && memberId !== null}
+          own={ownProfile}
+          people={people}
+          loading={memos.isPending && (ownProfile === true || memberId !== null)}
           failed={memos.isError}
           onRetry={() => void memos.refetch()}
           onAddMemo={onAddMemo}

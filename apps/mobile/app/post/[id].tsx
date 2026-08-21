@@ -46,7 +46,7 @@ function CommentRow({ comment }: { comment: CommentSummary }) {
         accessibilityLabel={t('post.openProfile', { name: comment.authorName })}
         hitSlop={6}
       >
-        <Avatar size={32} name={comment.authorName} />
+        <Avatar size={32} name={comment.authorName} avatarKey={comment.authorAvatarKey} />
       </Pressable>
 
       <View style={{ flex: 1, gap: 2 }}>
@@ -139,7 +139,14 @@ export default function PostDetailScreen() {
                 normally draws are both repeated immediately below — once by
                 the button, once by the divider. Two of each on one screen was
                 the second half of what made the reactions confusing. */}
-            <PostCard post={post} onAuthorPress={openAuthor} showStats={false} />
+            <PostCard
+              post={post}
+              onAuthorPress={openAuthor}
+              onMediaPress={(m) =>
+                router.push({ pathname: '/media/[id]', params: { id: m.id, mime: m.mimeType } })
+              }
+              showStats={false}
+            />
 
             <LikeButton
               mine={post.myReaction}

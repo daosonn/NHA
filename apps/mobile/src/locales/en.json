@@ -1,4 +1,9 @@
 {
+  "media": {
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "mutedHint": "Sound is off"
+  },
   "common": {
     "close": "Close",
     "back": "Go back",
@@ -299,6 +304,12 @@
     "memoEmptyBody": "Things to remember about {{name}} — allergies, gift ideas, stories to ask for. Only you will see them.",
     "memoEmptyAction": "Write a note",
     "memoPrivate": "Private to you. {{name}} cannot see these notes.",
+    "memoOwnHeading": "Your notes",
+    "memoFilterAll": "Everyone",
+    "memoGroupCount": "{{count}} note",
+    "memoGroupCount_other": "{{count}} notes",
+    "memoOwnPrivate": "Notes about your family. Only you can see them.",
+    "memoOwnEmptyBody": "Open a family member's profile to note what you want to remember — allergies, gift hints, things to ask about.",
     "memoCategories": {
       "hobbies": "Interest",
       "health": "Health",
@@ -609,6 +620,8 @@
     "title": "Moment",
     "openLabel": "Open {{name}}'s moment",
     "openProfile": "Open {{name}}'s profile",
+    "openPhoto": "View this photo",
+    "openClip": "Play this clip",
     "private": "PRIVATE",
     "comments_one": "{{count}} comment",
     "comments_other": "{{count}} comments",
@@ -681,6 +694,10 @@
     "photosTitle": "Photos & clips",
     "chooseForMe": "Choose for me",
     "clipBadge": "Clip",
+    "clipSound": "Sound on",
+    "clipMuted": "Muted",
+    "clipAudioOn": "Use this clip's sound",
+    "clipAudioOff": "Mute this clip",
     "orderHint": "Numbers are the order they will appear. Tap again to remove.",
     "chosenSummary_one": "{{count}} chosen, in this order",
     "chosenSummary_other": "{{count}} chosen, in this order",

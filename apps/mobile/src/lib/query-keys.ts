@@ -50,6 +50,8 @@ export const queryKeys = {
    */
   memberMemos: (familyId: string, memberId: string) =>
     ['families', familyId, 'members', memberId, 'memos'] as const,
+  /** Toàn bộ sổ tay của bạn — mọi ghi chú, về bất kỳ ai, kể cả người đã rời đi. */
+  myMemos: () => ['me', 'memos'] as const,
   /** One note, reachable by id alone — including one whose member has gone. */
   memo: (memoId: string) => ['memos', memoId] as const,
   /** Your own timeline, which exists before you belong to any family. */

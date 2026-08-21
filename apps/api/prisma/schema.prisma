@@ -180,9 +180,13 @@ model Family {
   name        String
   inviteCode  String   @unique
   createdById String
+  /// Ảnh đại diện của gia đình — ảnh cả nhà, hiện ở đầu màn cây gia phả.
+  /// Cùng kiểu với Album.coverMediaId: SetNull để xoá ảnh không xoá gia đình.
+  coverMediaId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  coverMedia    Media?         @relation("FamilyCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
   createdBy     User           @relation("FamilyCreator", fields: [createdById], references: [id])
   members       FamilyMember[]
   relationships Relationship[]
@@ -341,6 +345,7 @@ model Media {
 
   albumItems AlbumItem[]
   coverOf    Album[]       @relation("AlbumCover")
+  coverOfFamily Family[]   @relation("FamilyCover")
   insight    MediaInsight?
   resultOf   VideoJob?     @relation("VideoJobResult")
 

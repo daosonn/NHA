@@ -17,6 +17,8 @@ export interface ProfileDetail {
   /** Placeholder member; null for a global profile. */
   memberId: string | null;
   displayName: string;
+  /** Ảnh của người này (id Media) — hồ sơ hiện mặt thay chữ viết tắt */
+  avatarKey: string | null;
   bio: string | null;
   interests: string[];
   birthDate: Date | null;
@@ -67,10 +69,10 @@ export class ProfileService {
       this.ensureGlobalProfile(userId),
       this.prisma.user.findUniqueOrThrow({
         where: { id: userId },
-        select: { name: true },
+        select: { name: true, avatarKey: true },
       }),
     ]);
-    return this.toDetail(profile, user.name);
+    return this.toDetail(profile, user.name, user.avatarKey);
   }
 
   async updateOwn(
@@ -93,12 +95,18 @@ export class ProfileService {
     memberId: string,
   ): Promise<ProfileDetail> {
     const member = await this.findMember(userId, familyId, memberId);
+    // Ảnh lấy từ hàng thành viên: ảnh thuộc về người này trong gia đình này,
+    // và placeholder chưa có tài khoản thì cũng có ảnh riêng.
     if (member.userId) {
       const profile = await this.ensureGlobalProfile(member.userId);
-      return this.toDetail(profile, member.user?.name ?? member.displayName);
+      return this.toDetail(
+        profile,
+        member.user?.name ?? member.displayName,
+        member.avatarKey ?? member.user?.avatarKey ?? null,
+      );
     }
     const profile = await this.ensurePlaceholderProfile(member.id);
-    return this.toDetail(profile, member.displayName);
+    return this.toDetail(profile, member.displayName, member.avatarKey);
   }
 
   /**
@@ -264,7 +272,8 @@ export class ProfileService {
     id: string;
     userId: string | null;
     displayName: string;
-    user: { name: string } | null;
+    avatarKey: string | null;
+    user: { name: string; avatarKey: string | null } | null;
   }> {
     await this.familyService.requireMembership(familyId, userId);
     const member = await this.prisma.familyMember.findFirst({
@@ -273,7 +282,8 @@ export class ProfileService {
         id: true,
         userId: true,
         displayName: true,
-        user: { select: { name: true } },
+        avatarKey: true,
+        user: { select: { name: true, avatarKey: true } },
       },
     });
     if (!member) {
@@ -304,12 +314,17 @@ export class ProfileService {
     });
   }
 
-  private toDetail(profile: ProfileRecord, displayName: string): ProfileDetail {
+  private toDetail(
+    profile: ProfileRecord,
+    displayName: string,
+    avatarKey: string | null = null,
+  ): ProfileDetail {
     return {
       id: profile.id,
       userId: profile.userId,
       memberId: profile.memberId,
       displayName,
+      avatarKey,
       bio: profile.bio,
       interests: this.readInterests(profile.interests),
       birthDate: profile.birthDate,

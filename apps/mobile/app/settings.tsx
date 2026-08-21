@@ -12,6 +12,7 @@ import { IconBadge } from '../src/components/ui/icon-badge';
 import { SelectField } from '../src/components/ui/select-field';
 import { Text } from '../src/components/ui/text';
 import { useSession } from '../src/features/auth/session';
+import { useMyProfile } from '../src/features/member/use-profile';
 import { LOCALE_NAMES, SUPPORTED_LOCALES, type Locale } from '../src/i18n';
 import { setLocale } from '../src/i18n/locale';
 import { useLocale } from '../src/i18n/use-locale';
@@ -38,6 +39,8 @@ export default function SettingsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { user, signOut } = useSession();
+  // Ảnh của mình nằm ở hồ sơ, không nằm trong phiên đăng nhập
+  const myProfile = useMyProfile();
   const locale = useLocale();
 
   return (
@@ -56,7 +59,7 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Card padding={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <Avatar size={56} name={user?.name} />
+          <Avatar size={56} name={user?.name} avatarKey={myProfile.data?.avatarKey} />
 
           <View style={{ flex: 1, gap: 3 }}>
             <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>

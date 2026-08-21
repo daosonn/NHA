@@ -119,7 +119,7 @@ export default function VideoSetupScreen() {
         <Card padding={12} style={{ gap: 11 }}>
           <SelectRow
             bare
-            leading={<Avatar size={38} />}
+            leading={<Avatar size={38} name={target?.displayName} avatarKey={target?.avatarKey} />}
             title={target?.displayName ?? t('video.aboutPick')}
             subtitle={t('video.aboutHint')}
             onPress={() => setMemberSheet(true)}
