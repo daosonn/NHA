@@ -1,6 +1,8 @@
+import { Image } from 'expo-image';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View } from 'react-native';
 
+import { mediaSource } from '../../lib/media-source';
 import { colors, radius } from '../../theme';
 import { PhotoPlaceholder } from './photo-placeholder';
 import { Text } from './text';
@@ -62,6 +64,12 @@ function initials(name: string): string | null {
 export type AvatarProps = {
   size: number;
   /**
+   * Their photograph, as a `Media` id — `ProfileDetail.avatarMediaId` or
+   * `FamilyMemberSummary.avatarKey`. When there is one it wins; otherwise the
+   * initials below stand in, which is most people most of the time.
+   */
+  mediaId?: string | null;
+  /**
    * Whose face this is. Given, the avatar draws their initials on a tint
    * derived from the name; omitted, it falls back to the stripe placeholder
    * — which is right for decoration, and wrong for a real person.
@@ -81,18 +89,47 @@ export type AvatarProps = {
 /**
  * A person.
  *
- * There are no photographs yet: `User.avatarKey` and `FamilyMember.avatarKey`
- * exist as columns, but no endpoint writes them and none serves them, so
- * there is nothing for this to load. Until then it draws their initials on a
- * colour of that person's own — which is the whole job an avatar does at this
- * size anyway. Every face used to be the same grey stripe pattern, so a tree
- * of nine people was nine identical blobs.
+ * Three states, in order: a photograph if there is one, otherwise their
+ * initials on a colour of their own, otherwise the stripe placeholder — which
+ * is only right for decoration, never for a real person.
  *
- * When the upload lands this component grows one prop and nothing else
- * changes: every caller already says who it is drawing.
+ * The initials tier is not a stopgap. Most people will not upload a picture,
+ * and "M" on a colour that is always theirs does the job an avatar does at
+ * this size. Every face used to be the same grey stripe pattern, so a tree of
+ * nine people was nine identical blobs.
  */
-export function Avatar({ size, name, tone = 'light', ring, style }: AvatarProps) {
+export function Avatar({ size, name, mediaId, tone = 'light', ring, style }: AvatarProps) {
   const letters = name === undefined ? null : initials(name);
+
+  if (mediaId != null && mediaId !== '') {
+    // The ring lives on a wrapper: `expo-image` takes an `ImageStyle`, which
+    // has no `boxShadow`, and the rings this app draws stack two of them.
+    return (
+      <View
+        accessible
+        accessibilityLabel={name}
+        style={[
+          {
+            width: size,
+            height: size,
+            borderRadius: radius.full,
+            overflow: 'hidden',
+            backgroundColor: colors.background.subtle,
+          },
+          ring !== undefined && { boxShadow: ring },
+          style,
+        ]}
+      >
+        <Image
+          source={mediaSource(mediaId)}
+          recyclingKey={mediaId}
+          contentFit="cover"
+          transition={140}
+          style={{ width: '100%', height: '100%' }}
+        />
+      </View>
+    );
+  }
 
   if (letters === null) {
     return (

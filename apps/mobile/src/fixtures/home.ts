@@ -7,5 +7,3 @@
  */
 
 export const occasionBackdrop = require('../../assets/home/photo-6.jpg') as number;
-
-export const notificationCount = 3;

@@ -111,7 +111,13 @@ export type FamilyMemberSummary = {
   userId: string | null;
   displayName: string;
   gender: Gender | null;
-  /** Object-storage key, not a URL. */
+  /**
+   * A `Media` id despite the column name — stream it with `GET /media/:id`.
+   *
+   * A linked member falls back to their account's avatar, so one person looks
+   * the same in every family (`family.service.ts`); the member's own value
+   * only matters for a placeholder, whose picture the family sets.
+   */
   avatarKey: string | null;
   joinedAt: IsoDateTime;
 };
@@ -436,7 +442,20 @@ export type ProfileDetail = {
   bio: string | null;
   interests: string[];
   birthDate: IsoDateTime | null;
+  /** Free text — mockup 7 prints it after the birth date. */
+  birthPlace: string | null;
+  /** Free text ("Carpenter, retired since 2021"), not a job title. */
+  occupation: string | null;
   deathDate: IsoDateTime | null;
+  /**
+   * A `Media` id, streamed through `GET /media/:id` — not a URL and not the
+   * opaque storage key the column name suggests (WBS 3.4.2).
+   *
+   * Stored on `User`/`FamilyMember` rather than on the profile, and surfaced
+   * here because the profile is where it is edited. `null` means no
+   * photograph, and the app draws initials.
+   */
+  avatarMediaId: string | null;
   updatedAt: IsoDateTime;
 };
 
@@ -446,6 +465,15 @@ export type ProfileDetail = {
  * the whole `interests` array because it replaces rather than merges.
  */
 export type UpdateProfileRequest = {
+  /**
+   * A `Media` id **this account uploaded** via `POST /media`; `null` clears
+   * it. The server refuses somebody else's upload.
+   */
+  avatarMediaId?: string | null;
+  /** Free text; `''` clears it. */
+  birthPlace?: string;
+  /** Free text; `''` clears it. */
+  occupation?: string;
   bio?: string;
   interests?: string[];
   birthDate?: string | null;
@@ -504,6 +532,76 @@ export type UpdateLifeEventRequest = {
   place?: string | null;
   type?: string | null;
   taggedMemberIds?: string[];
+};
+
+// -------------------------------------------------------- notifications
+
+/** `apps/api/src/generated/prisma/enums.ts` → `NotificationType`. */
+export type NotificationType =
+  | 'NEW_POST'
+  | 'COMMENT'
+  | 'REACTION'
+  | 'MEMBER_TAG'
+  | 'FAMILY_INVITE'
+  | 'BIRTHDAY_REMINDER'
+  | 'EVENT_REMINDER'
+  | 'CARE_REMINDER'
+  | 'AI_SUGGESTION';
+
+/**
+ * What a notification carries, by type. `payload` is `unknown` on the wire —
+ * the server stores it as JSON — so the client narrows it rather than
+ * trusting a cast.
+ *
+ * Two shapes exist today: the ones about a post (`postId` + who did it) and
+ * the reminders (`kind`, the family, and either a member or a stored
+ * occasion). Anything else is drawn without a destination rather than
+ * guessing one.
+ */
+export type NotificationPayload = {
+  postId?: string;
+  actorUserId?: string;
+  kind?: string;
+  familyId?: string;
+  memberId?: string;
+  specialDateId?: string;
+  displayName?: string;
+  title?: string;
+  occursOn?: string;
+  daysUntil?: number;
+};
+
+/** `GET /api/me/notifications` (WBS 3.1.2). */
+export type NotificationDetail = {
+  id: string;
+  type: NotificationType;
+  payload: unknown;
+  /** `null` is unread — that is what drives the badge. */
+  readAt: IsoDateTime | null;
+  createdAt: IsoDateTime;
+};
+
+export type NotificationPage = {
+  items: NotificationDetail[];
+  nextCursor: string | null;
+  /** Unread across everything, not just this page. */
+  unreadCount: number;
+};
+
+/** `GET /api/me/notifications/unread-count` — the badge on its own. */
+export type UnreadCount = {
+  count: number;
+};
+
+/** `POST /api/me/notifications/read-all`. */
+export type MarkAllReadResult = {
+  updated: number;
+};
+
+export type NotificationQuery = {
+  limit?: number;
+  cursor?: string;
+  unreadOnly?: boolean;
 };
 
 // --------------------------------------------------------------- albums

@@ -2,7 +2,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
-import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
+import {
+  BackButton,
+  NotificationBell,
+  ScreenTitle,
+} from '../../src/components/layout/header-slots';
 import { ProfileBody } from '../../src/components/member/profile-body';
 import { useSession } from '../../src/features/auth/session';
 import { useActiveFamily } from '../../src/features/family/active-family';
@@ -44,6 +48,8 @@ export default function MemberScreen() {
       <AppHeader
         left={<BackButton onPress={() => router.back()} />}
         center={<ScreenTitle title={profile.displayName} />}
+        right={<NotificationBell />}
+        paddingRight={spacing.lg}
       />
 
       <ScrollView

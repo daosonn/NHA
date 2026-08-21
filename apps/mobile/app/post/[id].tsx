@@ -14,7 +14,7 @@ import { Divider } from '../../src/components/ui/divider';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { Text } from '../../src/components/ui/text';
 import { TextField } from '../../src/components/ui/text-field';
-import { useMemberIdForUser } from '../../src/features/family/use-member-for-user';
+import { useMemberForUser } from '../../src/features/family/use-member-for-user';
 import { useAddComment, useComments } from '../../src/features/feed/use-comments';
 import { usePost, useSetReaction } from '../../src/features/feed/use-post';
 import { formatFullDate } from '../../src/lib/date';
@@ -31,7 +31,8 @@ function CommentRow({ comment }: { comment: CommentSummary }) {
   // Same rule as everywhere: a face is a way into a Life Profile. Null when
   // the commenter is not a member of the family being viewed, in which case
   // the avatar stays inert rather than leading somewhere that does not exist.
-  const memberId = useMemberIdForUser(comment.authorUserId);
+  const member = useMemberForUser(comment.authorUserId);
+  const memberId = member?.id ?? null;
 
   return (
     <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -46,7 +47,7 @@ function CommentRow({ comment }: { comment: CommentSummary }) {
         accessibilityLabel={t('post.openProfile', { name: comment.authorName })}
         hitSlop={6}
       >
-        <Avatar size={32} name={comment.authorName} />
+        <Avatar size={32} name={comment.authorName} mediaId={member?.avatarKey} />
       </Pressable>
 
       <View style={{ flex: 1, gap: 2 }}>
@@ -89,7 +90,8 @@ export default function PostDetailScreen() {
   const addComment = useAddComment(postId ?? '');
   const setReaction = useSetReaction(postId ?? '');
 
-  const authorMemberId = useMemberIdForUser(post?.authorUserId ?? null);
+  const author = useMemberForUser(post?.authorUserId ?? null);
+  const authorMemberId = author?.id ?? null;
   const [draft, setDraft] = useState('');
 
   const openAuthor =
@@ -135,7 +137,12 @@ export default function PostDetailScreen() {
                 normally draws are both repeated immediately below — once by
                 the button, once by the divider. Two of each on one screen was
                 the second half of what made the reactions confusing. */}
-            <PostCard post={post} onAuthorPress={openAuthor} showStats={false} />
+            <PostCard
+              post={post}
+              onAuthorPress={openAuthor}
+              authorAvatarId={author?.avatarKey}
+              showStats={false}
+            />
 
             <LikeButton
               mine={post.myReaction}

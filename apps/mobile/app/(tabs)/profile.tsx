@@ -1,17 +1,21 @@
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
 import { ScreenTitle, SettingsButton } from '../../src/components/layout/header-slots';
 import { ProfileBody } from '../../src/components/member/profile-body';
+import { Text } from '../../src/components/ui/text';
 import { useSession } from '../../src/features/auth/session';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { useFamilies } from '../../src/features/family/use-families';
 import { useFamilyTree } from '../../src/features/family/use-family-tree';
 import { toMemberProfile } from '../../src/features/member/member-profile';
-import { useMyProfile } from '../../src/features/member/use-profile';
-import { spacing } from '../../src/theme';
+import { useToast } from '../../src/components/ui/toast';
+import { useMyProfile, useUpdateAvatar } from '../../src/features/member/use-profile';
+import { colors, spacing } from '../../src/theme';
 
 /** Clears the bottom nav (56pt plus the home indicator). */
 const BOTTOM_INSET = 120;
@@ -32,7 +36,51 @@ export default function ProfileScreen() {
   const { user } = useSession();
   const { familyId } = useActiveFamily();
 
+  const toast = useToast();
   const { data: detail } = useMyProfile();
+  const updateAvatar = useUpdateAvatar();
+  const [permissionDenied, setPermissionDenied] = useState(false);
+
+  /**
+   * Square by request, not by crop: `allowsEditing` hands the platform's own
+   * cropper to the person, so what they choose is what lands. Cropping it
+   * afterwards on their behalf is how a face ends up half out of frame.
+   */
+  const pickAvatar = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      setPermissionDenied(true);
+      return;
+    }
+
+    setPermissionDenied(false);
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+
+    const asset = result.canceled ? undefined : result.assets[0];
+    if (asset === undefined) return;
+
+    updateAvatar.mutate(
+      {
+        id: asset.assetId ?? asset.uri,
+        kind: 'photo',
+        tone: 'light',
+        uri: asset.uri,
+        fileName: asset.fileName ?? 'avatar.jpg',
+        mimeType: asset.mimeType ?? 'image/jpeg',
+      },
+      {
+        onSuccess: () => toast.success(t('profileEdit.avatar.saved')),
+        onError: () => toast.failure(t('errors.generic')),
+      },
+    );
+  };
   const { data: families } = useFamilies();
   const { data: tree } = useFamilyTree(familyId);
 
@@ -63,12 +111,25 @@ export default function ProfileScreen() {
         contentContainerStyle={{ padding: spacing.xl, paddingBottom: BOTTOM_INSET }}
         showsVerticalScrollIndicator={false}
       >
+        {permissionDenied && (
+          <Text
+            variant="caption"
+            color={colors.themes.destructive.text}
+            accessibilityRole="alert"
+            style={{ paddingBottom: 10 }}
+          >
+            {t('moment.permissionDenied')}
+          </Text>
+        )}
+
         <ProfileBody
           profile={profile}
           familyId={familyId}
           memberId={memberId}
           ownProfile
           onEdit={() => router.push('/profile/edit')}
+          onChangeAvatar={() => void pickAvatar()}
+          uploadingAvatar={updateAvatar.isPending}
           onAddMemo={() =>
             familyId === null || memberId === null
               ? undefined

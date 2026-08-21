@@ -56,7 +56,11 @@ import type {
   CreateLifeEventRequest,
   LifeEventDetail,
   MediaSummary,
+  MarkAllReadResult,
   MemoDetail,
+  NotificationDetail,
+  NotificationPage,
+  NotificationQuery,
   OAuthProvider,
   PostDetail,
   ProfileDetail,
@@ -71,15 +75,21 @@ import type {
   UpdateMemoRequest,
   UpdatePostRequest,
   UpdateAlbumRequest,
+  UnreadCount,
   UpdateProfileRequest,
   VerifyResetCodeRequest,
   VerifyResetCodeResult,
 } from './types';
 
-/** Builds `?a=1&b=2`, skipping anything not set. */
-function query(params: Record<string, string | number | undefined>): string {
+/**
+ * Builds `?a=1&b=2`, skipping anything not set.
+ *
+ * Booleans go over as `true`/`false`, which is what the server's
+ * `@Transform(({ value }) => value === 'true')` reads them back as.
+ */
+function query(params: Record<string, string | number | boolean | undefined>): string {
   const pairs = Object.entries(params)
-    .filter((entry): entry is [string, string | number] => entry[1] !== undefined)
+    .filter((entry): entry is [string, string | number | boolean] => entry[1] !== undefined)
     .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`);
 
   return pairs.length === 0 ? '' : `?${pairs.join('&')}`;
@@ -472,6 +482,31 @@ export const memos = {
     apiRequest<MemoDetail>(`/memos/${memoId}`, { method: 'PATCH', body }),
 
   remove: (memoId: string) => apiRequest<SuccessResult>(`/memos/${memoId}`, { method: 'DELETE' }),
+};
+
+/**
+ * In-app notifications (WBS 3.1). No push and no email in the MVP.
+ *
+ * Reminders have no table of their own: birthdays and occasions land here
+ * with a reminder type, which is why one list carries both "somebody
+ * commented" and "her birthday is on Thursday".
+ */
+export const notifications = {
+  /** Newest first. The page carries the badge count as well as the rows. */
+  list: (params: NotificationQuery = {}) =>
+    apiRequest<NotificationPage>(`/me/notifications${query(params)}`),
+
+  /** Just the badge, without pulling a page in behind it. */
+  unreadCount: () => apiRequest<UnreadCount>('/me/notifications/unread-count'),
+
+  /** Idempotent — the first `readAt` is kept. */
+  markRead: (notificationId: string) =>
+    apiRequest<NotificationDetail>(`/me/notifications/${notificationId}/read`, {
+      method: 'PATCH',
+    }),
+
+  markAllRead: () =>
+    apiRequest<MarkAllReadResult>('/me/notifications/read-all', { method: 'POST' }),
 };
 
 /**

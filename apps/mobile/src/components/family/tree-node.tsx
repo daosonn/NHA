@@ -56,6 +56,7 @@ function NodeBody({ node }: { node: PositionedNode }) {
     <Avatar
       size={size}
       name={node.name}
+      mediaId={node.avatarMediaId}
       tone={node.tone ?? 'light'}
       ring={node.isViewer === true ? RING_VIEWER : RING}
     />

@@ -18,6 +18,7 @@ export {
   lifeEvents,
   media,
   memos,
+  notifications,
   posts,
   profiles,
   reactions,

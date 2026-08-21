@@ -14,6 +14,7 @@ import { AppHeader } from '../../src/components/layout/app-header';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { SectionHeader } from '../../src/components/ui/section-header';
+import { useToast } from '../../src/components/ui/toast';
 import { useSession } from '../../src/features/auth/session';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { treeFromGraph } from '../../src/features/family/tree-from-graph';
@@ -52,6 +53,7 @@ function toStripGroups(families: FamilySummary[]): FamilyGroupSummary[] {
 export default function FamilyTreeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const toast = useToast();
   const { user } = useSession();
   const { familyId, setFamilyId } = useActiveFamily();
 
@@ -214,7 +216,15 @@ export default function FamilyTreeScreen() {
                 <PendingBanner
                   invite={newestInvite}
                   otherCount={waiting.length - 1}
-                  onResend={() => resendInvitation.mutate(newestInvite.id)}
+                  // Nothing on screen changes when this succeeds — the
+                  // banner already said the same thing before the tap.
+                  onResend={() =>
+                    resendInvitation.mutate(newestInvite.id, {
+                      onSuccess: () =>
+                        toast.success(t('family.toast.resent', { name: newestInvite.name })),
+                      onError: () => toast.failure(t('errors.generic')),
+                    })
+                  }
                   resending={resendInvitation.isPending}
                 />
               )}
@@ -239,7 +249,12 @@ export default function FamilyTreeScreen() {
           }}
           onRemove={() => {
             if (managingId === null) return;
-            removeMember.mutate(managingId, { onSuccess: () => setManagingId(null) });
+            removeMember.mutate(managingId, {
+              onSuccess: () => {
+                setManagingId(null);
+                toast.success(t('family.toast.removed'));
+              },
+            });
           }}
           saving={saveMember.isPending}
           removing={removeMember.isPending}

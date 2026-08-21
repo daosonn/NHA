@@ -24,6 +24,12 @@ export type PostCardProps = {
   /** Opens the author's Life Profile. Omitted when they are not in this family. */
   onAuthorPress?: () => void;
   /**
+   * The author's photograph, as a `Media` id. Resolved by the screen — a
+   * post carries `authorUserId` and no face, and the card has no business
+   * holding a family tree to look one up.
+   */
+  authorAvatarId?: string | null;
+  /**
    * The heart and comment counters along the bottom. On by default, because
    * in a feed they are the only sign a moment has been read at all — off on
    * the detail screen, where the same two numbers appear right below in
@@ -50,6 +56,7 @@ export function PostCard({
   audienceLabel,
   onPress,
   onAuthorPress,
+  authorAvatarId,
   showStats = true,
 }: PostCardProps) {
   const { t } = useTranslation();
@@ -78,7 +85,7 @@ export function PostCard({
         accessibilityLabel={t('post.openProfile', { name: post.authorName })}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
       >
-        <Avatar size={40} name={post.authorName} />
+        <Avatar size={40} name={post.authorName} mediaId={authorAvatarId} />
 
         <View style={{ flex: 1, gap: 1 }}>
           <Text variant="body1" weight="semibold" numberOfLines={1}>

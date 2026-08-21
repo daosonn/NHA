@@ -1,6 +1,9 @@
+import { useRouter } from 'expo-router';
 import { Bell, ChevronLeft, Settings } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+
+import { useUnreadCount } from '../../features/notification/use-notifications';
 
 import { colors, radius } from '../../theme';
 import { BrandMark } from '../ui/brand-mark';
@@ -111,20 +114,30 @@ export function SettingsButton({ onPress }: { onPress?: () => void }) {
   );
 }
 
-export type NotificationBellProps = {
-  count?: number;
-  onPress?: () => void;
-};
-
-/** 40px touch target with the unread count riding the top-right of the bell. */
-export function NotificationBell({ count = 0, onPress }: NotificationBellProps) {
+/**
+ * The bell, and the number on it.
+ *
+ * It reads its own count and knows its own destination — deliberately, after
+ * the props version drifted: Home fed it a hard-coded `3` from a fixture, the
+ * AI tab fed it a count of this month's occasions, and Omoide had no bell at
+ * all. A badge whose number comes from whatever the screen happened to have
+ * lying around is not a badge.
+ *
+ * Every caller now writes `right={<NotificationBell />}` and cannot get it
+ * wrong.
+ */
+export function NotificationBell() {
   const { t } = useTranslation();
+  const router = useRouter();
+
+  const { data } = useUnreadCount();
+  const count = data?.count ?? 0;
 
   const label = count > 0 ? t('nav.notificationsUnread', { count }) : t('nav.notifications');
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={() => router.push('/notifications')}
       accessibilityRole="button"
       accessibilityLabel={label}
       style={{

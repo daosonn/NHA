@@ -109,7 +109,7 @@ export default function AiScreen() {
     <View className="flex-1 bg-page">
       <AppHeader
         center={<ScreenTitle title={t('nav.ai')} />}
-        right={<NotificationBell count={thisMonth} />}
+        right={<NotificationBell />}
         paddingRight={spacing.lg}
       />
 

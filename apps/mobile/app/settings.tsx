@@ -12,6 +12,7 @@ import { IconBadge } from '../src/components/ui/icon-badge';
 import { SelectField } from '../src/components/ui/select-field';
 import { Text } from '../src/components/ui/text';
 import { useSession } from '../src/features/auth/session';
+import { useMemberForUser } from '../src/features/family/use-member-for-user';
 import { LOCALE_NAMES, SUPPORTED_LOCALES, type Locale } from '../src/i18n';
 import { setLocale } from '../src/i18n/locale';
 import { useLocale } from '../src/i18n/use-locale';
@@ -38,6 +39,8 @@ export default function SettingsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { user, signOut } = useSession();
+  // The account carries no picture; the member row in the active family does.
+  const me = useMemberForUser(user?.id ?? null);
   const locale = useLocale();
 
   return (
@@ -52,7 +55,7 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Card padding={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <Avatar size={56} name={user?.name} />
+          <Avatar size={56} name={user?.name} mediaId={me?.avatarKey} />
 
           <View style={{ flex: 1, gap: 3 }}>
             <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>

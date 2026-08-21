@@ -369,6 +369,28 @@ resolves one to the other through the family on screen. It returns `null`
 when the author is not in that family, and the avatar stays inert rather than
 leading somewhere that does not exist.
 
+**The picture comes from the same lookup** (2026-08-21). `useMemberLookup`
+returns the whole `FamilyMemberSummary`, not just an id, so a caller that
+already has to resolve the author for the tap target gets `avatarKey` for
+free. Every people-avatar on screen now passes one: the feed and post detail
+(`authorAvatarId`, resolved by the screen — a `PostCard` has no business
+holding a family tree), comments, tree nodes (`TreeMember.avatarMediaId`),
+the member sheet, and Settings. Settings looks it up too, because
+`AuthenticatedUser` is id/email/name — **the account carries no picture**;
+the server keeps it on `User.avatarKey` and only ever hands it back through
+a member row.
+
+That row is where the fallback happens: the server coalesces a linked
+member's `avatarKey` to their account's, so one upload changes the face in
+every family at once and the client never merges two sources. The limit is
+the active family — an author from a family the viewer is not currently
+looking at resolves to `null` and draws initials, the same rule the tap
+target has always followed.
+
+Not passed a face, on purpose: the group strip and the audience picker
+(those circles are _families_, not people) and the bottom bar (see
+`components/layout/bottom-nav.tsx`).
+
 ## Screens
 
 Inventory: `screens.md`. Visual spec: `design-system.md`.

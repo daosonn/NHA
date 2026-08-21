@@ -18,6 +18,8 @@ export type TreeMember = {
   /** Empty spots have no name until someone is invited into them. */
   name?: string;
   role?: string;
+  /** Their photograph, as a `Media` id. Absent draws initials. */
+  avatarMediaId?: string | null;
   tone?: 'light' | 'dark';
   state: NodeState;
   /** The signed-in user. Exactly one node per tree. */

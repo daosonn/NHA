@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
+import { useToast } from '../../src/components/ui/toast';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { MemoActionsSheet } from '../../src/components/member/memo-actions-sheet';
 import { categoryChip } from '../../src/components/member/memo-card';
@@ -36,6 +37,7 @@ const PHOTO_GAP = 8;
 export default function MemoScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const toast = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const query = useMemo(id);
@@ -56,7 +58,10 @@ export default function MemoScreen() {
     // Leave first, delete second: the list this note came from is behind us,
     // and the screen would otherwise flash its "gone" state on the way out.
     router.back();
-    deleteMemo.mutate(memo);
+    deleteMemo.mutate(memo, {
+      onSuccess: () => toast.success(t('member.memoDelete.toast')),
+      onError: () => toast.failure(t('errors.generic')),
+    });
   };
 
   const written = memo === undefined ? null : relativeTime(memo.createdAt);

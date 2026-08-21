@@ -28,6 +28,30 @@ screens.
 
 ## Current Focus
 
+- **A pass over the shell, and notifications (2026-08-21).** Four things,
+  all of them about the app looking like one app:
+  - **Headers are one thing now.** `ScreenTitle` in `header-slots.tsx` is
+    used by all 23 headers plus `FormScreen`, and the wordmark carries the
+    app mark. The **bell is self-contained** — it reads its own unread count
+    and routes itself, so a screen adds it by writing it, not by wiring it —
+    and it sits on Home, Omoide, AI and other people's profiles.
+  - **Screen 19 (Notifications) is wired**: cursor-paginated list, unread as
+    a row tint rather than a dot, tap marks read _then_ navigates. A row with
+    nowhere to go is not pressable. Gap reported below: post notifications
+    carry `actorUserId` and no name, so they read "somebody commented".
+  - **Toasts** (`components/ui/toast.tsx`): one at a time, success and
+    failure alike. The app previously completed a save in total silence.
+  - **Avatars appear everywhere a person does** — feed, post detail,
+    comments, tree nodes, member sheet, Settings — closing sprint 3.4.2 on
+    the UI side. Details and the one limit (the active family) in
+    `architecture.md` § Avatars.
+
+  Two designs were tried and reverted the same day, both recorded in the code
+  next to what replaced them: the viewer's photograph in the bottom bar's
+  last slot (a face among four line drawings stops reading as a fifth
+  destination), and a centred, shrunken Welcome card (the coral header is
+  meant to _stretch_, not float).
+
 - **Frontend state re-verified against the code (2026-08-20).** Everything
   the server offers is now wired: auth including password reset, Home
   (families, feed, and the special-date widget), create-or-join family, the
