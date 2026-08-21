@@ -59,6 +59,7 @@ merge conflicts).
 | `POST /auth/password-reset/request`  | —    | `{ success }` |
 | `POST /auth/password-reset/verify`   | —    | `{ valid }`   |
 | `POST /auth/password-reset/confirm`  | —    | `{ success }` |
+| `POST /auth/change-password`         | ✔    | `AuthResult`  |
 
 `AuthResult` is `{ user: { id, email, name }, accessToken, refreshToken }`.
 
@@ -79,6 +80,17 @@ middle UI step; `confirm` sets the new password and **revokes every
 refresh token**, signing all devices out. Delivery is SMTP (Gmail app
 password for the MVP); with SMTP unconfigured (local dev) the code is
 logged to the API console instead of sent.
+
+**Change password while signed in** (WBS 3.4.3, added 2026-08-21):
+`{ currentPassword, newPassword }` — the current password is required
+even with a valid token, so an unlocked phone is not enough to lock its
+owner out. New password follows the register rules (8–72). On success
+**every refresh token is revoked** (same as reset: other devices sign
+out) and the response is a **fresh `AuthResult` for this device — store
+it like a refresh**, the old pair is dead. 400 for a wrong current
+password, an unchanged password, or a social-only account (empty hash —
+those sign in with Google/Facebook and have no password to change;
+"set a password" belongs to a future account-linking flow).
 
 ### Families — `apps/api/src/family/`
 
@@ -254,7 +266,23 @@ reconcile.
 
 `ProfileDetail` is `{ id, userId, memberId, displayName, bio,
 interests: string[], birthDate, birthPlace, occupation, deathDate,
-updatedAt }`.
+avatarMediaId, updatedAt }`.
+
+**Avatar (WBS 3.4.2, added 2026-08-20).** Write: PATCH `avatarMediaId` —
+the id of an **image the caller uploaded** via `POST /media` (any own
+image, attached or standalone; 400 for someone else's media, a non-image,
+or a missing id — one message, no existence oracle); `null` clears. On a
+placeholder it is wiki-set like the rest of the profile, and the photo
+must still be the _editor's_ own upload. Read: `ProfileDetail.avatarMediaId`
+here, and `FamilyMemberSummary.avatarKey` everywhere members appear
+(family detail, tree, join/add/update results) — for a linked member that
+field now **coalesces to the account's avatar**, so one person has one
+avatar in every family. The value is a Media id: stream it with
+`GET /media/:id`. Setting a photo as an avatar deliberately **widens that
+photo's visibility** to everyone who can see the person (family members;
+for a user, anyone sharing a family) — clearing the avatar withdraws that
+again. Every avatar change lands in the `EditHistory` snapshot like any
+other profile field.
 
 `birthPlace` and `occupation` (added 2026-08-20) are the two fields
 mockup 7's fact rows needed: the place printed after the birth date
@@ -473,11 +501,150 @@ Semantics:
 - Deleting an album deletes only the organization — the underlying media
   rows and files are untouched.
 
-### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side)
+### Notifications — `apps/api/src/notification/` (WBS 3.1.1, added 2026-08-20)
 
-| Route                                   | Returns                |
-| --------------------------------------- | ---------------------- |
-| `GET /families/:familyId/special-dates` | `UpcomingSpecialDates` |
+Screen 19. **No migration** — `Notification` shipped in the sprint-0 schema.
+
+| Route                                | Returns              |
+| ------------------------------------ | -------------------- |
+| `GET /me/notifications`              | `NotificationPage`   |
+| `GET /me/notifications/unread-count` | `{ count }`          |
+| `PATCH /me/notifications/:id/read`   | `NotificationDetail` |
+| `POST /me/notifications/read-all`    | `{ updated }`        |
+
+`NotificationPage` is `{ items, nextCursor, unreadCount }`;
+`NotificationDetail` is `{ id, type, payload, readAt, createdAt }`.
+
+- **There is no create route, by design.** A notification is raised by
+  something happening — a post, a comment, a reminder — never by a client
+  asking for one. Other modules call `NotificationEventsService`
+  directly; `NotificationService.create`/`createMany` stays exported for
+  reminders (3.2/3.3), which have no event to hang off.
+- **What raises one today** (wired 2026-08-20): a **new post** notifies
+  every account in the families it was shared to, except the author; a
+  member **tagged** in that post gets `MEMBER_TAG` _instead of_
+  `NEW_POST`, never both. A **comment** and a **first reaction** notify
+  the post's author only. Rules that follow from that, and that the app
+  can rely on: a **private post notifies nobody**; you are never notified
+  about your own action; and **changing a reaction** (LIKE → LOVE) raises
+  nothing, only the first one does. Invitations raise nothing yet — the
+  invitee has no account to notify, so who receives `FAMILY_INVITE` is an
+  open product question.
+- **Reminders (WBS 3.2.2, added 2026-08-20).** A twice-daily server job
+  turns profile dates and stored SpecialDate rows into notifications, at
+  **7 days ahead and on the day** (lead times are an assumption to
+  confirm; per-user tuning waits for 3.4.5): `BIRTHDAY_REMINDER` for a
+  living member's `birthDate`; `EVENT_REMINDER` with `payload.kind:
+"memorial"` for a `deathDate` (a deceased member gets no birthday
+  reminder) and with `kind: "special"` for custom occasions. Everyone in
+  the family hears **except the person whose birthday it is**; custom
+  occasions notify everyone, the couple included. One reminder per person
+  per occurrence per lead, idempotent across restarts (`payload.dedupeKey`).
+  Payloads carry ids, `occursOn`, `daysUntil` and _data snapshots_
+  (`displayName`, a custom occasion's `title`) — still no composed
+  sentences. Same calendar rules as the widgets: UTC days, Feb 29 → Mar 1
+  in non-leap years.
+- **The server sends no display text.** Only `type` plus a `payload` of
+  ids — the app writes the sentence, the same rule the special-date
+  widgets follow. A Japanese user must not be handed an English sentence
+  assembled server-side.
+- `type` is `NEW_POST | COMMENT | REACTION | MEMBER_TAG | FAMILY_INVITE |
+BIRTHDAY_REMINDER | EVENT_REMINDER | CARE_REMINDER | AI_SUGGESTION`.
+  `payload` shape is per type (`{ postId }`, `{ memberId }`, …).
+- Newest first, cursor-paginated exactly like the family feed (`limit`
+  1–50 default 20, echo `nextCursor`). `?unreadOnly=true` narrows it.
+- `unreadCount` on the page counts **everything unread**, not the page —
+  so the list and the badge (3.1.4) arrive together and cannot disagree.
+  `unread-count` is the same number on its own, for drawing the badge
+  without fetching rows.
+- Marking read is **idempotent**: the first `readAt` is kept, so "when did
+  I first see this" stays true. Everything is scoped to the caller —
+  someone else's notification is a 404, never a 403.
+
+**How the app should refresh (decided 2026-08-20 — polling, no socket).**
+Delivery is in-app only for the MVP, and while the app is open it
+**polls**: `refetchInterval` of **5–10s on the notifications screen and
+Home** (where the bell lives), 30–60s elsewhere, and a refetch on
+returning to the foreground — that focus refetch is the moment that
+actually feels instant, since it fires exactly when the person looks at
+the bell. Two things are load-bearing: **React Native does not wire focus
+by itself** — hook `AppState` into react-query's `focusManager` once,
+app-wide, or polling keeps running in the background and burns battery
+(the video-progress hook `use-video.ts` already shows the interval
+pattern); and after `PATCH .../read`, invalidate the query so the badge
+drops immediately instead of waiting a tick. Server-side this cadence is
+already paid for: the unread count runs on the `(recipientUserId,
+readAt)` index. SSE/WebSocket was considered and deliberately rejected
+for now — it buys ~1s over ~10s at the price of reconnect logic today
+and Redis the day there are two API instances; revisit only if chat or
+another genuinely two-way feature arrives.
+
+### Settings — `apps/api/src/settings/` (WBS 3.4.4 + 3.4.5, added 2026-08-21)
+
+| Route                              | Returns                |
+| ---------------------------------- | ---------------------- |
+| `GET /me/settings/privacy`         | `PrivacySettings`      |
+| `PATCH /me/settings/privacy`       | `PrivacySettings`      |
+| `GET /me/settings/notifications`   | `NotificationSettings` |
+| `PATCH /me/settings/notifications` | `NotificationSettings` |
+
+**Notification toggles (WBS 3.4.5).** `NotificationSettings` is
+`{ newPosts, aboutMe, reminders }`, all default `true`, PATCH is a
+partial merge (same conventions as privacy below). Grouped by _why you
+got it_, not one switch per type: `newPosts` = `NEW_POST` (feed noise),
+`aboutMe` = `COMMENT`/`REACTION`/`MEMBER_TAG` (things aimed at you),
+`reminders` = `BIRTHDAY_REMINDER`/`EVENT_REMINDER` (and `CARE_REMINDER`
+if 3.3 ships). Enforced at the creation funnel every notification passes
+through, so **muting means the row is never created** — nothing appears
+in the list, the badge never counts it, and unmuting does not resurrect
+what was muted. `FAMILY_INVITE`/`AI_SUGGESTION` have no toggle yet
+(nothing raises them) and always deliver.
+
+`PrivacySettings` is `{ allowAiPhotoAnalysis: boolean }` — defaults
+applied on read, so the app never sees a missing key. PATCH is a partial
+merge; unknown stored keys survive, so an old client cannot wipe a future
+flag.
+
+**`allowAiPhotoAnalysis`** (default `true`) is screen 20's "AI
+permissions", and it is **enforced, not decorative**: turning it off
+(1) removes the user's photos from the phase-1 pending feed — the only
+door photos leave through for the AI service — including photos uploaded
+later, and (2) **deletes every insight already extracted** from their
+photos (opting out withdraws the traces, the same principle as insights
+cascade-deleting with a deleted photo). Turning it back on re-queues
+their photos for analysis; the deleted insights do not resurrect.
+
+The other three screen-20 privacy items are **deliberately not stored
+yet**: the personal archive is already private, the sharing scope is
+chosen per post in the composer, and profile visibility has no product
+definition — a stored toggle the server does not enforce would be a lie
+the UI tells. Notification settings (3.4.5) will join this controller.
+
+### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side; CRUD = WBS 3.2.3, added 2026-08-20)
+
+| Route                                                     | Returns                |
+| --------------------------------------------------------- | ---------------------- |
+| `GET /families/:familyId/special-dates`                   | `UpcomingSpecialDates` |
+| `GET /families/:familyId/special-dates/custom`            | `SpecialDateDetail[]`  |
+| `POST /families/:familyId/special-dates`                  | `SpecialDateDetail`    |
+| `PATCH /families/:familyId/special-dates/:specialDateId`  | `SpecialDateDetail`    |
+| `DELETE /families/:familyId/special-dates/:specialDateId` | `{ success }`          |
+
+**CRUD (WBS 3.2.3).** `SpecialDateDetail` is `{ id, type, title, month,
+day, originYear, theme, members[], createdById, createdAt, updatedAt }` —
+the stored row **with its id**, which the merged widget items below never
+carry; the management side of screen 17 reads `GET .../custom` (calendar
+order), never the widget GET. Any family member creates, edits and
+deletes (no roles in the MVP — `createdById` is provenance, not
+ownership). Create body: `{ type, title (≤120, trimmed), month, day,
+originYear?, theme, memberIds? }`; `memberIds` must belong to this family
+and **replaces** on PATCH; `originYear: null` clears the ordinal. The
+month/day pair must be a real date — validated as the _resulting_ pair on
+PATCH, so changing only the month cannot leave Feb 31 behind; **Feb 29 is
+legal** and rolls to Mar 1 in non-leap years at display time. Deleting
+removes the occasion from the widgets; derived birthdays/memorials are
+untouched (edit those on the profile). A row addressed through another
+family's URL is a 404.
 
 `UpcomingSpecialDates` is `{ items: SpecialDateItem[] }`, soonest first,
 `?limit` 1–50 (default 10). Each item:
@@ -489,9 +656,8 @@ items `{ memberId, displayName }`.
   member with a `birthDate` (theme `CONFETTI_CANDLES`), a memorial per
   member with a `deathDate` (theme `FLORAL_BORDER`). A deceased member
   gets a memorial only, no birthday. No rows are stored.
-- **CUSTOM** items are `SpecialDate` rows (anniversaries etc.). Their
-  CRUD ships with Sprint 3 (task 3.2.3) — until then the table is
-  normally empty.
+- **CUSTOM** items are `SpecialDate` rows (anniversaries etc.), managed
+  through the CRUD above (task 3.2.3, done 2026-08-20).
 - `title` is only set on CUSTOM items. **Derived items carry no text**:
   build the label client-side from `type`, `members` and `ordinal`
   ("Dad turns 63", 三回忌) — i18n lives in the app, per the
@@ -595,30 +761,16 @@ already set as `expo.scheme`). The fragment keeps the tokens out of server
 logs and out of the `Referer`. The app then completes the flow with
 `expo-web-browser`; putting the buttons back is one screen edit each.
 
-**4. Avatars have columns and no endpoints (added 2026-08-19).**
-`User.avatarKey` and `FamilyMember.avatarKey` are in the schema, and nothing
-reads or writes them: no DTO accepts an avatar, and no route turns a key into
-bytes. `family.service.ts` selects `avatarKey` into `FamilyMemberSummary`, so
-the app receives a field that is always `null`.
-
-Verified rather than assumed: `PATCH /families/:familyId/members/:memberId`
-with `{"avatarKey": "<a real media id>"}` answers **200** and leaves the
-column `null` — `whitelist: true` on the global `ValidationPipe` strips the
-unknown key silently. That is why the app has **no avatar upload button**: one
-that looks like it worked is worse than none.
-
-**Asked for**, and the app is ready for both halves the moment they exist:
-
-- A write. Simplest shape that fits what is already there: accept
-  `avatarMediaId` on `UpdateProfileDto` (the profile is the global,
-  once-per-person object the app already edits), pointing at a `Media` row
-  the caller uploaded through `POST /media`.
-- A read. If the value is a `Media.id`, `GET /media/:id` already serves it
-  and the client needs nothing new — `lib/media-source.ts` handles the
-  authenticated fetch today. If it stays an opaque storage key, it needs a
-  route of its own.
-
-Until then `components/ui/avatar.tsx` draws an initial on a per-person tint.
+**4. ~~Avatars have columns and no endpoints~~ (added 2026-08-19) — done
+2026-08-20, in exactly the asked-for shape.** `avatarMediaId` on
+`UpdateProfileDto` (both profile routes), value is a `Media.id` served by
+the existing `GET /media/:id`, read back on `ProfileDetail.avatarMediaId`
+and on `FamilyMemberSummary.avatarKey` everywhere members appear. Full
+semantics in § Life Profiles above. One thing the request did not name and
+the server now handles: an avatar's bytes are visible to everyone who can
+see the person (before, a standalone upload streamed uploader-only, so
+everyone else's avatar would have 404'd). FE work remaining: the upload
+button, and reading the field in `components/ui/avatar.tsx`.
 
 Also still open from an earlier decision, and worth grouping here: **the
 profile PATCH is wider than the app.** `PATCH …/members/:memberId/profile`

@@ -42,7 +42,7 @@ export function MemberSheet({ visible, onClose, members, selectedId, onSelect }:
               backgroundColor: selected ? colors.coral.soft : pressed ? colors.background.subtle : 'transparent',
             })}
           >
-            <Avatar size={38} name={m.displayName} avatarKey={m.avatarKey} />
+            <Avatar size={38} name={m.displayName} mediaId={m.avatarKey} />
             <Text variant="body2" weight="semibold" style={{ flex: 1 }} numberOfLines={1}>
               {m.displayName}
             </Text>

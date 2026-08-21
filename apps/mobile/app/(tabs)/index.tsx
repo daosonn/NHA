@@ -2,7 +2,8 @@ import { useRouter } from 'expo-router';
 import { HousePlus, TriangleAlert } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, FlatList, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
+import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 
 import { PostCard } from '../../src/components/feed/post-card';
 import { EventWidget } from '../../src/components/home/event-widget';
@@ -16,23 +17,17 @@ import { SectionHeader } from '../../src/components/ui/section-header';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { useFamilies } from '../../src/features/family/use-families';
 import { takePendingInvite } from '../../src/features/family/pending-invite';
-import { useMemberIdLookup } from '../../src/features/family/use-member-for-user';
+import { useMemberLookup } from '../../src/features/family/use-member-for-user';
 import { useFamilyFeed } from '../../src/features/feed/use-family-feed';
 import { useSetReaction } from '../../src/features/feed/use-post';
+import { useAlbums } from '../../src/features/album/use-albums';
 import { useSpecialDates } from '../../src/features/ai/use-special-dates';
-import { defaultOccasion, notificationCount, recommendations } from '../../src/fixtures/home';
+import { useRecommendations } from '../../src/features/home/use-recommendations';
 import type { FamilySummary, PostDetail } from '../../src/lib/api';
 import { colors, spacing } from '../../src/theme';
 
 /** Room for the bottom nav plus the home indicator. */
 const BOTTOM_INSET = 140;
-
-/**
- * Banner behind the occasion card. An app asset, not family media: the
- * occasion is a date on the calendar and owns no photo. Same reason the
- * recommendation tiles carry their own banners in `fixtures/home`.
- */
-const OCCASION_BANNER = require('../../assets/banners/anniversary.jpg') as number;
 
 /** How many faces the strip draws before it collapses the rest into "+N". */
 const VISIBLE_GROUPS = 3;
@@ -65,6 +60,17 @@ export default function HomeScreen() {
   const { familyId } = useActiveFamily();
 
   /**
+   * Drives the pinned strip's condense. A shared value rather than state:
+   * this updates on every scroll frame, and re-rendering the feed sixty
+   * times a second to shrink a bar by seven pixels is not a trade worth
+   * making.
+   */
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
+
+  /**
    * Somebody who opened an invite link while signed out was sent through
    * sign-up, and the auth group lands everyone here afterwards. This is the
    * far end of that detour: take the code back out and finish the trip.
@@ -83,13 +89,18 @@ export default function HomeScreen() {
 
   const { data: families, isPending, isError, refetch } = useFamilies();
   const feed = useFamilyFeed(familyId);
-  const memberIdFor = useMemberIdLookup();
+  const memberFor = useMemberLookup();
   const { data: occasions } = useSpecialDates(familyId);
 
   // Soonest first from the server, so the head of the list is the next one.
   const nextOccasion = occasions?.items[0];
 
   const posts: PostDetail[] = feed.data?.pages.flatMap((page) => page.items) ?? [];
+
+  // The feed is already loaded above; the album list is one small request
+  // and is what lets a shelf the viewer built turn up here too.
+  const { data: albums } = useAlbums();
+  const suggestions = useRecommendations(posts, albums);
 
   /** The pill on a card: which family this reached, in that family's own name. */
   const audienceLabel = (post: PostDetail): string | undefined => {
@@ -99,9 +110,9 @@ export default function HomeScreen() {
   };
 
   const openAuthor = (post: PostDetail) => {
-    const memberId = memberIdFor(post.authorUserId);
-    if (memberId === null) return undefined;
-    return () => router.push({ pathname: '/member/[id]', params: { id: memberId } });
+    const member = memberFor(post.authorUserId);
+    if (member === null) return undefined;
+    return () => router.push({ pathname: '/member/[id]', params: { id: member.id } });
   };
 
   /**
@@ -112,43 +123,56 @@ export default function HomeScreen() {
    */
   const intro = (
     <View style={{ gap: 14, paddingBottom: 14 }}>
-      {/* The + starts another group. Someone with no family at all lands on
-          `/create-family` from the empty state below, which offers joining
-          too — by the time this strip exists, they already have one. */}
-      <GroupStrip
-        groups={toStripGroups(families ?? [])}
-        remainingCount={Math.max(0, (families?.length ?? 0) - VISIBLE_GROUPS)}
-        onPress={() => router.push('/family')}
-        onAddPress={() => router.push('/family/new')}
-      />
+      {/* Drawn only when there is an occasion. Birthdays are derived from
+          the birth dates on people's profiles, so a family who have not
+          filled any in has nothing coming up — and an empty celebration
+          card would be a strange thing to look at. */}
+      {nextOccasion !== undefined && (
+        <EventWidget occasion={nextOccasion} moreCount={(occasions?.items.length ?? 1) - 1} />
+      )}
 
-      {/* Mốc thật của gia đình luôn thắng; khi chưa có mốc nào (chưa có gia
-          đình, hoặc chưa ai khai ngày sinh) thì card vẫn vẽ với mốc mặc định
-          của app — cùng lý do các thẻ おすすめ luôn có mặt. Trước đây khối này
-          biến mất và màn Home khuyết một mảng lớn. */}
-      <EventWidget
-        occasion={nextOccasion ?? defaultOccasion()}
-        moreCount={Math.max(0, (occasions?.items.length ?? 0) - 1)}
-        image={OCCASION_BANNER}
-      />
+      {/* Hidden until the family has something old enough to resurface. An
+          empty "look what turned up" is worse than no shelf, and a shelf of
+          bundled stock photographs would be a claim about their life. */}
+      {suggestions.length > 0 && (
+        <>
+          <SectionHeader title={t('home.recommendations')} />
 
-      {/* Recommendations are still a fixture: no endpoint exists for them. */}
+          <RecommendationGrid
+            tiles={suggestions}
+            onSelect={(tile) =>
+              tile.target.kind === 'album'
+                ? router.push({ pathname: '/albums/[id]', params: { id: tile.target.id } })
+                : router.push({ pathname: '/post/[id]', params: { id: tile.target.id } })
+            }
+          />
+        </>
+      )}
 
-      <SectionHeader title={t('home.recommendations')} actionLabel={t('home.seeAll')} />
-
-      <RecommendationGrid feature={recommendations.feature} secondary={recommendations.secondary} />
-
-      <SwipeCue />
+      {/* Fades on the first flick — it has been followed by then. */}
+      <SwipeCue scrollY={scrollY} />
     </View>
   );
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.page }}>
-      <AppHeader
-        left={<BrandWordmark />}
-        right={<NotificationBell count={notificationCount} />}
-        paddingRight={spacing.lg}
-      />
+      <AppHeader left={<BrandWordmark />} right={<NotificationBell />} paddingRight={spacing.lg} />
+
+      {/* Pinned, not scrolled with the feed. It is the only way into the
+          family tree, and as the feed's first row it was gone after one
+          flick. The + starts another group; somebody with no family at all
+          lands on `/create-family` from the empty state below. */}
+      {families !== undefined && families.length > 0 && (
+        <View style={{ paddingHorizontal: spacing.xl, paddingTop: 4, paddingBottom: 10 }}>
+          <GroupStrip
+            groups={toStripGroups(families)}
+            remainingCount={Math.max(0, families.length - VISIBLE_GROUPS)}
+            onPress={() => router.push('/family')}
+            onAddPress={() => router.push('/family/new')}
+            scrollY={scrollY}
+          />
+        </View>
+      )}
 
       {renderBody()}
     </View>
@@ -188,12 +212,14 @@ export default function HomeScreen() {
     }
 
     return (
-      <FlatList
+      <Animated.FlatList
         data={posts}
-        keyExtractor={(post) => post.id}
+        keyExtractor={(post: PostDetail) => post.id}
         ListHeaderComponent={intro}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={{
-          padding: spacing.xl,
+          paddingHorizontal: spacing.xl,
           paddingBottom: BOTTOM_INSET,
           gap: 12,
         }}
@@ -219,7 +245,7 @@ export default function HomeScreen() {
             <ActivityIndicator color={colors.coral.primary} style={{ paddingVertical: 16 }} />
           ) : null
         }
-        renderItem={({ item }) => (
+        renderItem={({ item }: { item: PostDetail }) => (
           <FeedCard
             post={item}
             audienceLabel={audienceLabel(item)}
@@ -228,6 +254,7 @@ export default function HomeScreen() {
             onMediaPress={(m) =>
               router.push({ pathname: '/media/[id]', params: { id: m.id, mime: m.mimeType } })
             }
+            authorAvatarId={memberFor(item.authorUserId)?.avatarKey}
           />
         )}
       />

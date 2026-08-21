@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import {
+  BadRequestException,
   BadGatewayException,
   ConflictException,
   Injectable,
@@ -122,9 +123,15 @@ export class OAuthService {
       select: { id: true },
     });
     if (existing) {
-      throw new ConflictException(
-        'Email is already registered — log in with email and password',
-      );
+      // The address rides on the exception rather than on the service, which
+      // is a singleton: a field there would be shared by every request in
+      // flight, and two people signing in at once could be told each other's.
+      throw new ConflictException({
+        statusCode: 409,
+        error: 'Conflict',
+        email: profile.email,
+        message: 'Email is already registered — log in with email and password',
+      });
     }
 
     const user = await this.prisma.user.create({
@@ -155,6 +162,39 @@ export class OAuthService {
       );
     }
     return { clientId, clientSecret };
+  }
+
+  /**
+   * Where to hand the token pair back to, once the provider is done.
+   *
+   * Without this the callback answers `200 { accessToken, refreshToken }` as
+   * JSON — fine for Swagger and curl, useless to a client: a native app has
+   * no way to read a JSON page, and a web app has navigated away from itself
+   * to get here. The tokens have to come back as a redirect.
+   *
+   * **Exact match against a configured allowlist, never the raw parameter.**
+   * Echoing back whatever a caller asks for turns this route into an open
+   * redirector that hands real credentials to any address on the internet.
+   * `OAUTH_APP_REDIRECTS` is comma-separated; unset means no client may ask,
+   * and the JSON answer stands.
+   *
+   * Returns null when the caller asked for nothing.
+   */
+  resolveAppRedirect(requested: string | undefined): string | null {
+    if (!requested) {
+      return null;
+    }
+
+    const allowed = (this.config.get<string>('OAUTH_APP_REDIRECTS') ?? '')
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0);
+
+    if (!allowed.includes(requested)) {
+      throw new BadRequestException('redirect is not an allowed address');
+    }
+
+    return requested;
   }
 
   private redirectUri(provider: OAuthProvider): string {

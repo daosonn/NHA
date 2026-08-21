@@ -4,10 +4,10 @@ import { StyleSheet, View } from 'react-native';
 import Svg, { Polygon } from 'react-native-svg';
 
 import { useOccasionLabel } from '../../features/ai/use-special-dates';
+import { occasionBackdrop } from '../../fixtures/home';
 import type { SpecialDateItem } from '../../lib/api';
 import { formatFullDate } from '../../lib/date';
-import { colors, radius } from '../../theme';
-import { PhotoPlaceholder } from '../ui/photo-placeholder';
+import { colors, radius, spacing } from '../../theme';
 import { Text } from '../ui/text';
 
 const HEIGHT = 196;
@@ -89,12 +89,6 @@ export type EventWidgetProps = {
   occasion: SpecialDateItem;
   /** How many more are coming up behind this one. */
   moreCount?: number;
-  /**
-   * Banner behind the card — an app asset (`assets/banners/`), not family
-   * media: this widget draws an occasion, and an occasion has no photo of its
-   * own. Omitted → the striped placeholder stays.
-   */
-  image?: number;
 };
 
 /**
@@ -112,7 +106,7 @@ export type EventWidgetProps = {
  * `FLORAL_BORDER` have no drawing yet, and a plain white box for a memorial
  * would read as a widget that failed to load.
  */
-export function EventWidget({ occasion, moreCount = 0, image }: EventWidgetProps) {
+export function EventWidget({ occasion, moreCount = 0 }: EventWidgetProps) {
   const { t } = useTranslation();
 
   // One place words an occasion, and `main` already owns it — the AI hub and
@@ -136,31 +130,30 @@ export function EventWidget({ occasion, moreCount = 0, image }: EventWidgetProps
         { boxShadow: '0 10px 28px rgba(24,24,27,0.1), 0 0 0 1px rgba(24,24,27,0.07)' },
       ]}
     >
-      <PhotoPlaceholder style={StyleSheet.absoluteFill} />
-      {image !== undefined && (
-        // Neo lên đỉnh: khung rộng hơn tỉ lệ ảnh nên phần bị cắt là trên-dưới,
-        // và mặt người luôn ở nửa trên — cắt từ dưới giữ được ánh mắt.
-        <Image
-          source={image}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          contentPosition="top"
-        />
-      )}
+      {/* A stand-in until an occasion can carry a photograph of its own.
+          Dimmed, because the white card and the countdown sit on top of it
+          and the picture is scenery, not the subject. */}
+      <Image
+        source={occasionBackdrop}
+        contentFit="cover"
+        transition={200}
+        style={StyleSheet.absoluteFill}
+      />
+      <View
+        style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.28)' }]}
+        pointerEvents="none"
+      />
       <Bunting />
 
       <View
         style={[
           {
-            // Neo ĐÁY phải, hẹp hơn và trong hơn: ở góc trên phải nó đè đúng vào
-            // mặt người trong ảnh (đã dính với banner kỷ niệm). Ở đáy nó chỉ nằm
-            // trên mặt bàn, và 0.84 đủ đục để chữ đen còn đọc được trên ảnh sáng.
             position: 'absolute',
-            bottom: 10,
-            right: 10,
-            width: 138,
+            top: 36,
+            right: spacing.md,
+            width: 150,
             borderRadius: radius.md,
-            backgroundColor: 'rgba(255,255,255,0.84)',
+            backgroundColor: 'rgba(255,255,255,0.92)',
             padding: 10,
             gap: 6,
           },

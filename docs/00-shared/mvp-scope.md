@@ -78,7 +78,16 @@ and `domain-model.md`):
       types allowed (adopted, step, extended); set by whoever adds the
       member; tree auto-renders. See `domain-model.md`.
 - [ ] Media storage strategy
-- [ ] Notification delivery method
+- [x] Notification delivery method — **decided 2026-08-20: in-app only for
+      the MVP.** A list plus an unread badge inside the app, refreshed
+      while the app is open. **Push is deferred, not dropped.** The reason
+      is lead time, not cost: a push that reaches a closed phone must go
+      through Apple's servers, which needs a paid Apple Developer account,
+      and an **organization** account waits on D-U-N-S verification that
+      no amount of money shortens. That account is needed for an App Store
+      release anyway, so it should be started as a project task rather
+      than as part of this feature — see `project-status.md` → Important
+      Decisions.
 - [ ] AI providers and models
 - [ ] Final UI design system
 

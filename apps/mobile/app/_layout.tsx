@@ -20,6 +20,7 @@ import Lora_700Bold from '@expo-google-fonts/lora/700Bold/Lora_700Bold.ttf';
 // Registers the Tailwind utilities with NativeWind. Must be imported once,
 // at the root.
 import '../global.css';
+import { ToastProvider } from '../src/components/ui/toast';
 import { SessionProvider, useSession } from '../src/features/auth/session';
 import { currentAccessToken, refreshSession } from '../src/features/auth/session-store';
 import { ActiveFamilyProvider } from '../src/features/family/active-family';
@@ -126,14 +127,18 @@ export default function RootLayout() {
             {/* Below the session: which family is active is only a question
                 once somebody is signed in. */}
             <ActiveFamilyProvider>
-              <AuthGate>
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor: colors.background.page },
-                  }}
-                />
-              </AuthGate>
+              {/* Above the navigator so a toast outlives a screen change —
+                  saving a memo and going back should still say "saved". */}
+              <ToastProvider>
+                <AuthGate>
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      contentStyle: { backgroundColor: colors.background.page },
+                    }}
+                  />
+                </AuthGate>
+              </ToastProvider>
             </ActiveFamilyProvider>
           </SessionProvider>
         </QueryClientProvider>

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
+import { ScreenTitle } from '../../src/components/layout/header-slots';
 import { AudiencePicker, type AudienceGroup } from '../../src/components/moment/audience-picker';
 import { MediaStrip, type DraftMedia } from '../../src/components/moment/media-strip';
 import { MemberTagPicker } from '../../src/components/moment/member-tag-picker';
@@ -153,13 +154,7 @@ export default function NewMomentScreen() {
 
   return (
     <View className="flex-1 bg-page">
-      <AppHeader
-        center={
-          <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-            {t('moment.title')}
-          </Text>
-        }
-      />
+      <AppHeader center={<ScreenTitle title={t('moment.title')} />} />
 
       <ScrollView
         contentContainerStyle={{ padding: spacing.xl, paddingBottom: BOTTOM_INSET, gap: 20 }}

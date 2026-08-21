@@ -192,7 +192,7 @@ export function MemoList({
                   key={g.key}
                   label={g.displayName}
                   count={g.memos.length}
-                  avatarKey={g.avatarKey}
+                  avatarId={g.avatarKey}
                   active={picked === g.key}
                   onPress={() => setPicked(picked === g.key ? null : g.key)}
                 />
@@ -205,7 +205,7 @@ export function MemoList({
           {shown.map((group) => (
             <View key={group.key} style={{ gap: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
-                <Avatar size={28} name={group.displayName} avatarKey={group.avatarKey} />
+                <Avatar size={28} name={group.displayName} mediaId={group.avatarKey} />
                 <Text variant="body2" weight="semibold" numberOfLines={1} style={{ flex: 1 }}>
                   {group.displayName}
                 </Text>
@@ -250,13 +250,13 @@ export function MemoList({
 function FilterChip({
   label,
   count,
-  avatarKey,
+  avatarId,
   active,
   onPress,
 }: {
   label: string;
   count: number;
-  avatarKey?: string | null;
+  avatarId?: string | null;
   active: boolean;
   onPress: () => void;
 }) {
@@ -270,7 +270,7 @@ function FilterChip({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 7,
-        paddingLeft: avatarKey === undefined ? 12 : 5,
+        paddingLeft: avatarId === undefined ? 12 : 5,
         paddingRight: 12,
         paddingVertical: 5,
         borderRadius: radius.full,
@@ -279,7 +279,7 @@ function FilterChip({
         backgroundColor: active ? colors.coral.soft : colors.background.card,
       }}
     >
-      {avatarKey !== undefined && <Avatar size={24} name={label} avatarKey={avatarKey} />}
+      {avatarId !== undefined && <Avatar size={24} name={label} mediaId={avatarId} />}
       <Text
         variant="caption"
         weight="semibold"

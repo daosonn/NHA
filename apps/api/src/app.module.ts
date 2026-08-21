@@ -10,8 +10,10 @@ import { FamilyModule } from './family/family.module';
 import { GalleryModule } from './gallery/gallery.module';
 import { MediaModule } from './media/media.module';
 import { MemoModule } from './memo/memo.module';
+import { NotificationModule } from './notification/notification.module';
 import { PostModule } from './post/post.module';
 import { ProfileModule } from './profile/profile.module';
+import { SettingsModule } from './settings/settings.module';
 import { SpecialDateModule } from './special-date/special-date.module';
 import { VideoModule } from './video/video.module';
 
@@ -40,8 +42,10 @@ import { VideoModule } from './video/video.module';
     GalleryModule,
     MediaModule,
     MemoModule,
+    NotificationModule,
     PostModule,
     ProfileModule,
+    SettingsModule,
     SpecialDateModule,
     VideoModule,
   ],

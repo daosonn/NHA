@@ -9,7 +9,7 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, View } from 'react-n
 import { Sheet } from '../../src/components/ai/sheet';
 import { SourceChip } from '../../src/components/ai/source-chip';
 import { AppHeader } from '../../src/components/layout/app-header';
-import { BackButton } from '../../src/components/layout/header-slots';
+import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Button } from '../../src/components/ui/button';
 import { Card } from '../../src/components/ui/card';
 import { Chip } from '../../src/components/ui/chip';
@@ -98,7 +98,9 @@ export default function GiftResultsScreen() {
   const openShop = (idea: GiftIdeaResult) => {
     const kw = idea.resolve?.keyword_ja || idea.search_keywords_ja;
     if (!kw) return;
-    const range = idea.resolve ? `&price_from=${idea.resolve.price_min}&price_to=${idea.resolve.price_max}` : '';
+    const range = idea.resolve
+      ? `&price_from=${idea.resolve.price_min}&price_to=${idea.resolve.price_max}`
+      : '';
     void Linking.openURL(`https://shopping.yahoo.co.jp/search?p=${encodeURIComponent(kw)}${range}`);
   };
 
@@ -106,11 +108,7 @@ export default function GiftResultsScreen() {
     <View className="flex-1 bg-page">
       <AppHeader
         left={<BackButton onPress={() => router.back()} />}
-        center={
-          <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-            {t('ai.gifts.title')}
-          </Text>
-        }
+        center={<ScreenTitle title={t('ai.gifts.title')} />}
         right={
           <Pressable
             onPress={() => {
@@ -118,7 +116,13 @@ export default function GiftResultsScreen() {
             }}
             accessibilityRole="button"
             accessibilityLabel={t('ai.gifts.regenerate')}
-            style={{ width: 40, height: 40, borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' }}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: radius.full,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
             <RotateCw size={18} color={colors.text.primary} strokeWidth={2.1} />
           </Pressable>
@@ -127,12 +131,20 @@ export default function GiftResultsScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: 14, paddingBottom: 40, gap: 12 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.xl,
+          paddingTop: 14,
+          paddingBottom: 40,
+          gap: 12,
+        }}
         showsVerticalScrollIndicator={false}
       >
         <View style={{ gap: 4 }}>
           <Text serif weight="bold" style={{ fontSize: 25, lineHeight: 31, letterSpacing: -0.4 }}>
-            {t('ai.gifts.resultsTitle', { count: data?.ideas.length ?? 5, name: params.memberName })}
+            {t('ai.gifts.resultsTitle', {
+              count: data?.ideas.length ?? 5,
+              name: params.memberName,
+            })}
           </Text>
           <Text variant="caption" color={colors.text.muted}>
             {params.occasion}
@@ -153,7 +165,12 @@ export default function GiftResultsScreen() {
             <Text variant="body2" color={colors.text.body}>
               {t('ai.gifts.error')}
             </Text>
-            <Button label={t('common.retry')} variant="secondary" size="small" onPress={() => ask()} />
+            <Button
+              label={t('common.retry')}
+              variant="secondary"
+              size="small"
+              onPress={() => ask()}
+            />
           </Card>
         )}
 
@@ -221,7 +238,11 @@ export default function GiftResultsScreen() {
                     {insight.sources.length > 0 && (
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                         {insight.sources.map((s) => (
-                          <SourceChip key={s.evidence_id} label={s.label} onPress={() => setOpen({ source: s, idea: null })} />
+                          <SourceChip
+                            key={s.evidence_id}
+                            label={s.label}
+                            onPress={() => setOpen({ source: s, idea: null })}
+                          />
                         ))}
                       </View>
                     )}
@@ -261,12 +282,23 @@ export default function GiftResultsScreen() {
             <View style={{ gap: 12 }}>
               {data.ideas.map((idea) => (
                 <Card key={idea.title} padding={14} style={{ gap: 10 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      gap: 8,
+                    }}
+                  >
                     <Text variant="body1" weight="bold" style={{ flex: 1, letterSpacing: -0.15 }}>
                       {idea.title}
                     </Text>
                     <Chip
-                      label={idea.kind === 'together' ? t('ai.gifts.kindTogether') : t('ai.gifts.kindGift')}
+                      label={
+                        idea.kind === 'together'
+                          ? t('ai.gifts.kindTogether')
+                          : t('ai.gifts.kindGift')
+                      }
                       theme={idea.kind === 'together' ? 'memories' : 'gift'}
                       showDot
                     />
@@ -292,7 +324,11 @@ export default function GiftResultsScreen() {
                   {idea.sources.length > 0 && (
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                       {idea.sources.map((s) => (
-                        <SourceChip key={s.evidence_id} label={s.label} onPress={() => setOpen({ source: s, idea })} />
+                        <SourceChip
+                          key={s.evidence_id}
+                          label={s.label}
+                          onPress={() => setOpen({ source: s, idea })}
+                        />
                       ))}
                     </View>
                   )}
@@ -341,28 +377,65 @@ export default function GiftResultsScreen() {
                       }}
                     >
                       {/* hàng badge giải thích: cache · đã nới · đã loại vì kiêng kỵ */}
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          flexWrap: 'wrap',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
                         <Text variant="badge" weight="bold" color={colors.text.secondary}>
                           {t('ai.gifts.inStock', { count: idea.products.length })}
                         </Text>
                         {idea.resolve?.cached && (
-                          <View style={{ paddingHorizontal: 7, height: 18, justifyContent: 'center', borderRadius: radius.full, backgroundColor: colors.themes.hobbies.bg }}>
-                            <Text variant="badge" weight="semibold" color={colors.themes.hobbies.text}>
+                          <View
+                            style={{
+                              paddingHorizontal: 7,
+                              height: 18,
+                              justifyContent: 'center',
+                              borderRadius: radius.full,
+                              backgroundColor: colors.themes.hobbies.bg,
+                            }}
+                          >
+                            <Text
+                              variant="badge"
+                              weight="semibold"
+                              color={colors.themes.hobbies.text}
+                            >
                               {t('ai.gifts.fromCache')}
                             </Text>
                           </View>
                         )}
                         {!!idea.resolve?.relaxed && (
-                          <View style={{ paddingHorizontal: 7, height: 18, justifyContent: 'center', borderRadius: radius.full, backgroundColor: colors.themes.todo.bg }}>
+                          <View
+                            style={{
+                              paddingHorizontal: 7,
+                              height: 18,
+                              justifyContent: 'center',
+                              borderRadius: radius.full,
+                              backgroundColor: colors.themes.todo.bg,
+                            }}
+                          >
                             <Text variant="badge" weight="semibold" color={colors.themes.todo.text}>
                               {t('ai.gifts.widened')}
                             </Text>
                           </View>
                         )}
                         {(idea.resolve?.dropped_by_avoid ?? 0) > 0 && (
-                          <View style={{ paddingHorizontal: 7, height: 18, justifyContent: 'center', borderRadius: radius.full, backgroundColor: '#FDF3E7' }}>
+                          <View
+                            style={{
+                              paddingHorizontal: 7,
+                              height: 18,
+                              justifyContent: 'center',
+                              borderRadius: radius.full,
+                              backgroundColor: '#FDF3E7',
+                            }}
+                          >
                             <Text variant="badge" weight="semibold" color="#8A5E1E">
-                              {t('ai.gifts.droppedByAvoid', { count: idea.resolve!.dropped_by_avoid })}
+                              {t('ai.gifts.droppedByAvoid', {
+                                count: idea.resolve!.dropped_by_avoid,
+                              })}
                             </Text>
                           </View>
                         )}
@@ -377,17 +450,31 @@ export default function GiftResultsScreen() {
                           {p.image ? (
                             <Image
                               source={{ uri: p.image }}
-                              style={{ width: 46, height: 46, borderRadius: radius.lg, backgroundColor: colors.background.subtle }}
+                              style={{
+                                width: 46,
+                                height: 46,
+                                borderRadius: radius.lg,
+                                backgroundColor: colors.background.subtle,
+                              }}
                               contentFit="cover"
                             />
                           ) : (
-                            <PhotoPlaceholder style={{ width: 46, height: 46, borderRadius: radius.lg }} />
+                            <PhotoPlaceholder
+                              style={{ width: 46, height: 46, borderRadius: radius.lg }}
+                            />
                           )}
                           <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
                             <Text variant="caption" numberOfLines={2}>
                               {p.name}
                             </Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 6,
+                                flexWrap: 'wrap',
+                              }}
+                            >
                               <Text variant="body2" weight="bold">
                                 {p.price.toLocaleString('ja-JP')}円
                               </Text>
@@ -400,7 +487,11 @@ export default function GiftResultsScreen() {
                                   backgroundColor: colors.themes.gift.bg,
                                 }}
                               >
-                                <Text variant="badge" weight="semibold" color={colors.themes.gift.text}>
+                                <Text
+                                  variant="badge"
+                                  weight="semibold"
+                                  color={colors.themes.gift.text}
+                                >
                                   Yahoo!ショッピング
                                 </Text>
                               </View>
@@ -411,7 +502,11 @@ export default function GiftResultsScreen() {
                               </Text>
                             </View>
                           </View>
-                          <ExternalLink size={14} color={colors.text.lightMuted} strokeWidth={2.1} />
+                          <ExternalLink
+                            size={14}
+                            color={colors.text.lightMuted}
+                            strokeWidth={2.1}
+                          />
                         </Pressable>
                       ))}
 
@@ -433,12 +528,16 @@ export default function GiftResultsScreen() {
 
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     <Button
-                      label={savedTitles.includes(idea.title) ? t('ai.gifts.saved') : t('ai.gifts.save')}
+                      label={
+                        savedTitles.includes(idea.title) ? t('ai.gifts.saved') : t('ai.gifts.save')
+                      }
                       variant={savedTitles.includes(idea.title) ? 'secondary' : 'neutral'}
                       size="small"
                       disabled={savedTitles.includes(idea.title)}
                       onPress={() => onSave(idea)}
-                      renderIcon={({ size, color }) => <Heart size={size} color={color} strokeWidth={2.1} />}
+                      renderIcon={({ size, color }) => (
+                        <Heart size={size} color={color} strokeWidth={2.1} />
+                      )}
                     />
                     {!!idea.search_keywords_ja && (
                       <Button
@@ -446,7 +545,9 @@ export default function GiftResultsScreen() {
                         variant="neutral"
                         size="small"
                         onPress={() => openShop(idea)}
-                        renderIcon={({ size, color }) => <ExternalLink size={size} color={color} strokeWidth={2.1} />}
+                        renderIcon={({ size, color }) => (
+                          <ExternalLink size={size} color={color} strokeWidth={2.1} />
+                        )}
                       />
                     )}
                   </View>
@@ -469,7 +570,7 @@ export default function GiftResultsScreen() {
         subtitle={
           resolved?.created_at
             ? `${open?.source.label ?? ''} · ${formatFullDate(resolved.created_at.slice(0, 10)) ?? ''}`
-            : open?.source.label ?? ''
+            : (open?.source.label ?? '')
         }
       >
         {source.isPending && (
@@ -481,7 +582,12 @@ export default function GiftResultsScreen() {
         {resolved?.media_id && (
           <Image
             source={mediaSource(resolved.media_id)}
-            style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: radius['2xl'], backgroundColor: colors.background.subtle }}
+            style={{
+              width: '100%',
+              aspectRatio: 4 / 3,
+              borderRadius: radius['2xl'],
+              backgroundColor: colors.background.subtle,
+            }}
             contentFit="cover"
           />
         )}
@@ -510,7 +616,8 @@ export default function GiftResultsScreen() {
         ) : null}
 
         {/* Also from — các nguồn còn lại của cùng ý tưởng */}
-        {(open?.idea?.sources.filter((s) => s.evidence_id !== open.source.evidence_id).length ?? 0) > 0 && (
+        {(open?.idea?.sources.filter((s) => s.evidence_id !== open.source.evidence_id).length ??
+          0) > 0 && (
           <View style={{ gap: 7 }}>
             <Text
               variant="badge"
@@ -521,10 +628,14 @@ export default function GiftResultsScreen() {
               {t('ai.gifts.alsoFrom')}
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-              {open!.idea!.sources
-                .filter((s) => s.evidence_id !== open!.source.evidence_id)
+              {open!
+                .idea!.sources.filter((s) => s.evidence_id !== open!.source.evidence_id)
                 .map((s) => (
-                  <SourceChip key={s.evidence_id} label={s.label} onPress={() => setOpen({ source: s, idea: open!.idea })} />
+                  <SourceChip
+                    key={s.evidence_id}
+                    label={s.label}
+                    onPress={() => setOpen({ source: s, idea: open!.idea })}
+                  />
                 ))}
             </View>
           </View>
@@ -566,7 +677,9 @@ export default function GiftResultsScreen() {
             >
               <Heart
                 size={18}
-                color={savedTitles.includes(open.idea.title) ? colors.coral.hover : colors.text.secondary}
+                color={
+                  savedTitles.includes(open.idea.title) ? colors.coral.hover : colors.text.secondary
+                }
                 strokeWidth={2.1}
                 fill={savedTitles.includes(open.idea.title) ? colors.coral.hover : 'transparent'}
               />

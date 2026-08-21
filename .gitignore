@@ -50,3 +50,9 @@ docker-compose.override.yml
 # Nh蘯｡c n盻］ cho video k盻ｷ ni盻㍊ (45 track .m4a, ~80MB) 窶・tﾃi s蘯｣n nh盻・phﾃ｢n, khﾃｴng vﾃo git.
 # L蘯･y v盻・b蘯ｱng cﾃ｡ch copy t盻ｫ demo onemoretime (assets/music) ho蘯ｷc ch蘯｡y l蘯｡i script fetch-music.
 apps/api/assets/music/
+
+# Original camera files dropped in for the demo (48 MB of PNG/HEIC/MOV, and
+# personal photographs). The app bundles downscaled copies from
+# apps/mobile/assets/home instead — 4 JPEGs, ~440 KB, which are committed.
+# Regenerate those with the sharp snippet in src/fixtures/home.ts's history.
+apps/mobile/assets/Duc/

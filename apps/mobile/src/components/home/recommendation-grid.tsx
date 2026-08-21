@@ -2,9 +2,9 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import type { RecommendationTile } from '../../features/home/use-recommendations';
+import { mediaSource } from '../../lib/media-source';
 import { colors, radius, spacing } from '../../theme';
-import type { Recommendation } from '../../fixtures/home';
-import { PhotoPlaceholder } from '../ui/photo-placeholder';
 import { Text } from '../ui/text';
 
 const FEATURE_HEIGHT = 212;
@@ -14,7 +14,7 @@ const SECONDARY_HEIGHT = 101;
 const SCRIM = ['rgba(9,9,11,0)', 'rgba(9,9,11,0.6)'] as const;
 
 type TileProps = {
-  item: Recommendation;
+  item: RecommendationTile;
   height: number;
   /** How far up the scrim reaches. */
   scrimHeight: number;
@@ -36,12 +36,13 @@ function Tile({ item, height, scrimHeight, onPress, children }: TileProps) {
         overflow: 'hidden',
       }}
     >
-      {/* Placeholder nằm dưới cùng: nó là thứ người dùng thấy trong lúc ảnh
-          giải mã, và là thứ còn lại nếu banner thiếu. */}
-      <PhotoPlaceholder tone={item.tone} style={StyleSheet.absoluteFill} />
-      {item.image !== undefined && (
-        <Image source={item.image} style={StyleSheet.absoluteFill} contentFit="cover" />
-      )}
+      <Image
+        source={mediaSource(item.mediaId)}
+        recyclingKey={item.mediaId}
+        contentFit="cover"
+        transition={160}
+        style={StyleSheet.absoluteFill}
+      />
       <LinearGradient
         colors={SCRIM}
         style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: scrimHeight }}
@@ -52,13 +53,22 @@ function Tile({ item, height, scrimHeight, onPress, children }: TileProps) {
 }
 
 export type RecommendationGridProps = {
-  feature: Recommendation;
-  secondary: [Recommendation, Recommendation];
-  onSelect?: (item: Recommendation) => void;
+  /** Up to three, newest rule first. Fewer is normal; none renders nothing. */
+  tiles: RecommendationTile[];
+  onSelect?: (tile: RecommendationTile) => void;
 };
 
-/** One tall tile beside two short ones — the two columns end level. */
-export function RecommendationGrid({ feature, secondary, onSelect }: RecommendationGridProps) {
+/**
+ * One tall tile beside up to two short ones — the two columns end level.
+ *
+ * The count is not fixed at three any more. A family with one old moment
+ * gets one tile rather than two invented ones, and the tall one takes the
+ * full width so the row does not end in a gap.
+ */
+export function RecommendationGrid({ tiles, onSelect }: RecommendationGridProps) {
+  const [feature, ...secondary] = tiles;
+  if (feature === undefined) return null;
+
   return (
     <View style={{ flexDirection: 'row', gap: 10 }}>
       <View style={{ flex: 1 }}>
@@ -81,26 +91,28 @@ export function RecommendationGrid({ feature, secondary, onSelect }: Recommendat
         </Tile>
       </View>
 
-      <View style={{ flex: 1, gap: 10 }}>
-        {secondary.map((item) => (
-          <Tile
-            key={item.id}
-            item={item}
-            height={SECONDARY_HEIGHT}
-            scrimHeight={56}
-            onPress={() => onSelect?.(item)}
-          >
-            <Text
-              variant="caption"
-              weight="semibold"
-              color={colors.text.white}
-              style={{ position: 'absolute', left: spacing.md, bottom: 10 }}
+      {secondary.length > 0 && (
+        <View style={{ flex: 1, gap: 10 }}>
+          {secondary.map((item) => (
+            <Tile
+              key={`${item.target.kind}-${item.target.id}`}
+              item={item}
+              height={SECONDARY_HEIGHT}
+              scrimHeight={56}
+              onPress={() => onSelect?.(item)}
             >
-              {item.title}
-            </Text>
-          </Tile>
-        ))}
-      </View>
+              <Text
+                variant="caption"
+                weight="semibold"
+                color={colors.text.white}
+                style={{ position: 'absolute', left: spacing.md, bottom: 10 }}
+              >
+                {item.title}
+              </Text>
+            </Tile>
+          ))}
+        </View>
+      )}
     </View>
   );
 }

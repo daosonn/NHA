@@ -2,6 +2,12 @@
 
 ## Current Sprint
 
+**Backend moved to Sprint 3 on 2026-08-20** — `docs/sprints/sprint-03.md`
+(Notification / Settings / Release). Sprint 2's backend is code-complete;
+sprint 2 itself is **not closed**: 2.1.3–2.1.5 (trang Memories) is unbuilt
+and undecided, ten items in 2.2–2.5 are built but never ticked, and 2.6
+was dropped (see Important Decisions).
+
 **Sprint 1 — Core Features** (in progress — PRs #1–#9 merged; the
 "pending team review before start" note was stale and is removed
 2026-08-18). **Backend has moved on to Sprint 2 (2026-08-19)**: sprint 1's
@@ -21,6 +27,30 @@ screens.
 - Setup record (completed): `docs/sprints/00-setup.md`
 
 ## Current Focus
+
+- **A pass over the shell, and notifications (2026-08-21).** Four things,
+  all of them about the app looking like one app:
+  - **Headers are one thing now.** `ScreenTitle` in `header-slots.tsx` is
+    used by all 23 headers plus `FormScreen`, and the wordmark carries the
+    app mark. The **bell is self-contained** — it reads its own unread count
+    and routes itself, so a screen adds it by writing it, not by wiring it —
+    and it sits on Home, Omoide, AI and other people's profiles.
+  - **Screen 19 (Notifications) is wired**: cursor-paginated list, unread as
+    a row tint rather than a dot, tap marks read _then_ navigates. A row with
+    nowhere to go is not pressable. Gap reported below: post notifications
+    carry `actorUserId` and no name, so they read "somebody commented".
+  - **Toasts** (`components/ui/toast.tsx`): one at a time, success and
+    failure alike. The app previously completed a save in total silence.
+  - **Avatars appear everywhere a person does** — feed, post detail,
+    comments, tree nodes, member sheet, Settings — closing sprint 3.4.2 on
+    the UI side. Details and the one limit (the active family) in
+    `architecture.md` § Avatars.
+
+  Two designs were tried and reverted the same day, both recorded in the code
+  next to what replaced them: the viewer's photograph in the bottom bar's
+  last slot (a face among four line drawings stops reading as a fifth
+  destination), and a centred, shrunken Welcome card (the coral header is
+  meant to _stretch_, not float).
 
 - **Frontend state re-verified against the code (2026-08-20).** Everything
   the server offers is now wired: auth including password reset, Home
@@ -569,6 +599,179 @@ dev` **did not regenerate the client**, and the stale client survived
   (`components/member/profile-facts.tsx`). On branch
   `feature/profile-facts` (stacked on `fix/backend-doc-accuracy`).
 
+- Notification API (2026-08-20, sprint 3, WBS 3.1.1): in-app notifications
+  for screen 19 — `GET /me/notifications` (cursor-paginated, newest first,
+  `?unreadOnly`), `GET /me/notifications/unread-count`,
+  `PATCH /me/notifications/:id/read`, `POST /me/notifications/read-all`.
+  **No migration** — `Notification` shipped in the sprint-0 schema.
+  Two design decisions worth keeping: **no create route** (a notification
+  is raised by an event, never requested by a client — other modules call
+  the exported `create`/`createMany`, which is how reminders in 3.2/3.3
+  will make theirs), and **no display text on the wire** — only `type`
+  plus a payload of ids, so the app writes the sentence. That follows the
+  rule the special-date widgets already set, and it is what keeps Japanese
+  copy out of the server. The list response carries `unreadCount` for the
+  whole account, so the badge (3.1.4) and the list cannot disagree.
+  Marking read is idempotent (the first `readAt` is kept). Verified by
+  format/lint/build/test + a **26-case live smoke test** (paging across 25
+  rows, badge vs page counts, per-user isolation with 404 not 403,
+  idempotent read, read-all not touching another account).
+
+  **Event triggers wired the same day** — a task the WBS never had, but
+  without it screen 19 would have been built over an empty table.
+  `NotificationEventsService` holds the rules (kept out of
+  `NotificationService`, which stays a dumb store): a new post notifies
+  the families it was shared to except the author, a tagged member gets
+  `MEMBER_TAG` **instead of** `NEW_POST` rather than both, and a comment
+  or a **first** reaction notifies the post's author. Three rules are
+  enforced there and verified: a **private post notifies nobody**, you are
+  never notified about your own action, and **changing a reaction raises
+  nothing** (LIKE → LOVE → HAHA is one notification, not three — that
+  needed an extra existence check before the upsert). Triggers are
+  fire-and-forget on the same contract as `analyzePostInBackground`: a
+  post is published even if writing its notifications fails. Verified by a
+  further **13-case live smoke test** across four accounts (three in one
+  family, one outside). **Invitations raise nothing** — the invitee has no
+  account yet, so who `FAMILY_INVITE` is for is an open product question.
+  On branch `feature/notification-api`.
+
+- SpecialDate CRUD (2026-08-20, sprint 3, WBS 3.2.3 API side):
+  `POST/PATCH/DELETE /families/:id/special-dates(/:id)` plus
+  `GET .../custom` — the stored rows **with their ids**, which the merged
+  widget GET (1.2.5) deliberately never carried, so the management side
+  of screen 17 finally has something to edit. **No migration** —
+  `SpecialDate`/`SpecialDateMember` shipped in sprint 0. Any family
+  member creates/edits/deletes (no roles in the MVP; `createdById` is
+  provenance, not ownership — same wiki spirit as placeholder profiles,
+  noted as an assumption to confirm). Rules: month/day must be a real
+  date, validated as the **resulting pair** on PATCH so changing only the
+  month cannot leave Feb 31 behind; **Feb 29 stays legal** (display rolls
+  it to Mar 1 in non-leap years, same as derived birthdays);
+  `memberIds` must belong to the family and replaces on PATCH;
+  `originYear: null` clears the ordinal; cross-family ids 404. Verified
+  by lint/build/test + a **23-case live smoke test** (create→widget
+  round-trip incl. ordinal, wiki edit by another member, date-pair
+  validation, family isolation, delete removes it from the widget).
+  Remaining in group 3.2: the reminder generator (3.2.2) that turns these
+  plus profile dates into Notification rows, and the screen-17 UI. On
+  branch `feature/special-date-crud`.
+- Avatar API (2026-08-20, sprint 3, WBS 3.4.2 API side): the write the
+  frontend asked for on 2026-08-19, in exactly the requested shape —
+  `avatarMediaId` on `UpdateProfileDto` (both profile routes, so the wiki
+  rule is the authorization), value stored into the existing
+  `User.avatarKey` / `FamilyMember.avatarKey` columns as a **Media id**
+  the existing `GET /media/:id` already streams. **No migration.** Read
+  side: `ProfileDetail.avatarMediaId`, plus `FamilyMemberSummary.avatarKey`
+  now **coalesces to the account's avatar for linked members** — one
+  person, one avatar, every family, tree included. Two rules enforced:
+  the photo must be the _editor's own uploaded image_ (400 otherwise, one
+  message, no existence oracle — on a placeholder the editor and the
+  subject differ, and pointing at somebody else's photo must not work),
+  and **avatar bytes are as visible as the person**: `MediaService.canView`
+  gained an avatar fallback, since a standalone upload used to stream
+  uploader-only and everyone else's avatar would have 404'd. Clearing the
+  avatar withdraws that widened visibility again. Avatar changes land in
+  the `EditHistory` snapshot. No index on `avatarKey` — the lookup only
+  runs after every parent check says no, on people-sized tables; add one
+  if it ever shows up in profiles. Verified by lint/build/test + a
+  **21-case live smoke test** (summary coalescing, visibility matrix
+  incl. outsider 404 and clear-withdraws-access, steal/audio/ghost 400s,
+  linked-profile 403, EditHistory in the DB). FE work remaining: upload
+  button + reading the field. On branch `feature/avatar-api`.
+
+- Reminder generator (2026-08-20, sprint 3, WBS 3.2.2): a twice-daily
+  in-process job (`ReminderService`, plain `setInterval` + startup run —
+  a cron package is not worth "twice a day") that turns LifeProfile
+  birth/death dates and SpecialDate rows into Notification rows via the
+  `createMany` the notification module exported for exactly this.
+  **No migration, no dependency, no new route.** Lead times **7 days and
+  day-of** — an assumption to confirm, nothing was written down; per-user
+  tuning belongs to 3.4.5. Rules enforced and verified: nobody is
+  reminded of **their own** birthday; a deceased member gets memorial
+  reminders only; custom occasions notify the whole family including the
+  people they are about; one reminder per person per occurrence per lead
+  even across shared families. Idempotent by a `dedupeKey` in the payload
+  (occasion + occurrence + lead) checked against the last 9 days — the
+  same restart-safety contract as everything else, and the reason the
+  smoke test could simply restart the API twice. Payloads carry ids +
+  data snapshots (name, custom title), never composed sentences. Same
+  calendar rules as the widgets (UTC days, Feb 29 → Mar 1) — the JST
+  question applies here too. Known limit, same as the video renderer:
+  check-then-insert means two instances could double-create; fine
+  single-instance, noted for the scale-out day. Verified by
+  lint/build/test + a **12-case staged smoke test** (seed → restart →
+  assert → restart → assert-no-duplicates), counts exact per recipient.
+  Group 3.2 backend is now **fully closed** (3.2.1 widget GET, 3.2.2
+  reminders, 3.2.3 CRUD). On branch `feature/reminders`.
+
+- Change password API (2026-08-21, sprint 3, WBS 3.4.3):
+  `POST /auth/change-password` — requires the **current password even with
+  a valid token** (an unlocked phone must not lock its owner out), applies
+  the register password rules, and on success **revokes every refresh
+  token then returns a fresh `AuthResult` for this device** — the person
+  who changed it stays signed in, every other device is out, same
+  session-ending contract as the reset flow. Social-only accounts (empty
+  hash) get a clear 400 — "set a password" belongs to a future
+  account-linking flow. No migration, no new module — one method in
+  AuthService reusing argon2 + `issueTokens`. Verified by
+  lint/build/test + a **13-case live smoke test** (two-device revocation
+  matrix incl. the caller's own old pair dying, wrong/same/short password,
+  social-only via a DB-forced empty hash).
+
+  **WBS 3.3 (care reminder) suspended the same day** — the rule is
+  defined nowhere and it is the most culturally sensitive feature in the
+  sprint; question + proposal recorded in `domain-model.md` → Open
+  Questions, section marked in `sprint-03.md`. The plumbing (3.2.2's
+  `ReminderService`) is ready the day the team decides.
+
+- Privacy settings API (2026-08-21, sprint 3, WBS 3.4.4):
+  `GET/PATCH /me/settings/privacy` on a new `settings/` module (3.4.5
+  will join it). **One flag, fully enforced**: `allowAiPhotoAnalysis`
+  (default true, screen 20's "AI permissions") — turning it off removes
+  the user's photos from the phase-1 pending feed at the only door photos
+  leave through (`InsightService.listPending`), covers photos uploaded
+  later, and **deletes every insight already extracted** from their
+  photos; opting back in re-queues them, deleted insights stay deleted.
+  This gives the recorded customer concern ("family photos leave the
+  server for the Claude API — Japanese market, privacy-sensitive",
+  `03-ai/architecture.md`) a real per-user answer. Stored as a partial
+  object in the sprint-0 `User.privacySettings` Json column — defaults
+  applied on read, **unknown keys preserved on write** so future flags
+  survive old clients. The other three screen-20 items (sharing scope,
+  profile visibility, archive access) are **deliberately not stored**: the
+  archive is already private, the scope is chosen per post, visibility has
+  no product definition — an unenforced privacy toggle is a lie the UI
+  tells; recorded in the contract so nobody "completes" them as dumb
+  storage. No migration. Verified by lint/build/test + a **14-case live
+  smoke test** (default, opt-out pulls pending + deletes traces incl. a
+  pre-existing insight checked in the DB, new uploads stay excluded,
+  opt-in re-queues without resurrecting, unknown-key survival, non-boolean
+  400). On branch `feature/privacy-settings` (stacked on
+  `feature/change-password`).
+
+- Notification settings API (2026-08-21, sprint 3, WBS 3.4.5 — **the last
+  backend piece of sprint 3 outside suspended 3.3**):
+  `GET/PATCH /me/settings/notifications` on the settings module. Three
+  toggles grouped by _why you got it_ — `newPosts` (NEW_POST),
+  `aboutMe` (COMMENT/REACTION/MEMBER_TAG), `reminders`
+  (BIRTHDAY_/EVENT_/CARE_REMINDER) — all default true, stored in the
+  sprint-0 `User.notificationSettings` Json column with the same
+  partial-merge/defaults-on-read/unknown-keys-preserved conventions as
+  3.4.4. **Enforced at the one funnel every notification passes through**
+  (`NotificationService.create/createMany` →
+  `SettingsService.filterAllowedNotifications`), so event triggers,
+  reminders and any future caller respect the toggles without knowing
+  they exist. Semantics chosen: **muting means the row is never created**
+  (delivery is in-app only — a muted row would sit in the very list the
+  user asked to quiet), so unmuting does not resurrect what was muted;
+  FAMILY_INVITE/AI_SUGGESTION stay unmapped and always deliver rather
+  than dying behind a switch nobody sees. No migration. Verified by
+  lint/build/test + a **12-case live smoke test** (per-group isolation:
+  muting newPosts still delivers MEMBER_TAG, muting aboutMe blocks
+  comment/reaction/tag while another user still receives everything,
+  unmute non-resurrection, privacy column untouched). On branch
+  `feature/notification-settings`.
+
 ### Sprint 2 — AI team
 
 - AI integration for screens 21-33 (2026-08-20, **merged to `main` in
@@ -624,6 +827,37 @@ dev` **did not regenerate the client**, and the stale client survived
   see Important Decisions / PR #28.
 
 ## Important Decisions
+
+- **Notifications are in-app only for the MVP; push deferred (2026-08-20)**
+  — closes the "Notification delivery method" open question in
+  `mvp-scope.md`. The app shows a list and an unread badge, refreshed
+  while it is open; nothing reaches a closed phone yet.
+
+  Two things worth stating so the decision is not re-argued from scratch:
+
+  - **Sound, vibration and a lock-screen banner are the same mechanism**,
+    not three tiers. Choosing "just a sound" does not avoid anything —
+    every one of them is a push delivered by Apple or Google.
+  - **The Apple Developer account is a project cost, not a push cost.**
+    Without it the app cannot go to the App Store at all, and installs on
+    a real iPhone expire after seven days — which also blocks the
+    "nothing has run on a physical device yet" problem below. An
+    **organization** account waits on D-U-N-S verification, days to weeks,
+    which money cannot shorten. **It should be started now as a project
+    task**, in parallel with the code, not when push is scheduled.
+
+  Two things that do not need it, and are worth doing first: **polling**
+  `unread-count` while the app is open (frontend only, the endpoint
+  exists), and **local scheduled notifications** for birthday and special
+  date reminders (WBS 3.2) — the app already knows those dates from
+  `GET /families/:id/special-dates`, so the phone can raise them on its
+  own with no server and no Apple credential. Only unpredictable social
+  events ("Lan just commented") genuinely require push.
+
+  **Polling cadence settled the same day: 5–10s** on the notifications
+  screen and Home, slower elsewhere, stop in background, refetch on
+  foreground. SSE/WebSocket considered and rejected for now. Full FE
+  guidance in `api-contract.md` → Notifications.
 
 - **AI Quality Time dropped (2026-08-20)** — the whole of WBS 2.6, both
   the suggestion (2.6.1–2.6.3) and saving/sharing the result as a `Plan`

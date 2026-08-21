@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { SettingsModule } from '../settings/settings.module';
 import { StorageModule } from '../storage/storage.module';
 import { AiClientService } from './ai-client.service';
 import { AiContextService } from './ai-context.service';
@@ -25,7 +26,7 @@ import { ShopsService } from './shops.service';
  * Route không đụng nhau (`/internal/ai/...` vs `families/.../gift-ideas`).
  */
 @Module({
-  imports: [StorageModule],
+  imports: [StorageModule, SettingsModule],
   controllers: [AiController, AiInternalController],
   providers: [
     AiService,

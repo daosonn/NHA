@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma/prisma.service';
 import type { Prisma } from '../generated/prisma/client';
+import { SettingsService } from '../settings/settings.service';
 import { PutInsightDto } from './dto/put-insight.dto';
 
 /** A photo waiting for phase-1 analysis (docs/03-ai/architecture.md). */
@@ -20,17 +21,29 @@ export interface PendingMediaItem {
  */
 @Injectable()
 export class InsightService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly settingsService: SettingsService,
+  ) {}
 
   /**
    * Photos not yet analysed, oldest first — the AI team polls this and
    * works the backlog down; analysed items drop out on their own.
    * Images only for the MVP (decided 2026-08-19): video analysis is a
    * later conversation.
+   *
+   * Uploads by users who turned **allowAiPhotoAnalysis off** (WBS 3.4.4)
+   * never appear here — enforced at this door, the only place photos
+   * leave for the AI service, rather than trusted to the poller.
    */
   async listPending(limit: number): Promise<PendingMediaItem[]> {
+    const optedOut = await this.settingsService.aiOptedOutUserIds();
     return this.prisma.media.findMany({
-      where: { mimeType: { startsWith: 'image/' }, insight: null },
+      where: {
+        mimeType: { startsWith: 'image/' },
+        insight: null,
+        ...(optedOut.length > 0 ? { uploaderUserId: { notIn: optedOut } } : {}),
+      },
       orderBy: { createdAt: 'asc' },
       take: limit,
       select: { id: true, storageKey: true, mimeType: true, createdAt: true },

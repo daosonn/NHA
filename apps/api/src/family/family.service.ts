@@ -80,7 +80,23 @@ const memberSelect = {
   gender: true,
   avatarKey: true,
   joinedAt: true,
+  // Only for the avatar fallback below — never returned raw.
+  user: { select: { avatarKey: true } },
 } as const;
+
+type MemberRow = FamilyMemberSummary & {
+  user: { avatarKey: string | null } | null;
+};
+
+/**
+ * A linked person has one avatar wherever they appear — the account's
+ * (set via PATCH /me/profile, WBS 3.4.2). The member row's own column
+ * only matters for placeholders, whose avatar is wiki-set through the
+ * member profile route. The value is a Media id; GET /media/:id serves it.
+ */
+function toMemberSummary({ user, ...member }: MemberRow): FamilyMemberSummary {
+  return { ...member, avatarKey: member.avatarKey ?? user?.avatarKey ?? null };
+}
 
 // No 0/O/1/I — invite codes are meant to be read aloud or retyped.
 // Shared with per-spot invitation codes (invitation.service.ts).
@@ -100,7 +116,7 @@ export class FamilyService {
   ): Promise<FamilyDetail> {
     const user = await this.requireUser(userId);
     const inviteCode = await this.generateInviteCode();
-    return this.prisma.family.create({
+    const family = await this.prisma.family.create({
       data: {
         name: dto.name,
         inviteCode,
@@ -116,6 +132,7 @@ export class FamilyService {
         members: { select: memberSelect },
       },
     });
+    return { ...family, members: family.members.map(toMemberSummary) };
   }
 
   async listMyFamilies(userId: string): Promise<FamilySummary[]> {
@@ -152,7 +169,7 @@ export class FamilyService {
     if (!family) {
       throw new NotFoundException('Family not found');
     }
-    return family;
+    return { ...family, members: family.members.map(toMemberSummary) };
   }
 
   /** Nodes + edges of one family's tree; the client lays them out. */
@@ -196,7 +213,7 @@ export class FamilyService {
     return {
       ...family,
       members: family.members.map((member) => ({
-        ...member,
+        ...toMemberSummary(member),
         pending: pendingMemberIds.has(member.id),
       })),
     };
@@ -235,7 +252,11 @@ export class FamilyService {
       data: { familyId: family.id, userId, displayName: user.name },
       select: memberSelect,
     });
-    return { familyId: family.id, familyName: family.name, member };
+    return {
+      familyId: family.id,
+      familyName: family.name,
+      member: toMemberSummary(member),
+    };
   }
 
   async addMember(
@@ -246,7 +267,7 @@ export class FamilyService {
     await this.requireMembership(familyId, userId);
     // Placeholder member (no account) — gets a family-local Life Profile
     // until an account links to it (docs/00-shared/domain-model.md).
-    return this.prisma.familyMember.create({
+    const created = await this.prisma.familyMember.create({
       data: {
         familyId,
         displayName: dto.displayName,
@@ -255,6 +276,7 @@ export class FamilyService {
       },
       select: memberSelect,
     });
+    return toMemberSummary(created);
   }
 
   async updateMember(
@@ -272,7 +294,7 @@ export class FamilyService {
         'Linked members manage their own information',
       );
     }
-    return this.prisma.familyMember.update({
+    const updated = await this.prisma.familyMember.update({
       where: { id: memberId },
       data: {
         ...(dto.displayName !== undefined && { displayName: dto.displayName }),
@@ -280,6 +302,7 @@ export class FamilyService {
       },
       select: memberSelect,
     });
+    return toMemberSummary(updated);
   }
 
   async removeMember(
@@ -465,7 +488,7 @@ export class FamilyService {
         'That member is already linked to an account',
       );
     }
-    return this.prisma.$transaction(async (tx) => {
+    const linked = await this.prisma.$transaction(async (tx) => {
       const placeholderProfile = await tx.lifeProfile.findUnique({
         where: { memberId },
         select: { id: true },
@@ -487,6 +510,7 @@ export class FamilyService {
         select: memberSelect,
       });
     });
+    return toMemberSummary(linked);
   }
 
   private async generateInviteCode(): Promise<string> {

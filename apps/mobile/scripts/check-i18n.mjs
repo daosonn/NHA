@@ -41,8 +41,15 @@ const DYNAMIC = [
   'family.relation.',
   // src/features/moment/moment-error.ts maps an upload status to one of these.
   'moment.errors.',
-  // src/components/feed/reaction-bar.tsx picks one per reaction type.
+  // src/components/feed/like-button.tsx uses one of these per state.
   'post.reactions.',
+  // src/features/notification/notification-label.ts picks one per
+  // NotificationType, and one of three phrasings per reminder.
+  'notifications.types.',
+  // src/features/home/occasion-label.ts words a derived occasion.
+  'home.occasion.',
+  // src/features/family/kinship.ts carries a label key per picker option.
+  'family.kinship.',
   // app/profile/edit.tsx picks one per failed field, and one per API status.
   'profileEdit.errors.',
   // app/ai/card.tsx picks one per template id.

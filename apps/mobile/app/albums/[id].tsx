@@ -8,7 +8,8 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, View } from 'react-nat
 
 import { AlbumFormSheet } from '../../src/components/album/album-form-sheet';
 import { AppHeader } from '../../src/components/layout/app-header';
-import { BackButton } from '../../src/components/layout/header-slots';
+import { useToast } from '../../src/components/ui/toast';
+import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import type { DraftMedia } from '../../src/components/moment/media-strip';
 import { Button } from '../../src/components/ui/button';
 import { EmptyState } from '../../src/components/ui/empty-state';
@@ -128,6 +129,7 @@ function ItemActions({
 export default function AlbumScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const toast = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const album = useAlbum(id ?? null);
@@ -165,11 +167,7 @@ export default function AlbumScreen() {
   const header = (title: string) => (
     <AppHeader
       left={<BackButton onPress={() => router.back()} />}
-      center={
-        <Text variant="subtitle" weight="bold" numberOfLines={1} style={{ letterSpacing: -0.2 }}>
-          {title}
-        </Text>
-      }
+      center={<ScreenTitle title={title} />}
       right={
         album.data === undefined ? undefined : (
           <Pressable
@@ -349,11 +347,22 @@ export default function AlbumScreen() {
         onClose={() => setActing(null)}
         onSetCover={() => {
           if (acting === null) return;
-          update.mutate({ coverMediaId: acting.mediaId }, { onSettled: () => setActing(null) });
+          update.mutate(
+            { coverMediaId: acting.mediaId },
+            {
+              onSettled: () => setActing(null),
+              onSuccess: () => toast.success(t('albums.toast.cover')),
+              onError: () => toast.failure(t('errors.generic')),
+            },
+          );
         }}
         onRemove={() => {
           if (acting === null) return;
-          removeItem.mutate(acting.mediaId, { onSettled: () => setActing(null) });
+          removeItem.mutate(acting.mediaId, {
+            onSettled: () => setActing(null),
+            onSuccess: () => toast.success(t('albums.toast.removed')),
+            onError: () => toast.failure(t('errors.generic')),
+          });
         }}
       />
 
@@ -378,6 +387,7 @@ export default function AlbumScreen() {
             onSuccess: () => {
               setEditing(false);
               router.back();
+              toast.success(t('albums.toast.deleted'));
             },
           })
         }

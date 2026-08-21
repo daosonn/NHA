@@ -28,6 +28,8 @@ export type ProfileBodyProps = {
   /** True on your own Profile tab, which reads the `/me` routes. */
   ownProfile?: boolean;
   onEdit?: () => void;
+  onChangeAvatar?: () => void;
+  uploadingAvatar?: boolean;
   onAddMemo?: () => void;
   onOpenMemo?: (memo: MemoDetail) => void;
   onEditMemo?: (memo: MemoDetail) => void;
@@ -53,6 +55,8 @@ export function ProfileBody({
   memberId,
   ownProfile = false,
   onEdit,
+  onChangeAvatar,
+  uploadingAvatar,
   onAddMemo,
   onOpenMemo,
   onEditMemo,
@@ -100,7 +104,12 @@ export function ProfileBody({
 
   return (
     <View style={{ gap: 16 }}>
-      <ProfileHero profile={profile} onEdit={onEdit} />
+      <ProfileHero
+        profile={profile}
+        onEdit={onEdit}
+        onChangeAvatar={onChangeAvatar}
+        uploadingAvatar={uploadingAvatar}
+      />
 
       <ProfileFacts profile={profile} />
 

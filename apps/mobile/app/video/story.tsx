@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
-import { BackButton } from '../../src/components/layout/header-slots';
+import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Button } from '../../src/components/ui/button';
 import { Card } from '../../src/components/ui/card';
 import { Chip } from '../../src/components/ui/chip';
@@ -36,7 +36,10 @@ export default function VideoStoryScreen() {
   const plan = draft.plan;
   if (!plan) {
     return (
-      <View className="flex-1 bg-page" style={{ alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 }}>
+      <View
+        className="flex-1 bg-page"
+        style={{ alignItems: 'center', justifyContent: 'center', padding: 32, gap: 12 }}
+      >
         <Text variant="body2" color={colors.text.body}>
           {t('video.noPlan')}
         </Text>
@@ -77,10 +80,28 @@ export default function VideoStoryScreen() {
     );
 
   /** Một dòng trường sửa được: NHÃN HOA nhỏ + giá trị + đếm ký tự + bút (11j). */
-  const fieldRow = (labelKey: string, value: string, max: number, onChange: (v: string) => void, last = false) => (
-    <View style={{ gap: 3, paddingVertical: 9, borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.state.borderDefault }}>
+  const fieldRow = (
+    labelKey: string,
+    value: string,
+    max: number,
+    onChange: (v: string) => void,
+    last = false,
+  ) => (
+    <View
+      style={{
+        gap: 3,
+        paddingVertical: 9,
+        borderBottomWidth: last ? 0 : 1,
+        borderBottomColor: colors.state.borderDefault,
+      }}
+    >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text variant="badge" weight="semibold" color={colors.text.lightMuted} style={{ letterSpacing: 0.8, textTransform: 'uppercase' }}>
+        <Text
+          variant="badge"
+          weight="semibold"
+          color={colors.text.lightMuted}
+          style={{ letterSpacing: 0.8, textTransform: 'uppercase' }}
+        >
           {t(labelKey)}
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -97,7 +118,13 @@ export default function VideoStoryScreen() {
         multiline
         placeholder={t('video.captionPlaceholder')}
         placeholderTextColor={colors.text.subtle}
-        style={{ padding: 0, ...typeface, fontSize: 15, lineHeight: 22, color: colors.text.primary }}
+        style={{
+          padding: 0,
+          ...typeface,
+          fontSize: 15,
+          lineHeight: 22,
+          color: colors.text.primary,
+        }}
       />
     </View>
   );
@@ -106,15 +133,16 @@ export default function VideoStoryScreen() {
     <View className="flex-1 bg-page">
       <AppHeader
         left={<BackButton onPress={() => router.back()} />}
-        center={
-          <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-            {t('video.storyScenesTitle')}
-          </Text>
-        }
+        center={<ScreenTitle title={t('video.storyScenesTitle')} />}
       />
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: 14, paddingBottom: 40, gap: 12 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.xl,
+          paddingTop: 14,
+          paddingBottom: 40,
+          gap: 12,
+        }}
         showsVerticalScrollIndicator={false}
       >
         {/* tóm tắt câu chuyện + "8 scenes · ~92 seconds" + phong cách mở đầu */}
@@ -123,7 +151,14 @@ export default function VideoStoryScreen() {
             {draft.storyRequest}
           </Text>
         )}
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'baseline',
+            justifyContent: 'space-between',
+            gap: 8,
+          }}
+        >
           <Text variant="body1" weight="bold">
             {t('video.sceneSummary', { count: plan.scenes.length, seconds: totalSec })}
           </Text>
@@ -135,14 +170,33 @@ export default function VideoStoryScreen() {
         {/* TITLE / SUBTITLE / CLOSING LINE / OPENING WORDS / DEDICATION — một card (11j) */}
         <Card padding={13} style={{ gap: 0 }}>
           {fieldRow('video.fieldTitle', plan.title, LIMITS.title, (v) => patchPlan({ title: v }))}
-          {fieldRow('video.fieldSubtitle', plan.subtitle ?? '', LIMITS.subtitle, (v) => patchPlan({ subtitle: v }))}
-          {fieldRow('video.fieldClosing', plan.closing ?? '', LIMITS.closing, (v) => patchPlan({ closing: v }))}
-          {fieldRow('video.fieldOpening', plan.opening ?? '', LIMITS.opening, (v) => patchPlan({ opening: v }))}
-          {fieldRow('video.fieldDedication', plan.dedication ?? '', LIMITS.dedication, (v) => patchPlan({ dedication: v }), true)}
+          {fieldRow('video.fieldSubtitle', plan.subtitle ?? '', LIMITS.subtitle, (v) =>
+            patchPlan({ subtitle: v }),
+          )}
+          {fieldRow('video.fieldClosing', plan.closing ?? '', LIMITS.closing, (v) =>
+            patchPlan({ closing: v }),
+          )}
+          {fieldRow('video.fieldOpening', plan.opening ?? '', LIMITS.opening, (v) =>
+            patchPlan({ opening: v }),
+          )}
+          {fieldRow(
+            'video.fieldDedication',
+            plan.dedication ?? '',
+            LIMITS.dedication,
+            (v) => patchPlan({ dedication: v }),
+            true,
+          )}
         </Card>
 
         {/* "Eight scenes — tap any line to rewrite" */}
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'baseline',
+            justifyContent: 'space-between',
+            gap: 8,
+          }}
+        >
           <Text variant="body1" weight="bold">
             {t('video.scenesHeading', { count: plan.scenes.length })}
           </Text>
@@ -159,7 +213,12 @@ export default function VideoStoryScreen() {
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Image
                 source={thumbnailSource(s.mediaId, isClip(s.mediaId) ? 'video/mp4' : 'image/jpeg')}
-                style={{ width: 62, height: 62, borderRadius: radius.lg, backgroundColor: colors.background.subtle }}
+                style={{
+                  width: 62,
+                  height: 62,
+                  borderRadius: radius.lg,
+                  backgroundColor: colors.background.subtle,
+                }}
                 contentFit="cover"
               />
               <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
@@ -229,7 +288,14 @@ export default function VideoStoryScreen() {
                     placeholder={t('video.captionPlaceholder')}
                     placeholderTextColor={colors.text.subtle}
                     maxLength={80}
-                    style={{ flex: 1, padding: 0, ...typeface, fontSize: 13.5, lineHeight: 19, color: colors.text.primary }}
+                    style={{
+                      flex: 1,
+                      padding: 0,
+                      ...typeface,
+                      fontSize: 13.5,
+                      lineHeight: 19,
+                      color: colors.text.primary,
+                    }}
                   />
                   <PenLine size={13} color={colors.text.lightMuted} strokeWidth={2.1} />
                 </View>
@@ -240,9 +306,24 @@ export default function VideoStoryScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               {(
                 [
-                  { icon: ArrowUp, onPress: () => moveScene(i, -1), disabled: i === 0, label: t('video.moveUp') },
-                  { icon: ArrowDown, onPress: () => moveScene(i, 1), disabled: i === plan.scenes.length - 1, label: t('video.moveDown') },
-                  { icon: X, onPress: () => removeScene(i), disabled: plan.scenes.length <= 1, label: t('video.removeScene') },
+                  {
+                    icon: ArrowUp,
+                    onPress: () => moveScene(i, -1),
+                    disabled: i === 0,
+                    label: t('video.moveUp'),
+                  },
+                  {
+                    icon: ArrowDown,
+                    onPress: () => moveScene(i, 1),
+                    disabled: i === plan.scenes.length - 1,
+                    label: t('video.moveDown'),
+                  },
+                  {
+                    icon: X,
+                    onPress: () => removeScene(i),
+                    disabled: plan.scenes.length <= 1,
+                    label: t('video.removeScene'),
+                  },
                 ] as const
               ).map(({ icon: Icon, onPress, disabled, label }, k) => (
                 <Pressable
@@ -258,11 +339,17 @@ export default function VideoStoryScreen() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderWidth: 1,
-                    borderColor: disabled ? colors.state.disabledBorder : colors.state.borderNeutral,
+                    borderColor: disabled
+                      ? colors.state.disabledBorder
+                      : colors.state.borderNeutral,
                     backgroundColor: pressed ? colors.background.subtle : colors.background.card,
                   })}
                 >
-                  <Icon size={14} color={disabled ? colors.state.disabledText : colors.text.secondary} strokeWidth={2.2} />
+                  <Icon
+                    size={14}
+                    color={disabled ? colors.state.disabledText : colors.text.secondary}
+                    strokeWidth={2.2}
+                  />
                 </Pressable>
               ))}
 

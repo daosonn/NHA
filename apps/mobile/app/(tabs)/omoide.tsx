@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, SectionList, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
-import { BrandMark } from '../../src/components/ui/brand-mark';
+import { NotificationBell, ScreenTitle } from '../../src/components/layout/header-slots';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { IconBadge } from '../../src/components/ui/icon-badge';
 import { Text } from '../../src/components/ui/text';
@@ -46,12 +46,9 @@ export default function OmoideScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.page }}>
       <AppHeader
-        left={<BrandMark size={23} />}
-        center={
-          <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-            {t('nav.omoide')}
-          </Text>
-        }
+        center={<ScreenTitle title={t('nav.omoide')} />}
+        right={<NotificationBell />}
+        paddingRight={spacing.lg}
       />
 
       {renderBody()}

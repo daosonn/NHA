@@ -67,7 +67,7 @@ export function AudiencePicker({ groups, selected, onToggle }: AudiencePickerPro
               <Avatar
                 size={CIRCLE}
                 name={group.name}
-                avatarKey={group.coverMediaId}
+                mediaId={group.coverMediaId}
                 ring={on ? RING_ON : RING_OFF}
               />
 

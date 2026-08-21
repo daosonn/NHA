@@ -1,10 +1,11 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Lock, Mail } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { AuthModeTabs } from '../../src/components/auth/auth-mode-tabs';
+import { SocialButtons } from '../../src/components/auth/social-buttons';
 import { FormScreen } from '../../src/components/layout/form-screen';
 import { Button } from '../../src/components/ui/button';
 import { Checkbox } from '../../src/components/ui/checkbox';
@@ -20,7 +21,10 @@ export default function SignInScreen() {
   const router = useRouter();
   const { signIn } = useSession();
 
-  const [email, setEmail] = useState('');
+  // Filled in when social login sent them here: the address already has a
+  // password, and retyping what they just proved they own is a small insult.
+  const { email: prefill } = useLocalSearchParams<{ email?: string }>();
+  const [email, setEmail] = useState(prefill ?? '');
   const [password, setPassword] = useState('');
   const [stayed, setStayed] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -65,6 +69,8 @@ export default function SignInScreen() {
             loading={submitting}
             onPress={() => void submit()}
           />
+
+          <SocialButtons />
         </>
       }
     >

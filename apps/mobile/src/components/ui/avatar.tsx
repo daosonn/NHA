@@ -64,16 +64,17 @@ function initials(name: string): string | null {
 export type AvatarProps = {
   size: number;
   /**
+   * Their photograph, as a `Media` id — `ProfileDetail.avatarMediaId` or
+   * `FamilyMemberSummary.avatarKey`. When there is one it wins; otherwise the
+   * initials below stand in, which is most people most of the time.
+   */
+  mediaId?: string | null;
+  /**
    * Whose face this is. Given, the avatar draws their initials on a tint
    * derived from the name; omitted, it falls back to the stripe placeholder
    * — which is right for decoration, and wrong for a real person.
    */
   name?: string;
-  /**
-   * Ảnh thật của người này — id của một Media (`FamilyMember.avatarKey`).
-   * Có thì vẽ ảnh, không thì rơi về chữ cái đầu như trước.
-   */
-  avatarKey?: string | null;
   /** Only used by the stripe fallback. */
   tone?: 'light' | 'dark';
   /**
@@ -88,24 +89,21 @@ export type AvatarProps = {
 /**
  * A person.
  *
- * There are no photographs yet: `User.avatarKey` and `FamilyMember.avatarKey`
- * exist as columns, but no endpoint writes them and none serves them, so
- * there is nothing for this to load. Until then it draws their initials on a
- * colour of that person's own — which is the whole job an avatar does at this
- * size anyway. Every face used to be the same grey stripe pattern, so a tree
- * of nine people was nine identical blobs.
+ * Three states, in order: a photograph if there is one, otherwise their
+ * initials on a colour of their own, otherwise the stripe placeholder — which
+ * is only right for decoration, never for a real person.
  *
- * When the upload lands this component grows one prop and nothing else
- * changes: every caller already says who it is drawing.
+ * The initials tier is not a stopgap. Most people will not upload a picture,
+ * and "M" on a colour that is always theirs does the job an avatar does at
+ * this size. Every face used to be the same grey stripe pattern, so a tree of
+ * nine people was nine identical blobs.
  */
-export function Avatar({ size, name, avatarKey, tone = 'light', ring, style }: AvatarProps) {
+export function Avatar({ size, name, mediaId, tone = 'light', ring, style }: AvatarProps) {
   const letters = name === undefined ? null : initials(name);
 
-  // Ảnh thật thắng chữ cái đầu. `GET /media/:id` cần token nên phải đi qua
-  // `mediaSource` — cùng đường mà feed và album đang dùng.
-  if (avatarKey !== undefined && avatarKey !== null && avatarKey !== '') {
-    // Ảnh nằm trong một View tròn: ring là box-shadow của khung, và
-    // `ImageStyle` không nhận ViewStyle nên không thể đặt trực tiếp lên ảnh.
+  if (mediaId != null && mediaId !== '') {
+    // The ring lives on a wrapper: `expo-image` takes an `ImageStyle`, which
+    // has no `boxShadow`, and the rings this app draws stack two of them.
     return (
       <View
         accessible
@@ -123,8 +121,8 @@ export function Avatar({ size, name, avatarKey, tone = 'light', ring, style }: A
         ]}
       >
         <Image
-          source={mediaSource(avatarKey)}
-          recyclingKey={avatarKey}
+          source={mediaSource(mediaId)}
+          recyclingKey={mediaId}
           contentFit="cover"
           transition={140}
           style={{ width: '100%', height: '100%' }}

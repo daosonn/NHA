@@ -10,7 +10,7 @@ import { MemberSheet } from '../../src/components/ai/member-sheet';
 import { Pill } from '../../src/components/ai/pill';
 import { SelectRow } from '../../src/components/ai/select-row';
 import { AppHeader } from '../../src/components/layout/app-header';
-import { BackButton } from '../../src/components/layout/header-slots';
+import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Avatar } from '../../src/components/ui/avatar';
 import { AvatarStack } from '../../src/components/ui/avatar-stack';
 import { Button } from '../../src/components/ui/button';
@@ -104,28 +104,33 @@ export default function VideoSetupScreen() {
     <View className="flex-1 bg-page">
       <AppHeader
         left={<BackButton onPress={() => router.back()} />}
-        center={
-          <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-            {t('video.title')}
-          </Text>
-        }
+        center={<ScreenTitle title={t('video.title')} />}
       />
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: 14, paddingBottom: 24, gap: 12 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.xl,
+          paddingTop: 14,
+          paddingBottom: 24,
+          gap: 12,
+        }}
         showsVerticalScrollIndicator={false}
       >
         {/* ---------- card 1: về ai + loại + câu chuyện (11h) ---------- */}
         <Card padding={12} style={{ gap: 11 }}>
           <SelectRow
             bare
-            leading={<Avatar size={38} name={target?.displayName} avatarKey={target?.avatarKey} />}
+            leading={<Avatar size={38} name={target?.displayName} mediaId={target?.avatarKey} />}
             title={target?.displayName ?? t('video.aboutPick')}
             subtitle={t('video.aboutHint')}
             onPress={() => setMemberSheet(true)}
           />
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 4 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, paddingRight: 4 }}
+          >
             {KINDS.map((k) => (
               <Pill
                 key={k}
@@ -176,7 +181,15 @@ export default function VideoSetupScreen() {
             <Text variant="body2" weight="semibold" style={{ width: 58 }}>
               {t('video.length')}
             </Text>
-            <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'flex-end' }}>
+            <View
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: 6,
+                justifyContent: 'flex-end',
+              }}
+            >
               {LENGTHS.map((s) => (
                 <Pill
                   key={s}
@@ -194,7 +207,14 @@ export default function VideoSetupScreen() {
             </Text>
             <View style={{ flex: 1 }} />
             {/* segmented 9:16 | 16:9 — nút trắng nổi trong rãnh xám */}
-            <View style={{ flexDirection: 'row', padding: 3, borderRadius: radius.full, backgroundColor: colors.background.subtle }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                padding: 3,
+                borderRadius: radius.full,
+                backgroundColor: colors.background.subtle,
+              }}
+            >
               {(['portrait', 'landscape'] as const).map((a) => {
                 const selected = draft.aspect === a;
                 return (
@@ -212,7 +232,11 @@ export default function VideoSetupScreen() {
                       boxShadow: selected ? '0 1px 3px rgba(24,24,27,0.12)' : undefined,
                     }}
                   >
-                    <Text variant="caption" weight="semibold" color={selected ? colors.coral.deep : colors.text.muted}>
+                    <Text
+                      variant="caption"
+                      weight="semibold"
+                      color={selected ? colors.coral.deep : colors.text.muted}
+                    >
                       {a === 'portrait' ? '9:16' : '16:9'}
                     </Text>
                   </Pressable>
@@ -231,7 +255,9 @@ export default function VideoSetupScreen() {
                 size={40}
                 background="#EFE4D4"
                 foreground="#8A6B3E"
-                renderIcon={({ size, color }) => <BookOpen size={size} color={color} strokeWidth={2.1} />}
+                renderIcon={({ size, color }) => (
+                  <BookOpen size={size} color={color} strokeWidth={2.1} />
+                )}
               />
             }
             title={t(`video.styleOpening.${draft.style}`)}
@@ -246,10 +272,14 @@ export default function VideoSetupScreen() {
                 size={40}
                 background={colors.coral.soft}
                 foreground={colors.coral.hover}
-                renderIcon={({ size, color }) => <Music size={size} color={color} strokeWidth={2.1} />}
+                renderIcon={({ size, color }) => (
+                  <Music size={size} color={color} strokeWidth={2.1} />
+                )}
               />
             }
-            title={draft.musicId === 'none' ? t('video.noMusic') : draft.musicLabel || draft.musicId}
+            title={
+              draft.musicId === 'none' ? t('video.noMusic') : draft.musicLabel || draft.musicId
+            }
             subtitle={draft.musicId === 'none' ? t('video.musicSub') : draft.musicMeta || null}
             onPress={() => router.push('/video/music')}
           />
@@ -257,7 +287,11 @@ export default function VideoSetupScreen() {
           <SelectRow
             bare
             leading={
-              <AvatarStack items={[{ id: 'a' }, { id: 'b', tone: 'dark' }, { id: 'c' }]} size={28} surface={colors.background.card} />
+              <AvatarStack
+                items={[{ id: 'a' }, { id: 'b', tone: 'dark' }, { id: 'c' }]}
+                size={28}
+                surface={colors.background.card}
+              />
             }
             title={
               draft.mediaIds.length === 0
@@ -278,7 +312,11 @@ export default function VideoSetupScreen() {
         )}
 
         {storyboard.isError && (
-          <Text variant="caption" color={colors.themes.destructive.text} style={{ textAlign: 'center' }}>
+          <Text
+            variant="caption"
+            color={colors.themes.destructive.text}
+            style={{ textAlign: 'center' }}
+          >
             {t('video.storyboardError')}
           </Text>
         )}
@@ -298,7 +336,11 @@ export default function VideoSetupScreen() {
           accessibilityRole="button"
           style={{ alignItems: 'center', paddingVertical: 6 }}
         >
-          <Text variant="caption" weight="semibold" color={ready ? colors.coral.hover : colors.state.disabledText}>
+          <Text
+            variant="caption"
+            weight="semibold"
+            color={ready ? colors.coral.hover : colors.state.disabledText}
+          >
             {t('video.stitchQuick')}
           </Text>
         </Pressable>

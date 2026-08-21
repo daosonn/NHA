@@ -1,6 +1,6 @@
-import { PencilLine } from 'lucide-react-native';
+import { Camera, PencilLine } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import type { MemberProfile } from '../../features/member/member-profile';
 import { colors, radius } from '../../theme';
@@ -13,10 +13,19 @@ const AVATAR = 56;
 const RING = `0 0 0 3px ${colors.background.card}, 0 0 0 4px ${colors.state.borderDefault}`;
 
 const EDIT = 30;
+/** The camera badge that hangs off the avatar. */
+const CAMERA = 24;
 
 export type ProfileHeroProps = {
   profile: MemberProfile;
   onEdit?: () => void;
+  /**
+   * Opens the picture picker. Given only on your own profile — a photograph
+   * of somebody else is not yours to change, the same rule the rest of the
+   * profile follows.
+   */
+  onChangeAvatar?: () => void;
+  uploadingAvatar?: boolean;
 };
 
 /**
@@ -35,8 +44,15 @@ export type ProfileHeroProps = {
  *
  * Who may edit is the server's answer, carried on `editability`.
  */
-export function ProfileHero({ profile, onEdit }: ProfileHeroProps) {
+export function ProfileHero({
+  profile,
+  onEdit,
+  onChangeAvatar,
+  uploadingAvatar = false,
+}: ProfileHeroProps) {
   const { t } = useTranslation();
+
+  const canChangeFace = profile.editability === 'self' && onChangeAvatar !== undefined;
 
   const meta = [profile.relationKey === null ? null : t(profile.relationKey), profile.familyName]
     .filter((part): part is string => part !== null && part !== '')
@@ -44,13 +60,47 @@ export function ProfileHero({ profile, onEdit }: ProfileHeroProps) {
 
   return (
     <Card padding={16} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14 }}>
-      <Avatar
-        size={AVATAR}
-        name={profile.displayName}
-        avatarKey={profile.avatarKey}
-        tone={profile.tone}
-        ring={RING}
-      />
+      {/* The camera sits **on** the face rather than in a menu: it is the
+          one control whose target is unambiguous, and tapping your own
+          picture to change it is what everybody already tries. */}
+      <View>
+        <Avatar
+          size={AVATAR}
+          name={profile.displayName}
+          mediaId={profile.avatarMediaId}
+          tone={profile.tone}
+          ring={RING}
+        />
+
+        {canChangeFace && (
+          <Pressable
+            onPress={onChangeAvatar}
+            disabled={uploadingAvatar}
+            accessibilityRole="button"
+            accessibilityLabel={t('profileEdit.avatar.change')}
+            hitSlop={8}
+            style={{
+              position: 'absolute',
+              right: -3,
+              bottom: -3,
+              width: CAMERA,
+              height: CAMERA,
+              borderRadius: radius.full,
+              backgroundColor: colors.coral.primary,
+              // Painted, not empty: the badge sits on top of the avatar ring.
+              boxShadow: `0 0 0 2.5px ${colors.background.card}`,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {uploadingAvatar ? (
+              <ActivityIndicator size="small" color={colors.text.white} />
+            ) : (
+              <Camera size={13} color={colors.text.white} strokeWidth={2.4} />
+            )}
+          </Pressable>
+        )}
+      </View>
 
       <View style={{ flex: 1, gap: 3, paddingTop: 2 }}>
         <Text variant="h2" weight="bold" style={{ letterSpacing: -0.3 }}>

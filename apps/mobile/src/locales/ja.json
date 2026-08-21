@@ -14,7 +14,8 @@
     "selectedOption": "{{label}}：{{value}}",
     "retry": "もう一度",
     "done": "完了",
-    "addOwn": "自分で追加"
+    "addOwn": "自分で追加",
+    "or": "または"
   },
   "nav": {
     "home": "ホーム",
@@ -99,11 +100,22 @@
       "invalidCredentials": "メールアドレスまたはパスワードが正しくありません。",
       "emailTaken": "このメールアドレスは既に登録されています。",
       "checkFields": "入力内容を確認してもう一度お試しください。"
+    },
+    "google": "Google",
+    "facebook": "Facebook",
+    "continueGoogle": "Googleで続ける",
+    "continueFacebook": "Facebookで続ける",
+    "social": {
+      "finishing": "サインインを完了しています…",
+      "errors": {
+        "emailTaken": "このメールアドレスはすでにNHAでパスワード登録されています。パスワードでサインインしてください（アドレスは入力済みです）。",
+        "rejected": "サインインが完了しませんでした。もう一度試すか、メールとパスワードをお使いください。",
+        "incomplete": "サインインの結果が不完全でした。もう一度お試しください。"
+      }
     }
   },
   "home": {
     "recommendations": "おすすめ",
-    "seeAll": "すべて見る",
     "familyTree": "家系図",
     "openFamilyTree": "家系図を開く",
     "moreGroups": "+{{count}}",
@@ -120,6 +132,13 @@
       "tomorrow": "明日",
       "inDays_other": "あと{{count}}日",
       "more_other": "ほかに{{count}}件"
+    },
+    "recommend": {
+      "onThisDay": "{{year}}年の今日",
+      "month": "{{year}}年{{month}}",
+      "photoCount_other": "写真{{count}}枚",
+      "lookBack": "あの頃",
+      "album": "「{{name}}」から"
     }
   },
   "family": {
@@ -225,6 +244,10 @@
         "beside": "あなたの隣",
         "custom": "関係は自由に書けます"
       }
+    },
+    "toast": {
+      "resent": "{{name}}さんの期限を1週間のばしました",
+      "removed": "家系図から外しました"
     }
   },
   "invite": {
@@ -344,7 +367,8 @@
       "title": "このメモを削除しますか？",
       "body_other": "このメモと写真{{count}}枚が完全になくなります。",
       "confirm": "メモを削除",
-      "cancel": "やめておく"
+      "cancel": "やめておく",
+      "toast": "メモを削除しました"
     },
     "memoFailed": "メモを読み込めませんでした。",
     "timelineFailed": "年表を読み込めませんでした。",
@@ -645,7 +669,14 @@
       "forbidden": "このプロフィールを変更できるのは本人だけです。",
       "birthAfterDeath": "記録されている没年月日より後の日付です。"
     },
-    "deathReadOnly": "別の場所に記録されています。この画面では変更できません。"
+    "deathReadOnly": "別の場所に記録されています。この画面では変更できません。",
+    "toast": {
+      "saved": "プロフィールを保存しました"
+    },
+    "avatar": {
+      "change": "写真を変更",
+      "saved": "写真を変更しました"
+    }
   },
   "video": {
     "title": "思い出ムービー",
@@ -805,6 +836,32 @@
       "setCover": "表紙にする",
       "isCover": "表紙になっています",
       "remove": "アルバムから外す"
+    },
+    "toast": {
+      "cover": "表紙を変更しました",
+      "removed": "アルバムから外しました",
+      "deleted": "アルバムを削除しました"
+    }
+  },
+  "notifications": {
+    "markAll": "すべて既読",
+    "loadFailed": "お知らせを読み込めませんでした。",
+    "emptyTitle": "新しいお知らせはありません",
+    "emptyBody": "家族の投稿・コメント・リマインダーがここに届きます。",
+    "types": {
+      "newPost": "家族に新しい思い出が共有されました",
+      "comment": "あなたの思い出にコメントがつきました",
+      "reaction": "あなたの思い出にいいねがつきました",
+      "memberTag": "思い出にタグ付けされました",
+      "familyInvite": "家族に招待されました",
+      "birthday": "{{name}}さんの誕生日が近づいています",
+      "birthdayToday": "今日は{{name}}さんの誕生日です",
+      "birthdayIn_other": "{{name}}さんの誕生日まであと{{count}}日",
+      "event": "{{what}}が近づいています",
+      "eventToday": "今日は{{what}}です",
+      "eventIn_other": "{{what}}まであと{{count}}日",
+      "care": "{{name}}さんとしばらく連絡をとっていません",
+      "aiSuggestion": "新しい提案が届いています"
     }
   }
 }

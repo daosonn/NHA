@@ -213,7 +213,7 @@ function MemberSheetBody({
           <Avatar
             size={48}
             name={member.displayName}
-            avatarKey={member.avatarKey}
+            mediaId={member.avatarKey}
             ring={`0 0 0 2px ${colors.background.page}`}
           />
 
