@@ -59,6 +59,7 @@ merge conflicts).
 | `POST /auth/password-reset/request`  | —    | `{ success }` |
 | `POST /auth/password-reset/verify`   | —    | `{ valid }`   |
 | `POST /auth/password-reset/confirm`  | —    | `{ success }` |
+| `POST /auth/change-password`         | ✔    | `AuthResult`  |
 
 `AuthResult` is `{ user: { id, email, name }, accessToken, refreshToken }`.
 
@@ -79,6 +80,17 @@ middle UI step; `confirm` sets the new password and **revokes every
 refresh token**, signing all devices out. Delivery is SMTP (Gmail app
 password for the MVP); with SMTP unconfigured (local dev) the code is
 logged to the API console instead of sent.
+
+**Change password while signed in** (WBS 3.4.3, added 2026-08-21):
+`{ currentPassword, newPassword }` — the current password is required
+even with a valid token, so an unlocked phone is not enough to lock its
+owner out. New password follows the register rules (8–72). On success
+**every refresh token is revoked** (same as reset: other devices sign
+out) and the response is a **fresh `AuthResult` for this device — store
+it like a refresh**, the old pair is dead. 400 for a wrong current
+password, an unchanged password, or a social-only account (empty hash —
+those sign in with Google/Facebook and have no password to change;
+"set a password" belongs to a future account-linking flow).
 
 ### Families — `apps/api/src/family/`
 

@@ -127,7 +127,7 @@ export class OAuthController {
         const body = error.getResponse();
         const email =
           typeof body === 'object' && body !== null && 'email' in body
-            ? String((body as { email: unknown }).email)
+            ? String(body.email)
             : null;
         if (email) params.set('email', email);
       }
