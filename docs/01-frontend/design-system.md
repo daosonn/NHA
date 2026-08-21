@@ -141,13 +141,57 @@ Three layouts: back + title, close + title, and brand wordmark + bell.
 
 ### Bottom navigation
 
-98px tall, translucent white with 20px blur and a hairline top border.
-Five items: Home · Omoide · **+** · AI · Profile.
+A **floating pill**, 68px tall, inset from both edges and lifted 20px above
+the home indicator. Translucent white over a 30 blur. Five items:
+Home · Omoide · **+** · AI · Profile.
 
-- Active: icon in `#F58B7B` inside a 44×26 `#FDE7E2` pill, label 600 in
-  `#18181B`.
-- Inactive: icon and label in `#A1A1AA`, weight 500.
-- The center **+** is a 44px coral circle raised 6px above the row.
+- Slots **flex evenly** — no fixed slot width. At the 390px reference they
+  land near 70×52, with a 22px icon above a 10px label.
+- Active: a `coral.light` block behind the whole slot, radius `2xl`, with
+  the icon and label both `coral.deep` (4.6:1) and the label semibold.
+- Inactive: icon and label `text.secondary`, label medium.
+- The centre **+** is a 50px `coral.primary` circle, vertically centred and
+  unlabelled — it is the one filled control and reads as a button, not a
+  destination.
+
+Redrawn 2026-08-21 from a full-width slab with a hairline top border. A slab
+cuts the page in two; inset with a radius, content keeps running underneath
+and the screen stays one thing. Screens reserve `BOTTOM_INSET` for it —
+140, or 160 where the last row is tall.
+
+**It is sized from the screen, not from a constant.** It used to be a fixed
+294px that hugged its contents, which put the same absolute bar on every
+phone: 78% of the width on an SE, 68% on a 15 Pro Max. Identical in points
+and visibly meaner on the big screen, which is how it was reported. Two
+things fix that together:
+
+- The bar **spans the width it is given** — screen minus a 16px margin each
+  side, capped at 460 — and the four destinations flex into what is left
+  after the compose circle. It keeps its proportion (91–93% on every phone)
+  instead of its pixel count.
+- Everything on it **scales with the screen**, `width / 390` clamped to
+  [1, 1.14]. Nothing shrinks below the reference — the small phones were
+  right already, and fixing a big screen must not spoil them. A 15 Pro Max
+  gets a 75px bar with 24px icons; a desktop browser stops at 78 and 25,
+  because a tab bar that grows without limit becomes a remote control.
+
+Scale is measured against the **screen**, not the bar: the bar is already
+the screen minus two margins, so measuring against it keeps the ratio near 1
+and the scale never engages. That was the first attempt, and it did nothing.
+
+**The labels stay.** They were dropped and restored the same morning, so the
+reasoning is worth keeping: dropping them borrows from apps whose icons
+everybody learned a decade ago, and these are not those icons. `History`
+for 思い出 and `Sparkles` for the AI tab name nothing anyone can guess — a
+clock could as easily mean "recent", a sparkle "highlights" — and two
+legible glyphs out of five is not enough to run a navigation bar on. This is
+an app families use together, grandparents included, where an unlabelled
+glyph is a quiz.
+
+Tab words come from `nav.tab.*`, not `nav.*`: a 54px slot needs a shorter
+word than a screen header does (プロフィール does not fit, マイページ does).
+The visible label and the accessibility label are the **same string**, so
+somebody using voice control can say what they see.
 
 ### Card
 

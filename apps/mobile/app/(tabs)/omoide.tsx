@@ -15,7 +15,7 @@ import { formatFullDate } from '../../src/lib/date';
 import { colors, radius, spacing } from '../../src/theme';
 
 /** Room for the bottom nav plus the home indicator. */
-const BOTTOM_INSET = 120;
+const BOTTOM_INSET = 140;
 
 /**
  * The family's shared pictures, newest day first.

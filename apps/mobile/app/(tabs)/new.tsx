@@ -22,7 +22,7 @@ import type { FamilySummary } from '../../src/lib/api';
 import { colors, spacing } from '../../src/theme';
 
 /** Clears the bottom nav (56pt plus the home indicator) with room to breathe. */
-const BOTTOM_INSET = 140;
+const BOTTOM_INSET = 160;
 
 function toAudience(families: FamilySummary[]): AudienceGroup[] {
   return families.map((family) => ({

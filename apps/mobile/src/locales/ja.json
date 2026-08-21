@@ -18,14 +18,19 @@
     "or": "または"
   },
   "nav": {
-    "home": "ホーム",
     "omoide": "思い出",
     "ai": "AI",
     "profile": "プロフィール",
     "newMoment": "投稿する",
     "notifications": "お知らせ",
     "notificationsUnread_other": "お知らせ、未読{{count}}件",
-    "settings": "アカウントと設定"
+    "settings": "アカウントと設定",
+    "tab": {
+      "home": "ホーム",
+      "omoide": "思い出",
+      "ai": "AI",
+      "profile": "マイページ"
+    }
   },
   "auth": {
     "modeLabel": "ログインまたは新規登録",
@@ -110,8 +115,10 @@
       "errors": {
         "emailTaken": "このメールアドレスはすでにNHAでパスワード登録されています。パスワードでサインインしてください（アドレスは入力済みです）。",
         "rejected": "サインインが完了しませんでした。もう一度試すか、メールとパスワードをお使いください。",
-        "incomplete": "サインインの結果が不完全でした。もう一度お試しください。"
-      }
+        "incomplete": "サインインの結果が不完全でした。もう一度お試しください。",
+        "stuck": "時間がかかりすぎています。もう一度ログインしてください。"
+      },
+      "backToSignIn": "ログイン画面へ戻る"
     }
   },
   "home": {
@@ -663,7 +670,31 @@
       "love": "いいね",
       "clear": "いいねを取り消す"
     },
-    "families_other": "{{count}} 家族"
+    "families_other": "{{count}} 家族",
+    "commentEdited": "{{date}} · 編集済み",
+    "commentActions": {
+      "open": "コメントの操作",
+      "closeScrim": "閉じる",
+      "edit": "コメントを編集",
+      "delete": "コメントを削除",
+      "cancel": "キャンセル"
+    },
+    "commentEdit": {
+      "banner": "コメントを編集中",
+      "cancel": "編集をやめる",
+      "label": "あなたのコメント",
+      "save": "保存",
+      "done": "コメントを更新しました",
+      "failed": "保存できませんでした。もう一度お試しください。"
+    },
+    "commentDelete": {
+      "title": "このコメントを削除しますか？",
+      "body": "完全に削除され、元に戻せません。",
+      "confirm": "削除",
+      "cancel": "やめる",
+      "done": "コメントを削除しました",
+      "failed": "削除できませんでした。もう一度お試しください。"
+    }
   },
   "omoide": {
     "summary": "{{people}}人が投稿した写真 {{photos}}枚",

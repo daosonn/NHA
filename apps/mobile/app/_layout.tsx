@@ -52,7 +52,17 @@ const queryClient = createQueryClient();
  * of the invitation page is to make its case to somebody who does not have an
  * account yet, and bouncing them to Welcome throws the code away.
  */
-const PUBLIC_GROUPS: readonly string[] = ['(auth)', 'invite'];
+/**
+ * Route groups a signed-out visitor is allowed to be in.
+ *
+ * `auth` — no parentheses — is `app/auth/callback.tsx`, where social login
+ * lands. It was missing until 2026-08-21, which meant the gate below fired
+ * the moment the stored session came back empty and threw the callback off
+ * its own screen **while it was still saving the tokens it had just been
+ * handed**. Whether the sign-in survived came down to which promise resolved
+ * first.
+ */
+const PUBLIC_GROUPS: readonly string[] = ['(auth)', 'auth', 'invite'];
 
 /**
  * Sends a signed-out visitor back to Welcome, from anywhere.

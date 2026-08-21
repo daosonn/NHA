@@ -18,7 +18,7 @@ import { useMyProfile, useUpdateAvatar } from '../../src/features/member/use-pro
 import { colors, spacing } from '../../src/theme';
 
 /** Clears the bottom nav (56pt plus the home indicator). */
-const BOTTOM_INSET = 120;
+const BOTTOM_INSET = 140;
 
 /**
  * Your own Life Profile.

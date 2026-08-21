@@ -38,3 +38,53 @@ export function useAddComment(postId: string) {
     },
   });
 }
+
+/**
+ * Rewrites one of your own comments.
+ *
+ * Author-only on the server, so there is nothing to check here beyond
+ * drawing the affordance on the right rows. The whole thread is refetched
+ * rather than patched in place: a comment can sit on any page of an infinite
+ * query, and finding it to splice would be more code than one request.
+ *
+ * The post's `commentCount` is untouched — editing does not change how many
+ * there are.
+ */
+export function useUpdateComment(postId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ commentId, content }: { commentId: string; content: string }) =>
+      comments.update(postId, commentId, { content }),
+
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.postComments(postId) });
+    },
+  });
+}
+
+/**
+ * Removes one of your own comments. There is no undo.
+ *
+ * The count is nudged down for the same reason `useAddComment` nudges it up:
+ * the comment routes never return the post, and a header that still says
+ * "3 comments" over two of them is the kind of small wrongness people notice
+ * immediately.
+ */
+export function useDeleteComment(postId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (commentId: string) => comments.remove(postId, commentId),
+
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.postComments(postId) });
+
+      queryClient.setQueryData<PostDetail>(queryKeys.post(postId), (current) =>
+        current === undefined
+          ? current
+          : { ...current, commentCount: Math.max(0, current.commentCount - 1) },
+      );
+    },
+  });
+}
