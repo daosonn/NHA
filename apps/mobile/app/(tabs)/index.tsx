@@ -2,7 +2,8 @@ import { useRouter } from 'expo-router';
 import { HousePlus, TriangleAlert } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, FlatList, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
+import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 
 import { PostCard } from '../../src/components/feed/post-card';
 import { EventWidget } from '../../src/components/home/event-widget';
@@ -41,6 +42,17 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { familyId } = useActiveFamily();
+
+  /**
+   * Drives the pinned strip's condense. A shared value rather than state:
+   * this updates on every scroll frame, and re-rendering the feed sixty
+   * times a second to shrink a bar by seven pixels is not a trade worth
+   * making.
+   */
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
 
   /**
    * Somebody who opened an invite link while signed out was sent through
@@ -95,16 +107,6 @@ export default function HomeScreen() {
    */
   const intro = (
     <View style={{ gap: 14, paddingBottom: 14 }}>
-      {/* The + starts another group. Someone with no family at all lands on
-          `/create-family` from the empty state below, which offers joining
-          too — by the time this strip exists, they already have one. */}
-      <GroupStrip
-        groups={toStripGroups(families ?? [])}
-        remainingCount={Math.max(0, (families?.length ?? 0) - VISIBLE_GROUPS)}
-        onPress={() => router.push('/family')}
-        onAddPress={() => router.push('/family/new')}
-      />
-
       {/* Drawn only when there is an occasion. Birthdays are derived from
           the birth dates on people's profiles, so a family who have not
           filled any in has nothing coming up — and an empty celebration
@@ -133,13 +135,30 @@ export default function HomeScreen() {
         </>
       )}
 
-      <SwipeCue />
+      {/* Fades on the first flick — it has been followed by then. */}
+      <SwipeCue scrollY={scrollY} />
     </View>
   );
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.page }}>
       <AppHeader left={<BrandWordmark />} right={<NotificationBell />} paddingRight={spacing.lg} />
+
+      {/* Pinned, not scrolled with the feed. It is the only way into the
+          family tree, and as the feed's first row it was gone after one
+          flick. The + starts another group; somebody with no family at all
+          lands on `/create-family` from the empty state below. */}
+      {families !== undefined && families.length > 0 && (
+        <View style={{ paddingHorizontal: spacing.xl, paddingTop: 4, paddingBottom: 10 }}>
+          <GroupStrip
+            groups={toStripGroups(families)}
+            remainingCount={Math.max(0, families.length - VISIBLE_GROUPS)}
+            onPress={() => router.push('/family')}
+            onAddPress={() => router.push('/family/new')}
+            scrollY={scrollY}
+          />
+        </View>
+      )}
 
       {renderBody()}
     </View>
@@ -179,12 +198,14 @@ export default function HomeScreen() {
     }
 
     return (
-      <FlatList
+      <Animated.FlatList
         data={posts}
-        keyExtractor={(post) => post.id}
+        keyExtractor={(post: PostDetail) => post.id}
         ListHeaderComponent={intro}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={{
-          padding: spacing.xl,
+          paddingHorizontal: spacing.xl,
           paddingBottom: BOTTOM_INSET,
           gap: 12,
         }}
@@ -210,7 +231,7 @@ export default function HomeScreen() {
             <ActivityIndicator color={colors.coral.primary} style={{ paddingVertical: 16 }} />
           ) : null
         }
-        renderItem={({ item }) => (
+        renderItem={({ item }: { item: PostDetail }) => (
           <PostCard
             post={item}
             audienceLabel={audienceLabel(item)}
