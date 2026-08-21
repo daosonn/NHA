@@ -518,6 +518,20 @@ Screen 19. **No migration** — `Notification` shipped in the sprint-0 schema.
   nothing, only the first one does. Invitations raise nothing yet — the
   invitee has no account to notify, so who receives `FAMILY_INVITE` is an
   open product question.
+- **Reminders (WBS 3.2.2, added 2026-08-20).** A twice-daily server job
+  turns profile dates and stored SpecialDate rows into notifications, at
+  **7 days ahead and on the day** (lead times are an assumption to
+  confirm; per-user tuning waits for 3.4.5): `BIRTHDAY_REMINDER` for a
+  living member's `birthDate`; `EVENT_REMINDER` with `payload.kind:
+"memorial"` for a `deathDate` (a deceased member gets no birthday
+  reminder) and with `kind: "special"` for custom occasions. Everyone in
+  the family hears **except the person whose birthday it is**; custom
+  occasions notify everyone, the couple included. One reminder per person
+  per occurrence per lead, idempotent across restarts (`payload.dedupeKey`).
+  Payloads carry ids, `occursOn`, `daysUntil` and _data snapshots_
+  (`displayName`, a custom occasion's `title`) — still no composed
+  sentences. Same calendar rules as the widgets: UTC days, Feb 29 → Mar 1
+  in non-leap years.
 - **The server sends no display text.** Only `type` plus a `payload` of
   ids — the app writes the sentence, the same rule the special-date
   widgets follow. A Japanese user must not be handed an English sentence
