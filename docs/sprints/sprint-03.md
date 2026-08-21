@@ -23,7 +23,9 @@ complete, the system passes end-to-end tests, and the MVP is demoed.
 
 ### 3.2 Nhắc ngày đặc biệt — Birthday/Event
 
-- [ ] 3.2.1 Lấy birthday/event (query DB — LifeProfile.birthDate, Event)
+- [x] 3.2.1 Lấy birthday/event (query DB — LifeProfile.birthDate, Event) —
+      done từ 2026-08-18 (PR #11, `GET /families/:id/special-dates`) nhưng
+      chưa từng tick; 3.2.2 giờ cũng query cùng nguồn
 - [x] 3.2.2 Tạo reminder (tự động tạo notification) — done 2026-08-20:
       job server 2 lần/ngày, nhắc trước 7 ngày + đúng ngày, idempotent
       (chi tiết: `api-contract.md` → Notifications → Reminders)
@@ -54,7 +56,10 @@ thêm một rule là chạy.
       (`POST /auth/change-password`, trả cặp token mới cho thiết bị này,
       thu hồi mọi thiết bị khác; chi tiết: `api-contract.md` → Auth);
       UI chưa nối
-- [ ] 3.4.4 Privacy settings (thiết lập quyền riêng tư)
+- [ ] 3.4.4 Privacy settings (thiết lập quyền riêng tư) — API done
+      2026-08-21 (`GET/PATCH /me/settings/privacy`, một flag
+      `allowAiPhotoAnalysis` **có ép luật thật**: rút ảnh khỏi pending feed + xoá insight đã trích; chi tiết: `api-contract.md` → Settings);
+      UI chưa nối. Ba mục còn lại của màn 20 cố ý chưa lưu — xem contract.
 - [ ] 3.4.5 Notification settings (bật/tắt nhắc)
 
 ### 3.5 System Integration Test — Test end-to-end
