@@ -611,6 +611,75 @@ dev` **did not regenerate the client**, and the stale client survived
   account yet, so who `FAMILY_INVITE` is for is an open product question.
   On branch `feature/notification-api`.
 
+- SpecialDate CRUD (2026-08-20, sprint 3, WBS 3.2.3 API side):
+  `POST/PATCH/DELETE /families/:id/special-dates(/:id)` plus
+  `GET .../custom` — the stored rows **with their ids**, which the merged
+  widget GET (1.2.5) deliberately never carried, so the management side
+  of screen 17 finally has something to edit. **No migration** —
+  `SpecialDate`/`SpecialDateMember` shipped in sprint 0. Any family
+  member creates/edits/deletes (no roles in the MVP; `createdById` is
+  provenance, not ownership — same wiki spirit as placeholder profiles,
+  noted as an assumption to confirm). Rules: month/day must be a real
+  date, validated as the **resulting pair** on PATCH so changing only the
+  month cannot leave Feb 31 behind; **Feb 29 stays legal** (display rolls
+  it to Mar 1 in non-leap years, same as derived birthdays);
+  `memberIds` must belong to the family and replaces on PATCH;
+  `originYear: null` clears the ordinal; cross-family ids 404. Verified
+  by lint/build/test + a **23-case live smoke test** (create→widget
+  round-trip incl. ordinal, wiki edit by another member, date-pair
+  validation, family isolation, delete removes it from the widget).
+  Remaining in group 3.2: the reminder generator (3.2.2) that turns these
+  plus profile dates into Notification rows, and the screen-17 UI. On
+  branch `feature/special-date-crud`.
+- Avatar API (2026-08-20, sprint 3, WBS 3.4.2 API side): the write the
+  frontend asked for on 2026-08-19, in exactly the requested shape —
+  `avatarMediaId` on `UpdateProfileDto` (both profile routes, so the wiki
+  rule is the authorization), value stored into the existing
+  `User.avatarKey` / `FamilyMember.avatarKey` columns as a **Media id**
+  the existing `GET /media/:id` already streams. **No migration.** Read
+  side: `ProfileDetail.avatarMediaId`, plus `FamilyMemberSummary.avatarKey`
+  now **coalesces to the account's avatar for linked members** — one
+  person, one avatar, every family, tree included. Two rules enforced:
+  the photo must be the _editor's own uploaded image_ (400 otherwise, one
+  message, no existence oracle — on a placeholder the editor and the
+  subject differ, and pointing at somebody else's photo must not work),
+  and **avatar bytes are as visible as the person**: `MediaService.canView`
+  gained an avatar fallback, since a standalone upload used to stream
+  uploader-only and everyone else's avatar would have 404'd. Clearing the
+  avatar withdraws that widened visibility again. Avatar changes land in
+  the `EditHistory` snapshot. No index on `avatarKey` — the lookup only
+  runs after every parent check says no, on people-sized tables; add one
+  if it ever shows up in profiles. Verified by lint/build/test + a
+  **21-case live smoke test** (summary coalescing, visibility matrix
+  incl. outsider 404 and clear-withdraws-access, steal/audio/ghost 400s,
+  linked-profile 403, EditHistory in the DB). FE work remaining: upload
+  button + reading the field. On branch `feature/avatar-api`.
+
+- Reminder generator (2026-08-20, sprint 3, WBS 3.2.2): a twice-daily
+  in-process job (`ReminderService`, plain `setInterval` + startup run —
+  a cron package is not worth "twice a day") that turns LifeProfile
+  birth/death dates and SpecialDate rows into Notification rows via the
+  `createMany` the notification module exported for exactly this.
+  **No migration, no dependency, no new route.** Lead times **7 days and
+  day-of** — an assumption to confirm, nothing was written down; per-user
+  tuning belongs to 3.4.5. Rules enforced and verified: nobody is
+  reminded of **their own** birthday; a deceased member gets memorial
+  reminders only; custom occasions notify the whole family including the
+  people they are about; one reminder per person per occurrence per lead
+  even across shared families. Idempotent by a `dedupeKey` in the payload
+  (occasion + occurrence + lead) checked against the last 9 days — the
+  same restart-safety contract as everything else, and the reason the
+  smoke test could simply restart the API twice. Payloads carry ids +
+  data snapshots (name, custom title), never composed sentences. Same
+  calendar rules as the widgets (UTC days, Feb 29 → Mar 1) — the JST
+  question applies here too. Known limit, same as the video renderer:
+  check-then-insert means two instances could double-create; fine
+  single-instance, noted for the scale-out day. Verified by
+  lint/build/test + a **12-case staged smoke test** (seed → restart →
+  assert → restart → assert-no-duplicates), counts exact per recipient.
+  Group 3.2 backend is now **fully closed** (3.2.1 widget GET, 3.2.2
+  reminders, 3.2.3 CRUD). On branch `feature/reminders`.
+
 ### Sprint 2 — AI team
 
 - AI integration for screens 21-33 (2026-08-20, **merged to `main` in

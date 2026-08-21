@@ -254,7 +254,23 @@ reconcile.
 
 `ProfileDetail` is `{ id, userId, memberId, displayName, bio,
 interests: string[], birthDate, birthPlace, occupation, deathDate,
-updatedAt }`.
+avatarMediaId, updatedAt }`.
+
+**Avatar (WBS 3.4.2, added 2026-08-20).** Write: PATCH `avatarMediaId` —
+the id of an **image the caller uploaded** via `POST /media` (any own
+image, attached or standalone; 400 for someone else's media, a non-image,
+or a missing id — one message, no existence oracle); `null` clears. On a
+placeholder it is wiki-set like the rest of the profile, and the photo
+must still be the _editor's_ own upload. Read: `ProfileDetail.avatarMediaId`
+here, and `FamilyMemberSummary.avatarKey` everywhere members appear
+(family detail, tree, join/add/update results) — for a linked member that
+field now **coalesces to the account's avatar**, so one person has one
+avatar in every family. The value is a Media id: stream it with
+`GET /media/:id`. Setting a photo as an avatar deliberately **widens that
+photo's visibility** to everyone who can see the person (family members;
+for a user, anyone sharing a family) — clearing the avatar withdraws that
+again. Every avatar change lands in the `EditHistory` snapshot like any
+other profile field.
 
 `birthPlace` and `occupation` (added 2026-08-20) are the two fields
 mockup 7's fact rows needed: the place printed after the birth date
@@ -502,6 +518,20 @@ Screen 19. **No migration** — `Notification` shipped in the sprint-0 schema.
   nothing, only the first one does. Invitations raise nothing yet — the
   invitee has no account to notify, so who receives `FAMILY_INVITE` is an
   open product question.
+- **Reminders (WBS 3.2.2, added 2026-08-20).** A twice-daily server job
+  turns profile dates and stored SpecialDate rows into notifications, at
+  **7 days ahead and on the day** (lead times are an assumption to
+  confirm; per-user tuning waits for 3.4.5): `BIRTHDAY_REMINDER` for a
+  living member's `birthDate`; `EVENT_REMINDER` with `payload.kind:
+"memorial"` for a `deathDate` (a deceased member gets no birthday
+  reminder) and with `kind: "special"` for custom occasions. Everyone in
+  the family hears **except the person whose birthday it is**; custom
+  occasions notify everyone, the couple included. One reminder per person
+  per occurrence per lead, idempotent across restarts (`payload.dedupeKey`).
+  Payloads carry ids, `occursOn`, `daysUntil` and _data snapshots_
+  (`displayName`, a custom occasion's `title`) — still no composed
+  sentences. Same calendar rules as the widgets: UTC days, Feb 29 → Mar 1
+  in non-leap years.
 - **The server sends no display text.** Only `type` plus a `payload` of
   ids — the app writes the sentence, the same rule the special-date
   widgets follow. A Japanese user must not be handed an English sentence
@@ -537,11 +567,31 @@ for now — it buys ~1s over ~10s at the price of reconnect logic today
 and Redis the day there are two API instances; revisit only if chat or
 another genuinely two-way feature arrives.
 
-### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side)
+### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side; CRUD = WBS 3.2.3, added 2026-08-20)
 
-| Route                                   | Returns                |
-| --------------------------------------- | ---------------------- |
-| `GET /families/:familyId/special-dates` | `UpcomingSpecialDates` |
+| Route                                                     | Returns                |
+| --------------------------------------------------------- | ---------------------- |
+| `GET /families/:familyId/special-dates`                   | `UpcomingSpecialDates` |
+| `GET /families/:familyId/special-dates/custom`            | `SpecialDateDetail[]`  |
+| `POST /families/:familyId/special-dates`                  | `SpecialDateDetail`    |
+| `PATCH /families/:familyId/special-dates/:specialDateId`  | `SpecialDateDetail`    |
+| `DELETE /families/:familyId/special-dates/:specialDateId` | `{ success }`          |
+
+**CRUD (WBS 3.2.3).** `SpecialDateDetail` is `{ id, type, title, month,
+day, originYear, theme, members[], createdById, createdAt, updatedAt }` —
+the stored row **with its id**, which the merged widget items below never
+carry; the management side of screen 17 reads `GET .../custom` (calendar
+order), never the widget GET. Any family member creates, edits and
+deletes (no roles in the MVP — `createdById` is provenance, not
+ownership). Create body: `{ type, title (≤120, trimmed), month, day,
+originYear?, theme, memberIds? }`; `memberIds` must belong to this family
+and **replaces** on PATCH; `originYear: null` clears the ordinal. The
+month/day pair must be a real date — validated as the _resulting_ pair on
+PATCH, so changing only the month cannot leave Feb 31 behind; **Feb 29 is
+legal** and rolls to Mar 1 in non-leap years at display time. Deleting
+removes the occasion from the widgets; derived birthdays/memorials are
+untouched (edit those on the profile). A row addressed through another
+family's URL is a 404.
 
 `UpcomingSpecialDates` is `{ items: SpecialDateItem[] }`, soonest first,
 `?limit` 1–50 (default 10). Each item:
@@ -553,9 +603,8 @@ items `{ memberId, displayName }`.
   member with a `birthDate` (theme `CONFETTI_CANDLES`), a memorial per
   member with a `deathDate` (theme `FLORAL_BORDER`). A deceased member
   gets a memorial only, no birthday. No rows are stored.
-- **CUSTOM** items are `SpecialDate` rows (anniversaries etc.). Their
-  CRUD ships with Sprint 3 (task 3.2.3) — until then the table is
-  normally empty.
+- **CUSTOM** items are `SpecialDate` rows (anniversaries etc.), managed
+  through the CRUD above (task 3.2.3, done 2026-08-20).
 - `title` is only set on CUSTOM items. **Derived items carry no text**:
   build the label client-side from `type`, `members` and `ordinal`
   ("Dad turns 63", 三回忌) — i18n lives in the app, per the
@@ -659,30 +708,16 @@ already set as `expo.scheme`). The fragment keeps the tokens out of server
 logs and out of the `Referer`. The app then completes the flow with
 `expo-web-browser`; putting the buttons back is one screen edit each.
 
-**4. Avatars have columns and no endpoints (added 2026-08-19).**
-`User.avatarKey` and `FamilyMember.avatarKey` are in the schema, and nothing
-reads or writes them: no DTO accepts an avatar, and no route turns a key into
-bytes. `family.service.ts` selects `avatarKey` into `FamilyMemberSummary`, so
-the app receives a field that is always `null`.
-
-Verified rather than assumed: `PATCH /families/:familyId/members/:memberId`
-with `{"avatarKey": "<a real media id>"}` answers **200** and leaves the
-column `null` — `whitelist: true` on the global `ValidationPipe` strips the
-unknown key silently. That is why the app has **no avatar upload button**: one
-that looks like it worked is worse than none.
-
-**Asked for**, and the app is ready for both halves the moment they exist:
-
-- A write. Simplest shape that fits what is already there: accept
-  `avatarMediaId` on `UpdateProfileDto` (the profile is the global,
-  once-per-person object the app already edits), pointing at a `Media` row
-  the caller uploaded through `POST /media`.
-- A read. If the value is a `Media.id`, `GET /media/:id` already serves it
-  and the client needs nothing new — `lib/media-source.ts` handles the
-  authenticated fetch today. If it stays an opaque storage key, it needs a
-  route of its own.
-
-Until then `components/ui/avatar.tsx` draws an initial on a per-person tint.
+**4. ~~Avatars have columns and no endpoints~~ (added 2026-08-19) — done
+2026-08-20, in exactly the asked-for shape.** `avatarMediaId` on
+`UpdateProfileDto` (both profile routes), value is a `Media.id` served by
+the existing `GET /media/:id`, read back on `ProfileDetail.avatarMediaId`
+and on `FamilyMemberSummary.avatarKey` everywhere members appear. Full
+semantics in § Life Profiles above. One thing the request did not name and
+the server now handles: an avatar's bytes are visible to everyone who can
+see the person (before, a standalone upload streamed uploader-only, so
+everyone else's avatar would have 404'd). FE work remaining: the upload
+button, and reading the field in `components/ui/avatar.tsx`.
 
 Also still open from an earlier decision, and worth grouping here: **the
 profile PATCH is wider than the app.** `PATCH …/members/:memberId/profile`
