@@ -22,6 +22,7 @@ export {
   posts,
   profiles,
   reactions,
+  settings,
   specialDates,
   video,
 } from './endpoints';

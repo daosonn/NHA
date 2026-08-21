@@ -115,7 +115,10 @@ export default function HomeScreen() {
         <EventWidget occasion={nextOccasion} moreCount={(occasions?.items.length ?? 1) - 1} />
       )}
 
-      {/* Recommendations are still a fixture: no endpoint exists for them. */}
+      {/* Derived on the client from this family's own posts and albums —
+          there is no endpoint for these. Seeded by the day, not
+          `Math.random()`, so the shelf is stable while somebody looks at it
+          and different tomorrow. */}
 
       {/* Hidden until the family has something old enough to resurface. An
           empty "look what turned up" is worse than no shelf, and a shelf of

@@ -45,6 +45,14 @@ screens.
     comments, tree nodes, member sheet, Settings — closing sprint 3.4.2 on
     the UI side. Details and the one limit (the active family) in
     `architecture.md` § Avatars.
+  - **Google sign-in works again.** The server's OAuth callback now redirects
+    with the tokens in the fragment, so the buttons have something to do; web
+    only until somebody registers a deep-link scheme for native.
+  - **Home's group strip was rebuilt** after three attempts, and the lesson
+    was that the problem was never contrast: the only way into the family
+    tree was the feed's first row and scrolled away on the first flick. It is
+    now pinned and condenses as you read, with the swipe cue fading out
+    beneath it. Full write-up in `design-system.md` § Group strip.
 
   Two designs were tried and reverted the same day, both recorded in the code
   next to what replaced them: the viewer's photograph in the bottom bar's
@@ -58,8 +66,9 @@ screens.
   family tree with per-spot invitations and pinch/pan, New moment with member
   tagging, post detail, Omoide, the whole Life Profile (identity, timeline,
   gallery, memos), personal albums, and the invitation page. **The only
-  fixtures left are Home's recommendation grid** — which has no endpoint at
-  all — and the AI screens' seed data. Per-screen detail:
+  fixtures left are the AI screens' seed data** (2026-08-21). Home's
+  recommendation shelf still has no endpoint, but it stopped being a fixture
+  on 2026-08-20: it is derived from the family's own posts and albums. Per-screen detail:
   `docs/01-frontend/architecture.md` § Wiring status.
 - **Sprint 1 is one task from done (2026-08-20).** 1.1.9 (Facebook login) is
   blocked twice over: the OAuth callback cannot return tokens to the app, and
@@ -189,25 +198,43 @@ screens.
 
 Raised by the frontend, neither actionable from `apps/mobile`.
 
-- **Social login cannot finish in the app (2026-08-20).** The OAuth callback
-  answers `200 { user, accessToken, refreshToken }` as JSON, so the token pair
-  lands in the browser and the app never sees it. The six Google/Facebook
-  buttons have been removed from Welcome, Sign in and Sign up — none of them
-  had a handler, because none could. **Asked for**: redirect to a configurable
-  app URL with the tokens in the fragment instead of returning JSON. Full
-  write-up in `docs/00-shared/api-contract.md` § Requests from the app.
+- ~~**Social login cannot finish in the app (2026-08-20).**~~ — **closed
+  2026-08-21.** The callback now redirects to an allow-listed app URL with the
+  token pair in the fragment (`OAUTH_APP_REDIRECTS`, exact-match), and failure
+  redirects too, carrying `email_taken` / `rejected` / `incomplete` /
+  `failed`. **Google is back on Sign in and Sign up** behind
+  `features/auth/use-social-login.ts` + `app/auth/callback.tsx`. Web only:
+  `SocialButtons` renders nothing on native, because the native side needs a
+  deep-link scheme nobody has registered yet. Facebook stays blocked on the
+  unaccepted Meta tester invite (task 1.1.9), not on us.
 
-- **Avatars have columns and no endpoints (2026-08-19).**
-  `User.avatarKey` and `FamilyMember.avatarKey` are in the schema; nothing
-  writes them and nothing serves them. Verified: `PATCH …/members/:memberId`
-  with an `avatarKey` answers **200** and leaves the column `null`, because
-  `whitelist: true` strips the unknown field. The app therefore ships **no
-  upload button** — one that looks like it worked is worse than none — and
-  draws an initial on a per-person tint instead. **Asked for**: an
-  `avatarMediaId` on `UpdateProfileDto` pointing at a `Media` row; if the
-  stored value is a `Media.id` then `GET /media/:id` already serves it and the
-  client needs nothing further. Full write-up in
-  `docs/00-shared/api-contract.md` § Requests from the app.
+- ~~**Avatars have columns and no endpoints (2026-08-19).**~~ — **closed on
+  both sides.** The server landed `avatarMediaId` on `UpdateProfileDto`
+  2026-08-20, exactly as asked, and widened `MediaService.canView` so an
+  avatar is as visible as the person. The app wired it 2026-08-21: a camera
+  badge on your own face, and the picture drawn everywhere a person appears
+  (`architecture.md` § Avatars).
+
+- **Removing a member has no admin and no floor (2026-08-21).** Read while
+  wiring the delete UI, not a bug report — the rule may well be deliberate,
+  but it is not written down anywhere and the app now depends on it.
+  `removeMember` lets any member delete a **placeholder** and lets a **linked
+  member delete only themselves**; there is no way to remove somebody else who
+  has an account. So the product has _leave_, not _kick_. `Family.createdById`
+  exists and confers nothing. Two questions:
+  1. Is "no kick" intended? If a family ever needs to remove an account
+     holder — a wrong invite accepted, somebody who should not be there — the
+     only route today is asking them to leave.
+  2. **Nothing stops the last member leaving.** `removeMember` does not count
+     what remains, so a one-member family can empty itself: the `Family` row
+     survives with zero members, `requireMembership` then refuses everyone,
+     and its posts and media are unreachable but not deleted. A guard, or a
+     documented cascade, would settle it.
+
+  The app mirrors the current rule and adds one of its own on top: it will not
+  remove anybody with children below them, because what happens to
+  relationships routing through a removed person is still an open domain
+  question. See `apps/mobile/src/features/family/member-permissions.ts`.
 
 - **Three gaps found building the Life Profile against mockup 7
   (2026-08-19; status re-checked against the code 2026-08-20).** Written up
