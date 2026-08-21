@@ -3,19 +3,72 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { colors, radius } from '../../theme';
+import { BrandMark } from '../ui/brand-mark';
 import { Text } from '../ui/text';
 
-/** The NHA wordmark. Lora is allowed here — it is the brand, not a control. */
+/**
+ * How big the mark is in a header. One number, everywhere.
+ *
+ * It was 22 on the Life Profile and the memo screens, 23 on Omoide and 26 on
+ * the AI tab — three sizes for the same mark, on screens one tap apart.
+ */
+const MARK = 22;
+
+/**
+ * The full lockup: the mark beside the name. Home only.
+ *
+ * Home is the front door and has no screen title to carry, so this is where
+ * the brand gets to say its whole name. Everywhere else the mark travels on
+ * its own next to that screen's title — see `ScreenTitle`.
+ *
+ * Lora is allowed here. It is the brand, not a control.
+ */
 export function BrandWordmark() {
   return (
-    <Text
-      serif
-      weight="bold"
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+      <BrandMark size={MARK} />
+
+      <Text
+        serif
+        weight="bold"
+        accessibilityRole="header"
+        style={{ fontSize: 22, lineHeight: 28, letterSpacing: 1.6, color: colors.coral.primary }}
+      >
+        PRESENT
+      </Text>
+    </View>
+  );
+}
+
+/**
+ * The centre of every header that is not Home: the mark, then where you are.
+ *
+ * Made one component on 2026-08-21 because it had become five. The mark
+ * appeared on five screens out of twenty, at three sizes, sometimes in the
+ * left slot and sometimes in the middle; the title beside it was a bold
+ * subtitle on sixteen screens, a 21px serif on the AI tab and coral text on
+ * the Profile tab. Nothing about that was a decision — it was drift.
+ *
+ * The title clamps to one line. It sits between two buttons, and an album
+ * called "Summer at my grandmother's house" must not push them off the edge.
+ */
+export function ScreenTitle({ title }: { title: string }) {
+  return (
+    <View
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}
       accessibilityRole="header"
-      style={{ fontSize: 22, lineHeight: 28, letterSpacing: 1.6, color: colors.coral.primary }}
     >
-      PRESENT
-    </Text>
+      <BrandMark size={MARK} />
+
+      <Text
+        variant="subtitle"
+        weight="bold"
+        numberOfLines={1}
+        style={{ letterSpacing: -0.2, flexShrink: 1 }}
+      >
+        {title}
+      </Text>
+    </View>
   );
 }
 

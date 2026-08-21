@@ -8,7 +8,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 
 import { SelectRow } from '../../src/components/ai/select-row';
 import { AppHeader } from '../../src/components/layout/app-header';
-import { BackButton } from '../../src/components/layout/header-slots';
+import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Button } from '../../src/components/ui/button';
 import { Card } from '../../src/components/ui/card';
 import { Text } from '../../src/components/ui/text';
@@ -48,13 +48,19 @@ function buildChecklist(
   if (inScenes) {
     if (i > 1)
       rows.push({
-        label: i - 1 === 1 ? t('video.sceneN', { n: 1 }) : t('video.stageScenesRange', { from: 1, to: i - 1 }),
+        label:
+          i - 1 === 1
+            ? t('video.sceneN', { n: 1 })
+            : t('video.stageScenesRange', { from: 1, to: i - 1 }),
         state: 'done',
       });
     rows.push({ label: t('video.stageSceneOf', { i, n }), state: 'now' });
     if (i < n)
       rows.push({
-        label: i + 1 === n ? t('video.sceneN', { n }) : t('video.stageScenesRange', { from: i + 1, to: n }),
+        label:
+          i + 1 === n
+            ? t('video.sceneN', { n })
+            : t('video.stageScenesRange', { from: i + 1, to: n }),
         state: 'todo',
       });
   } else {
@@ -147,21 +153,27 @@ export default function VideoJobScreen() {
     onSuccess: () => setSavedToDevice(true),
   });
 
-  const fmtDur = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
+  const fmtDur = (s: number) =>
+    `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 
   return (
     <View className="flex-1 bg-page">
       <AppHeader
         left={<BackButton onPress={() => router.back()} />}
         center={
-          <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-            {data?.status === 'DONE' ? t('video.title') : t('video.makingTitle')}
-          </Text>
+          <ScreenTitle
+            title={data?.status === 'DONE' ? t('video.title') : t('video.makingTitle')}
+          />
         }
       />
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: 14, paddingBottom: 40, gap: 13 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.xl,
+          paddingTop: 14,
+          paddingBottom: 40,
+          gap: 13,
+        }}
         showsVerticalScrollIndicator={false}
       >
         {/* ---------- màn 32 (11k): đang render ---------- */}
@@ -178,7 +190,14 @@ export default function VideoJobScreen() {
                 </Text>
               </View>
 
-              <View style={{ height: 8, borderRadius: 4, backgroundColor: colors.background.subtle, overflow: 'hidden' }}>
+              <View
+                style={{
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: colors.background.subtle,
+                  overflow: 'hidden',
+                }}
+              >
                 <View
                   style={{
                     width: `${Math.max(3, data.progress)}%`,
@@ -222,7 +241,14 @@ export default function VideoJobScreen() {
                         backgroundColor: colors.coral.light,
                       }}
                     >
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.coral.brand }} />
+                      <View
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: colors.coral.brand,
+                        }}
+                      />
                     </View>
                   ) : (
                     <View
@@ -235,7 +261,14 @@ export default function VideoJobScreen() {
                         backgroundColor: colors.background.subtle,
                       }}
                     >
-                      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: colors.state.borderDashed }} />
+                      <View
+                        style={{
+                          width: 7,
+                          height: 7,
+                          borderRadius: 4,
+                          backgroundColor: colors.state.borderDashed,
+                        }}
+                      />
                     </View>
                   )}
                   <Text
@@ -249,7 +282,11 @@ export default function VideoJobScreen() {
               ))}
             </View>
 
-            <Text variant="badge" color={colors.text.subtle} style={{ textAlign: 'center', paddingTop: 8 }}>
+            <Text
+              variant="badge"
+              color={colors.text.subtle}
+              style={{ textAlign: 'center', paddingTop: 8 }}
+            >
               {t('ai.privacyFooter')}
             </Text>
           </>
@@ -271,11 +308,17 @@ export default function VideoJobScreen() {
         {/* ---------- màn 33 (11l): xong ---------- */}
         {data?.status === 'DONE' && (
           <>
-            <View style={{ borderRadius: radius['2xl'], overflow: 'hidden', backgroundColor: '#000' }}>
+            <View
+              style={{ borderRadius: radius['2xl'], overflow: 'hidden', backgroundColor: '#000' }}
+            >
               <VideoView
                 ref={videoRef}
                 player={player}
-                style={{ width: '100%', aspectRatio: data.options?.aspect === 'landscape' ? 16 / 9 : 9 / 16, maxHeight: 440 }}
+                style={{
+                  width: '100%',
+                  aspectRatio: data.options?.aspect === 'landscape' ? 16 / 9 : 9 / 16,
+                  maxHeight: 440,
+                }}
                 contentFit="contain"
                 nativeControls
                 // PHẢI truyền: trên web expo-video mặc định gắn controlsList="nofullscreen",
@@ -324,7 +367,11 @@ export default function VideoJobScreen() {
             </View>
 
             <View style={{ gap: 2 }}>
-              <Text serif weight="bold" style={{ fontSize: 20, lineHeight: 26, letterSpacing: -0.3 }}>
+              <Text
+                serif
+                weight="bold"
+                style={{ fontSize: 20, lineHeight: 26, letterSpacing: -0.3 }}
+              >
                 {data.title || t('video.untitled')}
               </Text>
               <Text variant="caption" color={colors.text.muted}>
@@ -369,11 +416,17 @@ export default function VideoJobScreen() {
                 variant="neutral"
                 size="large"
                 onPress={() => router.back()}
-                renderIcon={({ size, color }) => <Pencil size={size} color={color} strokeWidth={2.1} />}
+                renderIcon={({ size, color }) => (
+                  <Pencil size={size} color={color} strokeWidth={2.1} />
+                )}
               />
             </View>
             {saveToDevice.isError && (
-              <Text variant="badge" color={colors.themes.destructive.text} style={{ textAlign: 'center' }}>
+              <Text
+                variant="badge"
+                color={colors.themes.destructive.text}
+                style={{ textAlign: 'center' }}
+              >
                 {t('video.saveFailed')}
               </Text>
             )}
@@ -401,7 +454,11 @@ export default function VideoJobScreen() {
               title={share.isSuccess ? t('video.sharedToFamily') : t('video.shareToFamily')}
               subtitle={t('video.shareHint')}
               trailing={share.isSuccess ? 'none' : share.isPending ? 'none' : 'chevron'}
-              onPress={share.isSuccess || share.isPending ? undefined : () => share.mutate({ jobId: data.id })}
+              onPress={
+                share.isSuccess || share.isPending
+                  ? undefined
+                  : () => share.mutate({ jobId: data.id })
+              }
             />
 
             {/* "Your videos" — thumbnail ngang (11l) */}
@@ -417,11 +474,18 @@ export default function VideoJobScreen() {
                   </Text>
                 </View>
 
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ gap: 10 }}
+                >
                   {myVideos.data!.slice(0, 8).map((v) => (
                     <Pressable
                       key={v.id}
-                      onPress={() => v.id !== data.id && router.push({ pathname: '/video/[id]', params: { id: v.id } })}
+                      onPress={() =>
+                        v.id !== data.id &&
+                        router.push({ pathname: '/video/[id]', params: { id: v.id } })
+                      }
                       accessibilityRole="button"
                       style={{ width: 148, gap: 5 }}
                     >
@@ -445,7 +509,12 @@ export default function VideoJobScreen() {
                               backgroundColor: 'rgba(255,255,255,0.22)',
                             }}
                           >
-                            <Play size={15} color={colors.text.white} strokeWidth={2.2} fill={colors.text.white} />
+                            <Play
+                              size={15}
+                              color={colors.text.white}
+                              strokeWidth={2.2}
+                              fill={colors.text.white}
+                            />
                           </View>
                         ) : (
                           <Text variant="body2" weight="bold" color={colors.text.white}>

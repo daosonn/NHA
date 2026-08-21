@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../src/components/layout/app-header';
-import { BackButton } from '../src/components/layout/header-slots';
+import { BackButton, ScreenTitle } from '../src/components/layout/header-slots';
 import { Avatar } from '../src/components/ui/avatar';
 import { Button } from '../src/components/ui/button';
 import { Card } from '../src/components/ui/card';
@@ -44,11 +44,7 @@ export default function SettingsScreen() {
     <View className="flex-1 bg-page">
       <AppHeader
         left={<BackButton onPress={() => router.back()} />}
-        center={
-          <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-            {t('settings.title')}
-          </Text>
-        }
+        center={<ScreenTitle title={t('settings.title')} />}
       />
 
       <ScrollView

@@ -5,10 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
-import { BackButton } from '../../src/components/layout/header-slots';
+import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { MemoActionsSheet } from '../../src/components/member/memo-actions-sheet';
 import { categoryChip } from '../../src/components/member/memo-card';
-import { BrandMark } from '../../src/components/ui/brand-mark';
 import { Chip } from '../../src/components/ui/chip';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { PhotoPlaceholder } from '../../src/components/ui/photo-placeholder';
@@ -69,14 +68,7 @@ export default function MemoScreen() {
     <View className="flex-1 bg-page">
       <AppHeader
         left={<BackButton onPress={() => router.back()} />}
-        center={
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <BrandMark size={22} />
-            <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-              {t('member.memoDetail.title')}
-            </Text>
-          </View>
-        }
+        center={<ScreenTitle title={t('member.memoDetail.title')} />}
         right={
           memo === undefined ? undefined : (
             <Pressable

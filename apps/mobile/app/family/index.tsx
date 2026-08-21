@@ -11,10 +11,9 @@ import { PendingBanner } from '../../src/components/family/pending-banner';
 import type { PositionedNode } from '../../src/components/family/tree-layout';
 import { GroupStrip, type FamilyGroupSummary } from '../../src/components/home/group-strip';
 import { AppHeader } from '../../src/components/layout/app-header';
-import { BackButton } from '../../src/components/layout/header-slots';
+import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { SectionHeader } from '../../src/components/ui/section-header';
-import { Text } from '../../src/components/ui/text';
 import { useSession } from '../../src/features/auth/session';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { treeFromGraph } from '../../src/features/family/tree-from-graph';
@@ -163,11 +162,7 @@ export default function FamilyTreeScreen() {
     <View className="flex-1 bg-page">
       <AppHeader
         left={<BackButton onPress={() => router.back()} />}
-        center={
-          <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-            {t('family.title')}
-          </Text>
-        }
+        center={<ScreenTitle title={t('family.title')} />}
       />
 
       <View className="flex-1 gap-lg px-xl pb-xl pt-lg">

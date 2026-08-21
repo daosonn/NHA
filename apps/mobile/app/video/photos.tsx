@@ -8,7 +8,7 @@ import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { Pill } from '../../src/components/ai/pill';
 import { AppHeader } from '../../src/components/layout/app-header';
-import { BackButton } from '../../src/components/layout/header-slots';
+import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Button } from '../../src/components/ui/button';
 import { Text } from '../../src/components/ui/text';
 import { useSession } from '../../src/features/auth/session';
@@ -42,7 +42,10 @@ export default function VideoPhotosScreen() {
     return tiles.filter((p) => p.familyId === filter);
   }, [tiles, filter, user?.id]);
 
-  const clipTotal = useMemo(() => tiles.filter((p) => p.mimeType.startsWith('video/')).length, [tiles]);
+  const clipTotal = useMemo(
+    () => tiles.filter((p) => p.mimeType.startsWith('video/')).length,
+    [tiles],
+  );
 
   /** Chọn/bỏ chọn — ghi luôn image|video để màn khác không phải hỏi lại feed. */
   const select = (ids: string[]) => {
@@ -55,7 +58,11 @@ export default function VideoPhotosScreen() {
   };
 
   const toggle = (id: string) =>
-    select(draft.mediaIds.includes(id) ? draft.mediaIds.filter((x) => x !== id) : [...draft.mediaIds, id]);
+    select(
+      draft.mediaIds.includes(id)
+        ? draft.mediaIds.filter((x) => x !== id)
+        : [...draft.mediaIds, id],
+    );
 
   const chooseForMe = () => select(visible.slice(0, 8).map((p) => p.id));
 
@@ -65,7 +72,10 @@ export default function VideoPhotosScreen() {
    * vẫn còn — trước đây nó biến mất và ô đã chọn trông như rỗng.
    */
   const addFromDevice = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], quality: 0.92 });
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images', 'videos'],
+      quality: 0.92,
+    });
     const asset = result.assets?.[0];
     if (!asset) return;
     setUploading(true);
@@ -76,9 +86,15 @@ export default function VideoPhotosScreen() {
         type: asset.mimeType ?? (asset.type === 'video' ? 'video/mp4' : 'image/jpeg'),
       });
       update({
-        uploadedTiles: [{ id: up.id, mimeType: up.mimeType, createdAt: up.createdAt }, ...draft.uploadedTiles],
+        uploadedTiles: [
+          { id: up.id, mimeType: up.mimeType, createdAt: up.createdAt },
+          ...draft.uploadedTiles,
+        ],
         mediaIds: [...draft.mediaIds, up.id],
-        mediaKinds: { ...draft.mediaKinds, [up.id]: up.mimeType.startsWith('video/') ? 'video' : 'image' },
+        mediaKinds: {
+          ...draft.mediaKinds,
+          [up.id]: up.mimeType.startsWith('video/') ? 'video' : 'image',
+        },
       });
     } finally {
       setUploading(false);
@@ -89,29 +105,54 @@ export default function VideoPhotosScreen() {
     <View className="flex-1 bg-page">
       <AppHeader
         left={<BackButton onPress={() => router.back()} />}
-        center={
-          <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-            {t('video.photosTitle')}
-          </Text>
-        }
+        center={<ScreenTitle title={t('video.photosTitle')} />}
       />
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: 14, paddingBottom: 130, gap: 12 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.xl,
+          paddingTop: 14,
+          paddingBottom: 130,
+          gap: 12,
+        }}
         showsVerticalScrollIndicator={false}
       >
         {/* filter chips: Everyone / <family> / Mine (11m) */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-          <Pill label={t('video.filterEveryone')} selected={filter === 'all'} onPress={() => setFilter('all')} />
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 8 }}
+        >
+          <Pill
+            label={t('video.filterEveryone')}
+            selected={filter === 'all'}
+            onPress={() => setFilter('all')}
+          />
           {familyList.length > 1 &&
             familyList.map((f) => (
-              <Pill key={f.id} label={f.name} selected={filter === f.id} onPress={() => setFilter(f.id)} />
+              <Pill
+                key={f.id}
+                label={f.name}
+                selected={filter === f.id}
+                onPress={() => setFilter(f.id)}
+              />
             ))}
-          <Pill label={t('video.filterMine')} selected={filter === 'mine'} onPress={() => setFilter('mine')} />
+          <Pill
+            label={t('video.filterMine')}
+            selected={filter === 'mine'}
+            onPress={() => setFilter('mine')}
+          />
         </ScrollView>
 
         {/* "46 photos and 3 clips shared with you" + Choose for me */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+          }}
+        >
           <Text variant="caption" color={colors.text.body} style={{ flex: 1 }}>
             {t('video.photosShared', { photos: tiles.length - clipTotal, clips: clipTotal })}
           </Text>
@@ -181,9 +222,18 @@ export default function VideoPhotosScreen() {
                 onPress={() => toggle(p.id)}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
-                style={{ width: '23.5%', aspectRatio: 1, borderRadius: radius.lg, overflow: 'hidden' }}
+                style={{
+                  width: '23.5%',
+                  aspectRatio: 1,
+                  borderRadius: radius.lg,
+                  overflow: 'hidden',
+                }}
               >
-                <Image source={mediaSource(p.id)} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                <Image
+                  source={mediaSource(p.id)}
+                  style={{ width: '100%', height: '100%' }}
+                  contentFit="cover"
+                />
                 {p.mimeType.startsWith('video/') && (
                   <View
                     style={{
@@ -266,7 +316,9 @@ export default function VideoPhotosScreen() {
           gap: 10,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+        >
           <Text variant="caption" weight="semibold">
             {t('video.chosenSummary', { count: draft.mediaIds.length })}
           </Text>

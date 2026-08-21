@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { InvitePreview } from '../../src/components/family/invite-preview';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { ScreenTitle } from '../../src/components/layout/header-slots';
 import { Avatar } from '../../src/components/ui/avatar';
 import { BrandMark } from '../../src/components/ui/brand-mark';
 import { Button } from '../../src/components/ui/button';
@@ -122,11 +123,7 @@ export default function InvitationScreen() {
           <X size={17} color={colors.text.secondary} strokeWidth={2} />
         </Pressable>
       }
-      center={
-        <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-          {t('invite.page.title')}
-        </Text>
-      }
+      center={<ScreenTitle title={t('invite.page.title')} />}
     />
   );
 

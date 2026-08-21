@@ -3,16 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
-import { SettingsButton } from '../../src/components/layout/header-slots';
+import { ScreenTitle, SettingsButton } from '../../src/components/layout/header-slots';
 import { ProfileBody } from '../../src/components/member/profile-body';
-import { Text } from '../../src/components/ui/text';
 import { useSession } from '../../src/features/auth/session';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { useFamilies } from '../../src/features/family/use-families';
 import { useFamilyTree } from '../../src/features/family/use-family-tree';
 import { toMemberProfile } from '../../src/features/member/member-profile';
 import { useMyProfile } from '../../src/features/member/use-profile';
-import { colors, spacing } from '../../src/theme';
+import { spacing } from '../../src/theme';
 
 /** Clears the bottom nav (56pt plus the home indicator). */
 const BOTTOM_INSET = 120;
@@ -55,15 +54,7 @@ export default function ProfileScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        center={
-          <Text
-            variant="subtitle"
-            weight="bold"
-            style={{ letterSpacing: -0.2, color: colors.coral.primary }}
-          >
-            {t('nav.profile')}
-          </Text>
-        }
+        center={<ScreenTitle title={t('nav.profile')} />}
         right={<SettingsButton onPress={() => router.push('/settings')} />}
         paddingRight={spacing.lg}
       />

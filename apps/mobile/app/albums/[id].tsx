@@ -8,7 +8,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, View } from 'react-nat
 
 import { AlbumFormSheet } from '../../src/components/album/album-form-sheet';
 import { AppHeader } from '../../src/components/layout/app-header';
-import { BackButton } from '../../src/components/layout/header-slots';
+import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import type { DraftMedia } from '../../src/components/moment/media-strip';
 import { Button } from '../../src/components/ui/button';
 import { EmptyState } from '../../src/components/ui/empty-state';
@@ -165,11 +165,7 @@ export default function AlbumScreen() {
   const header = (title: string) => (
     <AppHeader
       left={<BackButton onPress={() => router.back()} />}
-      center={
-        <Text variant="subtitle" weight="bold" numberOfLines={1} style={{ letterSpacing: -0.2 }}>
-          {title}
-        </Text>
-      }
+      center={<ScreenTitle title={title} />}
       right={
         album.data === undefined ? undefined : (
           <Pressable

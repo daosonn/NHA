@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
-import { BackButton } from '../../src/components/layout/header-slots';
+import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Text } from '../../src/components/ui/text';
 import { useVideoDraft } from '../../src/features/video/draft';
 import type { VideoStyleId } from '../../src/lib/api';
@@ -23,20 +23,61 @@ function Preview({ id }: { id: VideoStyleId }) {
   switch (id) {
     case 'album':
       return (
-        <View style={{ flex: 1, backgroundColor: '#E9DFCC', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 3 }}>
-          <View style={{ width: 30, height: 44, borderTopLeftRadius: 5, borderBottomLeftRadius: 5, backgroundColor: '#6B4A2E' }} />
-          <View style={{ width: 26, height: 44, borderTopRightRadius: 4, borderBottomRightRadius: 4, backgroundColor: '#FBF7EE', borderWidth: 1, borderColor: '#D8CCB4' }} />
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: '#E9DFCC',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'row',
+            gap: 3,
+          }}
+        >
+          <View
+            style={{
+              width: 30,
+              height: 44,
+              borderTopLeftRadius: 5,
+              borderBottomLeftRadius: 5,
+              backgroundColor: '#6B4A2E',
+            }}
+          />
+          <View
+            style={{
+              width: 26,
+              height: 44,
+              borderTopRightRadius: 4,
+              borderBottomRightRadius: 4,
+              backgroundColor: '#FBF7EE',
+              borderWidth: 1,
+              borderColor: '#D8CCB4',
+            }}
+          />
         </View>
       );
     case 'cinema':
       return (
-        <View style={{ flex: 1, backgroundColor: '#101014', alignItems: 'center', justifyContent: 'center' }}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: '#101014',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           <View style={{ width: '58%', height: 9, borderRadius: 3, backgroundColor: '#8E8B84' }} />
         </View>
       );
     case 'film':
       return (
-        <View style={{ flex: 1, backgroundColor: '#3E382E', alignItems: 'center', justifyContent: 'center' }}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: '#3E382E',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           <View
             style={{
               width: 34,
@@ -56,11 +97,27 @@ function Preview({ id }: { id: VideoStyleId }) {
       );
     case 'letter':
       return (
-        <View style={{ flex: 1, backgroundColor: '#FBF4E2', justifyContent: 'center', paddingHorizontal: 14, gap: 5 }}>
-          <View style={{ height: 3.5, width: '86%', borderRadius: 2, backgroundColor: '#8F8672' }} />
-          <View style={{ height: 3.5, width: '70%', borderRadius: 2, backgroundColor: '#B0a78F' }} />
-          <View style={{ height: 3.5, width: '80%', borderRadius: 2, backgroundColor: '#B0A78F' }} />
-          <View style={{ height: 3.5, width: '52%', borderRadius: 2, backgroundColor: '#C4BCA6' }} />
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: '#FBF4E2',
+            justifyContent: 'center',
+            paddingHorizontal: 14,
+            gap: 5,
+          }}
+        >
+          <View
+            style={{ height: 3.5, width: '86%', borderRadius: 2, backgroundColor: '#8F8672' }}
+          />
+          <View
+            style={{ height: 3.5, width: '70%', borderRadius: 2, backgroundColor: '#B0a78F' }}
+          />
+          <View
+            style={{ height: 3.5, width: '80%', borderRadius: 2, backgroundColor: '#B0A78F' }}
+          />
+          <View
+            style={{ height: 3.5, width: '52%', borderRadius: 2, backgroundColor: '#C4BCA6' }}
+          />
         </View>
       );
     case 'seasonal':
@@ -91,7 +148,14 @@ function Preview({ id }: { id: VideoStyleId }) {
       );
     case 'polaroid':
       return (
-        <View style={{ flex: 1, backgroundColor: '#DDD9D2', alignItems: 'center', justifyContent: 'center' }}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: '#DDD9D2',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
           {[-8, 5, 0].map((deg, i) => (
             <View
               key={i}
@@ -107,7 +171,9 @@ function Preview({ id }: { id: VideoStyleId }) {
                 boxShadow: '0 1px 3px rgba(24,24,27,0.18)',
               }}
             >
-              <View style={{ flex: 1, marginBottom: 8, backgroundColor: '#E4E1DC', borderRadius: 2 }} />
+              <View
+                style={{ flex: 1, marginBottom: 8, backgroundColor: '#E4E1DC', borderRadius: 2 }}
+              />
             </View>
           ))}
         </View>
@@ -126,11 +192,7 @@ export default function VideoStyleScreen() {
     <View className="flex-1 bg-page">
       <AppHeader
         left={<BackButton onPress={() => router.back()} />}
-        center={
-          <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-            {t('video.styleTitle')}
-          </Text>
-        }
+        center={<ScreenTitle title={t('video.styleTitle')} />}
         right={
           <Pressable onPress={() => router.back()} accessibilityRole="button" hitSlop={8}>
             <Text variant="body2" weight="semibold" color={colors.coral.hover}>
@@ -141,7 +203,12 @@ export default function VideoStyleScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: 14, paddingBottom: 40, gap: 12 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.xl,
+          paddingTop: 14,
+          paddingBottom: 40,
+          gap: 12,
+        }}
         showsVerticalScrollIndicator={false}
       >
         <Text variant="caption" color={colors.text.body}>

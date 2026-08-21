@@ -8,9 +8,8 @@ import { specialDateIcon, specialDateKindKey } from '../../src/components/ai/occ
 import { DateTile } from '../../src/components/ai/date-tile';
 import { SelectRow } from '../../src/components/ai/select-row';
 import { AppHeader } from '../../src/components/layout/app-header';
-import { NotificationBell } from '../../src/components/layout/header-slots';
+import { NotificationBell, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Avatar } from '../../src/components/ui/avatar';
-import { BrandMark } from '../../src/components/ui/brand-mark';
 import { Button } from '../../src/components/ui/button';
 import { Card } from '../../src/components/ui/card';
 import { IconBadge } from '../../src/components/ui/icon-badge';
@@ -109,14 +108,7 @@ export default function AiScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
-            <BrandMark size={26} />
-            <Text serif weight="bold" accessibilityRole="header" style={{ fontSize: 21, lineHeight: 26, letterSpacing: -0.2 }}>
-              Present
-            </Text>
-          </View>
-        }
+        center={<ScreenTitle title={t('nav.ai')} />}
         right={<NotificationBell count={thisMonth} />}
         paddingRight={spacing.lg}
       />
@@ -146,11 +138,23 @@ export default function AiScreen() {
 
         {/* ---------- featured: the next date that needs a decision ---------- */}
         {featured && featuredMember && (
-          <View style={{ backgroundColor: colors.coral.light, borderRadius: radius['4xl'], padding: 15, gap: 13 }}>
+          <View
+            style={{
+              backgroundColor: colors.coral.light,
+              borderRadius: radius['4xl'],
+              padding: 15,
+              gap: 13,
+            }}
+          >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <Avatar size={46} />
               <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-                <Text variant="subtitle" weight="semibold" style={{ letterSpacing: -0.15 }} numberOfLines={1}>
+                <Text
+                  variant="subtitle"
+                  weight="semibold"
+                  style={{ letterSpacing: -0.15 }}
+                  numberOfLines={1}
+                >
                   {occasionLabel(featured)}
                 </Text>
                 <Text variant="caption" color={colors.text.muted} numberOfLines={1}>
@@ -170,21 +174,27 @@ export default function AiScreen() {
                 label={t('ai.giftIdeas')}
                 size="small"
                 onPress={() => pushMaker('/ai/gifts')}
-                renderIcon={({ size, color }) => <Gift size={size} color={color} strokeWidth={2.1} />}
+                renderIcon={({ size, color }) => (
+                  <Gift size={size} color={color} strokeWidth={2.1} />
+                )}
               />
               <Button
                 label={t('ai.hub.message')}
                 variant="neutral"
                 size="small"
                 onPress={() => pushMaker('/ai/message')}
-                renderIcon={({ size, color }) => <Mail size={size} color={color} strokeWidth={2.1} />}
+                renderIcon={({ size, color }) => (
+                  <Mail size={size} color={color} strokeWidth={2.1} />
+                )}
               />
               <Button
                 label={t('ai.video')}
                 variant="neutral"
                 size="small"
                 onPress={() => pushMaker('/video/setup')}
-                renderIcon={({ size, color }) => <Film size={size} color={color} strokeWidth={2.1} />}
+                renderIcon={({ size, color }) => (
+                  <Film size={size} color={color} strokeWidth={2.1} />
+                )}
               />
             </View>
           </View>
@@ -193,7 +203,13 @@ export default function AiScreen() {
         {/* ---------- ALSO THIS SEASON ---------- */}
         {rest.length > 0 && (
           <View style={{ gap: 10 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
               <Text
                 variant="badge"
                 weight="semibold"
@@ -203,7 +219,11 @@ export default function AiScreen() {
                 {t('ai.hub.alsoThisSeason')}
               </Text>
               {items.length > 3 && (
-                <Pressable onPress={() => setShowAll((v) => !v)} accessibilityRole="button" hitSlop={8}>
+                <Pressable
+                  onPress={() => setShowAll((v) => !v)}
+                  accessibilityRole="button"
+                  hitSlop={8}
+                >
                   <Text variant="caption" weight="semibold" color={colors.coral.hover}>
                     {showAll ? t('common.close') : t('ai.hub.seeAll')}
                   </Text>
@@ -230,7 +250,8 @@ export default function AiScreen() {
                       {occasionLabel(item)}
                     </Text>
                     <Text variant="caption" color={colors.text.muted} numberOfLines={1}>
-                      {t('ai.daysAway', { count: item.daysUntil })} · {t(specialDateKindKey(item.type))}
+                      {t('ai.daysAway', { count: item.daysUntil })} ·{' '}
+                      {t(specialDateKindKey(item.type))}
                     </Text>
                   </View>
                   <IconBadge

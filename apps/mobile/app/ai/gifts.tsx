@@ -12,7 +12,7 @@ import { OccasionSheet, type OccasionChoice } from '../../src/components/ai/occa
 import { SectionLabel } from '../../src/components/ai/section-label';
 import { SelectRow } from '../../src/components/ai/select-row';
 import { AppHeader } from '../../src/components/layout/app-header';
-import { BackButton } from '../../src/components/layout/header-slots';
+import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Avatar } from '../../src/components/ui/avatar';
 import { AvatarStack } from '../../src/components/ui/avatar-stack';
 import { Button } from '../../src/components/ui/button';
@@ -85,11 +85,7 @@ export default function GiftAskScreen() {
     <View className="flex-1 bg-page">
       <AppHeader
         left={<BackButton onPress={() => router.back()} />}
-        center={
-          <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-            {t('ai.gifts.title')}
-          </Text>
-        }
+        center={<ScreenTitle title={t('ai.gifts.title')} />}
       />
 
       <ScrollView
