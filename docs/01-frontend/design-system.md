@@ -229,6 +229,68 @@ This is a badge, which is one of coral's five permitted uses. It also keeps
 the space between the name and the section tabs empty, which is what makes
 a profile read as a person rather than as a toolbar.
 
+### Group strip
+
+The family switcher above the fold on Home: overlapped 34px faces, a dashed
+coral circle that starts an invite, then the way into the family tree.
+
+That last one is a **filled cap** at the tray's right end: 40px tall,
+`coral.light`, `coral.deep` label and `Network` glyph, no border.
+
+It took three attempts on 2026-08-21, and the two failures are the useful
+part:
+
+1. A 12px `text.muted` word beside a white chevron in a white circle. It
+   disappeared — muted grey is the colour of every caption on the screen.
+2. A white pill with a coral **border**, inside the tray. Border inside
+   border inside border: a button dropped in a drawer.
+3. The pill moved out of the tray onto the page. The row then read as two
+   unrelated objects.
+
+A **fill** inside a container is ordinary — a chip in a bar — where a
+second outline was not. That is the difference between (2) and what is
+there now, and it is not a colour difference.
+
+**The prominence is structural, not chromatic.** The strip was the feed's
+first row and was gone after one flick, which no amount of contrast can
+fix. It is now **pinned below the header on Home** and condenses to 86%
+(52 → 45px tall) over the first 90px of scroll, the way a nav bar does. On
+a pointer device the cap grows to 1.06 on hover; the fill cannot darken
+instead, because that drops the label below 4.5:1.
+
+Scroll position reaches the strip as a Reanimated `SharedValue`, never
+React state — sixty re-renders a second of the feed to shrink a bar by
+seven pixels is not a trade worth making. It is read once in a
+`useDerivedValue`; a shared value read inside a helper that a worklet
+merely _calls_ is not reliably picked up as a dependency.
+
+The same `scrollY` fades the swipe cue underneath — the "swipe up for
+moments" hint drops to nothing over the first 50px and drifts up 6px as it
+goes. An instruction that stays up after it has been followed is no longer
+an instruction; it is furniture, and this one sits directly above the
+moments it was pointing at.
+
+The rules that fixed it generalise:
+
+- **A destination is a control.** If it navigates, give it the button
+  shape, not caption styling with a chevron beside it.
+- **Solid coral cannot carry a label.** `coral.primary` gives white text
+  2.4:1 and `coral.brand` 2.9:1 — a filled brand pill with a readable
+  label does not exist in this palette. `coral.deep` on `coral.light` is
+  4.6:1 and on white 5.4:1; those are the two branded fills available. It
+  also leaves solid coral to the primary action on the screen, which must
+  stay the heaviest thing.
+- **When it still reads too quietly, reach for size and position before
+  colour.** Both were cheaper here than any tint, and both worked.
+- **A fill nests; an outline does not.** Putting a bordered control inside
+  a bordered container reads as a mistake at any colour. Filled chips
+  inside bars are unremarkable.
+- **Before spending more contrast, ask whether the thing is even on
+  screen.** Pinning beat every colour change tried before it.
+- **Pick a glyph that says something the neighbours don't.** `UsersRound`
+  is the family tree's mark elsewhere, but beside a row of faces it reads
+  as "more people". `Network` says structure.
+
 ## Family tree
 
 - Nodes are 60px avatars with a 3px warm-white ring.

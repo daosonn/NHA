@@ -96,7 +96,9 @@ scripts/
 The five tabs are **Home · Omoide · + · AI · Profile**, matching the
 mockups and `design-system.md`. The family tree is _not_ a tab: it is
 reached by tapping the group strip on Home, so the tab bar stays about
-content rather than navigation structure.
+content rather than navigation structure. That puts weight on the strip
+being legible as a way in — it was not, and was redrawn 2026-08-21
+(`design-system.md` § Group strip).
 
 Routes stay thin: they compose components and call hooks. Business logic
 lives in `src/features/`.
