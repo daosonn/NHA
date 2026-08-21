@@ -1,10 +1,14 @@
 import { Module } from '@nestjs/common';
+import { SettingsModule } from '../settings/settings.module';
 import { NotificationEventsService } from './notification-events.service';
 import { NotificationController } from './notification.controller';
 import { NotificationService } from './notification.service';
 import { ReminderService } from './reminder.service';
 
 @Module({
+  // SettingsModule: the 3.4.5 toggles are enforced inside
+  // NotificationService's create funnel.
+  imports: [SettingsModule],
   controllers: [NotificationController],
   providers: [NotificationService, NotificationEventsService, ReminderService],
   // `NotificationEventsService` is what feature modules call when

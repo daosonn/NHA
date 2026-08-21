@@ -725,6 +725,29 @@ dev` **did not regenerate the client**, and the stale client survived
   400). On branch `feature/privacy-settings` (stacked on
   `feature/change-password`).
 
+- Notification settings API (2026-08-21, sprint 3, WBS 3.4.5 — **the last
+  backend piece of sprint 3 outside suspended 3.3**):
+  `GET/PATCH /me/settings/notifications` on the settings module. Three
+  toggles grouped by _why you got it_ — `newPosts` (NEW_POST),
+  `aboutMe` (COMMENT/REACTION/MEMBER_TAG), `reminders`
+  (BIRTHDAY_/EVENT_/CARE_REMINDER) — all default true, stored in the
+  sprint-0 `User.notificationSettings` Json column with the same
+  partial-merge/defaults-on-read/unknown-keys-preserved conventions as
+  3.4.4. **Enforced at the one funnel every notification passes through**
+  (`NotificationService.create/createMany` →
+  `SettingsService.filterAllowedNotifications`), so event triggers,
+  reminders and any future caller respect the toggles without knowing
+  they exist. Semantics chosen: **muting means the row is never created**
+  (delivery is in-app only — a muted row would sit in the very list the
+  user asked to quiet), so unmuting does not resurrect what was muted;
+  FAMILY_INVITE/AI_SUGGESTION stay unmapped and always deliver rather
+  than dying behind a switch nobody sees. No migration. Verified by
+  lint/build/test + a **12-case live smoke test** (per-group isolation:
+  muting newPosts still delivers MEMBER_TAG, muting aboutMe blocks
+  comment/reaction/tag while another user still receives everything,
+  unmute non-resurrection, privacy column untouched). On branch
+  `feature/notification-settings`.
+
 ### Sprint 2 — AI team
 
 - AI integration for screens 21-33 (2026-08-20, **merged to `main` in

@@ -579,12 +579,26 @@ for now — it buys ~1s over ~10s at the price of reconnect logic today
 and Redis the day there are two API instances; revisit only if chat or
 another genuinely two-way feature arrives.
 
-### Settings — `apps/api/src/settings/` (WBS 3.4.4, added 2026-08-21)
+### Settings — `apps/api/src/settings/` (WBS 3.4.4 + 3.4.5, added 2026-08-21)
 
-| Route                        | Returns           |
-| ---------------------------- | ----------------- |
-| `GET /me/settings/privacy`   | `PrivacySettings` |
-| `PATCH /me/settings/privacy` | `PrivacySettings` |
+| Route                              | Returns                |
+| ---------------------------------- | ---------------------- |
+| `GET /me/settings/privacy`         | `PrivacySettings`      |
+| `PATCH /me/settings/privacy`       | `PrivacySettings`      |
+| `GET /me/settings/notifications`   | `NotificationSettings` |
+| `PATCH /me/settings/notifications` | `NotificationSettings` |
+
+**Notification toggles (WBS 3.4.5).** `NotificationSettings` is
+`{ newPosts, aboutMe, reminders }`, all default `true`, PATCH is a
+partial merge (same conventions as privacy below). Grouped by _why you
+got it_, not one switch per type: `newPosts` = `NEW_POST` (feed noise),
+`aboutMe` = `COMMENT`/`REACTION`/`MEMBER_TAG` (things aimed at you),
+`reminders` = `BIRTHDAY_REMINDER`/`EVENT_REMINDER` (and `CARE_REMINDER`
+if 3.3 ships). Enforced at the creation funnel every notification passes
+through, so **muting means the row is never created** — nothing appears
+in the list, the badge never counts it, and unmuting does not resurrect
+what was muted. `FAMILY_INVITE`/`AI_SUGGESTION` have no toggle yet
+(nothing raises them) and always deliver.
 
 `PrivacySettings` is `{ allowAiPhotoAnalysis: boolean }` — defaults
 applied on read, so the app never sees a missing key. PATCH is a partial
