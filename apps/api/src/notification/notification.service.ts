@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma/prisma.service';
 import type { Notification, Prisma } from '../generated/prisma/client';
 import { NotificationType } from '../generated/prisma/enums';
+import { SettingsService } from '../settings/settings.service';
 import { ListNotificationsDto } from './dto/list-notifications.dto';
 
 /**
@@ -46,7 +47,10 @@ const DEFAULT_LIMIT = 20;
  */
 @Injectable()
 export class NotificationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly settingsService: SettingsService,
+  ) {}
 
   /** Newest first, cursor-paginated — the same convention as the family
    *  feed, so the app reuses its paging code. */
@@ -122,18 +126,33 @@ export class NotificationService {
    * Note for callers: **do not notify someone about their own action**
    * (commenting on your own post, tagging yourself). That rule belongs
    * to the caller, which is the only side that knows who acted.
+   *
+   * Returns null when the recipient muted this type's group (WBS 3.4.5)
+   * — enforced here, the funnel every notification passes through, so
+   * events, reminders and future callers all respect the toggles.
    */
-  create(item: NewNotification): Promise<Notification> {
+  async create(item: NewNotification): Promise<Notification | null> {
+    const [allowed] = await this.settingsService.filterAllowedNotifications([
+      item,
+    ]);
+    if (!allowed) {
+      return null;
+    }
     return this.prisma.notification.create({ data: item });
   }
 
   /** Fan-out — one event, many recipients (a new post notifies the
-   *  family). One statement instead of one round trip per member. */
+   *  family). One statement instead of one round trip per member; muted
+   *  recipients (3.4.5) are dropped before the insert. */
   async createMany(items: NewNotification[]): Promise<{ created: number }> {
-    if (items.length === 0) {
+    const allowed =
+      await this.settingsService.filterAllowedNotifications(items);
+    if (allowed.length === 0) {
       return { created: 0 };
     }
-    const result = await this.prisma.notification.createMany({ data: items });
+    const result = await this.prisma.notification.createMany({
+      data: allowed,
+    });
     return { created: result.count };
   }
 

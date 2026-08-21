@@ -60,7 +60,9 @@ thêm một rule là chạy.
       2026-08-21 (`GET/PATCH /me/settings/privacy`, một flag
       `allowAiPhotoAnalysis` **có ép luật thật**: rút ảnh khỏi pending feed + xoá insight đã trích; chi tiết: `api-contract.md` → Settings);
       UI chưa nối. Ba mục còn lại của màn 20 cố ý chưa lưu — xem contract.
-- [ ] 3.4.5 Notification settings (bật/tắt nhắc)
+- [ ] 3.4.5 Notification settings (bật/tắt nhắc) — API done 2026-08-21
+      (`GET/PATCH /me/settings/notifications`, 3 nhóm toggle ép tại phễu
+      tạo notification; chi tiết: `api-contract.md` → Settings); UI chưa nối
 
 ### 3.5 System Integration Test — Test end-to-end
 
