@@ -3,10 +3,8 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'rea
 import { useTranslation } from 'react-i18next';
 
 import { colors, radius, spacing } from '../../theme';
-import { BrandMark } from '../ui/brand-mark';
-import { Text } from '../ui/text';
 import { AppHeader } from './app-header';
-import { BackButton } from './header-slots';
+import { BackButton, ScreenTitle } from './header-slots';
 
 export type FormScreenProps = {
   /** Shown as the back arrow. Omit for the first screen of a flow. */
@@ -58,16 +56,7 @@ export function FormScreen({ onBack, onClose, title, children, footer }: FormScr
             <BackButton onPress={onBack} />
           ) : undefined
         }
-        center={
-          title === undefined ? undefined : (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <BrandMark size={22} />
-              <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-                {title}
-              </Text>
-            </View>
-          )
-        }
+        center={title === undefined ? undefined : <ScreenTitle title={title} />}
       />
 
       <KeyboardAvoidingView

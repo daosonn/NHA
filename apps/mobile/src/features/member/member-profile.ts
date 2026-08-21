@@ -50,6 +50,8 @@ export type MemberProfile = {
   /** The family being looked through. Null when none is active. */
   familyName: string | null;
   tone: 'light' | 'dark';
+  /** Their photograph, as a `Media` id. Null draws initials instead. */
+  avatarMediaId: string | null;
   bio: string | null;
   birthDate: string | null;
   deathDate: string | null;
@@ -84,6 +86,10 @@ export function toMemberProfile(input: MemberProfileInput): MemberProfile {
     displayName: member?.displayName ?? detail?.displayName ?? input.fallbackName ?? '',
     relationKey,
     familyName,
+    // The tree row already resolves a linked member to their account's
+    // avatar, so it is the same picture either way — but the profile is the
+    // one that has just been written to when somebody changes it.
+    avatarMediaId: detail?.avatarMediaId ?? member?.avatarKey ?? null,
     tone: toneFor(member?.id ?? null),
     bio: detail?.bio ?? null,
     birthDate: detail?.birthDate ?? null,

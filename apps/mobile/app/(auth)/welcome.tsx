@@ -26,8 +26,23 @@ export default function WelcomeScreen() {
 
   return (
     <View className="flex-1 bg-page">
+      {/*
+        The header grows; the gap does not.
+
+        `flex: 3` here against `flex: 1` on the spacer below the buttons hands
+        three quarters of whatever space is left over to the coral. That is
+        the whole fix for the dead white band this screen used to have in the
+        middle: the band was leftover space with nowhere to go, so it went
+        below the buttons and sat there.
+
+        Content is centred **inside** the header rather than pinned to its
+        top, so the mark and the title stay optically placed however tall the
+        header ends up on a given handset.
+      */}
       <View
         style={{
+          flex: 3,
+          justifyContent: 'center',
           paddingTop: insets.top + 40,
           paddingBottom: 34,
           paddingHorizontal: spacing['2xl'],
@@ -58,7 +73,7 @@ export default function WelcomeScreen() {
         <AvatarStack items={FACES} size={34} surface={colors.coral.light} remaining={6} />
       </View>
 
-      <View style={{ flex: 1, paddingTop: 30, paddingHorizontal: spacing.xl, gap: 10 }}>
+      <View style={{ paddingTop: 26, paddingHorizontal: spacing.xl, gap: 10 }}>
         <Button
           label={t('auth.welcome.create')}
           size="large"
@@ -68,6 +83,9 @@ export default function WelcomeScreen() {
 
         <SocialButtons layout="stack" continueWording />
       </View>
+
+      {/* What is left of the gap — a quarter of the slack, not all of it. */}
+      <View style={{ flex: 1 }} />
 
       <View
         style={{

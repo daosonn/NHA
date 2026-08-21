@@ -247,6 +247,10 @@
         "beside": "Beside you",
         "custom": "You describe the relationship"
       }
+    },
+    "toast": {
+      "resent": "{{name}} has another week to accept",
+      "removed": "Removed from the tree"
     }
   },
   "invite": {
@@ -367,7 +371,8 @@
       "body_one": "This note and its {{count}} photo are gone for good.",
       "body_other": "This note and its {{count}} photos are gone for good.",
       "confirm": "Delete note",
-      "cancel": "Keep it"
+      "cancel": "Keep it",
+      "toast": "Note deleted"
     },
     "memoFailed": "Those notes could not be loaded.",
     "timelineFailed": "That timeline could not be loaded.",
@@ -680,7 +685,14 @@
       "forbidden": "Only this person can change their own profile.",
       "birthAfterDeath": "This is after the recorded death date."
     },
-    "deathReadOnly": "Recorded elsewhere. It is not changed on this screen."
+    "deathReadOnly": "Recorded elsewhere. It is not changed on this screen.",
+    "toast": {
+      "saved": "Profile saved"
+    },
+    "avatar": {
+      "change": "Change your picture",
+      "saved": "Picture updated"
+    }
   },
   "video": {
     "title": "Memory video",
@@ -837,6 +849,34 @@
       "setCover": "Use as cover",
       "isCover": "This is the cover",
       "remove": "Remove from album"
+    },
+    "toast": {
+      "cover": "Cover updated",
+      "removed": "Removed from the album",
+      "deleted": "Album deleted"
+    }
+  },
+  "notifications": {
+    "markAll": "Mark all read",
+    "loadFailed": "Could not load your notifications.",
+    "emptyTitle": "Nothing new",
+    "emptyBody": "Posts, comments and reminders from your family land here.",
+    "types": {
+      "newPost": "A new moment was shared with your family",
+      "comment": "Someone commented on your moment",
+      "reaction": "Someone liked your moment",
+      "memberTag": "You were tagged in a moment",
+      "familyInvite": "You were invited to a family",
+      "birthday": "{{name}}'s birthday is coming up",
+      "birthdayToday": "It is {{name}}'s birthday today",
+      "birthdayIn": "{{name}}'s birthday is in {{count}} day",
+      "birthdayIn_other": "{{name}}'s birthday is in {{count}} days",
+      "event": "{{what}} is coming up",
+      "eventToday": "{{what}} is today",
+      "eventIn": "{{what}} is in {{count}} day",
+      "eventIn_other": "{{what}} is in {{count}} days",
+      "care": "It has been a while since you heard from {{name}}",
+      "aiSuggestion": "A new suggestion is waiting for you"
     }
   }
 }

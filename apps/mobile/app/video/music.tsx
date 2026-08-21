@@ -8,7 +8,7 @@ import { ActivityIndicator, Platform, Pressable, ScrollView, View } from 'react-
 import { Pill } from '../../src/components/ai/pill';
 import { SelectRow } from '../../src/components/ai/select-row';
 import { AppHeader } from '../../src/components/layout/app-header';
-import { BackButton } from '../../src/components/layout/header-slots';
+import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Card } from '../../src/components/ui/card';
 import { IconBadge } from '../../src/components/ui/icon-badge';
 import { Text } from '../../src/components/ui/text';
@@ -82,7 +82,11 @@ export default function VideoMusicScreen() {
         name: asset.name ?? 'song.mp3',
         type: asset.mimeType ?? 'audio/mpeg',
       });
-      update({ musicId: `media:${up.id}`, musicLabel: asset.name ?? t('video.ownSong'), musicMeta: t('video.ownSongMeta') });
+      update({
+        musicId: `media:${up.id}`,
+        musicLabel: asset.name ?? t('video.ownSong'),
+        musicMeta: t('video.ownSongMeta'),
+      });
     } finally {
       setUploading(false);
     }
@@ -92,11 +96,7 @@ export default function VideoMusicScreen() {
     <View className="flex-1 bg-page">
       <AppHeader
         left={<BackButton onPress={() => router.back()} />}
-        center={
-          <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-            {t('video.musicTitle')}
-          </Text>
-        }
+        center={<ScreenTitle title={t('video.musicTitle')} />}
         right={
           <Pressable onPress={() => router.back()} accessibilityRole="button" hitSlop={8}>
             <Text variant="body2" weight="semibold" color={colors.coral.hover}>
@@ -108,13 +108,22 @@ export default function VideoMusicScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: 14, paddingBottom: 40, gap: 12 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.xl,
+          paddingTop: 14,
+          paddingBottom: 40,
+          gap: 12,
+        }}
         showsVerticalScrollIndicator={false}
       >
         {catalog.isPending && <ActivityIndicator color={colors.coral.primary} />}
 
         {/* mood chips — thư viện nhạc mang cả tên tiếng Nhật, dùng đúng theo ngôn ngữ đang xem */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 8 }}
+        >
           {themes.map((th) => (
             <Pill
               key={th.id}
@@ -159,9 +168,19 @@ export default function VideoMusicScreen() {
                       })}
                     >
                       {playingId === tr.id ? (
-                        <Pause size={14} color={colors.text.white} strokeWidth={2.4} fill={colors.text.white} />
+                        <Pause
+                          size={14}
+                          color={colors.text.white}
+                          strokeWidth={2.4}
+                          fill={colors.text.white}
+                        />
                       ) : (
-                        <Play size={14} color={colors.text.white} strokeWidth={2.4} fill={colors.text.white} />
+                        <Play
+                          size={14}
+                          color={colors.text.white}
+                          strokeWidth={2.4}
+                          fill={colors.text.white}
+                        />
                       )}
                     </Pressable>
                   ) : (
@@ -169,7 +188,9 @@ export default function VideoMusicScreen() {
                       size={34}
                       background={colors.coral.primary}
                       foreground={colors.text.white}
-                      renderIcon={({ size, color }) => <Music2 size={size} color={color} strokeWidth={2.2} />}
+                      renderIcon={({ size, color }) => (
+                        <Music2 size={size} color={color} strokeWidth={2.2} />
+                      )}
                     />
                   )}
 
@@ -177,7 +198,13 @@ export default function VideoMusicScreen() {
                     onPress={() => pick(tr.id, tr.title, tr.duration_s)}
                     accessibilityRole="button"
                     accessibilityState={{ selected }}
-                    style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 }}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 10,
+                    }}
                   >
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text variant="body2" weight="semibold" numberOfLines={1}>
@@ -227,12 +254,18 @@ export default function VideoMusicScreen() {
               size={38}
               background={colors.background.subtle}
               foreground={colors.text.muted}
-              renderIcon={({ size, color }) => <Music2 size={size} color={color} strokeWidth={2.1} />}
+              renderIcon={({ size, color }) => (
+                <Music2 size={size} color={color} strokeWidth={2.1} />
+              )}
             />
           }
           title={t('video.noMusic')}
           trailing={
-            draft.musicId === 'none' ? <Check size={17} color={colors.coral.hover} strokeWidth={2.4} /> : 'none'
+            draft.musicId === 'none' ? (
+              <Check size={17} color={colors.coral.hover} strokeWidth={2.4} />
+            ) : (
+              'none'
+            )
           }
           onPress={() => update({ musicId: 'none', musicLabel: '', musicMeta: '' })}
         />
@@ -241,7 +274,9 @@ export default function VideoMusicScreen() {
         <SelectRow
           leading={
             uploading ? (
-              <View style={{ width: 38, height: 38, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{ width: 38, height: 38, alignItems: 'center', justifyContent: 'center' }}
+              >
                 <ActivityIndicator size="small" color={colors.coral.primary} />
               </View>
             ) : (
@@ -249,13 +284,23 @@ export default function VideoMusicScreen() {
                 size={38}
                 background={colors.background.subtle}
                 foreground={colors.text.secondary}
-                renderIcon={({ size, color }) => <Upload size={size} color={color} strokeWidth={2.1} />}
+                renderIcon={({ size, color }) => (
+                  <Upload size={size} color={color} strokeWidth={2.1} />
+                )}
               />
             )
           }
           title={draft.musicId.startsWith('media:') ? draft.musicLabel : t('video.ownSong')}
-          subtitle={draft.musicId.startsWith('media:') ? t('video.ownSongPicked') : t('video.ownSongSub')}
-          trailing={draft.musicId.startsWith('media:') ? <Check size={17} color={colors.coral.hover} strokeWidth={2.4} /> : 'chevron'}
+          subtitle={
+            draft.musicId.startsWith('media:') ? t('video.ownSongPicked') : t('video.ownSongSub')
+          }
+          trailing={
+            draft.musicId.startsWith('media:') ? (
+              <Check size={17} color={colors.coral.hover} strokeWidth={2.4} />
+            ) : (
+              'chevron'
+            )
+          }
           onPress={() => void useOwnSong()}
         />
 

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
+import { ScreenTitle } from '../../src/components/layout/header-slots';
 import {
   MEMO_CATEGORIES,
   categoryKey,
@@ -13,7 +14,6 @@ import {
 } from '../../src/components/member/memo-card';
 import { NoteField } from '../../src/components/member/note-field';
 import { MediaStrip, type DraftMedia } from '../../src/components/moment/media-strip';
-import { BrandMark } from '../../src/components/ui/brand-mark';
 import { Card } from '../../src/components/ui/card';
 import { Text } from '../../src/components/ui/text';
 import { useCreateMemo, useMemo, useUpdateMemo } from '../../src/features/member/use-memos';
@@ -239,12 +239,11 @@ function MemoEditorForm({
           </Pressable>
         }
         center={
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <BrandMark size={22} />
-            <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-              {memo === null ? t('member.memoEditor.titleNew') : t('member.memoEditor.titleEdit')}
-            </Text>
-          </View>
+          <ScreenTitle
+            title={
+              memo === null ? t('member.memoEditor.titleNew') : t('member.memoEditor.titleEdit')
+            }
+          />
         }
         right={
           <Pressable

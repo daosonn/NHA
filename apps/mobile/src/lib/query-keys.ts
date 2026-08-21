@@ -45,6 +45,12 @@ export const queryKeys = {
   myAlbums: () => ['me', 'albums'] as const,
   album: (albumId: string) => ['me', 'albums', albumId] as const,
   /**
+   * Notifications and the badge, kept as siblings so marking one read can
+   * invalidate both with `['me', 'notifications']`.
+   */
+  notifications: () => ['me', 'notifications'] as const,
+  unreadCount: () => ['me', 'notifications', 'unread'] as const,
+  /**
    * Notes the viewer wrote about one member. Under `families` so leaving a
    * family drops them from the cache with everything else about it.
    */

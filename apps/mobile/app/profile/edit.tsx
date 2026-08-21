@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { FormScreen } from '../../src/components/layout/form-screen';
+import { useToast } from '../../src/components/ui/toast';
 import { Button } from '../../src/components/ui/button';
 import { Text } from '../../src/components/ui/text';
 import { TextField } from '../../src/components/ui/text-field';
@@ -140,6 +141,7 @@ function InterestChips({
 export default function ProfileEditScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const toast = useToast();
   const { familyId, memberId } = useLocalSearchParams<{
     familyId?: string;
     memberId?: string;
@@ -191,7 +193,12 @@ export default function ProfileEditScreen() {
       saving={mutation.isPending}
       error={mutation.error}
       onSave={(input) => {
-        mutation.mutate(input, { onSuccess: () => router.back() });
+        mutation.mutate(input, {
+          onSuccess: () => {
+            router.back();
+            toast.success(t('profileEdit.toast.saved'));
+          },
+        });
       }}
       onCancel={() => router.back()}
     />

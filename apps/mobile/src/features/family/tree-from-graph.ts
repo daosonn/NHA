@@ -90,6 +90,9 @@ export function treeFromGraph(tree: FamilyTree, options: TreeFromGraphOptions): 
       name: member.displayName,
       // No word for anyone more than one edge away — see relationship-label.ts.
       role: key === null ? undefined : translate(key),
+      // The server already falls back to the account's picture for a linked
+      // member, so this is the same face they have everywhere else.
+      avatarMediaId: member.avatarKey,
       tone: row.length % 2 === 0 ? 'light' : 'dark',
       state: pendingMemberIds?.has(member.id) === true ? 'pending' : 'active',
       isViewer: member.id === viewerMemberId ? true : undefined,

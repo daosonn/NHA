@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import type { DraftMedia } from '../../components/moment/media-strip';
 import { profiles } from '../../lib/api';
-import type { UpdateProfileRequest } from '../../lib/api';
+import type { ProfileDetail, UpdateProfileRequest } from '../../lib/api';
 import { queryKeys } from '../../lib/query-keys';
+import { uploadDrafts } from '../moment/upload-drafts';
 
 /**
  * The signed-in account's own Life Profile.
@@ -68,6 +70,39 @@ export function useUpdateMemberProfile(familyId: string | null, memberId: string
       queryClient.setQueryData(queryKeys.memberProfile(familyId, memberId), detail);
       // The tree carries the name, so a rename has to reach it too.
       void queryClient.invalidateQueries({ queryKey: queryKeys.family(familyId) });
+    },
+  });
+}
+
+/**
+ * Puts a photograph on your own profile.
+ *
+ * Upload first, then point the profile at it: `avatarMediaId` takes a
+ * `Media` id, and the server refuses one this account did not upload. Two
+ * requests, not one — there is no multipart profile endpoint and there should
+ * not be, because the same picture goes through the same `POST /media` as
+ * everything else.
+ *
+ * Only ever your own. A placeholder's picture is something the family sets
+ * from the tree, which is the same rule the rest of the profile follows.
+ */
+export function useUpdateAvatar() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (draft: DraftMedia | null): Promise<ProfileDetail> => {
+      if (draft === null) return profiles.updateMine({ avatarMediaId: null });
+
+      const [mediaId] = await uploadDrafts([draft]);
+      if (mediaId === undefined) throw new Error('Upload produced no media');
+
+      return profiles.updateMine({ avatarMediaId: mediaId });
+    },
+    onSuccess: (detail) => {
+      queryClient.setQueryData(queryKeys.myProfile(), detail);
+      // The face is drawn from the tree in the feed, the strip and the
+      // canvas, so every family this person belongs to is now stale.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.families() });
     },
   });
 }

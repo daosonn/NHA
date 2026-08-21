@@ -14,7 +14,7 @@ import { SectionLabel } from '../../src/components/ai/section-label';
 import { SelectRow } from '../../src/components/ai/select-row';
 import { SourceChip } from '../../src/components/ai/source-chip';
 import { AppHeader } from '../../src/components/layout/app-header';
-import { BackButton } from '../../src/components/layout/header-slots';
+import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Avatar } from '../../src/components/ui/avatar';
 import { Button } from '../../src/components/ui/button';
 import { Card } from '../../src/components/ui/card';
@@ -78,7 +78,7 @@ export default function MessageScreen() {
   const locale = useAiLocale();
 
   const occasionDays = occasion?.date
-    ? (dates.data?.items ?? []).find((i) => i.nextOccurrence === occasion.date)?.daysUntil ?? null
+    ? ((dates.data?.items ?? []).find((i) => i.nextOccurrence === occasion.date)?.daysUntil ?? null)
     : null;
 
   const generate = (nextTone?: 'warm' | 'formal') => {
@@ -119,15 +119,16 @@ export default function MessageScreen() {
     <View className="flex-1 bg-page">
       <AppHeader
         left={<BackButton onPress={() => router.back()} />}
-        center={
-          <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-            {t('ai.message.title')}
-          </Text>
-        }
+        center={<ScreenTitle title={t('ai.message.title')} />}
       />
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: 14, paddingBottom: 40, gap: 12 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.xl,
+          paddingTop: 14,
+          paddingBottom: 40,
+          gap: 12,
+        }}
         showsVerticalScrollIndicator={false}
       >
         {/* To + Occasion — hai hàng trong MỘT card (11e) */}
@@ -145,9 +146,17 @@ export default function MessageScreen() {
             bare
             leading={
               occasion?.date ? (
-                <DateTile day={Number(occasion.date.slice(8, 10))} month={t(`date.months.${Number(occasion.date.slice(5, 7))}`)} />
+                <DateTile
+                  day={Number(occasion.date.slice(8, 10))}
+                  month={t(`date.months.${Number(occasion.date.slice(5, 7))}`)}
+                />
               ) : (
-                <IconBadge size={38} renderIcon={({ size, color }) => <Gift size={size} color={color} strokeWidth={2.1} />} />
+                <IconBadge
+                  size={38}
+                  renderIcon={({ size, color }) => (
+                    <Gift size={size} color={color} strokeWidth={2.1} />
+                  )}
+                />
               )
             }
             title={occasion?.label ?? t('ai.gifts.pickOccasion')}
@@ -173,7 +182,9 @@ export default function MessageScreen() {
             fullWidth
             disabled={!familyId || !target || !occasion || suggest.isPending}
             onPress={() => generate()}
-            renderIcon={({ size, color }) => <Sparkles size={size} color={color} strokeWidth={2.1} />}
+            renderIcon={({ size, color }) => (
+              <Sparkles size={size} color={color} strokeWidth={2.1} />
+            )}
           />
         )}
 
@@ -245,11 +256,25 @@ export default function MessageScreen() {
             {/* màn 25 — SAY IT DIFFERENTLY */}
             <SectionLabel label={t('ai.message.sayDifferently')} />
             <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Pill label={t('ai.message.warmer')} selected={tone === 'warm'} onPress={() => generate('warm')} />
-              <Pill label={t('ai.message.moreFormal')} selected={tone === 'formal'} onPress={() => generate('formal')} />
+              <Pill
+                label={t('ai.message.warmer')}
+                selected={tone === 'warm'}
+                onPress={() => generate('warm')}
+              />
+              <Pill
+                label={t('ai.message.moreFormal')}
+                selected={tone === 'formal'}
+                onPress={() => generate('formal')}
+              />
             </View>
 
-            <Button label={t('ai.message.putOnCard')} variant="primary" size="large" fullWidth onPress={toCard} />
+            <Button
+              label={t('ai.message.putOnCard')}
+              variant="primary"
+              size="large"
+              fullWidth
+              onPress={toCard}
+            />
 
             <Text variant="badge" color={colors.text.subtle} style={{ textAlign: 'center' }}>
               {t('ai.privacyFooter')}

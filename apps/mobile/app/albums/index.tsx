@@ -7,7 +7,7 @@ import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { AlbumFormSheet } from '../../src/components/album/album-form-sheet';
 import { AppHeader } from '../../src/components/layout/app-header';
-import { BackButton } from '../../src/components/layout/header-slots';
+import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { Text } from '../../src/components/ui/text';
 import { useAlbums, useCreateAlbum } from '../../src/features/album/use-albums';
@@ -144,11 +144,7 @@ export default function AlbumsScreen() {
     <View className="flex-1 bg-page">
       <AppHeader
         left={<BackButton onPress={() => router.back()} />}
-        center={
-          <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-            {t('albums.title')}
-          </Text>
-        }
+        center={<ScreenTitle title={t('albums.title')} />}
       />
 
       <ScrollView

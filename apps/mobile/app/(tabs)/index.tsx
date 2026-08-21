@@ -16,12 +16,11 @@ import { SectionHeader } from '../../src/components/ui/section-header';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { useFamilies } from '../../src/features/family/use-families';
 import { takePendingInvite } from '../../src/features/family/pending-invite';
-import { useMemberIdLookup } from '../../src/features/family/use-member-for-user';
+import { useMemberLookup } from '../../src/features/family/use-member-for-user';
 import { useFamilyFeed } from '../../src/features/feed/use-family-feed';
 import { useAlbums } from '../../src/features/album/use-albums';
 import { useSpecialDates } from '../../src/features/ai/use-special-dates';
 import { useRecommendations } from '../../src/features/home/use-recommendations';
-import { notificationCount } from '../../src/fixtures/home';
 import type { FamilySummary, PostDetail } from '../../src/lib/api';
 import { colors, spacing } from '../../src/theme';
 
@@ -62,7 +61,7 @@ export default function HomeScreen() {
 
   const { data: families, isPending, isError, refetch } = useFamilies();
   const feed = useFamilyFeed(familyId);
-  const memberIdFor = useMemberIdLookup();
+  const memberFor = useMemberLookup();
   const { data: occasions } = useSpecialDates(familyId);
 
   // Soonest first from the server, so the head of the list is the next one.
@@ -83,9 +82,9 @@ export default function HomeScreen() {
   };
 
   const openAuthor = (post: PostDetail) => {
-    const memberId = memberIdFor(post.authorUserId);
-    if (memberId === null) return undefined;
-    return () => router.push({ pathname: '/member/[id]', params: { id: memberId } });
+    const member = memberFor(post.authorUserId);
+    if (member === null) return undefined;
+    return () => router.push({ pathname: '/member/[id]', params: { id: member.id } });
   };
 
   /**
@@ -140,11 +139,7 @@ export default function HomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.page }}>
-      <AppHeader
-        left={<BrandWordmark />}
-        right={<NotificationBell count={notificationCount} />}
-        paddingRight={spacing.lg}
-      />
+      <AppHeader left={<BrandWordmark />} right={<NotificationBell />} paddingRight={spacing.lg} />
 
       {renderBody()}
     </View>
@@ -221,6 +216,7 @@ export default function HomeScreen() {
             audienceLabel={audienceLabel(item)}
             onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
             onAuthorPress={openAuthor(item)}
+            authorAvatarId={memberFor(item.authorUserId)?.avatarKey}
           />
         )}
       />

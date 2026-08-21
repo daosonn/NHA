@@ -11,10 +11,10 @@ import { PendingBanner } from '../../src/components/family/pending-banner';
 import type { PositionedNode } from '../../src/components/family/tree-layout';
 import { GroupStrip, type FamilyGroupSummary } from '../../src/components/home/group-strip';
 import { AppHeader } from '../../src/components/layout/app-header';
-import { BackButton } from '../../src/components/layout/header-slots';
+import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { SectionHeader } from '../../src/components/ui/section-header';
-import { Text } from '../../src/components/ui/text';
+import { useToast } from '../../src/components/ui/toast';
 import { useSession } from '../../src/features/auth/session';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { treeFromGraph } from '../../src/features/family/tree-from-graph';
@@ -53,6 +53,7 @@ function toStripGroups(families: FamilySummary[]): FamilyGroupSummary[] {
 export default function FamilyTreeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const toast = useToast();
   const { user } = useSession();
   const { familyId, setFamilyId } = useActiveFamily();
 
@@ -163,11 +164,7 @@ export default function FamilyTreeScreen() {
     <View className="flex-1 bg-page">
       <AppHeader
         left={<BackButton onPress={() => router.back()} />}
-        center={
-          <Text variant="subtitle" weight="bold" style={{ letterSpacing: -0.2 }}>
-            {t('family.title')}
-          </Text>
-        }
+        center={<ScreenTitle title={t('family.title')} />}
       />
 
       <View className="flex-1 gap-lg px-xl pb-xl pt-lg">
@@ -219,7 +216,15 @@ export default function FamilyTreeScreen() {
                 <PendingBanner
                   invite={newestInvite}
                   otherCount={waiting.length - 1}
-                  onResend={() => resendInvitation.mutate(newestInvite.id)}
+                  // Nothing on screen changes when this succeeds — the
+                  // banner already said the same thing before the tap.
+                  onResend={() =>
+                    resendInvitation.mutate(newestInvite.id, {
+                      onSuccess: () =>
+                        toast.success(t('family.toast.resent', { name: newestInvite.name })),
+                      onError: () => toast.failure(t('errors.generic')),
+                    })
+                  }
                   resending={resendInvitation.isPending}
                 />
               )}
@@ -244,7 +249,12 @@ export default function FamilyTreeScreen() {
           }}
           onRemove={() => {
             if (managingId === null) return;
-            removeMember.mutate(managingId, { onSuccess: () => setManagingId(null) });
+            removeMember.mutate(managingId, {
+              onSuccess: () => {
+                setManagingId(null);
+                toast.success(t('family.toast.removed'));
+              },
+            });
           }}
           saving={saveMember.isPending}
           removing={removeMember.isPending}
