@@ -1,4 +1,4 @@
-import { ChevronRight, Plus } from 'lucide-react-native';
+import { ChevronRight, Network, Plus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
@@ -7,6 +7,8 @@ import { Avatar } from '../ui/avatar';
 import { Text } from '../ui/text';
 
 const AVATAR = 34;
+/** The tree pill stands on the same optical line as the faces. */
+const PILL = 34;
 /** Each avatar tucks under the previous one. */
 const OVERLAP = -9;
 /** Matches the strip fill so the ring reads as a gap, not a stroke. */
@@ -169,26 +171,48 @@ export function GroupStrip({
           gap: 10,
         }}
       >
+        {/* One pill, not a grey word beside a white circle.
+            Redrawn 2026-08-21: the only way into the family tree from Home
+            was 12px `text.muted` — the same grey as every caption on the
+            screen — next to a chevron in a circle the same white as
+            everything else. Three things were wrong at once and the link
+            disappeared into the strip. Now it carries a hierarchy glyph, a
+            border, and brand-coloured type.
+
+            White fill rather than solid coral: white on `coral.brand` is
+            2.9:1, which 13px text may not use, and dropping to `coral.deep`
+            for the fill would make this the heaviest thing above the fold —
+            heavier than the compose button, which is the one control that
+            should be. `coral.deep` on white is 5.4:1 and still reads as
+            ours. The pink-tinted alternative was passed over because the
+            dashed invite circle immediately to its left is already a
+            coral-tinted round thing, and two of those blur together. */}
         {showTreeLink && (
-          <>
-            <Text variant="caption" weight="medium" color={colors.text.muted}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              height: PILL,
+              paddingLeft: 11,
+              paddingRight: 8,
+              borderRadius: radius.full,
+              backgroundColor: colors.background.card,
+              borderWidth: 1.5,
+              borderColor: colors.coral.brand,
+            }}
+          >
+            <Network size={15} color={colors.coral.deep} strokeWidth={2.2} />
+
+            {/* Truncates rather than pushing the strip wide: "Family tree"
+                is half again the width of 家系図, and a fourth face plus the
+                +N circle can leave this little room. */}
+            <Text variant="body2" weight="semibold" color={colors.coral.deep} numberOfLines={1}>
               {t('home.familyTree')}
             </Text>
 
-            <View
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: radius.full,
-                backgroundColor: colors.background.card,
-                boxShadow: '0 1px 3px rgba(24,24,27,0.08)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <ChevronRight size={16} color={colors.coral.brand} strokeWidth={2.2} />
-            </View>
-          </>
+            <ChevronRight size={15} color={colors.coral.deep} strokeWidth={2.4} />
+          </View>
         )}
       </Pressable>
     </View>

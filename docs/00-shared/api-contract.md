@@ -59,6 +59,7 @@ merge conflicts).
 | `POST /auth/password-reset/request`  | —    | `{ success }` |
 | `POST /auth/password-reset/verify`   | —    | `{ valid }`   |
 | `POST /auth/password-reset/confirm`  | —    | `{ success }` |
+| `POST /auth/change-password`         | ✔    | `AuthResult`  |
 
 `AuthResult` is `{ user: { id, email, name }, accessToken, refreshToken }`.
 
@@ -79,6 +80,17 @@ middle UI step; `confirm` sets the new password and **revokes every
 refresh token**, signing all devices out. Delivery is SMTP (Gmail app
 password for the MVP); with SMTP unconfigured (local dev) the code is
 logged to the API console instead of sent.
+
+**Change password while signed in** (WBS 3.4.3, added 2026-08-21):
+`{ currentPassword, newPassword }` — the current password is required
+even with a valid token, so an unlocked phone is not enough to lock its
+owner out. New password follows the register rules (8–72). On success
+**every refresh token is revoked** (same as reset: other devices sign
+out) and the response is a **fresh `AuthResult` for this device — store
+it like a refresh**, the old pair is dead. 400 for a wrong current
+password, an unchanged password, or a social-only account (empty hash —
+those sign in with Google/Facebook and have no password to change;
+"set a password" belongs to a future account-linking flow).
 
 ### Families — `apps/api/src/family/`
 
@@ -566,6 +578,47 @@ readAt)` index. SSE/WebSocket was considered and deliberately rejected
 for now — it buys ~1s over ~10s at the price of reconnect logic today
 and Redis the day there are two API instances; revisit only if chat or
 another genuinely two-way feature arrives.
+
+### Settings — `apps/api/src/settings/` (WBS 3.4.4 + 3.4.5, added 2026-08-21)
+
+| Route                              | Returns                |
+| ---------------------------------- | ---------------------- |
+| `GET /me/settings/privacy`         | `PrivacySettings`      |
+| `PATCH /me/settings/privacy`       | `PrivacySettings`      |
+| `GET /me/settings/notifications`   | `NotificationSettings` |
+| `PATCH /me/settings/notifications` | `NotificationSettings` |
+
+**Notification toggles (WBS 3.4.5).** `NotificationSettings` is
+`{ newPosts, aboutMe, reminders }`, all default `true`, PATCH is a
+partial merge (same conventions as privacy below). Grouped by _why you
+got it_, not one switch per type: `newPosts` = `NEW_POST` (feed noise),
+`aboutMe` = `COMMENT`/`REACTION`/`MEMBER_TAG` (things aimed at you),
+`reminders` = `BIRTHDAY_REMINDER`/`EVENT_REMINDER` (and `CARE_REMINDER`
+if 3.3 ships). Enforced at the creation funnel every notification passes
+through, so **muting means the row is never created** — nothing appears
+in the list, the badge never counts it, and unmuting does not resurrect
+what was muted. `FAMILY_INVITE`/`AI_SUGGESTION` have no toggle yet
+(nothing raises them) and always deliver.
+
+`PrivacySettings` is `{ allowAiPhotoAnalysis: boolean }` — defaults
+applied on read, so the app never sees a missing key. PATCH is a partial
+merge; unknown stored keys survive, so an old client cannot wipe a future
+flag.
+
+**`allowAiPhotoAnalysis`** (default `true`) is screen 20's "AI
+permissions", and it is **enforced, not decorative**: turning it off
+(1) removes the user's photos from the phase-1 pending feed — the only
+door photos leave through for the AI service — including photos uploaded
+later, and (2) **deletes every insight already extracted** from their
+photos (opting out withdraws the traces, the same principle as insights
+cascade-deleting with a deleted photo). Turning it back on re-queues
+their photos for analysis; the deleted insights do not resurrect.
+
+The other three screen-20 privacy items are **deliberately not stored
+yet**: the personal archive is already private, the sharing scope is
+chosen per post in the composer, and profile visibility has no product
+definition — a stored toggle the server does not enforce would be a lie
+the UI tells. Notification settings (3.4.5) will join this controller.
 
 ### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side; CRUD = WBS 3.2.3, added 2026-08-20)
 

@@ -704,6 +704,74 @@ dev` **did not regenerate the client**, and the stale client survived
   Group 3.2 backend is now **fully closed** (3.2.1 widget GET, 3.2.2
   reminders, 3.2.3 CRUD). On branch `feature/reminders`.
 
+- Change password API (2026-08-21, sprint 3, WBS 3.4.3):
+  `POST /auth/change-password` — requires the **current password even with
+  a valid token** (an unlocked phone must not lock its owner out), applies
+  the register password rules, and on success **revokes every refresh
+  token then returns a fresh `AuthResult` for this device** — the person
+  who changed it stays signed in, every other device is out, same
+  session-ending contract as the reset flow. Social-only accounts (empty
+  hash) get a clear 400 — "set a password" belongs to a future
+  account-linking flow. No migration, no new module — one method in
+  AuthService reusing argon2 + `issueTokens`. Verified by
+  lint/build/test + a **13-case live smoke test** (two-device revocation
+  matrix incl. the caller's own old pair dying, wrong/same/short password,
+  social-only via a DB-forced empty hash).
+
+  **WBS 3.3 (care reminder) suspended the same day** — the rule is
+  defined nowhere and it is the most culturally sensitive feature in the
+  sprint; question + proposal recorded in `domain-model.md` → Open
+  Questions, section marked in `sprint-03.md`. The plumbing (3.2.2's
+  `ReminderService`) is ready the day the team decides.
+
+- Privacy settings API (2026-08-21, sprint 3, WBS 3.4.4):
+  `GET/PATCH /me/settings/privacy` on a new `settings/` module (3.4.5
+  will join it). **One flag, fully enforced**: `allowAiPhotoAnalysis`
+  (default true, screen 20's "AI permissions") — turning it off removes
+  the user's photos from the phase-1 pending feed at the only door photos
+  leave through (`InsightService.listPending`), covers photos uploaded
+  later, and **deletes every insight already extracted** from their
+  photos; opting back in re-queues them, deleted insights stay deleted.
+  This gives the recorded customer concern ("family photos leave the
+  server for the Claude API — Japanese market, privacy-sensitive",
+  `03-ai/architecture.md`) a real per-user answer. Stored as a partial
+  object in the sprint-0 `User.privacySettings` Json column — defaults
+  applied on read, **unknown keys preserved on write** so future flags
+  survive old clients. The other three screen-20 items (sharing scope,
+  profile visibility, archive access) are **deliberately not stored**: the
+  archive is already private, the scope is chosen per post, visibility has
+  no product definition — an unenforced privacy toggle is a lie the UI
+  tells; recorded in the contract so nobody "completes" them as dumb
+  storage. No migration. Verified by lint/build/test + a **14-case live
+  smoke test** (default, opt-out pulls pending + deletes traces incl. a
+  pre-existing insight checked in the DB, new uploads stay excluded,
+  opt-in re-queues without resurrecting, unknown-key survival, non-boolean
+  400). On branch `feature/privacy-settings` (stacked on
+  `feature/change-password`).
+
+- Notification settings API (2026-08-21, sprint 3, WBS 3.4.5 — **the last
+  backend piece of sprint 3 outside suspended 3.3**):
+  `GET/PATCH /me/settings/notifications` on the settings module. Three
+  toggles grouped by _why you got it_ — `newPosts` (NEW_POST),
+  `aboutMe` (COMMENT/REACTION/MEMBER_TAG), `reminders`
+  (BIRTHDAY_/EVENT_/CARE_REMINDER) — all default true, stored in the
+  sprint-0 `User.notificationSettings` Json column with the same
+  partial-merge/defaults-on-read/unknown-keys-preserved conventions as
+  3.4.4. **Enforced at the one funnel every notification passes through**
+  (`NotificationService.create/createMany` →
+  `SettingsService.filterAllowedNotifications`), so event triggers,
+  reminders and any future caller respect the toggles without knowing
+  they exist. Semantics chosen: **muting means the row is never created**
+  (delivery is in-app only — a muted row would sit in the very list the
+  user asked to quiet), so unmuting does not resurrect what was muted;
+  FAMILY_INVITE/AI_SUGGESTION stay unmapped and always deliver rather
+  than dying behind a switch nobody sees. No migration. Verified by
+  lint/build/test + a **12-case live smoke test** (per-group isolation:
+  muting newPosts still delivers MEMBER_TAG, muting aboutMe blocks
+  comment/reaction/tag while another user still receives everything,
+  unmute non-resurrection, privacy column untouched). On branch
+  `feature/notification-settings`.
+
 ### Sprint 2 — AI team
 
 - AI integration for screens 21-33 (2026-08-20, **merged to `main` in
