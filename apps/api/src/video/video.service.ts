@@ -101,9 +101,36 @@ export interface VideoJobView {
   options: OptionsJson | null;
 }
 
+/**
+ * Bao nhiêu video được dựng CÙNG LÚC trên máy này.
+ *
+ * Một lượt render đã tự chạy 5 ffmpeg song song (xem pool trong `renderWorker`),
+ * nên hai lượt là 10 process trên 16 luồng — vừa đủ. Người thứ ba bấm "tạo" mà
+ * cũng được chạy ngay thì 15 process giành nhau, và cái mất mát không chỉ là
+ * video của họ chậm: API còn phải trả ảnh và bài đăng cho những người đang chỉ
+ * xem, nên cả nhà thấy app đứng.
+ *
+ * Xếp hàng dễ chịu hơn thế: video vào hàng chậm hơn ít phút, còn app vẫn nhẹ.
+ */
+const MAX_CONCURRENT_RENDERS = Math.max(
+  1,
+  Number(process.env.VIDEO_MAX_CONCURRENT_RENDERS ?? 2) || 2,
+);
+
+/** `stage` của một job đang đợi tới lượt — app hiện "đang chờ" thay vì 0% đứng im. */
+const STAGE_QUEUED = 'queued';
+
 @Injectable()
 export class VideoService {
   private readonly logger = new Logger(VideoService.name);
+
+  /**
+   * Hàng đợi nằm trong tiến trình, không nằm trong DB — cùng một lựa chọn với
+   * bản thân worker render (fire-and-forget, mất khi restart). Khi nào tách
+   * render sang tiến trình riêng thì cả hai chuyển sang hàng đợi bền một lượt.
+   */
+  private rendering = 0;
+  private readonly waiting: string[] = [];
 
   constructor(
     private readonly prisma: PrismaService,
@@ -237,6 +264,32 @@ export class VideoService {
   async startRender(userId: string, jobId: string): Promise<{ ok: boolean }> {
     const job = await this.ownJob(userId, jobId);
     if (job.status === 'PROCESSING') return { ok: true };
+    if (this.waiting.includes(jobId)) return { ok: true };
+
+    if (this.rendering >= MAX_CONCURRENT_RENDERS) {
+      this.waiting.push(jobId);
+      await this.prisma.videoJob.update({
+        where: { id: jobId },
+        data: {
+          status: 'PENDING',
+          progress: 0,
+          stage: STAGE_QUEUED,
+          error: null,
+        },
+      });
+      this.logger.log(
+        `render ${jobId} vào hàng đợi (đang dựng ${this.rendering}, chờ ${this.waiting.length})`,
+      );
+      return { ok: true };
+    }
+
+    await this.launchRender(jobId);
+    return { ok: true };
+  }
+
+  /** Chiếm một chỗ, dựng, rồi nhường chỗ cho người đang đợi. */
+  private async launchRender(jobId: string): Promise<void> {
+    this.rendering++;
     await this.prisma.videoJob.update({
       where: { id: jobId },
       data: {
@@ -246,17 +299,40 @@ export class VideoService {
         error: null,
       },
     });
-    void this.renderWorker(jobId).catch(async (err) => {
-      this.logger.error(`render ${jobId} failed: ${String(err)}`);
-      await this.prisma.videoJob.update({
-        where: { id: jobId },
-        data: {
-          status: 'FAILED',
-          error: String((err as Error)?.message ?? err).slice(0, 500),
-        },
+    void this.renderWorker(jobId)
+      .catch(async (err) => {
+        this.logger.error(`render ${jobId} failed: ${String(err)}`);
+        await this.prisma.videoJob.update({
+          where: { id: jobId },
+          data: {
+            status: 'FAILED',
+            error: String((err as Error)?.message ?? err).slice(0, 500),
+          },
+        });
+      })
+      // Nhường chỗ phải chạy CẢ KHI render lỗi, nếu không một lần thất bại là
+      // hàng đợi tắc vĩnh viễn cho tới lúc restart.
+      .finally(() => {
+        this.rendering--;
+        void this.startNextWaiting();
       });
+  }
+
+  private async startNextWaiting(): Promise<void> {
+    const next = this.waiting.shift();
+    if (next === undefined) return;
+    // Job có thể đã bị xoá trong lúc đợi — bỏ qua và gọi người kế tiếp.
+    const still = await this.prisma.videoJob.findUnique({
+      where: { id: next },
+      select: { id: true, status: true },
     });
-    return { ok: true };
+    if (!still || still.status !== 'PENDING') {
+      await this.startNextWaiting();
+      return;
+    }
+    await this.launchRender(next).catch((err: unknown) =>
+      this.logger.error(`không khởi động được ${next}: ${String(err)}`),
+    );
   }
 
   async get(userId: string, jobId: string): Promise<VideoJobView> {

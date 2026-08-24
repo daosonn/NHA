@@ -5,7 +5,9 @@ Mock mode: AI_MOCK=1 (mặc định) — 0 token, dữ liệu giả lập đúng
 """
 
 import json
+from contextlib import asynccontextmanager
 
+import anyio.to_thread
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
@@ -32,7 +34,33 @@ from .schemas import (
     StoryboardScene,
 )
 
-app = FastAPI(title="NHA AI service", version="0.1.0", docs_url="/docs")
+"""Bao nhiêu call LLM được chạy cùng lúc.
+
+Mọi route dưới đây là `def` chứ không phải `async def`, nên FastAPI chạy chúng
+trong threadpool của anyio — mặc định 40 chỗ. Thread thứ 41 phải đợi một chỗ
+trống, và một call ở đây kéo dài 4-9 giây: đo 21/08 với 50 request cùng lúc,
+40 request đầu xong sau 4,9s còn 10 request cuối mất 9,1s vì đứng chờ.
+
+Nới lên 200 vì thread ở đây KHÔNG tính toán — nó nằm im đợi mạng trả lời, nên
+200 thread không tốn CPU, chỉ tốn ít bộ nhớ stack. Trần thật lúc đó là hạn mức
+của OpenAI (5.000 request/phút, 2 triệu token/phút — đo cùng ngày), tức khoảng
+870 lượt/phút, thay vì 330 lượt/phút do threadpool tự áp.
+
+Vì sao ở `lifespan` mà không ở đầu file: `current_default_thread_limiter()` đọc
+biến theo vòng lặp sự kiện đang chạy, gọi lúc import thì chưa có vòng lặp nào.
+"""
+LLM_CALL_SLOTS = 200
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    anyio.to_thread.current_default_thread_limiter().total_tokens = LLM_CALL_SLOTS
+    yield
+
+
+app = FastAPI(
+    title="NHA AI service", version="0.1.0", docs_url="/docs", lifespan=lifespan
+)
 
 
 def require_internal(x_internal_token: str | None = Header(default=None)) -> None:
