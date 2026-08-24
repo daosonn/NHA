@@ -603,7 +603,7 @@
         "title": "Set a password",
         "row": "This account signs in with Google or Facebook",
         "explain": "This account signs in with Google or Facebook, so there is no password to change. You can set one — after that, both ways in work.",
-        "howItWorks": "Tap the button and we will email a 6-digit code to your address. Enter it, choose a password, and you are done.",
+        "howItWorks": "Choose a new password first. We will then email a 6-digit code to your address — entering it confirms the change.",
         "send": "Email me a code",
         "submit": "Set password",
         "done": "Password set. Sign in to continue.",

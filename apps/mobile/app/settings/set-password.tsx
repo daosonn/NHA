@@ -30,18 +30,24 @@ function countdown(seconds: number): string {
 
 /**
  * Set a password on a social-only account (reached from
- * `/settings/password`, which already sent the code).
+ * `/settings/password`).
  *
  * This is the password-reset flow worn by a signed-in person: the server
  * has no separate "set password" endpoint on purpose — owning the email is
  * the proof, same as the provider login itself (`api-contract.md` → Auth).
- * Code and passwords sit on one screen rather than the auth flow's two,
- * because the email step is already behind us and the person is signed in.
+ *
+ * Two steps, password FIRST: choose the password, and only the "email me a
+ * code" tap sends anything — so the code arrives when the person is ready
+ * to type it, not while they are still inventing a password, and closing
+ * the screen at step one costs nothing. The emailed code is the final
+ * confirmation. (The signed-out reset flow runs the other way around
+ * because there the code also proves which account is being reset; here
+ * the session already knows.)
  *
  * Succeeding revokes **every** session, this device's included — the reset
- * contract, and right for it. So this screen says that before the button,
- * and afterwards signs out locally so the person lands on sign-in instead of
- * watching the app quietly 401 on the next refresh.
+ * contract, and right for it. So the last step says that before the
+ * button, and afterwards signs out locally so the person lands on sign-in
+ * instead of watching the app quietly 401 on the next refresh.
  */
 export default function SetPasswordScreen() {
   const { t } = useTranslation();
@@ -49,19 +55,20 @@ export default function SetPasswordScreen() {
   const toast = useToast();
   const { user, signOut } = useSession();
 
-  const [code, setCode] = useState('');
+  const [step, setStep] = useState<'password' | 'code'>('password');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
+  const [code, setCode] = useState('');
   const [seconds, setSeconds] = useState(RESEND_SECONDS);
 
+  const request = useRequestPasswordReset();
   const confirm = useConfirmPasswordReset();
-  const resend = useRequestPasswordReset();
 
   useEffect(() => {
-    if (seconds === 0) return;
+    if (step !== 'code' || seconds === 0) return;
     const timer = setTimeout(() => setSeconds((left) => left - 1), 1000);
     return () => clearTimeout(timer);
-  }, [seconds]);
+  }, [step, seconds]);
 
   const email = user?.email ?? null;
 
@@ -69,15 +76,30 @@ export default function SetPasswordScreen() {
   // Only complain once there is enough typed to be a real mismatch.
   const mismatched = confirmation.length >= password.length && confirmation !== password;
 
-  const ready =
+  const passwordReady =
     email !== null &&
-    code.length === CODE_LENGTH &&
     password.length >= MIN_PASSWORD &&
     password.length <= MAX_PASSWORD &&
     confirmation === password;
 
+  const sendCode = () => {
+    if (!passwordReady || email === null) return;
+
+    request.mutate(
+      { email },
+      {
+        // The countdown starts only once the mail is actually on its way;
+        // starting it on the tap would hide a failure behind a timer.
+        onSuccess: () => {
+          setSeconds(RESEND_SECONDS);
+          setStep('code');
+        },
+      },
+    );
+  };
+
   const submit = () => {
-    if (!ready || email === null) return;
+    if (code.length !== CODE_LENGTH || email === null) return;
 
     confirm.mutate(
       { email, code, newPassword: password },
@@ -93,21 +115,85 @@ export default function SetPasswordScreen() {
   };
 
   /**
-   * A 400 here is the **code** — expired, mistyped, or already spent. The
-   * password fields bound everything else before the request leaves.
+   * A 400 on confirm is the **code** — expired, mistyped, or already
+   * spent. The password step bounded everything else before it was sent.
    */
   const errorKey =
     confirm.error instanceof ApiError && confirm.error.status === 400
       ? 'auth.verify.wrongCode'
       : confirm.error !== null
         ? authErrorKey(confirm.error)
-        : resend.error !== null
-          ? authErrorKey(resend.error)
+        : request.error !== null
+          ? authErrorKey(request.error)
           : null;
+
+  if (step === 'password') {
+    return (
+      <FormScreen
+        onBack={() => router.back()}
+        title={t('settings.password.set.title')}
+        footer={
+          <>
+            {errorKey !== null && (
+              <Text
+                variant="caption"
+                color={colors.themes.destructive.text}
+                accessibilityRole="alert"
+              >
+                {t(errorKey)}
+              </Text>
+            )}
+
+            <Button
+              label={t('settings.password.set.send')}
+              size="large"
+              fullWidth
+              disabled={!passwordReady}
+              loading={request.isPending}
+              onPress={sendCode}
+            />
+          </>
+        }
+      >
+        <Text variant="body2" color={colors.text.muted}>
+          {t('settings.password.set.howItWorks')}
+        </Text>
+
+        <View style={{ gap: 15 }}>
+          <TextField
+            label={t('auth.reset.newPassword')}
+            value={password}
+            onChangeText={setPassword}
+            secure
+            autoComplete="new-password"
+            textContentType="newPassword"
+            maxLength={MAX_PASSWORD}
+            hint={t('auth.fields.minCharacters', { count: MIN_PASSWORD })}
+            error={tooShort ? t('auth.fields.minCharacters', { count: MIN_PASSWORD }) : undefined}
+            renderIcon={({ size, color }) => <Lock size={size} color={color} strokeWidth={2} />}
+          />
+
+          <TextField
+            label={t('auth.reset.confirmPassword')}
+            value={confirmation}
+            onChangeText={setConfirmation}
+            secure
+            autoComplete="new-password"
+            textContentType="newPassword"
+            maxLength={MAX_PASSWORD}
+            error={confirmation.length > 0 && mismatched ? t('auth.reset.mismatch') : undefined}
+            renderIcon={({ size, color }) => <Lock size={size} color={color} strokeWidth={2} />}
+          />
+        </View>
+      </FormScreen>
+    );
+  }
 
   return (
     <FormScreen
-      onBack={() => router.back()}
+      // Back from the code step re-opens the password step, not Settings —
+      // the person may have left to check their inbox and mistyped earlier.
+      onBack={() => setStep('password')}
       title={t('settings.password.set.title')}
       footer={
         <>
@@ -125,7 +211,7 @@ export default function SetPasswordScreen() {
             label={t('settings.password.set.submit')}
             size="large"
             fullWidth
-            disabled={!ready}
+            disabled={code.length < CODE_LENGTH}
             loading={confirm.isPending}
             onPress={submit}
           />
@@ -167,46 +253,13 @@ export default function SetPasswordScreen() {
             label={t('auth.verify.resend')}
             variant="ghost"
             size="small"
-            loading={resend.isPending}
+            loading={request.isPending}
             onPress={() => {
               if (email === null) return;
-              resend.mutate(
-                { email },
-                // The countdown restarts only once the mail is actually on
-                // its way; restarting it on the tap would hide a failure
-                // behind a timer.
-                { onSuccess: () => setSeconds(RESEND_SECONDS) },
-              );
+              request.mutate({ email }, { onSuccess: () => setSeconds(RESEND_SECONDS) });
             }}
           />
         )}
-      </View>
-
-      <View style={{ gap: 15 }}>
-        <TextField
-          label={t('auth.reset.newPassword')}
-          value={password}
-          onChangeText={setPassword}
-          secure
-          autoComplete="new-password"
-          textContentType="newPassword"
-          maxLength={MAX_PASSWORD}
-          hint={t('auth.fields.minCharacters', { count: MIN_PASSWORD })}
-          error={tooShort ? t('auth.fields.minCharacters', { count: MIN_PASSWORD }) : undefined}
-          renderIcon={({ size, color }) => <Lock size={size} color={color} strokeWidth={2} />}
-        />
-
-        <TextField
-          label={t('auth.reset.confirmPassword')}
-          value={confirmation}
-          onChangeText={setConfirmation}
-          secure
-          autoComplete="new-password"
-          textContentType="newPassword"
-          maxLength={MAX_PASSWORD}
-          error={confirmation.length > 0 && mismatched ? t('auth.reset.mismatch') : undefined}
-          renderIcon={({ size, color }) => <Lock size={size} color={color} strokeWidth={2} />}
-        />
       </View>
 
       {/* Said before it happens, not after — this one signs out THIS device
