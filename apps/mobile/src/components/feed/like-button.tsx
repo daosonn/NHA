@@ -1,9 +1,11 @@
 import { Heart } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import type { ReactionType } from '../../lib/api';
 import { colors, radius } from '../../theme';
+import { usePop } from '../motion/pop';
 import { Text } from '../ui/text';
 
 /**
@@ -45,6 +47,8 @@ export function LikeButton({ mine, count, onChange }: LikeButtonProps) {
   const { t } = useTranslation();
 
   const active = mine !== null;
+  // `nhaPop` on toggle — setting and clearing alike; never on first paint.
+  const heartPop = usePop(mine);
 
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -67,12 +71,14 @@ export function LikeButton({ mine, count, onChange }: LikeButtonProps) {
             : `inset 0 0 0 1px ${colors.state.borderDefault}`,
         }}
       >
-        <Heart
-          size={17}
-          color={active ? colors.coral.brand : colors.text.subtle}
-          strokeWidth={2}
-          fill={active ? colors.coral.brand : 'transparent'}
-        />
+        <Animated.View style={heartPop}>
+          <Heart
+            size={17}
+            color={active ? colors.coral.brand : colors.text.subtle}
+            strokeWidth={2}
+            fill={active ? colors.coral.brand : 'transparent'}
+          />
+        </Animated.View>
 
         <Text
           variant="caption"

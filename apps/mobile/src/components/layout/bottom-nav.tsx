@@ -5,10 +5,15 @@ import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { History, House, Plus, Sparkles, UserRound } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable, useWindowDimensions, View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
+import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, elevation, radius } from '../../theme';
+import { duration, easing } from '../../theme/motion';
+import { AnimatedPressable } from '../motion/animated-pressable';
+import { usePop } from '../motion/pop';
+import { usePressScale } from '../motion/press';
 import { Text } from '../ui/text';
 
 /**
@@ -95,6 +100,36 @@ const TABS: Record<string, TabConfig> = {
 /** The centre action, still the one filled control on the bar. */
 const COMPOSE_ROUTE = 'new';
 
+/** Its own component so the press hook is not called inside a `.map()`. */
+function ComposeButton({ label, onPress, m }: { label: string; onPress: () => void; m: Metrics }) {
+  const press = usePressScale({
+    background: { rest: colors.coral.primary, pressed: colors.coral.dark },
+  });
+
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
+      style={[
+        {
+          width: m.compose,
+          height: m.compose,
+          marginHorizontal: 4,
+          borderRadius: radius.full,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        press.style,
+      ]}
+    >
+      <Plus size={m.composeIcon} color={colors.text.white} strokeWidth={2.3} />
+    </AnimatedPressable>
+  );
+}
+
 /**
  * One destination. `flex: 1`, so the four share whatever the bar has left
  * after the compose circle — the row keeps its rhythm at any width without
@@ -115,25 +150,46 @@ function Slot({
 }) {
   const tint = selected ? colors.coral.deep : colors.text.secondary;
 
+  const press = usePressScale();
+  // The tinted block fades in rather than snapping on (selection = 200ms).
+  const selection = useAnimatedStyle(
+    () => ({
+      backgroundColor: withTiming(selected ? colors.coral.light : 'transparent', {
+        duration: duration.select,
+        easing: easing.snap,
+      }),
+    }),
+    [selected],
+  );
+  // The icon pops on arrival only — the slot being left just fades.
+  const iconPop = usePop(selected, selected);
+
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
       accessibilityRole="tab"
       accessibilityState={{ selected }}
-      style={{
-        flex: 1,
-        height: m.itemHeight,
-        borderRadius: radius['2xl'],
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 3,
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
+      style={[
+        {
+          flex: 1,
+          height: m.itemHeight,
+          borderRadius: radius['2xl'],
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 3,
+        },
         // A soft tinted block behind the whole slot rather than a colour
         // change alone — it survives being looked at quickly, and with the
         // label inside it reads as a selected chip rather than a stray pill.
-        backgroundColor: selected ? colors.coral.light : 'transparent',
-      }}
+        selection,
+        press.style,
+      ]}
     >
-      <Icon size={m.icon} color={tint} strokeWidth={selected ? 2.4 : 2} />
+      <Animated.View style={iconPop}>
+        <Icon size={m.icon} color={tint} strokeWidth={selected ? 2.4 : 2} />
+      </Animated.View>
 
       {/* Ellipsises rather than wrapping on the narrowest phones, where
           マイページ and a 5-way split are asking a lot of 320px. */}
@@ -145,7 +201,7 @@ function Slot({
       >
         {label}
       </Text>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -227,25 +283,7 @@ export function BottomNav({ state, navigation }: BottomTabBarProps) {
           };
 
           if (route.name === COMPOSE_ROUTE) {
-            return (
-              <Pressable
-                key={route.key}
-                onPress={go}
-                accessibilityRole="button"
-                accessibilityLabel={t('nav.newMoment')}
-                style={{
-                  width: m.compose,
-                  height: m.compose,
-                  marginHorizontal: 4,
-                  borderRadius: radius.full,
-                  backgroundColor: colors.coral.primary,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Plus size={m.composeIcon} color={colors.text.white} strokeWidth={2.3} />
-              </Pressable>
-            );
+            return <ComposeButton key={route.key} label={t('nav.newMoment')} onPress={go} m={m} />;
           }
 
           const config = TABS[route.name];

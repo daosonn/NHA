@@ -27,6 +27,9 @@ export const PRESS_SCALE = 0.955;
 /** Cards and rows dip less than buttons (`.nha-card:active`). */
 export const CARD_PRESS_SCALE = 0.99;
 
+/** `.nha-tick` — the mark springs in over 260ms while opacity leads at 160. */
+export const tickTiming = { scaleMs: 260, fadeMs: 160 } as const;
+
 /**
  * Content entering a screen. Pass the item's index and siblings arrive
  * staggered (`.nha-enter`, `--stagger`); omit it for a lone element.
