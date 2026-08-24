@@ -598,6 +598,16 @@
       "errors": {
         "rejected": "That current password is not right. If you signed up with Google, this account has no password to change.",
         "same": "Choose a password different from your current one."
+      },
+      "set": {
+        "title": "Set a password",
+        "row": "This account signs in with Google or Facebook",
+        "explain": "This account signs in with Google or Facebook, so there is no password to change. You can set one — after that, both ways in work.",
+        "howItWorks": "Tap the button and we will email a 6-digit code to your address. Enter it, choose a password, and you are done.",
+        "send": "Email me a code",
+        "submit": "Set password",
+        "done": "Password set. Sign in to continue.",
+        "signsOutAll": "Setting a password signs this account out everywhere — this phone included. Sign back in with your new password, or with Google or Facebook as before."
       }
     },
     "notifications": {

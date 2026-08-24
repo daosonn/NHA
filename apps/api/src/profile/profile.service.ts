@@ -30,6 +30,15 @@ export interface ProfileDetail {
    *  LifeProfile — surfaced here because the profile is where it is
    *  edited (WBS 3.4.2). */
   avatarMediaId: string | null;
+  /**
+   * Whether this account can sign in with a password (WBS 3.4.3): false =
+   * social-only (empty hash), so Settings offers "set a password" (the
+   * password-reset flow) instead of the change-password form. Only the
+   * owner's own route (`GET /me/profile`) carries a value — another
+   * member's sign-in method is not the family's business, so the
+   * family-scoped route always answers null.
+   */
+  hasPassword: boolean | null;
   updatedAt: Date;
 }
 
@@ -72,10 +81,14 @@ export class ProfileService {
       this.ensureGlobalProfile(userId),
       this.prisma.user.findUniqueOrThrow({
         where: { id: userId },
-        select: { name: true, avatarKey: true },
+        select: { name: true, avatarKey: true, passwordHash: true },
       }),
     ]);
-    return this.toDetail(profile, user.name, user.avatarKey);
+    return this.toDetail(profile, user.name, user.avatarKey, {
+      // Social-only accounts store an empty hash (architecture.md § social
+      // login); setting a password via the reset flow flips this to true.
+      hasPassword: user.passwordHash !== '',
+    });
   }
 
   async updateOwn(
@@ -390,6 +403,7 @@ export class ProfileService {
     profile: ProfileRecord,
     displayName: string,
     avatarMediaId: string | null,
+    options: { hasPassword: boolean | null } = { hasPassword: null },
   ): ProfileDetail {
     return {
       id: profile.id,
@@ -403,6 +417,7 @@ export class ProfileService {
       occupation: profile.occupation,
       deathDate: profile.deathDate,
       avatarMediaId,
+      hasPassword: options.hasPassword,
       updatedAt: profile.updatedAt,
     };
   }

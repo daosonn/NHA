@@ -685,14 +685,23 @@ rows here — no standalone Reminder table. Delivery is in-app only for MVP
 
 > **The feature these two tables exist for is not being built.** Quality
 > Time (WBS 2.6) was dropped on 2026-08-20 —
-> `project-status.md` → Important Decisions. **The tables stay in the
-> schema**: they shipped in the sprint-0 migration, they are empty, and
-> dropping them would cost a migration for something that may come back.
-> Nothing reads or writes them. The API was written and verified but not
-> merged — branch `feature/plans`, if this is ever revived.
+> `project-status.md` → Important Decisions. The Plan API written for it
+> was verified but not merged — branch `feature/plans`, if this is ever
+> revived.
 >
-> The design below is kept as the record of what was decided, not as a
-> description of anything running.
+> **`Plan` is nevertheless in live use (corrected 2026-08-24)** — the AI
+> team's gift-save (sprint-2 group 2.4) reuses it as its storage:
+> `ai.service.ts#saveGiftIdea` writes one row per ♡-saved gift idea
+> (`title` convention `gift:<name>`, `content` JSON
+> `{ kind: 'gift_idea', why, price_range }`, `aboutMemberId` = the
+> recipient, owner-private like the original design), and
+> `ai-context.service.ts` reads them back as `past_gifts` so a saved gift
+> is never re-suggested. **Do not drop `Plan` as unused.** `PlanShare`
+> alone is genuinely empty and unread.
+>
+> The design below is kept as the record of what was decided; the
+> Quality Time semantics (shared view-only plans etc.) describe nothing
+> running.
 
 AI-drafted surprise / quality-time plans are **saved** — they are followed
 over days, unlike read-once gift ideas. **Private to the creator; only the
@@ -765,9 +774,10 @@ All items from the 2026-08-14 design review are resolved:
 - **Memo is always private** (2026-08-14): only the author views/edits —
   `isShared` removed, WBS task 1.6.6 dropped.
 - ~~**Plans are saved** (2026-08-14)~~ — **superseded 2026-08-20: the
-  Quality Time feature was dropped**, so nothing creates a `Plan`. The two
-  tables stay in the schema unused (see the section above). Gift/message
-  suggestions stay request/response, which is now the only mode.
+  Quality Time feature was dropped.** Gift/message _suggestions_ stay
+  request/response. **Corrected 2026-08-24**: the `Plan` table itself is
+  not unused — gift-save writes ♡-saved gift ideas into it (see the Plan
+  section above); only `PlanShare` is empty.
 - Earlier same-day resolutions: albums split (family library derived /
   personal albums private / profile gallery derived); Memo = private
   notes about a member; `birthDate`/`deathDate` on `LifeProfile`;

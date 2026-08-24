@@ -9,7 +9,11 @@ import { Button } from '../../src/components/ui/button';
 import { Text } from '../../src/components/ui/text';
 import { TextField } from '../../src/components/ui/text-field';
 import { useToast } from '../../src/components/ui/toast';
+import { authErrorKey } from '../../src/features/auth/auth-error';
+import { useSession } from '../../src/features/auth/session';
 import { useChangePassword } from '../../src/features/auth/use-change-password';
+import { useRequestPasswordReset } from '../../src/features/auth/use-password-reset';
+import { useMyProfile } from '../../src/features/member/use-profile';
 import { ApiError } from '../../src/lib/api';
 import { colors } from '../../src/theme';
 
@@ -28,17 +32,78 @@ const MAX_PASSWORD = 72;
  * device is signed out — that is the server's doing and the point of the
  * feature — but this one keeps working, on the fresh pair the response
  * carries (`features/auth/use-change-password.ts`).
+ *
+ * A **social-only** account (`hasPassword: false` on `GET /me/profile`) has
+ * no current password to type, so it gets a different screen entirely: an
+ * explanation and a way into `/settings/set-password`, which is the emailed
+ * six-digit-code reset flow worn as "set a password" — the deliberate path
+ * for these accounts (`api-contract.md` → Auth). Rendering the form and
+ * letting it 400 would be a dead control.
  */
 export default function ChangePasswordScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const toast = useToast();
+  const { user } = useSession();
 
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirmation, setConfirmation] = useState('');
 
   const change = useChangePassword();
+  const profile = useMyProfile();
+  const sendCode = useRequestPasswordReset();
+
+  // Social-only account: offer "set a password" instead of the form. An
+  // errored or still-loading profile falls through to the form — the server
+  // enforces the real rule either way, this branch is only the better door.
+  if (profile.data?.hasPassword === false) {
+    const email = user?.email ?? null;
+    const sendErrorKey = sendCode.error !== null ? authErrorKey(sendCode.error) : null;
+
+    return (
+      <FormScreen
+        onBack={() => router.back()}
+        title={t('settings.password.set.title')}
+        footer={
+          <>
+            {sendErrorKey !== null && (
+              <Text
+                variant="caption"
+                color={colors.themes.destructive.text}
+                accessibilityRole="alert"
+              >
+                {t(sendErrorKey)}
+              </Text>
+            )}
+
+            <Button
+              label={t('settings.password.set.send')}
+              size="large"
+              fullWidth
+              disabled={email === null}
+              loading={sendCode.isPending}
+              onPress={() => {
+                if (email === null) return;
+                sendCode.mutate(
+                  { email },
+                  { onSuccess: () => router.push('/settings/set-password') },
+                );
+              }}
+            />
+          </>
+        }
+      >
+        <Text variant="body2" color={colors.text.muted}>
+          {t('settings.password.set.explain')}
+        </Text>
+
+        <Text variant="caption" color={colors.text.subtle}>
+          {t('settings.password.set.howItWorks')}
+        </Text>
+      </FormScreen>
+    );
+  }
 
   const tooShort = next.length > 0 && next.length < MIN_PASSWORD;
   // Only complain once there is enough typed for it to be a real mismatch.
