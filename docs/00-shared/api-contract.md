@@ -89,8 +89,20 @@ owner out. New password follows the register rules (8–72). On success
 out) and the response is a **fresh `AuthResult` for this device — store
 it like a refresh**, the old pair is dead. 400 for a wrong current
 password, an unchanged password, or a social-only account (empty hash —
-those sign in with Google/Facebook and have no password to change;
-"set a password" belongs to a future account-linking flow).
+those sign in with Google/Facebook and have no password to change).
+
+**A social-only account sets its password through the reset flow — on
+purpose (decided 2026-08-24).** `password-reset/request` deliberately does
+**not** exclude accounts with an empty hash: owning the emailed code proves
+ownership of the address, the same trust anchor the provider login rests
+on, and this is how the industry usually does it (Spotify, Figma, Notion).
+After `confirm`, the account signs in **both** ways — the `OAuthAccount`
+link survives — and `hasPassword` on `GET /me/profile` flips to `true`, so
+Settings switches from "Set a password" to the change-password form. Do
+not "fix" the reset flow to reject social accounts; the app depends on
+this path (`app/settings/set-password.tsx`). Note the reset contract
+still applies: confirm revokes every session, the device that set the
+password included.
 
 ### Families — `apps/api/src/family/`
 
@@ -266,7 +278,15 @@ reconcile.
 
 `ProfileDetail` is `{ id, userId, memberId, displayName, bio,
 interests: string[], birthDate, birthPlace, occupation, deathDate,
-avatarMediaId, updatedAt }`.
+avatarMediaId, hasPassword, updatedAt }`.
+
+**`hasPassword` (added 2026-08-24, WBS 3.4.3 follow-up)**: whether the
+account can sign in with a password — `false` marks a social-only account
+(empty hash), which is what tells Settings to offer "Set a password" (the
+reset flow, see § Auth) instead of the change-password form. Carries a
+real value **only on `GET /me/profile`**; the family-scoped route always
+answers `null`, because how somebody else signs in is not the family's
+business.
 
 **Avatar (WBS 3.4.2, added 2026-08-20).** Write: PATCH `avatarMediaId` —
 the id of an **image the caller uploaded** via `POST /media` (any own

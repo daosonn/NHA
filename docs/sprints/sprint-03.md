@@ -58,7 +58,10 @@ thêm một rule là chạy.
       thu hồi mọi thiết bị khác; chi tiết: `api-contract.md` → Auth).
       **UI xong + đã nối 2026-08-21** (`app/settings/password.tsx`);
       chưa tick vì chưa chạy thử live — API đang chạy bản trước merge nên
-      route còn trả 404, restart rồi thử là tick được
+      route còn trả 404, restart rồi thử là tick được.
+      — bổ sung 2026-08-24: tài khoản social-only thấy "Đặt mật khẩu"
+      (flow reset) thay vì form đổi — cờ `hasPassword` trên `/me/profile`;
+      chi tiết: `api-contract.md` → Auth / Life Profiles
 - [ ] 3.4.4 Privacy settings (thiết lập quyền riêng tư) — API done
       2026-08-21 (`GET/PATCH /me/settings/privacy`, một flag
       `allowAiPhotoAnalysis` **có ép luật thật**: rút ảnh khỏi pending feed + xoá insight đã trích; chi tiết: `api-contract.md` → Settings);
