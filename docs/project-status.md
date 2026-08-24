@@ -910,9 +910,14 @@ dev` **did not regenerate the client**, and the stale client survived
   recorded so nobody re-derives them:
   - **Every AI suggestion the product ships is read-once.** Nothing is
     persisted; the "AI output you follow over days" case is gone.
-  - **`Plan` and `PlanShare` stay in the schema, unused.** They shipped in
-    the sprint-0 migration and are empty; dropping them costs a migration
-    for something that may come back. Nothing reads or writes them.
+  - ~~**`Plan` and `PlanShare` stay in the schema, unused.**~~ — **no longer
+    true for `Plan` (corrected 2026-08-24): the AI team's gift-save reuses
+    it.** `ai.service.ts` writes a `Plan` row per ♡-saved gift idea (title
+    convention `gift:<name>`, owner-private) and `ai-context.service.ts`
+    reads them back as `past_gifts` so a saved gift is never re-suggested.
+    Only `PlanShare` is truly unused. Do not drop `Plan` as "empty and
+    harmless" — it carries live data. The Quality Time _feature_ stays
+    dropped; only the table found a second life.
   - The Plan API was **written and verified** (49-case live smoke test,
     2026-08-20) but deliberately **not merged** — branch `feature/plans`
     if this is revived. Same for `feature/ai-suggestions`, which had the
@@ -1130,7 +1135,8 @@ relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
   personal albums private / profile gallery derived); Memo = private
   notes about a member (author-only, always); ~~AI plans are saved
   (`Plan` + `PlanShare` — owner edits, view-only sharing)~~ — **the
-  feature was dropped 2026-08-20, tables kept unused**; birth/death
+  feature was dropped 2026-08-20; `Plan` was then reused by gift-save
+  (corrected 2026-08-24, see the Quality Time decision above)**; birth/death
   dates live on LifeProfile; wiki edits logged (`EditHistory`); diverse
   reactions (base LIKE/LOVE/HAHA/WOW/SAD); solar-only dates (product
   targets the Japanese market); special-date widgets (`SpecialDate`).
