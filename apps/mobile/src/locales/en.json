@@ -844,6 +844,8 @@
     "makingTitle": "Making your video",
     "almostThere": "Almost there",
     "canLeave": "You can leave this screen — we will let you know.",
+    "queued": "Waiting its turn",
+    "queuedHint": "Another film is being made right now. Yours starts as soon as that one finishes — you can leave this screen.",
     "stageOpening": "Opening",
     "stageScenes": "Scenes",
     "stageMusic": "Adding the music",
