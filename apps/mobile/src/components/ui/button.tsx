@@ -1,11 +1,9 @@
-import { ActivityIndicator, Pressable, View, type PressableProps } from 'react-native';
-import Animated from 'react-native-reanimated';
+import { ActivityIndicator, View, type PressableProps } from 'react-native';
 
 import { colors, fonts, radius } from '../../theme';
+import { AnimatedPressable } from '../motion/animated-pressable';
 import { usePressScale } from '../motion/press';
 import { Text } from './text';
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export type ButtonVariant =
   'primary' | 'secondary' | 'neutral' | 'ghost' | 'destructive' | 'destructiveSolid';
@@ -125,7 +123,9 @@ export function Button({
   // The press animates scale and fill together (`.nha-press`). The hook owns
   // backgroundColor, so the static style below must not set it — except when
   // blocked, where no press can happen and the grey is static by definition.
-  const press = usePressScale(isBlocked ? undefined : { rest: v.bg, pressed: v.bgPressed });
+  const press = usePressScale(
+    isBlocked ? undefined : { background: { rest: v.bg, pressed: v.bgPressed } },
+  );
 
   return (
     <AnimatedPressable

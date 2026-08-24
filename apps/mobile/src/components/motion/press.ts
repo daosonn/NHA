@@ -11,7 +11,7 @@ import { duration, easing, PRESS_SCALE } from '../../theme/motion';
  *
  * Usage — an `Animated` pressable, the style, and the two handlers:
  *
- *     const press = usePressScale({ rest: v.bg, pressed: v.bgPressed });
+ *     const press = usePressScale({ background: { rest: v.bg, pressed: v.bgPressed } });
  *     <AnimatedPressable
  *       style={[base, press.style]}
  *       onPressIn={press.onPressIn}
@@ -19,26 +19,32 @@ import { duration, easing, PRESS_SCALE } from '../../theme/motion';
  *     >
  *
  * When `background` is given the hook owns `backgroundColor` — the static
- * styles must not set it too, or the two fight over the same prop.
+ * styles must not set it too, or the two fight over the same prop. Cards
+ * and rows pass `scale: CARD_PRESS_SCALE` for the shallower dip.
  *
  * A hook rather than a wrapper component on purpose: half the app's
  * tappables are `Pressable`s with their own layout responsibilities, and
  * wrapping them in another view breaks flex parents. The hook composes;
  * a component would compete.
  */
-export function usePressScale(background?: { rest: string; pressed: string }) {
+export function usePressScale(options?: {
+  background?: { rest: string; pressed: string };
+  scale?: number;
+}) {
   const pressed = useSharedValue(false);
+  const background = options?.background;
+  const scaleTo = options?.scale ?? PRESS_SCALE;
 
   const style = useAnimatedStyle(() => {
     const timing = { duration: duration.press, easing: easing.snap };
-    const scale = { transform: [{ scale: withTiming(pressed.value ? PRESS_SCALE : 1, timing) }] };
+    const scale = { transform: [{ scale: withTiming(pressed.value ? scaleTo : 1, timing) }] };
 
     if (background === undefined) return scale;
     return {
       ...scale,
       backgroundColor: withTiming(pressed.value ? background.pressed : background.rest, timing),
     };
-  }, [background?.rest, background?.pressed]);
+  }, [background?.rest, background?.pressed, scaleTo]);
 
   return useMemo(
     () => ({

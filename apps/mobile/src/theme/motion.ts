@@ -24,6 +24,9 @@ export const easing = {
 /** Scale for anything pressable while pressed (`.nha-press`). */
 export const PRESS_SCALE = 0.955;
 
+/** Cards and rows dip less than buttons (`.nha-card:active`). */
+export const CARD_PRESS_SCALE = 0.99;
+
 /**
  * Content entering a screen. Pass the item's index and siblings arrive
  * staggered (`.nha-enter`, `--stagger`); omit it for a lone element.
