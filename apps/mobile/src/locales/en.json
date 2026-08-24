@@ -79,10 +79,7 @@
       "codeLabel": "{{count}}-digit verification code",
       "resendBefore": "Resend code in ",
       "resend": "Resend code",
-      "verify": "Verify",
       "continue": "Continue",
-      "changeEmail": "Change email address",
-      "differentEmail": "Use a different email",
       "wrongCode": "That code is not right. Check it and try again."
     },
     "forgot": {
@@ -98,8 +95,7 @@
       "mismatch": "The two do not match",
       "submit": "Save and sign in",
       "errors": {
-        "noCode": "Start again from the code screen — this one has nothing to send.",
-        "codeExpired": "That code has expired or has already been used. Ask for a new one."
+        "missingEmail": "Start again from the sign-in screen — this one does not know which account to reset."
       }
     },
     "errors": {

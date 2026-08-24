@@ -36,8 +36,9 @@ export default function SignUpScreen() {
   /**
    * Registration returns a token pair immediately — the server has no email
    * confirmation step (`docs/00-shared/api-contract.md`), so this lands
-   * straight in the app. `verify.tsx` stays built and unreachable until that
-   * endpoint exists rather than pretending to check something.
+   * straight in the app rather than pretending to check something. (The old
+   * standalone code screen, `verify.tsx`, was removed 2026-08-24 when the
+   * reset flow folded its code entry into `/reset`.)
    */
   const submit = async () => {
     setSubmitting(true);

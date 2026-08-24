@@ -1,11 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 
 import { auth } from '../../lib/api';
-import type {
-  ConfirmPasswordResetRequest,
-  RequestPasswordResetRequest,
-  VerifyResetCodeRequest,
-} from '../../lib/api';
+import type { ConfirmPasswordResetRequest, RequestPasswordResetRequest } from '../../lib/api';
 
 /**
  * Send the six-digit code.
@@ -19,19 +15,6 @@ import type {
 export function useRequestPasswordReset() {
   return useMutation({
     mutationFn: (body: RequestPasswordResetRequest) => auth.requestPasswordReset(body),
-  });
-}
-
-/**
- * Check the code without spending it.
- *
- * Note the shape: `{ valid: boolean }`, not an error. A wrong code is a
- * **successful request** carrying a "no", so callers have to read the body —
- * a `mutateAsync` that resolves is not proof the code was right.
- */
-export function useVerifyResetCode() {
-  return useMutation({
-    mutationFn: (body: VerifyResetCodeRequest) => auth.verifyResetCode(body),
   });
 }
 

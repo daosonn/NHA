@@ -30,7 +30,7 @@ build the family tree, post content with photos, and view member profiles.
       — done 2026-08-17: merged in PR #2
 - [x] 1.1.6 Đăng xuất (revoke refresh token) — done 2026-08-17: single-use
       refresh rotation + revoke on logout, merged in PR #2
-- [x] 1.1.7 Khôi phục mật khẩu (quên mật khẩu — `PasswordResetToken`; added 2026-08-14, see `database.md`) — API done 2026-08-18 (PR #12); FE nối xong 2026-08-19 (3 màn: gửi mã, kiểm mã, đặt lại)
+- [x] 1.1.7 Khôi phục mật khẩu (quên mật khẩu — `PasswordResetToken`; added 2026-08-14, see `database.md`) — API done 2026-08-18 (PR #12); FE nối xong 2026-08-19 (3 màn: gửi mã, kiểm mã, đặt lại). — đảo thứ tự 2026-08-24: còn 2 màn, mật khẩu trước → mã sau làm bước xác nhận (màn `verify` gộp vào `reset`)
 - [x] 1.1.8 Google login (OAuth authorization code, `OAuthAccount` — customer requirement, added 2026-08-17; see `02-backend/architecture.md`) — done 2026-08-18: backend merged in PR #3, happy path verified end-to-end với credentials thật (consent screen External + test user) — **FE chưa dùng được**: callback trả JSON, không redirect về app (2026-08-20, xem `api-contract.md`); nút social đã gỡ khỏi 3 màn auth
 - [ ] 1.1.9 Facebook login (chung flow OAuth với 1.1.8 — added 2026-08-17; LINE deferred chờ quyền email, X phase 2) — backend merged in PR #3; chờ verify E2E (cần accept tester role trên Meta app); FE chặn cùng lý do với 1.1.8
 
