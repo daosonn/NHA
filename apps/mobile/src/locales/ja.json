@@ -805,6 +805,8 @@
     "makingTitle": "ムービーを作成中",
     "almostThere": "もうすぐ完成",
     "canLeave": "この画面を離れても大丈夫 — できあがったらお知らせします。",
+    "queued": "順番待ちです",
+    "queuedHint": "いま別の映像をつくっています。それが終わったらすぐに始まります — この画面を離れても大丈夫です。",
     "stageOpening": "オープニング",
     "stageScenes": "シーン",
     "stageMusic": "音楽を重ねています",

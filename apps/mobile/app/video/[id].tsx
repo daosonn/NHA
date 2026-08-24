@@ -27,6 +27,9 @@ const GREEN = '#4B9E74';
 
 type StageState = 'done' | 'now' | 'todo';
 
+/** `stage` server đặt cho job đang đợi tới lượt (`video.service.ts`). */
+const STAGE_QUEUED = 'queued';
+
 /**
  * Checklist 11k theo THỨ TỰ TRÌNH CHIẾU (Opening → Scenes → Closing card → Music),
  * suy từ stage thật của worker ('opening'/'closing_prep'/'scene:i/n'/'music').
@@ -36,6 +39,17 @@ function buildChecklist(
   progress: number,
   t: (key: string, opts?: Record<string, unknown>) => string,
 ): { label: string; state: StageState }[] {
+  // Đang đợi tới lượt thì CHƯA có bước nào đang chạy — để "Opening" sáng lên là
+  // nói sai với người đang đọc nó.
+  if (stage === STAGE_QUEUED) {
+    return [
+      { label: t('video.stageOpening'), state: 'todo' },
+      { label: t('video.stageScenes'), state: 'todo' },
+      { label: t('video.stageClosing'), state: 'todo' },
+      { label: t('video.stageMusic'), state: 'todo' },
+    ];
+  }
+
   const m = /^scene:(\d+)\/(\d+)$/.exec(stage ?? '');
   const i = m ? Number(m[1]) : 0;
   const n = m ? Number(m[2]) : 0;
@@ -83,6 +97,12 @@ export default function VideoJobScreen() {
 
   const data = job.data;
   const fileUrl = data?.status === 'DONE' ? video.fileUrl(data.id) : null;
+
+  /**
+   * Máy chỉ dựng 2 video một lúc, cái thứ ba đứng đợi tới lượt. Phải nói ra:
+   * một thanh 0% không nhích là thứ người ta đọc thành "hỏng rồi".
+   */
+  const queued = data?.status === 'PENDING' && data.stage === STAGE_QUEUED;
 
   /**
    * Trên web, `<video>` KHÔNG mang được header Authorization, nên nguồn phát
@@ -183,11 +203,13 @@ export default function VideoJobScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Clapperboard size={16} color={colors.coral.hover} strokeWidth={2.1} />
                 <Text variant="body1" weight="bold" style={{ flex: 1 }}>
-                  {t('video.almostThere')}
+                  {queued ? t('video.queued') : t('video.almostThere')}
                 </Text>
-                <Text variant="body1" weight="bold">
-                  {data.progress}%
-                </Text>
+                {!queued && (
+                  <Text variant="body1" weight="bold">
+                    {data.progress}%
+                  </Text>
+                )}
               </View>
 
               <View
@@ -209,7 +231,7 @@ export default function VideoJobScreen() {
               </View>
 
               <Text variant="caption" color={colors.text.body}>
-                {t('video.canLeave')}
+                {queued ? t('video.queuedHint') : t('video.canLeave')}
               </Text>
             </Card>
 
