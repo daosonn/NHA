@@ -54,6 +54,20 @@ export const exit = {
 } as const;
 
 /**
+ * `.nha-screen` for the native stack — spread into a `Stack`'s
+ * `screenOptions`. The native push *is* the spec's motion (incoming slides
+ * from the right, the outgoing screen parallaxes behind at reduced
+ * opacity), so this configures rather than reimplements it. The duration
+ * is honored on iOS; Android keeps its system curve, and web does not
+ * animate route changes at all — the spec's `.nha-screen` classes exist
+ * for the web demo, not for `react-native-screens`.
+ */
+export const screenTransition = {
+  animation: 'slide_from_right',
+  animationDuration: duration.screen,
+} as const;
+
+/**
  * `nhaToast` — rises with a small overshoot before settling. The bounce
  * lives in the keyframes, so the easing between them stays `settle`.
  */
