@@ -385,6 +385,40 @@ in blush negative space, reading like an envelope opening onto a note
 inside. Coral `#F58B7B` on blush `#FDE7E2`. No gradients or shadows in the
 mark. Holds together down to 16px.
 
+## Motion
+
+> Spec handed off from Claude Design 2026-08-24: `motion/nha-motion.css`
+> (tokens + keyframes, written as web CSS), `motion/nha-cats.svg` (four
+> mascot cats), `motion/README.md` (the designer's usage rules). The CSS
+> does not run in React Native — it is the **reference**; the running
+> implementation is the translation below. When they disagree, the spec
+> wins: fix the translation, don't fork the values.
+
+One vocabulary, three homes:
+
+| Layer          | Where                                | What                                                                                              |
+| -------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| Tokens         | `packages/tokens/src/motion.ts`      | Durations (press 120 · select 200 · sheet 320 · screen 420 · enter 520), stagger 55, 3 easings    |
+| Reanimated map | `apps/mobile/src/theme/motion.ts`    | `easing.settle/bounce/snap`, `enter.up/fade(index)`, `exit.fade/down`, `toastIn`, `pop`           |
+| Primitives     | `apps/mobile/src/components/motion/` | `usePressScale()` — press feedback for anything tappable; more only as shipping screens need them |
+
+Rules, from the handoff:
+
+- **Calm motion for repeated actions** — presses, screen changes, sheets,
+  tabs, chips, AI skeletons. Durations are named for the moment, never
+  typed as numbers in a screen: a one-off `FadeInDown.duration(250)`
+  inline is the motion equivalent of a hex color.
+- **The cats appear only at one-time emotional moments**: waiting on AI
+  for 10s+, empty states, and a just-sent/just-done screen. Never in
+  chrome, never on daily actions. They are not built yet — when one of
+  those moments is, author the needed cat as a `react-native-svg`
+  component from `motion/nha-cats.svg`, animated with the same tokens.
+- **Animate only `transform` and `opacity`** — width/height/top/left
+  stutter on weak devices, which this audience owns.
+- **Reduced motion costs nothing here**: Reanimated defaults every
+  animation to `ReduceMotion.System`, so the OS switch collapses them all
+  centrally. Never override that per-component.
+
 ## Copy
 
 No component writes English into itself. Every user-visible string is a
