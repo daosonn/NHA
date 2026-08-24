@@ -11,7 +11,16 @@ const workspaceRoot = path.resolve(projectRoot, '../..');
 
 const config = getDefaultConfig(projectRoot);
 
-config.watchFolders = [workspaceRoot];
+// Watch only what the app actually imports from outside its own folder:
+// the shared packages and the hoisted dependencies. Watching the whole
+// workspace root made Metro's crawler and file-watcher swallow apps/api's
+// generated Prisma client, apps/ai's .venv (~3k files), apps/web and three
+// node_modules trees — on Windows, without watchman, that is exactly the
+// "every reload takes forever" report (2026-08-24).
+config.watchFolders = [
+  path.resolve(workspaceRoot, 'packages'),
+  path.resolve(workspaceRoot, 'node_modules'),
+];
 
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
