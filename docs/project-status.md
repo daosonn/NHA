@@ -83,8 +83,33 @@ screens.
   blocked twice over: the OAuth callback cannot return tokens to the app, and
   the Meta tester invite is unaccepted. 1.2.4 (empty/loading states) is ours
   and small — `app/memo/[id].tsx` and `app/memo/edit.tsx` have no error
-  state; the AI and video screens merged from `main` are missing several and
-  belong to their author. "Fix lỗi chính" is the remaining sweep.
+  state; the AI and video screens' gaps were closed 2026-08-24 (see below).
+  "Fix lỗi chính" is the remaining sweep.
+
+- **AI-screens UX pass (2026-08-24).** All five AI surfaces (hub, gift ask,
+  gift results, message, card) plus video setup/story got the missing
+  error/empty/loading states, driven by a 7-persona audit and an adversarial
+  review (21 findings fixed). The through-line: no AI failure is silent any
+  more — every mutation surfaces `InlineError` (new shared component) with a
+  retry, a 503 `AI_UNAVAILABLE` now reaches screens as `ApiError.code` /
+  `.isAiUnavailable` and reads as "AI is off", and a failed regenerate keeps
+  the previous results on screen instead of destroying them. Also: message
+  source chips resolve real evidence via the existing `/evidence` route,
+  cards can be saved to the device and the shared post opened, over-limit
+  messages are counted and blocked before the server truncates them, the
+  card renderer skips the salutation for empty names (server + preview now
+  agree), `budgetLabel(0, n)` no longer halves the price floor server-side,
+  and the video storyboard request stops hardcoding `locale: 'ja'`.
+  **One recorded decision was overridden**: the selected `Pill` is now
+  coral-tint + deep-coral text (4.6:1) per design-system contrast rules,
+  replacing solid coral + white (2.4:1, Sơn's 19/08 call) — ratify or revert
+  in `src/components/ai/pill.tsx`. Verified: mobile tsc, api tsc/lint/build,
+  check:i18n (719 keys), prettier on touched files, Metro web bundle, live
+  card render. Left for the backend owner: per-variant labeled evidence refs
+  for messages, localized card salutation (PNG still draws English "Dear"),
+  toName/fromName DTO cap 40 vs 100-char names (mobile clamps for now),
+  thumbnails on `GiftSource`, splitting video create+render (ghost PENDING
+  jobs on render failure), and `mock.py` ignoring `locale`.
 - **Four bugs found by hand in one sitting (2026-08-20)**, all of a kind the
   app should catch itself: a catalogue key printed raw under somebody's name
   (`family.relation.parent` — the field was called `relation` and documented

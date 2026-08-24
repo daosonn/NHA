@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, Minus, PenLine, Plus, Volume2, VolumeX, X } from 'l
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { InlineError } from '../../src/components/ai/inline-error';
 import { AppHeader } from '../../src/components/layout/app-header';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Button } from '../../src/components/ui/button';
@@ -13,6 +14,7 @@ import { Text } from '../../src/components/ui/text';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { useVideoDraft } from '../../src/features/video/draft';
 import { useCreateAndRender } from '../../src/features/video/use-video';
+import { ApiError } from '../../src/lib/api';
 import { thumbnailSource } from '../../src/lib/media-source';
 import { colors, radius, spacing } from '../../src/theme';
 import { useTypeface } from '../../src/theme/typeface';
@@ -366,24 +368,35 @@ export default function VideoStoryScreen() {
                   backgroundColor: colors.background.subtle,
                 }}
               >
+                {/* Chạm biên 3s/8s thì nút mờ đi thay vì kẹp im lặng */}
                 <Pressable
                   onPress={() => patchScene(i, { durationS: Math.max(3, s.durationS - 1) })}
+                  disabled={s.durationS <= 3}
                   accessibilityRole="button"
                   accessibilityLabel={t('video.shorter')}
                   hitSlop={6}
                 >
-                  <Minus size={14} color={colors.text.secondary} strokeWidth={2.4} />
+                  <Minus
+                    size={14}
+                    color={s.durationS <= 3 ? colors.state.disabledText : colors.text.secondary}
+                    strokeWidth={2.4}
+                  />
                 </Pressable>
                 <Text variant="caption" weight="bold">
-                  {Math.round(s.durationS)}s
+                  {t('video.seconds', { count: Math.round(s.durationS) })}
                 </Text>
                 <Pressable
                   onPress={() => patchScene(i, { durationS: Math.min(8, s.durationS + 1) })}
+                  disabled={s.durationS >= 8}
                   accessibilityRole="button"
                   accessibilityLabel={t('video.longer')}
                   hitSlop={6}
                 >
-                  <Plus size={14} color={colors.text.secondary} strokeWidth={2.4} />
+                  <Plus
+                    size={14}
+                    color={s.durationS >= 8 ? colors.state.disabledText : colors.text.secondary}
+                    strokeWidth={2.4}
+                  />
                 </Pressable>
               </View>
             </View>
@@ -400,12 +413,24 @@ export default function VideoStoryScreen() {
         <Text variant="badge" color={colors.text.subtle} style={{ textAlign: 'center' }}>
           {t('video.reorderHint')}
         </Text>
+        {/* Tạo job thất bại — mọi chỉnh sửa vẫn ở local, nói rõ để không ai làm lại từ đầu */}
+        {createAndRender.isError && (
+          <InlineError
+            message={t(
+              createAndRender.error instanceof ApiError && createAndRender.error.isAiUnavailable
+                ? 'video.serviceOff'
+                : 'video.makeError',
+            )}
+            onRetry={make}
+          />
+        )}
         <Button
-          label={createAndRender.isPending ? t('video.making') : t('video.makeVideo')}
+          label={t('video.makeVideo')}
           variant="primary"
           size="large"
           fullWidth
-          disabled={createAndRender.isPending || plan.scenes.length === 0}
+          loading={createAndRender.isPending}
+          disabled={plan.scenes.length === 0}
           onPress={make}
         />
       </ScrollView>

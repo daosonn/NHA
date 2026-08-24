@@ -234,10 +234,16 @@ export class CardService {
       ${corners(t.frame, 84, 58)}
       ${t.deco(t)}
 
-      <!-- gạch ngắn dưới tên + hai chấm nhỏ hai bên, đúng mockup 11g -->
-      <line x1="${W / 2 - 92}" y1="446" x2="${W / 2 + 92}" y2="446" stroke="${t.frame}" stroke-width="2.5"/>
+      <!-- gạch ngắn dưới tên + hai chấm nhỏ hai bên, đúng mockup 11g.
+           Không có tên (deep link) thì bỏ cả gạch — app cũng ẩn dòng chào,
+           preview và PNG phải nói cùng một điều. -->
+      ${
+        input.toName.trim()
+          ? `<line x1="${W / 2 - 92}" y1="446" x2="${W / 2 + 92}" y2="446" stroke="${t.frame}" stroke-width="2.5"/>
       <circle cx="${W / 2 - 108}" cy="446" r="4" fill="${t.accent}"/>
-      <circle cx="${W / 2 + 108}" cy="446" r="4" fill="${t.accent}"/>
+      <circle cx="${W / 2 + 108}" cy="446" r="4" fill="${t.accent}"/>`
+          : ''
+      }
     </svg>`;
 
     const base = path.join(
@@ -300,7 +306,10 @@ export class CardService {
         272,
       );
     }
-    await draw(`Dear ${input.toName}`, 62, t.ink, 344);
+    // Tên rỗng thì không chào ai cả — một dòng "Dear " lơ lửng là lỗi in ấn.
+    if (input.toName.trim()) {
+      await draw(`Dear ${input.toName}`, 62, t.ink, 344);
+    }
 
     // Xuống dòng theo bề rộng hiển thị + kinsoku (tiếng Nhật không có dấu cách)
     const size = 38;

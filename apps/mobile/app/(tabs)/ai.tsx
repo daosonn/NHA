@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { Film, Gift, Mail } from 'lucide-react-native';
+import { CalendarHeart, Film, Gift, Mail, TriangleAlert } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -13,6 +13,7 @@ import { NotificationBell, ScreenTitle } from '../../src/components/layout/heade
 import { Avatar } from '../../src/components/ui/avatar';
 import { Button } from '../../src/components/ui/button';
 import { Card } from '../../src/components/ui/card';
+import { EmptyState } from '../../src/components/ui/empty-state';
 import { IconBadge } from '../../src/components/ui/icon-badge';
 import { Text } from '../../src/components/ui/text';
 import { useActiveFamily } from '../../src/features/family/active-family';
@@ -56,6 +57,12 @@ function weekdayIndex(isoDate: string): number | null {
   return new Date(y, m - 1, d).getDay();
 }
 
+/** Danh tính ổn định của một dịp — làm key cho hàng và cho lựa chọn nổi bật.
+ * Title luôn góp mặt: một người có thể có hai dịp CUSTOM cùng ngày, chỉ khác tên. */
+function dateKey(item: SpecialDateItem): string {
+  return `${item.type}-${item.nextOccurrence}-${item.members[0]?.memberId ?? ''}-${item.title ?? ''}`;
+}
+
 /**
  * The AI tab — the "Present" home of the mockups.
  *
@@ -76,13 +83,22 @@ export default function AiScreen() {
   });
   const occasionLabel = useOccasionLabel();
   const [showAll, setShowAll] = useState(false);
+  // Bấm một hàng "Also this season" thì dịp đó lên thẻ nổi bật (xem bên dưới).
+  const [featuredKey, setFeaturedKey] = useState<string | null>(null);
 
   const items = dates.data?.items ?? [];
   const thisMonth = items.filter((i) => i.daysUntil <= 31).length;
-  const featured: SpecialDateItem | undefined = items[0];
-  const rest = items.slice(1, showAll ? undefined : 3);
+  // Thẻ nổi bật cần một gương mặt: chỉ dịp CÓ thành viên mới lên thẻ. Dịp CUSTOM
+  // không người vẫn hợp lệ — nó nằm trong danh sách, và không chiếm chỗ của thẻ.
+  const featured: SpecialDateItem | undefined =
+    items.find((i) => dateKey(i) === featuredKey && i.members.length > 0) ??
+    items.find((i) => i.members.length > 0);
 
   const featuredMember = featured?.members[0] ?? null;
+  const featuredShown = Boolean(featured && featuredMember);
+  const others = featuredShown ? items.filter((i) => i !== featured) : items;
+  const restCap = featuredShown ? 2 : 4;
+  const rest = others.slice(0, showAll ? undefined : restCap);
   const featuredOccasion = featured
     ? `${occasionLabel(featured)}${formatDayMonth(featured.nextOccurrence) ? ` · ${formatDayMonth(featured.nextOccurrence)}` : ''}`
     : null;
@@ -99,6 +115,7 @@ export default function AiScreen() {
         .join(' ') + ` · ${t('ai.daysAway', { count: featured.daysUntil })}`
     : null;
 
+  /** Chip trên thẻ nổi bật — mang sẵn người và dịp. Các hàng MAKE SOMETHING mở maker trống. */
   const pushMaker = (pathname: '/ai/gifts' | '/ai/message' | '/video/setup') =>
     router.push({
       pathname,
@@ -139,10 +156,40 @@ export default function AiScreen() {
           >
             {t('ai.hub.comingUp')}
           </Text>
-          <Text variant="body2" color={colors.text.muted}>
-            {t('ai.hub.datesThisMonth', { count: thisMonth })}
-          </Text>
+          {/* Chỉ đếm khi đã tải xong — đang tải hay lỗi mà nói "0 dates" là nói sai. */}
+          {dates.isSuccess && items.length > 0 && (
+            <Text variant="body2" color={colors.text.muted}>
+              {t('ai.hub.datesThisMonth', { count: thisMonth })}
+            </Text>
+          )}
         </View>
+
+        {/* Lỗi tải có lối thử lại; MAKE SOMETHING bên dưới vẫn dùng được.
+            Chỉ khi KHÔNG còn dữ liệu cũ — refetch nền thất bại trên cache còn
+            tốt thì nội dung vẫn đứng, không chồng thêm một "load failed". */}
+        {dates.isError && !dates.data && (
+          <EmptyState
+            renderIcon={({ size, color }) => (
+              <TriangleAlert size={size} color={color} strokeWidth={2} />
+            )}
+            title={t('ai.hub.loadFailed')}
+            actionLabel={t('common.retry')}
+            onActionPress={() => void dates.refetch()}
+          />
+        )}
+
+        {/* Mốc ngày sinh ra từ ngày sinh trên hồ sơ — chưa có thì chỉ đường sang gia đình. */}
+        {dates.isSuccess && items.length === 0 && (
+          <EmptyState
+            renderIcon={({ size, color }) => (
+              <CalendarHeart size={size} color={color} strokeWidth={2} />
+            )}
+            title={t('ai.hub.noDatesTitle')}
+            description={t('ai.hub.noDatesBody')}
+            actionLabel={t('ai.hub.noDatesAction')}
+            onActionPress={() => router.push('/family')}
+          />
+        )}
 
         {/* ---------- featured: the next date that needs a decision ---------- */}
         {featured && featuredMember && (
@@ -235,10 +282,11 @@ export default function AiScreen() {
               >
                 {t('ai.hub.alsoThisSeason')}
               </Text>
-              {items.length > 3 && (
+              {others.length > restCap && (
                 <Pressable
                   onPress={() => setShowAll((v) => !v)}
                   accessibilityRole="button"
+                  accessibilityState={{ expanded: showAll }}
                   hitSlop={8}
                 >
                   <Text variant="caption" weight="semibold" color={colors.coral.hover}>
@@ -249,17 +297,27 @@ export default function AiScreen() {
             </View>
 
             <Card padding={8} style={{ gap: 2 }}>
+              {/* Bấm một hàng để đưa dịp đó lên thẻ nổi bật — dịp nào cũng có đủ ba chip. */}
               {rest.map((item, index) => (
-                <View
-                  key={`${item.type}-${item.nextOccurrence}-${item.members[0]?.memberId ?? index}`}
-                  style={{
+                <Pressable
+                  key={dateKey(item)}
+                  // Dịp không có thành viên không lên thẻ được — hàng đó đứng yên
+                  // thay vì bấm vào mà thẻ nổi bật biến mất.
+                  disabled={item.members.length === 0}
+                  onPress={() => setFeaturedKey(dateKey(item))}
+                  accessibilityRole={item.members.length > 0 ? 'button' : undefined}
+                  style={({ pressed }) => ({
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: 11,
                     padding: 6,
                     borderTopWidth: index === 0 ? 0 : 1,
                     borderTopColor: colors.state.borderDefault,
-                  }}
+                    backgroundColor:
+                      pressed && item.members.length > 0
+                        ? colors.background.surfaceSoft
+                        : 'transparent',
+                  })}
                 >
                   <DateTile day={item.day} month={t(`date.months.${item.month}`)} />
                   <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
@@ -277,7 +335,7 @@ export default function AiScreen() {
                     foreground={colors.text.muted}
                     renderIcon={specialDateIcon(item.type)}
                   />
-                </View>
+                </Pressable>
               ))}
             </Card>
           </View>
@@ -300,7 +358,7 @@ export default function AiScreen() {
             ))}
             title={t('ai.giftIdeas')}
             subtitle={t('ai.hub.giftIdeasDesc')}
-            onPress={() => pushMaker('/ai/gifts')}
+            onPress={() => router.push('/ai/gifts')}
           />
           <SelectRow
             leading={makeTile(MAKE_TILES.message, (p) => (
@@ -308,7 +366,7 @@ export default function AiScreen() {
             ))}
             title={t('ai.hub.messageCard')}
             subtitle={t('ai.hub.messageCardDesc')}
-            onPress={() => pushMaker('/ai/message')}
+            onPress={() => router.push('/ai/message')}
           />
           <SelectRow
             leading={makeTile(MAKE_TILES.video, (p) => (
@@ -316,7 +374,7 @@ export default function AiScreen() {
             ))}
             title={t('ai.hub.memoryVideo')}
             subtitle={t('ai.hub.memoryVideoDesc')}
-            onPress={() => pushMaker('/video/setup')}
+            onPress={() => router.push('/video/setup')}
           />
         </View>
       </ScrollView>

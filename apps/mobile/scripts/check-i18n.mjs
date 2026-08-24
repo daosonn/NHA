@@ -21,8 +21,9 @@ const LITERAL = /\bt\(\s*'([A-Za-z0-9_.]+)'/g;
 const INDIRECT =
   /'((?:common|nav|auth|home|family|invite|member|moment|ai|settings|date|video)\.[A-Za-z0-9_.]+)'/g;
 
-/** Plural keys live in the catalogue as `key_one` / `key_other`. */
-const SUFFIXES = ['', '_one', '_other'];
+/** Plural keys live in the catalogue as `key_one` / `key_other`, plus the
+ * optional `key_zero` override i18next prefers when count === 0. */
+const SUFFIXES = ['', '_zero', '_one', '_other'];
 
 /**
  * Groups whose keys are reached by a computed name, so no literal call site
@@ -122,7 +123,7 @@ for (const [locale, keys] of catalogues) {
   }
 
   for (const key of keys) {
-    const base = key.replace(/_(one|other)$/, '');
+    const base = key.replace(/_(zero|one|other)$/, '');
     if (DYNAMIC.some((prefix) => key.startsWith(prefix))) continue;
     if (!used.has(base) && !used.has(key)) {
       problems.push(`unused in ${locale}.json: ${key}`);
