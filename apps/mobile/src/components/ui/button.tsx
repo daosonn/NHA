@@ -1,7 +1,11 @@
 import { ActivityIndicator, Pressable, View, type PressableProps } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { colors, fonts, radius } from '../../theme';
+import { usePressScale } from '../motion/press';
 import { Text } from './text';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export type ButtonVariant =
   'primary' | 'secondary' | 'neutral' | 'ghost' | 'destructive' | 'destructiveSolid';
@@ -106,6 +110,8 @@ export function Button({
   align = 'start',
   renderIcon,
   disabled,
+  onPressIn,
+  onPressOut,
   ...rest
 }: ButtonProps) {
   const v = VARIANTS[variant];
@@ -116,13 +122,26 @@ export function Button({
   const fg = isBlocked ? DISABLED.fg : v.fg;
   const borderColor = isBlocked ? (v.border ? DISABLED.border : undefined) : v.border;
 
+  // The press animates scale and fill together (`.nha-press`). The hook owns
+  // backgroundColor, so the static style below must not set it — except when
+  // blocked, where no press can happen and the grey is static by definition.
+  const press = usePressScale(isBlocked ? undefined : { rest: v.bg, pressed: v.bgPressed });
+
   return (
-    <Pressable
+    <AnimatedPressable
       {...rest}
       disabled={isDisabled}
       accessibilityRole="button"
       accessibilityState={{ disabled: isDisabled, busy: loading }}
-      style={({ pressed }) => [
+      onPressIn={(event) => {
+        press.onPressIn();
+        onPressIn?.(event);
+      }}
+      onPressOut={(event) => {
+        press.onPressOut();
+        onPressOut?.(event);
+      }}
+      style={[
         {
           height: s.height,
           paddingHorizontal: s.px,
@@ -132,9 +151,10 @@ export function Button({
           justifyContent: 'center',
           gap: 8,
           alignSelf: fullWidth ? 'stretch' : align === 'center' ? 'center' : 'flex-start',
-          backgroundColor: isBlocked ? DISABLED.bg : pressed ? v.bgPressed : v.bg,
         },
+        isBlocked && { backgroundColor: DISABLED.bg },
         borderColor !== undefined && { borderWidth: 1.5, borderColor },
+        press.style,
       ]}
     >
       {loading ? (
@@ -149,6 +169,6 @@ export function Button({
       >
         {label}
       </Text>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
