@@ -1,12 +1,13 @@
 import { Plus } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { useOccasionLabel } from '../../features/ai/use-special-dates';
 import type { SpecialDateItem } from '../../lib/api';
 import { formatDayMonth } from '../../lib/date';
 import { colors, radius } from '../../theme';
+import { Button } from '../ui/button';
 import { Text } from '../ui/text';
 import { TextField } from '../ui/text-field';
 import { DateTile } from './date-tile';
@@ -21,6 +22,10 @@ export type OccasionSheetProps = {
   items: SpecialDateItem[];
   memberId: string | null;
   onSelect: (choice: OccasionChoice) => void;
+  /** Query state of the caller's dates fetch — free text below stays usable either way. */
+  loading?: boolean;
+  error?: boolean;
+  onRetry?: () => void;
 };
 
 /**
@@ -28,7 +33,16 @@ export type OccasionSheetProps = {
  * — "Birthday 30 Aug · in 16 days" — plus a free-text line for anything
  * the calendar does not know about.
  */
-export function OccasionSheet({ visible, onClose, items, memberId, onSelect }: OccasionSheetProps) {
+export function OccasionSheet({
+  visible,
+  onClose,
+  items,
+  memberId,
+  onSelect,
+  loading = false,
+  error = false,
+  onRetry,
+}: OccasionSheetProps) {
   const { t } = useTranslation();
   const occasionLabel = useOccasionLabel();
   const [custom, setCustom] = useState('');
@@ -46,35 +60,58 @@ export function OccasionSheet({ visible, onClose, items, memberId, onSelect }: O
 
   return (
     <Sheet visible={visible} onClose={onClose} title={t('ai.occasionSheet.title')}>
-      {sorted.map((item) => {
-        const label = occasionLabel(item);
-        const dayMonth = formatDayMonth(item.nextOccurrence);
-        return (
-          <Pressable
-            key={`${item.type}-${item.nextOccurrence}-${item.members[0]?.memberId ?? ''}`}
-            onPress={() => pick({ label: `${label}${dayMonth ? ` · ${dayMonth}` : ''}`, date: item.nextOccurrence })}
-            accessibilityRole="button"
-            style={({ pressed }) => ({
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 11,
-              padding: 8,
-              borderRadius: radius['2xl'],
-              backgroundColor: pressed ? colors.background.subtle : 'transparent',
-            })}
-          >
-            <DateTile day={item.day} month={t(`date.months.${item.month}`)} />
-            <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
-              <Text variant="body2" weight="semibold" numberOfLines={1}>
-                {label}
-              </Text>
-              <Text variant="caption" color={colors.text.muted}>
-                {t('ai.daysAway', { count: item.daysUntil })}
-              </Text>
-            </View>
-          </Pressable>
-        );
-      })}
+      {loading ? (
+        <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+          <ActivityIndicator color={colors.coral.primary} />
+        </View>
+      ) : error ? (
+        <View style={{ paddingVertical: 8, gap: 10 }}>
+          <Text variant="body2" color={colors.text.body}>
+            {t('ai.occasionSheet.loadFailed')}
+          </Text>
+          <Button label={t('common.retry')} variant="secondary" size="small" onPress={onRetry} />
+        </View>
+      ) : sorted.length === 0 ? (
+        // Không có ngày lưu sẵn — nói rõ để ô nhập bên dưới thành lối đi chính.
+        <Text variant="caption" color={colors.text.muted} style={{ paddingVertical: 8 }}>
+          {t('ai.occasionSheet.empty')}
+        </Text>
+      ) : (
+        sorted.map((item) => {
+          const label = occasionLabel(item);
+          const dayMonth = formatDayMonth(item.nextOccurrence);
+          return (
+            <Pressable
+              key={`${item.type}-${item.nextOccurrence}-${item.members[0]?.memberId ?? ''}`}
+              onPress={() =>
+                pick({
+                  label: `${label}${dayMonth ? ` · ${dayMonth}` : ''}`,
+                  date: item.nextOccurrence,
+                })
+              }
+              accessibilityRole="button"
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 11,
+                padding: 8,
+                borderRadius: radius['2xl'],
+                backgroundColor: pressed ? colors.background.subtle : 'transparent',
+              })}
+            >
+              <DateTile day={item.day} month={t(`date.months.${item.month}`)} />
+              <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
+                <Text variant="body2" weight="semibold" numberOfLines={1}>
+                  {label}
+                </Text>
+                <Text variant="caption" color={colors.text.muted}>
+                  {t('ai.daysAway', { count: item.daysUntil })}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })
+      )}
 
       {/* Dịp lịch không biết — gia đình tự thêm. Dấu "+" nói rõ đây là thêm mới. */}
       <View style={{ height: 1, backgroundColor: colors.state.borderDefault, marginTop: 6 }} />
@@ -86,7 +123,9 @@ export function OccasionSheet({ visible, onClose, items, memberId, onSelect }: O
             value={custom}
             onChangeText={setCustom}
             placeholder={t('ai.occasionSheet.placeholder')}
-            onSubmitEditing={() => custom.trim().length > 0 && pick({ label: custom.trim(), date: null })}
+            onSubmitEditing={() =>
+              custom.trim().length > 0 && pick({ label: custom.trim(), date: null })
+            }
             returnKeyType="done"
           />
         </View>
@@ -102,7 +141,11 @@ export function OccasionSheet({ visible, onClose, items, memberId, onSelect }: O
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor:
-              custom.trim().length === 0 ? colors.state.disabledBg : pressed ? colors.coral.dark : colors.coral.primary,
+              custom.trim().length === 0
+                ? colors.state.disabledBg
+                : pressed
+                  ? colors.coral.dark
+                  : colors.coral.primary,
           })}
         >
           <Plus

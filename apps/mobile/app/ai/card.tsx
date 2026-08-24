@@ -1,11 +1,12 @@
 import { useMutation } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Check, Flower2, PenLine, Share2 } from 'lucide-react-native';
+import { Check, Download, Flower2, PenLine, Share2 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { InlineError } from '../../src/components/ai/inline-error';
 import { Pill } from '../../src/components/ai/pill';
 import { SectionLabel } from '../../src/components/ai/section-label';
 import { AppHeader } from '../../src/components/layout/app-header';
@@ -13,10 +14,12 @@ import { BackButton, ScreenTitle } from '../../src/components/layout/header-slot
 import { Button } from '../../src/components/ui/button';
 import { Text } from '../../src/components/ui/text';
 import { TextField } from '../../src/components/ui/text-field';
+import { useToast } from '../../src/components/ui/toast';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { useSession } from '../../src/features/auth/session';
-import { ai, posts } from '../../src/lib/api';
+import { ai, apiAccessToken, media, posts } from '../../src/lib/api';
 import type { MessageVariant } from '../../src/lib/api';
+import { downloadAuthenticated } from '../../src/lib/download';
 import { mediaSource } from '../../src/lib/media-source';
 import { colors, radius, spacing } from '../../src/theme';
 
@@ -96,6 +99,7 @@ const LENGTH_KEY: Record<MessageVariant['length'], string> = {
 export default function CardScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const toast = useToast();
   const { familyId } = useActiveFamily();
   const { user } = useSession();
   const params = useLocalSearchParams<{
@@ -127,16 +131,30 @@ export default function CardScreen() {
   );
   const [mediaId, setMediaId] = useState<string | null>(null);
   const [sharedPostId, setSharedPostId] = useState<string | null>(null);
+  const [savedToDevice, setSavedToDevice] = useState(false);
+  // PNG tải hỏng ≠ PNG không tồn tại: giữ mediaId (nút chia sẻ/lưu còn sống),
+  // chỉ quay hình về preview sống.
+  const [imageFailed, setImageFailed] = useState(false);
 
-  const toName = params.toName ?? '';
-  const fromName = user?.name ?? '';
+  // Server DTO giới hạn 40 ký tự cho hai tên (displayName cho phép tới 100) —
+  // không cắt thì "Save the card" 400 vĩnh viễn với tên dài. Cắt hiển thị và
+  // cắt payload cùng một chỗ để preview và PNG nói cùng một điều.
+  const toName = (params.toName ?? '').slice(0, 40).trim();
+  const fromName = (user?.name ?? '').slice(0, 40).trim();
 
   const pickLength = (l: MessageVariant['length']) => {
     setLength(l);
     const v = variants.find((x) => x.length === l);
     if (v) setMessage(v.text);
+    discardRender();
+  };
+
+  /** Mọi chỉnh sửa (chữ, mẫu, độ dài) làm bản render cũ — và cả lỗi cũ — hết hiệu lực. */
+  const discardRender = () => {
     setMediaId(null);
     setSharedPostId(null);
+    setImageFailed(false);
+    render.reset();
   };
 
   const render = useMutation({
@@ -146,9 +164,14 @@ export default function CardScreen() {
         message: message.trim(),
         toName,
         fromName,
-        heading: params.occasion ?? undefined,
+        // DTO cap 80 — dịp tự đặt có thể dài hơn, cắt để không 400
+        heading: params.occasion ? params.occasion.slice(0, 80) : undefined,
       }),
-    onSuccess: (r) => setMediaId(r.media_id),
+    onSuccess: (r) => {
+      setMediaId(r.media_id);
+      setSavedToDevice(false);
+      setImageFailed(false);
+    },
   });
 
   const share = useMutation({
@@ -162,7 +185,35 @@ export default function CardScreen() {
     onSuccess: (p) => setSharedPostId(p.id),
   });
 
+  // Lưu PNG về máy — cùng pattern với `app/video/[id].tsx` (web: blob + bearer,
+  // native: import động expo-media-library vì nó không có module web).
+  const saveToDevice = useMutation({
+    mutationFn: async () => {
+      if (!mediaId) return;
+      const url = media.streamUrl(mediaId);
+      if (Platform.OS === 'web') {
+        await downloadAuthenticated(url, 'nha-card.png', apiAccessToken());
+        return;
+      }
+      const [MediaLibrary, FileSystem] = await Promise.all([
+        import('expo-media-library'),
+        import('expo-file-system/legacy'),
+      ]);
+      const { granted } = await MediaLibrary.requestPermissionsAsync();
+      if (!granted) throw new Error('permission');
+      const target = `${FileSystem.cacheDirectory}nha-card-${mediaId}.png`;
+      const dl = await FileSystem.downloadAsync(url, target, {
+        headers: { authorization: `Bearer ${apiAccessToken() ?? ''}` },
+      });
+      await MediaLibrary.saveToLibraryAsync(dl.uri);
+    },
+    onSuccess: () => setSavedToDevice(true),
+    onError: () => toast.failure(t('ai.card.saveFailed')),
+  });
+
   const active = TEMPLATES.find((x) => x.id === template)!;
+  // Vượt khuôn mẫu đang chọn bao nhiêu ký tự (>0 là quá dài).
+  const overBy = message.trim().length - active.maxChars;
 
   return (
     <View className="flex-1 bg-page">
@@ -208,13 +259,13 @@ export default function CardScreen() {
           {TEMPLATES.map((tp) => {
             const selected = tp.id === template;
             const fits = message.trim().length > 0 && message.trim().length <= tp.maxChars;
+            const over = message.trim().length - tp.maxChars;
             return (
               <Pressable
                 key={tp.id}
                 onPress={() => {
                   setTemplate(tp.id);
-                  setMediaId(null);
-                  setSharedPostId(null);
+                  discardRender();
                 }}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
@@ -240,18 +291,41 @@ export default function CardScreen() {
                         top: 5,
                         left: 5,
                         paddingHorizontal: 6,
-                        height: 15,
+                        height: 16,
                         justifyContent: 'center',
                         borderRadius: radius.full,
-                        backgroundColor: colors.coral.primary,
+                        backgroundColor: colors.coral.light,
                       }}
                     >
                       <Text
                         weight="bold"
-                        color={colors.text.white}
-                        style={{ fontSize: 8, lineHeight: 10 }}
+                        color={colors.coral.deep}
+                        style={{ fontSize: 10, lineHeight: 12 }}
                       >
                         {t('ai.card.fits')}
+                      </Text>
+                    </View>
+                  )}
+                  {/* quá khuôn mẫu này bao nhiêu ký tự — để so nhanh giữa 5 mẫu */}
+                  {over > 0 && (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        top: 5,
+                        left: 5,
+                        paddingHorizontal: 6,
+                        height: 16,
+                        justifyContent: 'center',
+                        borderRadius: radius.full,
+                        backgroundColor: colors.background.subtle,
+                      }}
+                    >
+                      <Text
+                        weight="semibold"
+                        color={colors.text.muted}
+                        style={{ fontSize: 10, lineHeight: 12 }}
+                      >
+                        {`−${over}`}
                       </Text>
                     </View>
                   )}
@@ -306,11 +380,15 @@ export default function CardScreen() {
         </ScrollView>
 
         {/* Live preview: PNG thật sau khi render, còn lại là preview View có hoa góc */}
-        {mediaId ? (
+        {mediaId && !imageFailed ? (
           <Image
             source={mediaSource(mediaId)}
             style={{ width: '100%', aspectRatio: 1080 / 1520, borderRadius: radius.xl }}
             contentFit="cover"
+            transition={150}
+            // PNG tải hỏng thì quay về preview sống thay vì ô trống — nhưng PNG
+            // vẫn tồn tại trên server, nên trạng thái đã-lưu/chia-sẻ giữ nguyên.
+            onError={() => setImageFailed(true)}
           />
         ) : (
           <View
@@ -366,32 +444,52 @@ export default function CardScreen() {
                   </Text>
                 )}
 
-                <Text
-                  serif
-                  weight="bold"
-                  color={active.ink}
-                  style={{ textAlign: 'center', fontSize: 23, lineHeight: 29, fontStyle: 'italic' }}
-                >
-                  {t('ai.card.dear', { name: toName })}
-                </Text>
+                {/* vào bằng deep link thì không có tên — bỏ hẳn dòng "Dear" */}
+                {toName !== '' && (
+                  <>
+                    <Text
+                      serif
+                      weight="bold"
+                      color={active.ink}
+                      style={{
+                        textAlign: 'center',
+                        fontSize: 23,
+                        lineHeight: 29,
+                        fontStyle: 'italic',
+                      }}
+                    >
+                      {t('ai.card.dear', { name: toName })}
+                    </Text>
 
-                {/* gạch ngắn + hai chấm dưới tên */}
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 7,
-                  }}
-                >
-                  <View
-                    style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: active.accent }}
-                  />
-                  <View style={{ width: 74, height: 1.5, backgroundColor: active.frame }} />
-                  <View
-                    style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: active.accent }}
-                  />
-                </View>
+                    {/* gạch ngắn + hai chấm dưới tên */}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 7,
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 4,
+                          height: 4,
+                          borderRadius: 2,
+                          backgroundColor: active.accent,
+                        }}
+                      />
+                      <View style={{ width: 74, height: 1.5, backgroundColor: active.frame }} />
+                      <View
+                        style={{
+                          width: 4,
+                          height: 4,
+                          borderRadius: 2,
+                          backgroundColor: active.accent,
+                        }}
+                      />
+                    </View>
+                  </>
+                )}
 
                 <Text
                   variant="body2"
@@ -422,10 +520,11 @@ export default function CardScreen() {
           value={message}
           onChangeText={(v) => {
             setMessage(v);
-            setMediaId(null);
-            setSharedPostId(null);
+            discardRender();
           }}
           multiline
+          hint={message.trim().length === 0 ? t('ai.card.emptyHint') : undefined}
+          error={overBy > 0 ? t('ai.card.tooLong', { count: overBy }) : undefined}
           renderIcon={({ size, color }) => <PenLine size={size} color={color} strokeWidth={2.1} />}
         />
 
@@ -434,23 +533,31 @@ export default function CardScreen() {
           <View style={{ flex: 1 }}>
             <Button
               label={
-                mediaId
-                  ? t('ai.card.savedCard')
-                  : render.isPending
-                    ? t('ai.card.rendering')
+                render.isPending
+                  ? t('ai.card.rendering')
+                  : mediaId
+                    ? t('ai.card.savedCard')
                     : t('ai.card.save')
               }
               variant="primary"
               size="large"
               fullWidth
-              disabled={!familyId || message.trim().length === 0 || render.isPending || !!mediaId}
+              loading={render.isPending}
+              // vẫn bấm được khi đã lưu — bấm lại là render lại, không phải nút chết
+              disabled={!familyId || message.trim().length === 0 || overBy > 0}
               onPress={() => render.mutate()}
+              renderIcon={
+                mediaId
+                  ? ({ size, color }) => <Check size={size} color={color} strokeWidth={2.6} />
+                  : undefined
+              }
             />
           </View>
           <Pressable
             onPress={() => mediaId && !sharedPostId && !share.isPending && share.mutate()}
             accessibilityRole="button"
-            accessibilityLabel={t('ai.card.share')}
+            accessibilityLabel={sharedPostId ? t('ai.card.shared') : t('ai.card.share')}
+            accessibilityState={{ busy: share.isPending }}
             disabled={!mediaId || !!sharedPostId || share.isPending}
             style={({ pressed }) => ({
               width: 52,
@@ -464,7 +571,14 @@ export default function CardScreen() {
             })}
           >
             {sharedPostId ? (
-              <Check size={20} color={colors.coral.hover} strokeWidth={2.4} />
+              // xanh "đã xong" — coral để dành cho hành động chính
+              <Check size={20} color={colors.themes.hobbies.text} strokeWidth={2.4} />
+            ) : share.isPending ? (
+              <ActivityIndicator
+                size="small"
+                color={colors.coral.brand}
+                style={{ width: 16, height: 16 }}
+              />
             ) : (
               <Share2
                 size={20}
@@ -475,10 +589,48 @@ export default function CardScreen() {
           </Pressable>
         </View>
 
+        {/* render hỏng: nói ra + cho bấm thử lại ngay tại chỗ */}
+        {render.isError && (
+          <InlineError message={t('ai.card.error')} onRetry={() => render.mutate()} />
+        )}
+
+        {share.isError && mediaId !== null && sharedPostId === null && (
+          <InlineError message={t('ai.card.shareError')} onRetry={() => share.mutate()} />
+        )}
+
+        {/* PNG đã có thật thì mới lưu về máy được */}
+        {mediaId && (
+          <Button
+            label={savedToDevice ? t('ai.card.savedToPhotos') : t('ai.card.saveToPhotos')}
+            variant="neutral"
+            size="large"
+            fullWidth
+            loading={saveToDevice.isPending}
+            disabled={savedToDevice}
+            onPress={() => saveToDevice.mutate()}
+            renderIcon={({ size, color }) =>
+              savedToDevice ? (
+                <Check size={size} color={color} strokeWidth={2.6} />
+              ) : (
+                <Download size={size} color={color} strokeWidth={2.1} />
+              )
+            }
+          />
+        )}
+
         {sharedPostId && (
-          <Text variant="badge" color={colors.text.subtle} style={{ textAlign: 'center' }}>
-            {t('ai.card.shared')}
-          </Text>
+          <View style={{ alignItems: 'center', gap: 2 }}>
+            <Text variant="caption" color={colors.text.secondary} style={{ textAlign: 'center' }}>
+              {t('ai.card.shared')}
+            </Text>
+            <Button
+              label={t('ai.card.viewPost')}
+              variant="ghost"
+              size="small"
+              align="center"
+              onPress={() => router.push(`/post/${sharedPostId}`)}
+            />
+          </View>
         )}
       </ScrollView>
     </View>
