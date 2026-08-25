@@ -785,7 +785,7 @@
   },
   "omoide": {
     "summary": "{{photos}} photos by {{people}} people",
-    "openMoment": "Open the moment this photo belongs to",
+    "openMoment": "View this photo full screen",
     "loadFailed": "Could not load the photos.",
     "emptyTitle": "No photos yet",
     "emptyBody": "Everything the family shares with a photo or a video shows up here.",
@@ -988,7 +988,8 @@
       "deleteExplain": "The album goes; the photos stay where they came from."
     },
     "item": {
-      "open": "Photo options",
+      "open": "View this photo full screen",
+      "actions": "Photo options",
       "setCover": "Use as cover",
       "isCover": "This is the cover",
       "remove": "Remove from album"
@@ -1019,7 +1020,8 @@
       "eventIn": "{{what}} is in {{count}} day",
       "eventIn_other": "{{what}} is in {{count}} days",
       "care": "It has been a while since you heard from {{name}}",
-      "aiSuggestion": "A new suggestion is waiting for you"
+      "aiSuggestion": "A new suggestion is waiting for you",
+      "videoDone": "Your video “{{title}}” is ready"
     }
   }
 }

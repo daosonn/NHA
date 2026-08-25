@@ -107,7 +107,7 @@ export default function NotificationSettingsScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton fallback="/settings" />}
         center={<ScreenTitle title={t('settings.notifications.title')} />}
       />
 

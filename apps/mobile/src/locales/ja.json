@@ -754,7 +754,7 @@
   },
   "omoide": {
     "summary": "{{people}}人が投稿した写真 {{photos}}枚",
-    "openMoment": "この写真の投稿を開く",
+    "openMoment": "写真を大きく表示",
     "loadFailed": "写真を読み込めませんでした。",
     "emptyTitle": "まだ写真がありません",
     "emptyBody": "家族が写真や動画を共有すると、ここに集まります。",
@@ -955,7 +955,8 @@
       "deleteExplain": "アルバムだけが消えます。写真は元の場所に残ります。"
     },
     "item": {
-      "open": "写真の操作",
+      "open": "写真を大きく表示",
+      "actions": "写真の操作",
       "setCover": "表紙にする",
       "isCover": "表紙になっています",
       "remove": "アルバムから外す"
@@ -984,7 +985,8 @@
       "eventToday": "今日は{{what}}です",
       "eventIn_other": "{{what}}まであと{{count}}日",
       "care": "{{name}}さんとしばらく連絡をとっていません",
-      "aiSuggestion": "新しい提案が届いています"
+      "aiSuggestion": "新しい提案が届いています",
+      "videoDone": "動画「{{title}}」ができあがりました"
     }
   }
 }

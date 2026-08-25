@@ -46,7 +46,7 @@ export default function MemberScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton />}
         center={<ScreenTitle title={profile.displayName} />}
         right={<NotificationBell />}
         paddingRight={spacing.lg}

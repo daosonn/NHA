@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { safeBack } from '../src/lib/back';
 import { Hash, UsersRound } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -61,7 +62,7 @@ export default function CreateFamilyScreen() {
         await join.mutateAsync({ inviteCode: code.trim().toUpperCase() });
       }
       // Back to Home, which now has a family to show.
-      router.back();
+      safeBack(router, '/');
     } catch {
       // Rendered from `active.error` below; nothing to do here.
     }
@@ -69,7 +70,7 @@ export default function CreateFamilyScreen() {
 
   return (
     <FormScreen
-      onBack={() => router.back()}
+      onBack={() => safeBack(router, '/')}
       footer={
         <>
           {active.error !== null && (

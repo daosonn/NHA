@@ -24,6 +24,8 @@ export function payloadOf(item: NotificationDetail): NotificationPayload {
     title: str('title'),
     occursOn: str('occursOn'),
     daysUntil: num('daysUntil'),
+    // server viết snake_case (video.service tạo thông báo video_done)
+    videoJobId: str('video_job_id'),
   };
 }
 
@@ -85,13 +87,28 @@ export function notificationLine(item: NotificationDetail): NotificationLine {
         values: { name: payload.displayName ?? '' },
       };
 
+    case 'AI_SUGGESTION':
+      // "Video kỷ niệm đã xong" cũng đi qua type này — trước đây nó rơi vào
+      // câu chung "A new suggestion is waiting for you": người dùng render
+      // video 3 phút xong nhận một dòng chẳng nói gì về video.
+      if (payload.kind === 'video_done') {
+        return {
+          key: 'notifications.types.videoDone',
+          values: { title: payload.title ?? '' },
+        };
+      }
+      return { key: 'notifications.types.aiSuggestion', values: {} };
+
     default:
       return { key: 'notifications.types.aiSuggestion', values: {} };
   }
 }
 
 export type NotificationTarget =
-  { kind: 'post'; id: string } | { kind: 'member'; id: string } | null;
+  | { kind: 'post'; id: string }
+  | { kind: 'member'; id: string }
+  | { kind: 'video'; id: string }
+  | null;
 
 /**
  * Where tapping it goes, or nothing.
@@ -103,6 +120,10 @@ export type NotificationTarget =
 export function notificationTarget(item: NotificationDetail): NotificationTarget {
   const payload = payloadOf(item);
 
+  // Video xong thì mở đúng màn video — hàng này từng bị disabled vì target null.
+  if (payload.kind === 'video_done' && payload.videoJobId !== undefined) {
+    return { kind: 'video', id: payload.videoJobId };
+  }
   if (payload.postId !== undefined) return { kind: 'post', id: payload.postId };
   if (payload.memberId !== undefined) return { kind: 'member', id: payload.memberId };
   return null;

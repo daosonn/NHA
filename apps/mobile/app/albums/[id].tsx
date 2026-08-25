@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { safeBack } from '../../src/lib/back';
 import { Ellipsis, ImagePlus, Star, Trash2, TriangleAlert } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -166,7 +167,7 @@ export default function AlbumScreen() {
 
   const header = (title: string) => (
     <AppHeader
-      left={<BackButton onPress={() => router.back()} />}
+      left={<BackButton fallback="/albums" />}
       center={<ScreenTitle title={title} />}
       right={
         album.data === undefined ? undefined : (
@@ -286,12 +287,22 @@ export default function AlbumScreen() {
             }}
           >
             {detail.items.map((item) => (
+              // View bọc ngoài để nút ⋯ là ANH EM của ô bấm, không phải con —
+              // button lồng button trên web nuốt sự kiện (bẫy GroupStrip cũ).
+              <View key={item.mediaId} style={{ width: CELL }}>
               <Pressable
-                key={item.mediaId}
-                onPress={() => setActing(item)}
+                // Bấm = XEM ẢNH (kỳ vọng tự nhiên nhất — trước đây bấm chỉ ra
+                // sheet "đặt bìa/gỡ khỏi album" và không có đường nào xem ảnh);
+                // giữ lâu = thao tác quản lý, cùng ngôn ngữ với memo.
+                onPress={() =>
+                  router.push({
+                    pathname: '/media/[id]',
+                    params: { id: item.mediaId, mime: item.mimeType },
+                  })
+                }
+                onLongPress={() => setActing(item)}
                 accessibilityRole="imagebutton"
                 accessibilityLabel={t('albums.item.open')}
-                style={{ width: CELL }}
               >
                 <Image
                   source={thumbnailSource(item.mediaId, item.mimeType)}
@@ -330,6 +341,31 @@ export default function AlbumScreen() {
                   </View>
                 )}
               </Pressable>
+
+              {/* Nút ⋯ vào sheet quản lý — giữ-lâu vẫn chạy, nhưng trên web
+                  chuột không ai nghĩ tới giữ lâu, nên phải có cửa nhìn thấy được */}
+              <Pressable
+                onPress={() => setActing(item)}
+                accessibilityRole="button"
+                accessibilityLabel={t('albums.item.actions')}
+                hitSlop={6}
+                style={{
+                  position: 'absolute',
+                  right: 6,
+                  top: 6,
+                  width: 22,
+                  height: 22,
+                  borderRadius: radius.full,
+                  backgroundColor: 'rgba(24,24,27,0.62)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text weight="bold" color={colors.text.white} style={{ fontSize: 12, lineHeight: 14 }}>
+                  ⋯
+                </Text>
+              </Pressable>
+              </View>
             ))}
 
             {/* Keeps a short last row left-aligned; `space-between` would
@@ -386,7 +422,7 @@ export default function AlbumScreen() {
           deleteAlbum.mutate(detail.id, {
             onSuccess: () => {
               setEditing(false);
-              router.back();
+              safeBack(router, '/albums');
               toast.success(t('albums.toast.deleted'));
             },
           })

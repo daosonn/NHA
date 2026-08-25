@@ -585,6 +585,8 @@ export type NotificationPayload = {
   title?: string;
   occursOn?: string;
   daysUntil?: number;
+  /** kind 'video_done' — server ghi snake_case `video_job_id` */
+  videoJobId?: string;
 };
 
 /** `GET /api/me/notifications` (WBS 3.1.2). */

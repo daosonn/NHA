@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { safeBack } from '../../src/lib/back';
 import { Mail } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -28,7 +29,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <FormScreen
-      onBack={() => router.back()}
+      onBack={() => safeBack(router, '/welcome')}
       footer={
         <Button
           label={t('auth.verify.continue')}

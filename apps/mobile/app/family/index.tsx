@@ -164,7 +164,7 @@ export default function FamilyTreeScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton />}
         center={<ScreenTitle title={t('family.title')} />}
       />
 

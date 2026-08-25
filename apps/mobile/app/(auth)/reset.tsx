@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { safeBack } from '../../src/lib/back';
 import { Clock, Lock } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -125,7 +126,7 @@ export default function ResetPasswordScreen() {
   if (step === 'password') {
     return (
       <FormScreen
-        onBack={() => router.back()}
+        onBack={() => safeBack(router, '/welcome')}
         footer={
           <>
             {errorAlert}

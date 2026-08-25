@@ -1,5 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
+import { safeBack } from '../../src/lib/back';
 import { Check, Music2, Pause, Play, Upload } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +13,7 @@ import { BackButton, ScreenTitle } from '../../src/components/layout/header-slot
 import { Card } from '../../src/components/ui/card';
 import { IconBadge } from '../../src/components/ui/icon-badge';
 import { Text } from '../../src/components/ui/text';
+import { useToast } from '../../src/components/ui/toast';
 import { useVideoDraft } from '../../src/features/video/draft';
 import { useVideoMusic } from '../../src/features/video/use-video';
 import { media, video } from '../../src/lib/api';
@@ -27,6 +29,7 @@ export default function VideoMusicScreen() {
   const { t, i18n } = useTranslation();
   const isJapanese = (i18n.language || '').toLowerCase().startsWith('ja');
   const router = useRouter();
+  const toast = useToast();
   const { draft, update } = useVideoDraft();
   const catalog = useVideoMusic();
 
@@ -56,7 +59,9 @@ export default function VideoMusicScreen() {
     // eslint-disable-next-line no-undef
     const el = new Audio(video.musicFileUrl(trackId));
     el.onended = () => setPlayingId(null);
-    void el.play();
+    // Autoplay policy của trình duyệt có thể từ chối play() — nuốt reject và
+    // trả nút về trạng thái dừng thay vì unhandled rejection + nút "đang phát" giả.
+    el.play().catch(() => setPlayingId(null));
     audioRef.current = el;
     setPlayingId(trackId);
   };
@@ -87,6 +92,10 @@ export default function VideoMusicScreen() {
         musicLabel: asset.name ?? t('video.ownSong'),
         musicMeta: t('video.ownSongMeta'),
       });
+    } catch {
+      // File nhạc thường nặng — 413/timeout dễ xảy ra; im lặng là người dùng
+      // không biết upload trượt hay đang xử lý.
+      toast.failure(t('errors.generic'));
     } finally {
       setUploading(false);
     }
@@ -95,10 +104,10 @@ export default function VideoMusicScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton fallback="/video/setup" />}
         center={<ScreenTitle title={t('video.musicTitle')} />}
         right={
-          <Pressable onPress={() => router.back()} accessibilityRole="button" hitSlop={8}>
+          <Pressable onPress={() => safeBack(router, '/video/setup')} accessibilityRole="button" hitSlop={8}>
             <Text variant="body2" weight="semibold" color={colors.coral.hover}>
               {t('common.done')}
             </Text>

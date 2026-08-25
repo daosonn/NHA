@@ -154,7 +154,7 @@ export default function GiftResultsScreen() {
     return (
       <View className="flex-1 bg-page">
         <AppHeader
-          left={<BackButton onPress={() => router.back()} />}
+          left={<BackButton fallback="/ai" />}
           center={<ScreenTitle title={t('ai.gifts.title')} />}
           paddingRight={spacing.lg}
         />
@@ -170,7 +170,7 @@ export default function GiftResultsScreen() {
     return (
       <View className="flex-1 bg-page">
         <AppHeader
-          left={<BackButton onPress={() => router.back()} />}
+          left={<BackButton fallback="/ai" />}
           center={<ScreenTitle title={t('ai.gifts.title')} />}
           paddingRight={spacing.lg}
         />
@@ -188,7 +188,7 @@ export default function GiftResultsScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton fallback="/ai" />}
         center={<ScreenTitle title={t('ai.gifts.title')} />}
         right={
           <Pressable

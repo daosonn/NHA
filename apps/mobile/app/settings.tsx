@@ -105,7 +105,7 @@ export default function SettingsScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton fallback="/profile" />}
         center={<ScreenTitle title={t('settings.title')} />}
       />
 
