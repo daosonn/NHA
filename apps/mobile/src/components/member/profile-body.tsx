@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import type { MemberProfile } from '../../features/member/member-profile';
 import { useLifeEvents } from '../../features/member/use-life-events';
@@ -9,6 +10,7 @@ import { useMemberGallery } from '../../features/member/use-member-gallery';
 import { useDeleteMemo, useMemberMemos, useMyMemos } from '../../features/member/use-memos';
 import { families, type MemoDetail } from '../../lib/api';
 import { queryKeys } from '../../lib/query-keys';
+import { enter, swapIn } from '../../theme/motion';
 import { SegmentedTabs } from '../ui/segmented-tabs';
 import { AlbumGrid } from './album-grid';
 import { MemoActionsSheet } from './memo-actions-sheet';
@@ -104,62 +106,74 @@ export function ProfileBody({
 
   return (
     <View style={{ gap: 16 }}>
-      <ProfileHero
-        profile={profile}
-        onEdit={onEdit}
-        onChangeAvatar={onChangeAvatar}
-        uploadingAvatar={uploadingAvatar}
-      />
+      <Animated.View entering={enter.up(0)}>
+        <ProfileHero
+          profile={profile}
+          onEdit={onEdit}
+          onChangeAvatar={onChangeAvatar}
+          uploadingAvatar={uploadingAvatar}
+        />
+      </Animated.View>
 
-      <ProfileFacts profile={profile} />
+      <Animated.View entering={enter.up(1)}>
+        <ProfileFacts profile={profile} />
+      </Animated.View>
 
-      <SegmentedTabs
-        accessibilityLabel={t('member.sections', { name: profile.displayName })}
-        value={tab}
-        onChange={setTab}
-        options={[
-          { value: 'timeline', label: t('member.timeline'), count: events.length },
-          { value: 'album', label: t('member.album'), count: gallery.data?.photoCount ?? 0 },
-          { value: 'memo', label: t('member.memo'), count: list.length },
-        ]}
-      />
+      <Animated.View entering={enter.up(2)}>
+        <SegmentedTabs
+          accessibilityLabel={t('member.sections', { name: profile.displayName })}
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'timeline', label: t('member.timeline'), count: events.length },
+            { value: 'album', label: t('member.album'), count: gallery.data?.photoCount ?? 0 },
+            { value: 'memo', label: t('member.memo'), count: list.length },
+          ]}
+        />
+      </Animated.View>
 
       {tab === 'timeline' && (
-        <TimelineList
-          events={events}
-          loading={timeline.isPending && (ownProfile || memberId !== null)}
-          failed={timeline.isError}
-          onRetry={() => void timeline.refetch()}
-        />
+        <Animated.View entering={swapIn}>
+          <TimelineList
+            events={events}
+            loading={timeline.isPending && (ownProfile || memberId !== null)}
+            failed={timeline.isError}
+            onRetry={() => void timeline.refetch()}
+          />
+        </Animated.View>
       )}
       {tab === 'album' && (
-        <AlbumGrid
-          gallery={gallery.data}
-          memberName={profile.displayName}
-          own={ownProfile}
-          loading={gallery.isPending && (ownProfile || memberId !== null)}
-          failed={gallery.isError}
-          onRetry={() => void gallery.refetch()}
-          onOpenMoment={onOpenMoment}
-          // A milestone's photographs are not a post and have nowhere of
-          // their own to open, but they are not a dead end either — the
-          // Timeline is where that milestone is written down.
-          onOpenTimeline={() => setTab('timeline')}
-        />
+        <Animated.View entering={swapIn}>
+          <AlbumGrid
+            gallery={gallery.data}
+            memberName={profile.displayName}
+            own={ownProfile}
+            loading={gallery.isPending && (ownProfile || memberId !== null)}
+            failed={gallery.isError}
+            onRetry={() => void gallery.refetch()}
+            onOpenMoment={onOpenMoment}
+            // A milestone's photographs are not a post and have nowhere of
+            // their own to open, but they are not a dead end either — the
+            // Timeline is where that milestone is written down.
+            onOpenTimeline={() => setTab('timeline')}
+          />
+        </Animated.View>
       )}
       {tab === 'memo' && (
-        <MemoList
-          memos={list}
-          memberName={profile.displayName}
-          own={ownProfile}
-          people={people}
-          loading={memos.isPending && (ownProfile === true || memberId !== null)}
-          failed={memos.isError}
-          onRetry={() => void memos.refetch()}
-          onAddMemo={onAddMemo}
-          onOpenMemo={onOpenMemo}
-          onMemoActions={setActing}
-        />
+        <Animated.View entering={swapIn}>
+          <MemoList
+            memos={list}
+            memberName={profile.displayName}
+            own={ownProfile}
+            people={people}
+            loading={memos.isPending && (ownProfile === true || memberId !== null)}
+            failed={memos.isError}
+            onRetry={() => void memos.refetch()}
+            onAddMemo={onAddMemo}
+            onOpenMemo={onOpenMemo}
+            onMemoActions={setActing}
+          />
+        </Animated.View>
       )}
 
       {/* One sheet for both steps. Deleting used to hand off to a second

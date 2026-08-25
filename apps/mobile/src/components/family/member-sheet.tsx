@@ -1,7 +1,7 @@
 import { Lock, Trash2, UserRound } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { edgeBetween, removalBlock } from '../../features/family/member-permissions';
 import { kinshipOptions, type KinshipOption } from '../../features/family/kinship';
@@ -10,6 +10,7 @@ import { colors, elevation, radius } from '../../theme';
 import { Avatar } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { SelectField } from '../ui/select-field';
+import { SheetModal } from '../ui/sheet-modal';
 import { Text } from '../ui/text';
 import { TextField } from '../ui/text-field';
 
@@ -78,20 +79,12 @@ export function MemberSheet({
   const { t } = useTranslation();
 
   return (
-    <Modal
+    <SheetModal
       visible={member !== null}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-      accessibilityViewIsModal
+      onClose={onClose}
+      scrimLabel={t('family.member.closeScrim')}
+      style={{ maxHeight: '92%' }}
     >
-      <Pressable
-        onPress={onClose}
-        accessibilityRole="button"
-        accessibilityLabel={t('family.member.closeScrim')}
-        style={{ flex: 1, backgroundColor: colors.state.scrim }}
-      />
-
       {member !== null && (
         <MemberSheetBody
           // Remounts when a different node is opened, so the fields reseed.
@@ -108,7 +101,7 @@ export function MemberSheet({
           errorKey={errorKey}
         />
       )}
-    </Modal>
+    </SheetModal>
   );
 }
 
@@ -185,7 +178,7 @@ function MemberSheetBody({
     <View
       style={[
         {
-          maxHeight: '92%',
+          flexShrink: 1,
           borderTopLeftRadius: radius['7xl'],
           borderTopRightRadius: radius['7xl'],
           backgroundColor: colors.background.page,

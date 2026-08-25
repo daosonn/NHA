@@ -5,10 +5,16 @@ import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { History, House, Plus, Sparkles, UserRound } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable, useWindowDimensions, View } from 'react-native';
+import { useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, elevation, radius } from '../../theme';
+import { easing } from '../../theme/motion';
+import { AnimatedPressable } from '../motion/animated-pressable';
+import { usePop } from '../motion/pop';
+import { usePressScale } from '../motion/press';
+import { useSlidingThumb } from '../motion/sliding-thumb';
 import { Text } from '../ui/text';
 
 /**
@@ -99,6 +105,36 @@ export const TABS: Record<string, TabConfig> = {
 /** The centre action, still the one filled control on the bar. */
 export const COMPOSE_ROUTE = 'new';
 
+/** Its own component so the press hook is not called inside a `.map()`. */
+function ComposeButton({ label, onPress, m }: { label: string; onPress: () => void; m: Metrics }) {
+  const press = usePressScale({
+    background: { rest: colors.coral.primary, pressed: colors.coral.dark },
+  });
+
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
+      style={[
+        {
+          width: m.compose,
+          height: m.compose,
+          marginHorizontal: 4,
+          borderRadius: radius.full,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        press.style,
+      ]}
+    >
+      <Plus size={m.composeIcon} color={colors.text.white} strokeWidth={2.3} />
+    </AnimatedPressable>
+  );
+}
+
 /**
  * One destination. `flex: 1`, so the four share whatever the bar has left
  * after the compose circle — the row keeps its rhythm at any width without
@@ -109,41 +145,51 @@ function Slot({
   icon: Icon,
   selected,
   onPress,
+  onLayout,
   m,
 }: {
   label: string;
   icon: LucideIcon;
   selected: boolean;
   onPress: () => void;
+  onLayout: (event: LayoutChangeEvent) => void;
   m: Metrics;
 }) {
   const tint = selected ? colors.coral.deep : colors.text.secondary;
 
+  const press = usePressScale();
+  // The icon pops on arrival only — the slot being left just fades.
+  const iconPop = usePop(selected, selected);
+
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
+      onLayout={onLayout}
       accessibilityRole="tab"
       accessibilityState={{ selected }}
-      style={{
-        flex: 1,
-        height: m.itemHeight,
-        // A pill inside a pill. It was `2xl` (18), which pinched: the bar's own
-        // cap is a 34 radius, and an 18-radius corner leaves only ~3px of
-        // clearance on the corner diagonal against 6px along the flat — so the
-        // selected chip looked both squarer than the bar it sits in and crowded
-        // against its end. At `full` the chip's cap is concentric enough with
-        // the bar's that the clearance is an even 6px the whole way round.
-        borderRadius: radius.full,
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 3,
-        // A soft tinted block behind the whole slot rather than a colour
-        // change alone — it survives being looked at quickly, and with the
-        // label inside it reads as a selected chip rather than a stray pill.
-        backgroundColor: selected ? colors.coral.light : 'transparent',
-      }}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
+      // No background of its own: the sliding pill behind the row carries
+      // the selected state (`.nha-tab-underline`, worn as a block).
+      style={[
+        {
+          flex: 1,
+          height: m.itemHeight,
+          // `full`, not `2xl` (main's finding): the bar's own cap is a 34
+          // radius, and an 18-radius corner pinches to ~3px of clearance on
+          // the corner diagonal against 6px along the flat. At `full` the
+          // press-feedback shape stays concentric with the bar.
+          borderRadius: radius.full,
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 3,
+        },
+        press.style,
+      ]}
     >
-      <Icon size={m.icon} color={tint} strokeWidth={selected ? 2.4 : 2} />
+      <Animated.View style={iconPop}>
+        <Icon size={m.icon} color={tint} strokeWidth={selected ? 2.4 : 2} />
+      </Animated.View>
 
       {/* Ellipsises rather than wrapping on the narrowest phones, where
           マイページ and a 5-way split are asking a lot of 320px. */}
@@ -155,7 +201,7 @@ function Slot({
       >
         {label}
       </Text>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -191,6 +237,13 @@ export function BottomNav({ state, navigation }: BottomTabBarProps) {
 
   const m = metrics(width);
 
+  // The selected-tab block is ONE pill that slides between slots
+  // (`useSlidingThumb` — the segmented-pill mechanic), on the bounce curve.
+  // The compose screen is a route but not a tab — the pill bows out.
+  const focusedRoute = state.routes[state.index];
+  const focusedIsTab = focusedRoute !== undefined && TABS[focusedRoute.name] !== undefined;
+  const pill = useSlidingThumb(focusedIsTab ? (focusedRoute?.key ?? null) : null, easing.bounce);
+
   return (
     <View
       style={{
@@ -222,6 +275,23 @@ export function BottomNav({ state, navigation }: BottomTabBarProps) {
           elevation.bottomNav,
         ]}
       >
+        {/* Behind the slots; pointerEvents off so it never eats a tap. */}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            {
+              position: 'absolute',
+              left: 0,
+              top: (m.height - m.itemHeight) / 2,
+              height: m.itemHeight,
+              // Concentric with the bar's cap — see the slot's radius note.
+              borderRadius: radius.full,
+              backgroundColor: colors.coral.light,
+            },
+            pill.style,
+          ]}
+        />
+
         {state.routes.map((route, index) => {
           const focused = state.index === index;
 
@@ -237,25 +307,7 @@ export function BottomNav({ state, navigation }: BottomTabBarProps) {
           };
 
           if (route.name === COMPOSE_ROUTE) {
-            return (
-              <Pressable
-                key={route.key}
-                onPress={go}
-                accessibilityRole="button"
-                accessibilityLabel={t('nav.newMoment')}
-                style={{
-                  width: m.compose,
-                  height: m.compose,
-                  marginHorizontal: 4,
-                  borderRadius: radius.full,
-                  backgroundColor: colors.coral.primary,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Plus size={m.composeIcon} color={colors.text.white} strokeWidth={2.3} />
-              </Pressable>
-            );
+            return <ComposeButton key={route.key} label={t('nav.newMoment')} onPress={go} m={m} />;
           }
 
           const config = TABS[route.name];
@@ -268,6 +320,7 @@ export function BottomNav({ state, navigation }: BottomTabBarProps) {
               icon={config.icon}
               selected={focused}
               onPress={go}
+              onLayout={pill.itemLayout(route.key)}
               m={m}
             />
           );

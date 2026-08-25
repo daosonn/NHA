@@ -1,9 +1,10 @@
 import { Check, ChevronDown } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { colors, radius } from '../../theme';
+import { SheetModal } from './sheet-modal';
 import { Text } from './text';
 
 export type SelectOption<T extends string> = {
@@ -70,17 +71,15 @@ export function SelectField<T extends string>({
         <ChevronDown size={18} color={colors.text.muted} strokeWidth={2} />
       </Pressable>
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <Pressable
-          onPress={() => setOpen(false)}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.close')}
-          style={{ flex: 1, backgroundColor: colors.state.scrim }}
-        />
-
+      <SheetModal
+        visible={open}
+        onClose={() => setOpen(false)}
+        scrimLabel={t('common.close')}
+        style={{ maxHeight: '70%' }}
+      >
         <View
           style={{
-            maxHeight: '70%',
+            flexShrink: 1,
             borderTopLeftRadius: radius['7xl'],
             borderTopRightRadius: radius['7xl'],
             backgroundColor: colors.background.page,
@@ -145,7 +144,7 @@ export function SelectField<T extends string>({
             })}
           </ScrollView>
         </View>
-      </Modal>
+      </SheetModal>
     </View>
   );
 }

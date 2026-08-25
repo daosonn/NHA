@@ -35,8 +35,12 @@ export function useSaveGiftIdea(familyId: string | null, memberId: string | null
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (body: { title: string; why?: string; priceRange?: string; occasionLabel?: string }) =>
-      ai.saveGiftIdea(familyId as string, memberId as string, body),
+    mutationFn: (body: {
+      title: string;
+      why?: string;
+      priceRange?: string;
+      occasionLabel?: string;
+    }) => ai.saveGiftIdea(familyId as string, memberId as string, body),
     onSuccess: () =>
       void queryClient.invalidateQueries({
         queryKey: queryKeys.savedGiftIdeas(familyId ?? 'none', memberId ?? 'none'),

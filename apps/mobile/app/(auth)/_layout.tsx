@@ -1,6 +1,7 @@
 import { Redirect, Stack } from 'expo-router';
 
 import { useSession } from '../../src/features/auth/session';
+import { screenTransition } from '../../src/theme/motion';
 
 /**
  * The signed-out half of the app.
@@ -15,5 +16,5 @@ export default function AuthLayout() {
   if (status === 'loading') return null;
   if (status === 'authenticated') return <Redirect href="/" />;
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return <Stack screenOptions={{ headerShown: false, ...screenTransition }} />;
 }

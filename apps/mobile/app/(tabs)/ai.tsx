@@ -4,6 +4,7 @@ import { CalendarHeart, Film, Gift, Mail, TriangleAlert } from 'lucide-react-nat
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { specialDateIcon, specialDateKindKey } from '../../src/components/ai/occasion-kind';
 import { DateTile } from '../../src/components/ai/date-tile';
@@ -23,6 +24,7 @@ import { families, type SpecialDateItem } from '../../src/lib/api';
 import { formatDayMonth } from '../../src/lib/date';
 import { queryKeys } from '../../src/lib/query-keys';
 import { colors, radius, spacing, useLayout } from '../../src/theme';
+import { enter } from '../../src/theme/motion';
 
 /**
  * Room the floating bottom bar needs at the end of the scroll.
@@ -155,7 +157,7 @@ export default function AiScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ gap: 6 }}>
+        <Animated.View entering={enter.up(0)} style={{ gap: 6 }}>
           <Text
             serif
             weight="bold"
@@ -170,7 +172,7 @@ export default function AiScreen() {
               {t('ai.hub.datesThisMonth', { count: thisMonth })}
             </Text>
           )}
-        </View>
+        </Animated.View>
 
         {/* Lỗi tải có lối thử lại; MAKE SOMETHING bên dưới vẫn dùng được.
             Chỉ khi KHÔNG còn dữ liệu cũ — refetch nền thất bại trên cache còn
@@ -201,7 +203,8 @@ export default function AiScreen() {
 
         {/* ---------- featured: the next date that needs a decision ---------- */}
         {featured && featuredMember && (
-          <View
+          <Animated.View
+            entering={enter.up(1)}
             style={{
               backgroundColor: colors.coral.light,
               borderRadius: radius['4xl'],
@@ -269,12 +272,12 @@ export default function AiScreen() {
                 )}
               />
             </View>
-          </View>
+          </Animated.View>
         )}
 
         {/* ---------- ALSO THIS SEASON ---------- */}
         {rest.length > 0 && (
-          <View style={{ gap: 10 }}>
+          <Animated.View entering={enter.up(2)} style={{ gap: 10 }}>
             <View
               style={{
                 flexDirection: 'row',
@@ -346,11 +349,11 @@ export default function AiScreen() {
                 </Pressable>
               ))}
             </Card>
-          </View>
+          </Animated.View>
         )}
 
         {/* ---------- MAKE SOMETHING ---------- */}
-        <View style={{ gap: 10 }}>
+        <Animated.View entering={enter.up(3)} style={{ gap: 10 }}>
           <Text
             variant="badge"
             weight="semibold"
@@ -384,7 +387,7 @@ export default function AiScreen() {
             subtitle={t('ai.hub.memoryVideoDesc')}
             onPress={() => router.push('/video/setup')}
           />
-        </View>
+        </Animated.View>
       </ScrollView>
     </View>
   );

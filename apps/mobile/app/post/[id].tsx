@@ -3,6 +3,7 @@ import { Ellipsis, Send, TriangleAlert, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { CommentActionsSheet } from '../../src/components/feed/comment-actions-sheet';
 import { PostCard } from '../../src/components/feed/post-card';
@@ -29,8 +30,12 @@ import { usePost, useSetReaction } from '../../src/features/feed/use-post';
 import { formatFullDate } from '../../src/lib/date';
 import type { CommentSummary } from '../../src/lib/api';
 import { colors, spacing } from '../../src/theme';
+import { enter, exit } from '../../src/theme/motion';
 
 const MAX_COMMENT = 2000;
+
+/** How many comment rows join the entrance cascade on first paint (Home's rule). */
+const CASCADE_ROWS = 4;
 
 function CommentRow({
   comment,
@@ -233,23 +238,29 @@ export default function PostDetailScreen() {
                 normally draws are both repeated immediately below — once by
                 the button, once by the divider. Two of each on one screen was
                 the second half of what made the reactions confusing. */}
-            <PostCard
-              post={post}
-              onAuthorPress={openAuthor}
-              onMediaPress={(m) =>
-                router.push({ pathname: '/media/[id]', params: { id: m.id, mime: m.mimeType } })
-              }
-              authorAvatarId={author?.avatarKey}
-              showStats={false}
-            />
+            <Animated.View entering={enter.up(0)}>
+              <PostCard
+                post={post}
+                onAuthorPress={openAuthor}
+                onMediaPress={(m) =>
+                  router.push({ pathname: '/media/[id]', params: { id: m.id, mime: m.mimeType } })
+                }
+                authorAvatarId={author?.avatarKey}
+                showStats={false}
+              />
+            </Animated.View>
 
-            <LikeButton
-              mine={post.myReaction}
-              count={post.reactionCount}
-              onChange={(type) => setReaction.mutate(type)}
-            />
+            <Animated.View entering={enter.up(1)}>
+              <LikeButton
+                mine={post.myReaction}
+                count={post.reactionCount}
+                onChange={(type) => setReaction.mutate(type)}
+              />
+            </Animated.View>
 
-            <Divider label={t('post.comments', { count: post.commentCount })} />
+            <Animated.View entering={enter.up(2)}>
+              <Divider label={t('post.comments', { count: post.commentCount })} />
+            </Animated.View>
 
             {items.length === 0 ? (
               <Text variant="body2" color={colors.text.subtle} style={{ textAlign: 'center' }}>
@@ -257,13 +268,19 @@ export default function PostDetailScreen() {
               </Text>
             ) : (
               <View style={{ gap: 16 }}>
-                {items.map((comment) => (
-                  <CommentRow
+                {items.map((comment, index) => (
+                  // Continues the cascade after the card; a comment added
+                  // later mounts alone and rises immediately (index ≥ cap).
+                  <Animated.View
                     key={comment.id}
-                    comment={comment}
-                    mine={user !== null && comment.authorUserId === user.id}
-                    onActions={() => setActing(comment)}
-                  />
+                    entering={enter.up(index < CASCADE_ROWS ? 3 + index : 0)}
+                  >
+                    <CommentRow
+                      comment={comment}
+                      mine={user !== null && comment.authorUserId === user.id}
+                      onActions={() => setActing(comment)}
+                    />
+                  </Animated.View>
                 ))}
               </View>
             )}
@@ -285,7 +302,11 @@ export default function PostDetailScreen() {
                 button does — and the only clue would be text appearing in a
                 box somebody was not looking at. */}
             {editing !== null && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Animated.View
+                entering={enter.fade(0)}
+                exiting={exit.fade}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+              >
                 <Text variant="caption" color={colors.coral.deep} style={{ flex: 1 }}>
                   {t('post.commentEdit.banner')}
                 </Text>
@@ -298,7 +319,7 @@ export default function PostDetailScreen() {
                 >
                   <X size={16} color={colors.text.muted} strokeWidth={2.2} />
                 </Pressable>
-              </View>
+              </Animated.View>
             )}
 
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 10 }}>

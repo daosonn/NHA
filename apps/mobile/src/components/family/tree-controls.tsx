@@ -84,8 +84,16 @@ export function ZoomControls({
 export function CanvasHint({ children }: { children: string }) {
   return (
     <View
-      className="absolute bottom-lg left-lg h-[28px] justify-center px-[11px]"
-      style={{ borderRadius: radius.full, backgroundColor: 'rgba(255,255,255,0.86)' }}
+      className="absolute bottom-lg left-lg justify-center px-[11px] py-[6px]"
+      // Bounded on the right so a long hint on a 320px screen wraps instead
+      // of running on underneath the add-member button; the fixed 28px
+      // height went with it, since a wrapped hint is two lines tall.
+      style={{
+        borderRadius: radius.xl,
+        backgroundColor: 'rgba(255,255,255,0.86)',
+        maxWidth: '72%',
+        alignSelf: 'flex-start',
+      }}
       pointerEvents="none"
     >
       <Text variant="badge" weight="medium" color={colors.text.muted}>

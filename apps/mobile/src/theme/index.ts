@@ -52,3 +52,10 @@ export const elevation = {
 } as const;
 
 export { shadow };
+
+/**
+ * Motion presets (durations, easings, entrance/exit builders) live in
+ * `./motion` — imported directly (`from '../theme/motion'`) rather than
+ * re-exported here, because this file must stay importable from
+ * non-animated contexts without pulling Reanimated in.
+ */

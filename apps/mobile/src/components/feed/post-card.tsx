@@ -2,11 +2,15 @@ import { Image } from 'expo-image';
 import { Heart, MessageCircle, Play } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import type { PostDetail, ReactionType } from '../../lib/api';
 import { formatFullDate } from '../../lib/date';
 import { thumbnailSource } from '../../lib/media-source';
 import { colors, elevation, radius, spacing } from '../../theme';
+import { CARD_PRESS_SCALE } from '../../theme/motion';
+import { usePop } from '../motion/pop';
+import { usePressScale } from '../motion/press';
 import { Avatar } from '../ui/avatar';
 import { Text } from '../ui/text';
 
@@ -83,15 +87,25 @@ export function PostCard({
   const hasBody =
     (post.content !== null && post.content !== '') || tiles.length > 0 || post.eventTitle !== null;
 
+  // The whole card dips while the "open this moment" surfaces are held —
+  // the body and the comment count, which share one destination. The author
+  // block and the heart go elsewhere, so they do not move the card.
+  const press = usePressScale({ scale: CARD_PRESS_SCALE });
+  // `nhaPop` on toggle — setting and clearing alike; never on first paint.
+  const heartPop = usePop(post.myReaction);
+
   return (
-    <View
-      style={{
-        backgroundColor: colors.background.card,
-        borderRadius: radius['2xl'],
-        padding: 14,
-        gap: 12,
-        ...elevation.card,
-      }}
+    <Animated.View
+      style={[
+        {
+          backgroundColor: colors.background.card,
+          borderRadius: radius['2xl'],
+          padding: 14,
+          gap: 12,
+          ...elevation.card,
+        },
+        press.style,
+      ]}
     >
       <Pressable
         onPress={onAuthorPress}
@@ -154,6 +168,8 @@ export function PostCard({
           disabled={onPress === undefined}
           accessibilityRole={onPress === undefined ? undefined : 'button'}
           accessibilityLabel={t('post.openLabel', { name: post.authorName })}
+          onPressIn={press.onPressIn}
+          onPressOut={press.onPressOut}
           style={{ gap: 12 }}
         >
           {post.type === 'EVENT' && post.eventTitle !== null && (
@@ -251,12 +267,14 @@ export function PostCard({
             hitSlop={10}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
           >
-            <Heart
-              size={16}
-              color={post.myReaction === null ? colors.text.lightMuted : colors.coral.primary}
-              strokeWidth={2}
-              fill={post.myReaction === null ? 'transparent' : colors.coral.primary}
-            />
+            <Animated.View style={heartPop}>
+              <Heart
+                size={16}
+                color={post.myReaction === null ? colors.text.lightMuted : colors.coral.primary}
+                strokeWidth={2}
+                fill={post.myReaction === null ? 'transparent' : colors.coral.primary}
+              />
+            </Animated.View>
             <Text variant="caption" weight="medium" color={colors.text.secondary}>
               {post.reactionCount}
             </Text>
@@ -268,6 +286,8 @@ export function PostCard({
             disabled={onPress === undefined}
             accessibilityRole={onPress === undefined ? undefined : 'button'}
             accessibilityLabel={t('post.comments', { count: post.commentCount })}
+            onPressIn={press.onPressIn}
+            onPressOut={press.onPressOut}
             hitSlop={10}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
           >
@@ -278,6 +298,6 @@ export function PostCard({
           </Pressable>
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 }

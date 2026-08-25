@@ -1,7 +1,7 @@
 import { Check, Share2, UserRoundPlus, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, ScrollView, Share, View } from 'react-native';
+import { Pressable, ScrollView, Share, View } from 'react-native';
 
 import { kinshipOptions, type KinshipOption } from '../../features/family/kinship';
 import type { InvitationSummary } from '../../lib/api';
@@ -9,6 +9,7 @@ import { daysUntil } from '../../lib/date';
 import { colors, elevation, radius } from '../../theme';
 import { Button } from '../ui/button';
 import { SelectField } from '../ui/select-field';
+import { SheetModal } from '../ui/sheet-modal';
 import { Text } from '../ui/text';
 import { TextField } from '../ui/text-field';
 import { InviteCodeCard } from './invite-code-card';
@@ -169,18 +170,16 @@ export function InviteSheet({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
-      <Pressable
-        onPress={close}
-        accessibilityRole="button"
-        accessibilityLabel={t('invite.sheet.closeScrim')}
-        style={{ flex: 1, backgroundColor: colors.state.scrim }}
-      />
-
+    <SheetModal
+      visible={visible}
+      onClose={close}
+      scrimLabel={t('invite.sheet.closeScrim')}
+      style={{ maxHeight: '92%' }}
+    >
       <View
         style={[
           {
-            maxHeight: '92%',
+            flexShrink: 1,
             borderTopLeftRadius: radius['7xl'],
             borderTopRightRadius: radius['7xl'],
             backgroundColor: colors.background.page,
@@ -329,6 +328,6 @@ export function InviteSheet({
           )}
         </ScrollView>
       </View>
-    </Modal>
+    </SheetModal>
   );
 }

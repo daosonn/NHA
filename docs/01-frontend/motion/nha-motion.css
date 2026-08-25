@@ -1,0 +1,89 @@
+/* NHA motion — tokens + keyframes. Copy nguyên file này vào app. */
+
+:root {
+  /* Easing: chỉ dùng 3 đường cong này */
+  --ease-settle: cubic-bezier(.22, 1, .36, 1);   /* mặc định */
+  --ease-bounce: cubic-bezier(.34, 1.56, .64, 1); /* phản hồi vui */
+  --ease-snap:   cubic-bezier(.4, 0, .2, 1);      /* nhấn, đổi màu */
+
+  /* Duration */
+  --dur-press:  120ms; /* nhấn, hover */
+  --dur-select: 200ms; /* chọn, tab, chip */
+  --dur-sheet:  320ms; /* sheet, modal, toast */
+  --dur-screen: 420ms; /* chuyển màn hình */
+  --dur-enter:  520ms; /* nội dung vào */
+  --stagger:     55ms; /* bước so le giữa các item */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* ---------- Keyframes ---------- */
+@keyframes nhaFadeUp { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: none } }
+@keyframes nhaFadeIn { from { opacity: 0 } to { opacity: 1 } }
+@keyframes nhaPop    { 0% { transform: scale(.72) } 60% { transform: scale(1.12) } 100% { transform: scale(1) } }
+@keyframes nhaShimmer{ from { background-position: -220px 0 } to { background-position: 320px 0 } }
+@keyframes nhaBreathe{ 0%,100% { transform: scale(1); opacity: .9 } 50% { transform: scale(1.07); opacity: 1 } }
+@keyframes nhaDot    { 0%,80%,100% { transform: translateY(0); opacity: .35 } 40% { transform: translateY(-5px); opacity: 1 } }
+@keyframes nhaBar    { 0% { transform: translateX(-100%) } 100% { transform: translateX(260%) } }
+@keyframes nhaToast  { 0% { opacity: 0; transform: translateY(18px) scale(.96) } 60% { opacity: 1; transform: translateY(-3px) scale(1.01) } 100% { opacity: 1; transform: none } }
+@keyframes nhaRing   { 0% { transform: scale(.6); opacity: .55 } 100% { transform: scale(2.1); opacity: 0 } }
+@keyframes nhaDraw   { from { stroke-dashoffset: 26 } to { stroke-dashoffset: 0 } }
+
+/* Mèo — chỉ dùng ở khoảnh khắc một lần: chờ lâu, rỗng, gửi xong */
+@keyframes nhaPeek { 0% { transform: translateY(16px); opacity: 0 } 55% { transform: translateY(-4px); opacity: 1 } 100% { transform: translateY(0); opacity: 1 } }
+@keyframes nhaTail { 0%,100% { transform: rotate(-8deg) } 50% { transform: rotate(14deg) } }
+@keyframes nhaEar  { 0%,88%,100% { transform: rotate(0) } 92% { transform: rotate(-9deg) } 96% { transform: rotate(6deg) } }
+@keyframes nhaBob  { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-4px) } }
+@keyframes nhaSleep{ 0%,100% { transform: scale(1) } 50% { transform: scale(1.035) } }
+@keyframes nhaZzz  { 0% { opacity: 0; transform: translate(0,0) scale(.7) } 30% { opacity: .9 } 100% { opacity: 0; transform: translate(9px,-20px) scale(1.15) } }
+@keyframes nhaFly  { 0% { opacity: 0; transform: translate(0,0) rotate(-6deg) scale(.9) } 25% { opacity: 1 } 100% { opacity: 0; transform: translate(52px,-56px) rotate(16deg) scale(.75) } }
+
+/* ---------- Class dùng lại ---------- */
+
+/* Nhấn: gắn cho mọi thứ bấm được */
+.nha-press { transition: transform var(--dur-press) var(--ease-snap), background var(--dur-press) var(--ease-snap); }
+.nha-press:active { transform: scale(.955); }
+
+/* Thẻ: nhấc lên khi hover */
+.nha-card { transition: transform 180ms var(--ease-settle), box-shadow 180ms var(--ease-settle), border-color 180ms; }
+.nha-card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(24,24,27,.09); }
+.nha-card:active { transform: translateY(-1px) scale(.99); }
+
+/* Nội dung vào so le: đặt --i = 0,1,2… trên từng item */
+.nha-enter { animation: nhaFadeUp var(--dur-enter) var(--ease-settle) both; animation-delay: calc(var(--i, 0) * var(--stagger)); }
+
+/* Chuyển màn hình */
+.nha-screen { transition: transform var(--dur-screen) var(--ease-settle), opacity var(--dur-screen) var(--ease-settle); }
+.nha-screen--behind { transform: translateX(-22%); opacity: .55; }
+.nha-screen--incoming { transform: translateX(100%); }
+.nha-screen--active { transform: none; opacity: 1; }
+
+/* Sheet + scrim */
+.nha-sheet { transition: transform var(--dur-sheet) var(--ease-settle); transform: translateY(100%); }
+.nha-sheet[data-open="true"] { transform: translateY(0); }
+.nha-scrim { background: rgba(24,24,27,.42); opacity: 0; pointer-events: none; transition: opacity var(--dur-sheet) var(--ease-settle); }
+.nha-scrim[data-open="true"] { opacity: 1; pointer-events: auto; }
+
+/* Toast */
+.nha-toast { animation: nhaToast var(--dur-sheet) var(--ease-bounce) both; }
+
+/* Khung xương AI */
+.nha-skeleton {
+  background: linear-gradient(90deg, #F1EDE9 0%, #FAF7F4 45%, #F1EDE9 90%);
+  background-size: 280px 100%;
+  animation: nhaShimmer 1300ms linear infinite;
+  border-radius: 999px;
+}
+
+/* Tick trong checkbox */
+.nha-tick { transition: transform 260ms var(--ease-bounce), opacity 160ms; transform: scale(.4); opacity: 0; }
+.nha-tick[data-on="true"] { transform: scale(1); opacity: 1; }
+
+/* Gạch chân tab: set --tab-x, --tab-w bằng JS */
+.nha-tab-underline { transition: transform var(--dur-sheet) var(--ease-bounce), width var(--dur-sheet) var(--ease-bounce); width: var(--tab-w); transform: translateX(var(--tab-x)); }

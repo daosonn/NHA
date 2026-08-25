@@ -194,6 +194,7 @@ export default function FamilyTreeScreen() {
           />
         ) : isPending || tree === null ? null : tree.memberCount === 0 ? (
           <EmptyState
+            cat
             renderIcon={({ size, color }) => (
               <UsersRound size={size} color={color} strokeWidth={2} />
             )}

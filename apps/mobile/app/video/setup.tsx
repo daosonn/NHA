@@ -171,7 +171,9 @@ export default function VideoSetupScreen() {
               multiline
               style={{
                 flex: 1,
-                minHeight: 52,
+                // 3 dòng: ở 320px placeholder ví dụ xuống 3 dòng, hộp 52px
+                // (2 dòng) cắt ngang dòng cuối — trông như chữ đè lên caption.
+                minHeight: 74,
                 padding: 0,
                 ...typeface,
                 fontSize: 14,

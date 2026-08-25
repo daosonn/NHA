@@ -33,6 +33,7 @@ import { createQueryClient } from '../src/lib/query-client';
 import '../src/i18n';
 import { restoreLocale } from '../src/i18n/locale';
 import { colors, useLayout } from '../src/theme';
+import { screenTransition } from '../src/theme/motion';
 
 // Module scope on purpose: this has to be in place before the first request,
 // and a child's effect can fire one before this component's own effects run.
@@ -192,6 +193,7 @@ export default function RootLayout() {
                       screenOptions={{
                         headerShown: false,
                         contentStyle: { backgroundColor: colors.background.page },
+                        ...screenTransition,
                       }}
                     />
                   </AppFrame>

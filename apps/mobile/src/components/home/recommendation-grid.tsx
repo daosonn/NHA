@@ -1,10 +1,13 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import type { RecommendationTile } from '../../features/home/use-recommendations';
 import { mediaSource } from '../../lib/media-source';
 import { colors, radius, spacing } from '../../theme';
+import { CARD_PRESS_SCALE } from '../../theme/motion';
+import { AnimatedPressable } from '../motion/animated-pressable';
+import { usePressScale } from '../motion/press';
 import { Text } from '../ui/text';
 
 const FEATURE_HEIGHT = 212;
@@ -23,18 +26,25 @@ type TileProps = {
 };
 
 function Tile({ item, height, scrimHeight, onPress, children }: TileProps) {
+  const press = usePressScale({ scale: CARD_PRESS_SCALE });
+
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={item.title}
-      style={{
-        height,
-        borderRadius: radius['2xl'],
-        borderWidth: 1,
-        borderColor: colors.state.borderDefault,
-        overflow: 'hidden',
-      }}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
+      style={[
+        {
+          height,
+          borderRadius: radius['2xl'],
+          borderWidth: 1,
+          borderColor: colors.state.borderDefault,
+          overflow: 'hidden',
+        },
+        press.style,
+      ]}
     >
       <Image
         source={mediaSource(item.mediaId)}
@@ -48,7 +58,7 @@ function Tile({ item, height, scrimHeight, onPress, children }: TileProps) {
         style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: scrimHeight }}
       />
       {children}
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 

@@ -26,6 +26,10 @@ import { useSpecialDates } from '../../src/features/ai/use-special-dates';
 import { useRecommendations } from '../../src/features/home/use-recommendations';
 import type { FamilySummary, PostDetail } from '../../src/lib/api';
 import { colors, spacing, useLayout } from '../../src/theme';
+import { enter } from '../../src/theme/motion';
+
+/** How many feed cards join the intro's entrance cascade on first paint. */
+const CASCADE_CARDS = 4;
 
 /**
  * Room the floating bottom bar needs at the end of the scroll.
@@ -130,7 +134,9 @@ export default function HomeScreen() {
           filled any in has nothing coming up — and an empty celebration
           card would be a strange thing to look at. */}
       {nextOccasion !== undefined && (
-        <EventWidget occasion={nextOccasion} moreCount={(occasions?.items.length ?? 1) - 1} />
+        <Animated.View entering={enter.up(0)}>
+          <EventWidget occasion={nextOccasion} moreCount={(occasions?.items.length ?? 1) - 1} />
+        </Animated.View>
       )}
 
       {/* Derived on the client from this family's own posts and albums —
@@ -142,7 +148,7 @@ export default function HomeScreen() {
           empty "look what turned up" is worse than no shelf, and a shelf of
           bundled stock photographs would be a claim about their life. */}
       {suggestions.length > 0 && (
-        <>
+        <Animated.View entering={enter.up(1)} style={{ gap: 14 }}>
           <SectionHeader title={t('home.recommendations')} />
 
           <RecommendationGrid
@@ -153,11 +159,15 @@ export default function HomeScreen() {
                 : router.push({ pathname: '/post/[id]', params: { id: tile.target.id } })
             }
           />
-        </>
+        </Animated.View>
       )}
 
-      {/* Fades on the first flick — it has been followed by then. */}
-      <SwipeCue scrollY={scrollY} />
+      {/* Fades on the first flick — it has been followed by then. Entrance is
+          fade-only: the cue's own opacity is scroll-driven, and a rising cue
+          would point the wrong way. */}
+      <Animated.View entering={enter.fade(2)}>
+        <SwipeCue scrollY={scrollY} />
+      </Animated.View>
     </View>
   );
 
@@ -212,6 +222,7 @@ export default function HomeScreen() {
     if (families.length === 0) {
       return (
         <EmptyState
+          cat
           renderIcon={({ size, color }) => <HousePlus size={size} color={color} strokeWidth={2} />}
           title={t('home.noFamilyTitle')}
           description={t('home.noFamilyBody')}
@@ -242,6 +253,7 @@ export default function HomeScreen() {
         ListEmptyComponent={
           feed.isPending ? null : (
             <EmptyState
+              cat
               renderIcon={({ size, color }) => (
                 <HousePlus size={size} color={color} strokeWidth={2} />
               )}
@@ -255,17 +267,23 @@ export default function HomeScreen() {
             <ActivityIndicator color={colors.coral.primary} style={{ paddingVertical: 16 }} />
           ) : null
         }
-        renderItem={({ item }: { item: PostDetail }) => (
-          <FeedCard
-            post={item}
-            audienceLabel={audienceLabel(item)}
-            onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
-            onAuthorPress={openAuthor(item)}
-            onMediaPress={(m) =>
-              router.push({ pathname: '/media/[id]', params: { id: m.id, mime: m.mimeType } })
-            }
-            authorAvatarId={memberFor(item.authorUserId)?.avatarKey}
-          />
+        renderItem={({ item, index }: { item: PostDetail; index: number }) => (
+          // The first screenful continues the intro's cascade (indices 3, 4,
+          // …); cards mounted later by scrolling rise immediately — a card
+          // that waits out a stagger delay mid-scroll reads as lag, not as
+          // choreography.
+          <Animated.View entering={enter.up(index < CASCADE_CARDS ? 3 + index : 0)}>
+            <FeedCard
+              post={item}
+              audienceLabel={audienceLabel(item)}
+              onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+              onAuthorPress={openAuthor(item)}
+              onMediaPress={(m) =>
+                router.push({ pathname: '/media/[id]', params: { id: m.id, mime: m.mimeType } })
+              }
+              authorAvatarId={memberFor(item.authorUserId)?.avatarKey}
+            />
+          </Animated.View>
         )}
       />
     );
