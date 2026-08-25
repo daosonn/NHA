@@ -9,7 +9,7 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import Svg, { Circle, Ellipse, G, Path } from 'react-native-svg';
+import Svg, { Circle, Ellipse, G, Path, Text as SvgText } from 'react-native-svg';
 
 /**
  * The four cats from the motion kit (`docs/01-frontend/motion/nha-cats.svg`),
@@ -36,6 +36,7 @@ const INK = '#18181B';
 
 const AnimatedG = Animated.createAnimatedComponent(G);
 const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedSvgText = Animated.createAnimatedComponent(SvgText);
 
 const inOut = Easing.inOut(Easing.ease);
 
@@ -127,6 +128,33 @@ function useBreath() {
   }, []);
 
   return useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+}
+
+/**
+ * `nhaZzz` — one "z" drifting up and to the right from the sleeper's head:
+ * fades in over the first 30% of the trip, grows the whole way, gone by the
+ * top. Loops forever; each z gets its own phase via `delayMs`.
+ */
+function useZzz(periodMs: number, delayMs: number, x: number, y: number) {
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    progress.value = withDelay(
+      delayMs,
+      withRepeat(withTiming(1, { duration: periodMs, easing: Easing.linear }), -1),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- starts once.
+  }, []);
+
+  return useAnimatedProps(() => {
+    const p = progress.value;
+    const opacity = p < 0.3 ? (p / 0.3) * 0.9 : 0.9 * (1 - (p - 0.3) / 0.7);
+    const scale = 0.7 + 0.45 * p;
+    return {
+      opacity,
+      transform: `translate(${x + 9 * p} ${y - 20 * p}) scale(${scale})`,
+    };
+  });
 }
 
 /** `nhaPeek` — one-shot: rises 16px past its spot by 4px, then settles. */
@@ -283,10 +311,18 @@ export function CatHappy({ size = 96 }: CatProps) {
 /** The empty-state cat: nothing here yet, so it curled up and went to sleep. */
 export function CatSleeping({ size = 112 }: CatProps) {
   const breath = useBreath();
+  const zzzBig = useZzz(1800, 0, 44, 20);
+  const zzzSmall = useZzz(1800, 900, 52, 26);
 
   return (
     <Animated.View style={breath}>
       <Svg width={size} height={(size * 72) / 104} viewBox="-6 -6 104 72">
+        <AnimatedSvgText animatedProps={zzzBig} fontSize={10} fontWeight="700" fill={CORAL}>
+          z
+        </AnimatedSvgText>
+        <AnimatedSvgText animatedProps={zzzSmall} fontSize={7} fontWeight="700" fill={CORAL}>
+          z
+        </AnimatedSvgText>
         <Path d="M14 52 q-4-24 22-24 q30 0 32 16 q2 8-8 8 z" fill={CORAL} />
         <Path
           d="M60 52 q16-2 12-14"
