@@ -6,6 +6,8 @@ import {
   FadeOut,
   FadeOutDown,
   Keyframe,
+  SlideInDown,
+  SlideOutDown,
 } from 'react-native-reanimated';
 import { motion } from '@nha/tokens';
 
@@ -100,6 +102,19 @@ export const exit = {
 export const screenTransition = {
   animation: 'slide_from_right',
   animationDuration: duration.screen,
+} as const;
+
+/**
+ * `.nha-sheet` / `.nha-scrim` — the panel rises from the bottom edge while
+ * the scrim fades beside it, 320ms both ways (the spec gives the sheet one
+ * transition for both directions). Predefined builders only: web-safe.
+ * Used through `components/ui/sheet-modal.tsx`, not spread by hand.
+ */
+export const sheet = {
+  in: SlideInDown.duration(duration.sheet).easing(easing.settle),
+  out: SlideOutDown.duration(duration.sheet).easing(easing.settle),
+  scrimIn: FadeIn.duration(duration.sheet).easing(easing.settle),
+  scrimOut: FadeOut.duration(duration.sheet).easing(easing.settle),
 } as const;
 
 /**

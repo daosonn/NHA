@@ -1,11 +1,12 @@
 import { Pencil, Trash2 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import type { MemoDetail } from '../../lib/api';
 import { colors, elevation, radius } from '../../theme';
 import { Button } from '../ui/button';
+import { SheetModal } from '../ui/sheet-modal';
 import { Text } from '../ui/text';
 import { categoryLabel } from './memo-card';
 
@@ -46,20 +47,11 @@ export function MemoActionsSheet({ memo, onClose, onEdit, onDelete }: MemoAction
   }, [memo]);
 
   return (
-    <Modal
+    <SheetModal
       visible={memo !== null}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-      accessibilityViewIsModal
+      onClose={onClose}
+      scrimLabel={t('member.memoActions.closeScrim')}
     >
-      <Pressable
-        onPress={onClose}
-        accessibilityRole="button"
-        accessibilityLabel={t('member.memoActions.closeScrim')}
-        style={{ flex: 1, backgroundColor: colors.state.scrim }}
-      />
-
       {memo !== null && (
         <View
           style={[
@@ -216,6 +208,6 @@ export function MemoActionsSheet({ memo, onClose, onEdit, onDelete }: MemoAction
           )}
         </View>
       )}
-    </Modal>
+    </SheetModal>
   );
 }

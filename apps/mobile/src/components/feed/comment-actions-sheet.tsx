@@ -1,11 +1,12 @@
 import { Pencil, Trash2 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import type { CommentSummary } from '../../lib/api';
 import { colors, elevation, radius } from '../../theme';
 import { Button } from '../ui/button';
+import { SheetModal } from '../ui/sheet-modal';
 import { Text } from '../ui/text';
 
 export type CommentActionsSheetProps = {
@@ -52,20 +53,11 @@ export function CommentActionsSheet({
   }, [comment]);
 
   return (
-    <Modal
+    <SheetModal
       visible={comment !== null}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-      accessibilityViewIsModal
+      onClose={onClose}
+      scrimLabel={t('post.commentActions.closeScrim')}
     >
-      <Pressable
-        onPress={onClose}
-        accessibilityRole="button"
-        accessibilityLabel={t('post.commentActions.closeScrim')}
-        style={{ flex: 1, backgroundColor: colors.state.scrim }}
-      />
-
       {comment !== null && (
         <View
           style={[
@@ -205,6 +197,6 @@ export function CommentActionsSheet({
           )}
         </View>
       )}
-    </Modal>
+    </SheetModal>
   );
 }
