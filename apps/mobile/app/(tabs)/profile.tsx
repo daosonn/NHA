@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { ScreenTitle, SettingsButton } from '../../src/components/layout/header-slots';
 import { ProfileBody } from '../../src/components/member/profile-body';
 import { Text } from '../../src/components/ui/text';
@@ -15,9 +16,15 @@ import { useFamilyTree } from '../../src/features/family/use-family-tree';
 import { toMemberProfile } from '../../src/features/member/member-profile';
 import { useToast } from '../../src/components/ui/toast';
 import { useMyProfile, useUpdateAvatar } from '../../src/features/member/use-profile';
-import { colors, spacing } from '../../src/theme';
+import { colors, spacing, useLayout } from '../../src/theme';
 
-/** Clears the bottom nav (56pt plus the home indicator). */
+/**
+ * Room the floating bottom bar needs at the end of the scroll.
+ *
+ * Only while the bar is at the bottom. From 1024px up the same destinations
+ * are a rail down the left, which overlaps nothing, so reserving this much
+ * there would just be 140px of dead space under the last row.
+ */
 const BOTTOM_INSET = 140;
 
 /**
@@ -32,6 +39,7 @@ const BOTTOM_INSET = 140;
  */
 export default function ProfileScreen() {
   const { t } = useTranslation();
+  const { expanded } = useLayout();
   const router = useRouter();
   const { user } = useSession();
   const { familyId } = useActiveFamily();
@@ -108,7 +116,11 @@ export default function ProfileScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={{ padding: spacing.xl, paddingBottom: BOTTOM_INSET }}
+        contentContainerStyle={{
+          ...contentColumn,
+          paddingTop: spacing.xl,
+          paddingBottom: expanded ? spacing['4xl'] : BOTTOM_INSET,
+        }}
         showsVerticalScrollIndicator={false}
       >
         {permissionDenied && (

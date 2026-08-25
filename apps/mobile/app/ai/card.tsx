@@ -10,6 +10,7 @@ import { InlineError } from '../../src/components/ai/inline-error';
 import { Pill } from '../../src/components/ai/pill';
 import { SectionLabel } from '../../src/components/ai/section-label';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Button } from '../../src/components/ui/button';
 import { Text } from '../../src/components/ui/text';
@@ -225,7 +226,7 @@ export default function CardScreen() {
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: spacing.xl,
+          ...contentColumn,
           paddingTop: 14,
           paddingBottom: 40,
           gap: 10,

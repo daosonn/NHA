@@ -92,6 +92,48 @@ TTF across the six weights, which is why it is a separate decision.
 Pills and buttons `9999`. Cards `20–24`. Media thumbnails `12–16`. Phone
 frame `44`.
 
+### Width and breakpoints
+
+The design is drawn for a phone and that stays the base. What it must not do
+is simply grow: every screen used to be `viewport - two gutters` wide at any
+size, so at 1440 a post card measured 1400px across and a line of its text
+ran to about 200 characters.
+
+**Content lives in a column with a ceiling of 600px, centred.** Gutter stays
+`spacing.xl` (20). The ceiling counts the gutters — React Native and
+react-native-web both measure `maxWidth` against the border box — so a
+window narrower than 600 is laid out exactly as before and the phone design
+is untouched rather than re-derived. Above 600 the column is a constant
+560px of content and the sides are empty on purpose.
+
+| Window | Column | Content | Each side |
+| ------ | ------ | ------- | --------- |
+| 375    | 375    | 335     | 0         |
+| 600    | 600    | 560     | 0         |
+| 768    | 600    | 560     | 84        |
+| 1024   | 600    | 560     | 212       |
+| 1440   | 600    | 560     | 420       |
+
+Two things stay full-bleed, and both are deliberate: **chrome** — the header's
+blurred bar, a footer bar's surface and top border — because chrome that stops
+short of the edge stops reading as chrome; and the **family tree canvas**,
+which is a map, where more room is more tree. In both cases what sits _on_
+them is still held to the column, so a wordmark, a bell or a group strip never
+drifts away from the page it belongs to.
+
+Breakpoints are `md` 768, `lg` 1024, `xl` 1280, matching Tailwind's own
+defaults so a `lg:` class and a JavaScript comparison cannot disagree. There
+is deliberately **no `sm`**: the ceiling above already carries everything
+between a phone and a tablet with no breakpoint at all, and a breakpoint
+belongs here only where the layout stops working — never because a popular
+screen happens to be that wide.
+
+`lg` is **the only breakpoint the layout actually branches on**: the floating
+bottom bar becomes a side rail (§ Side navigation). `md` and `xl` exist for a
+component that already styles with classes to reach for locally; nothing
+structural hangs off either. `xl` briefly did — a second, wider sidebar — and
+that turned out to be a hover, not a breakpoint.
+
 ### Icons
 
 Lucide only, 24px, stroke 2 (2.2 at 16px so it survives). No hand-drawn
@@ -147,8 +189,14 @@ Home · Omoide · **+** · AI · Profile.
 
 - Slots **flex evenly** — no fixed slot width. At the 390px reference they
   land near 70×52, with a 22px icon above a 10px label.
-- Active: a `coral.light` block behind the whole slot, radius `2xl`, with
-  the icon and label both `coral.deep` (4.6:1) and the label semibold.
+- Active: a `coral.light` block behind the whole slot, radius **`full`** — a
+  pill inside a pill — with the icon and label both `coral.deep` (4.6:1) and
+  the label semibold. It was `2xl` (18) until 2026-08-25, which pinched: the
+  bar's own cap is a 34 radius, so an 18-radius chip clears it by only ~3px on
+  the corner diagonal against 6px along the flat, and the selected slot read as
+  both squarer than the bar containing it and crowded against its end. At
+  `full` the two caps are concentric enough that the clearance is an even 6px
+  the whole way round, and no padding had to change to get it.
 - Inactive: icon and label `text.secondary`, label medium.
 - The centre **+** is a 50px `coral.primary` circle, vertically centred and
   unlabelled — it is the one filled control and reads as a button, not a
@@ -192,6 +240,110 @@ Tab words come from `nav.tab.*`, not `nav.*`: a 54px slot needs a shorter
 word than a screen header does (プロフィール does not fit, マイページ does).
 The visible label and the accessibility label are the **same string**, so
 somebody using voice control can say what they see.
+
+**It is only drawn below 1024px.** From there up the same destinations are a
+side rail, below.
+
+### Side navigation
+
+From `lg` up, the four destinations and compose move down the left. A floating
+bar of five buttons at the bottom of a 1440px window reads as a remote control:
+far from the content, far from the pointer, and spending 140–160px of every
+screen's height on itself. Vertical it costs 76px of width the page had going
+spare, and it stays on screen while a Life Profile or a post is open — which is
+what separates a web app from a phone app being looked at through a window.
+
+**It rests closed and opens under the pointer.** A 240px panel of labels
+standing permanently open beside a 600px column spends most of a third of a
+1920px window on four words; that was built on 2026-08-25 and read as top-heavy
+on the first screenshot of it. So the resting state is glyphs only, and hover
+reveals the words.
+
+|             | Closed          | Open (hover)                        |
+| ----------- | --------------- | ----------------------------------- |
+| Width       | 76 (a pill)     | 240                                 |
+| Brand       | mark only, 26px | mark only                           |
+| Compose     | 48px coral disc | coral pill, label right of the mark |
+| Destination | 48px glyph      | glyph, then label                   |
+
+Three things make opening read as one object moving rather than two states
+swapping:
+
+- **It opens over the content, not into it.** The 76px is real layout — a flex
+  sibling of the navigator — and only the opening is an overlay. Reflowing a
+  feed because a pointer crossed the left edge would be worse than the labels
+  being 170ms away. Out in 170ms, back in 130ms.
+- **Nothing moves horizontally.** Every glyph sits 38px from the left edge,
+  which is the centre of the closed rail by construction, so widening the panel
+  only ever uncovers what was already beside it.
+- **Labels are clipped and faded, and the glyph cannot shrink.** No second
+  layout exists — which is why compose needs no second component: a square row
+  with a `full` radius is a disc closed and a pill open. But two details in
+  that row are load-bearing, and getting either wrong was what made the first
+  build of this show four truncated _words_ where the icons belonged:
+  - The glyph sits in a box with `flexShrink: 0`. On web `react-native-svg`
+    renders a real `<svg>`, which does **not** inherit react-native-web's
+    `flex-shrink: 0` the way a `View` or `Text` does — so in a row too narrow
+    for its contents the icon was the only flexible thing in it, and collapsed
+    to a sliver.
+  - The label fades in from 45% of the opening, rather than relying on the clip
+    alone. 76px of rail against a label that starts at 61px leaves 14px of the
+    first character showing at the edge, which is what read as "ホ…".
+
+**It is the bottom bar, stood up.** Same glass — 30 blur under 86% white —
+inset 16 from the window edge, with the `floating` shadow, and a **38px corner
+that never changes**: half the closed width, so it is a true vertical pill at
+rest. Not `radius.full`, which the browser clamps to half the shorter side and
+would therefore grow to 120 as the bar opens, turning a rounded panel into a
+lozenge halfway through the animation.
+
+It **hugs its contents** rather than running the height of the window, and it
+is **centred down the window**, inside the safe area. A full-height panel with
+a border is a piece of furniture; this is the same floating object the bottom
+bar is, in a different position, and the two should not need explaining
+separately. The column it reserves is `76 + 16 + 16`, so content beside it
+starts clear of the glass rather than against it.
+
+Centred, not top-aligned — which is what it was first built as, on 2026-08-25,
+and it read as having slid up out of position. A bar hung from the top has no
+edge up there to belong to, the way the bottom bar belongs to the bottom one;
+and centred it also sits nearest where a pointer rests. It is centred by the
+reserved column (`justifyContent: 'center'`) rather than by absolute
+positioning, because a box cannot be centred on its own height without
+measuring it first.
+
+Active state is the same `coral.light` block with `coral.deep` glyph and label,
+so a destination looks selected the same way in both navigations.
+
+Only the exactly-matching destination is highlighted, so with a profile or a
+post open nothing is — which is true, and better than implying the tab
+underneath is where the reader is.
+
+**The known cost.** A touch device wide enough for the rail — an iPad in
+landscape — has no pointer, so it only ever sees glyphs, and § Bottom
+navigation argues two sections up that these particular glyphs carry no meaning
+on their own. The accessibility label is still the word, so voice control and
+screen readers are unaffected; what those readers lose is the visible label.
+Below 1024px — every phone, and a tablet in portrait — the labelled bottom bar
+is untouched. If this proves to matter, the answer is a pinned-open state, not
+a breakpoint.
+
+Home keeps its wordmark in the header at every width. The rail rests as glyphs,
+so the app needs one place that says its whole name, and without it the header
+row on a wide window is a bell and 1500px of nothing.
+
+It is mounted in `app/_layout.tsx`, beside the whole `Stack`, **not** in
+`(tabs)/_layout.tsx` where the bottom bar lives: a pushed screen sits above the
+tab navigator, so a rail mounted inside it would vanish the moment somebody
+opened a person's page. A plain flex row, so no screen has to know the rail
+exists — the content column simply centres in a narrower space. It is hidden
+while signed out, on the public invitation page, and while the keychain read is
+still in flight.
+
+Hover is `onPointerEnter` / `onPointerLeave` on the panel, never a `Pressable`
+wrapper: `react-native-web` turns every `accessibilityRole="button"` into a real
+`<button>`, and a button around four buttons swallows the presses inside it —
+the same trap the group strip is written around.
 
 ### Card
 

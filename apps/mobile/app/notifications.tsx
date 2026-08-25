@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 
 import { AppHeader } from '../src/components/layout/app-header';
+import { contentColumnBleed } from '../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../src/components/layout/header-slots';
 import { EmptyState } from '../src/components/ui/empty-state';
 import { IconBadge } from '../src/components/ui/icon-badge';
@@ -181,7 +182,7 @@ export default function NotificationsScreen() {
           ItemSeparatorComponent={() => (
             <View style={{ height: 1, backgroundColor: colors.background.subtle }} />
           )}
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ ...contentColumnBleed, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
           onEndReachedThreshold={0.5}
           onEndReached={() => {

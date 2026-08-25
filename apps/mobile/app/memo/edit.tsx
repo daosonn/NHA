@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumnBleed } from '../../src/components/layout/content-column';
 import { ScreenTitle } from '../../src/components/layout/header-slots';
 import {
   MEMO_CATEGORIES,
@@ -267,7 +268,12 @@ function MemoEditorForm({
       />
 
       <ScrollView
-        contentContainerStyle={{ paddingTop: 14, paddingBottom: 40, gap: 12 }}
+        contentContainerStyle={{
+          ...contentColumnBleed,
+          paddingTop: 14,
+          paddingBottom: 40,
+          gap: 12,
+        }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >

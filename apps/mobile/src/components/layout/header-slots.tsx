@@ -38,7 +38,7 @@ export function BrandWordmark() {
         accessibilityRole="header"
         style={{ fontSize: 22, lineHeight: 28, letterSpacing: 1.6, color: colors.coral.primary }}
       >
-        PRESENT
+        NHA
       </Text>
     </View>
   );
@@ -85,13 +85,7 @@ export function ScreenTitle({ title }: { title: string }) {
  * chết kèm lỗi GO_BACK trong đúng các kịch bản đó. Chỉ truyền `onPress`
  * khi màn thật sự cần logic riêng (xác nhận bỏ nháp…).
  */
-export function BackButton({
-  onPress,
-  fallback = '/',
-}: {
-  onPress?: () => void;
-  fallback?: Href;
-}) {
+export function BackButton({ onPress, fallback = '/' }: { onPress?: () => void; fallback?: Href }) {
   const { t } = useTranslation();
   const goBack = useSafeBack(fallback);
 

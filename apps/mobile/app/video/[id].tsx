@@ -9,6 +9,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 
 import { SelectRow } from '../../src/components/ai/select-row';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Button } from '../../src/components/ui/button';
 import { Card } from '../../src/components/ui/card';
@@ -199,7 +200,7 @@ export default function VideoJobScreen() {
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: spacing.xl,
+          ...contentColumn,
           paddingTop: 14,
           paddingBottom: 40,
           gap: 13,
@@ -333,7 +334,11 @@ export default function VideoJobScreen() {
             <Text variant="caption" color={colors.text.body}>
               {data.error}
             </Text>
-            <Button label={t('common.back')} variant="secondary" onPress={() => safeBack(router, '/ai')} />
+            <Button
+              label={t('common.back')}
+              variant="secondary"
+              onPress={() => safeBack(router, '/ai')}
+            />
           </Card>
         )}
 

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../src/components/layout/app-header';
+import { contentColumn } from '../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../src/components/layout/header-slots';
 import { Avatar } from '../src/components/ui/avatar';
 import { Button } from '../src/components/ui/button';
@@ -110,7 +111,7 @@ export default function SettingsScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={{ padding: spacing.xl, gap: 18 }}
+        contentContainerStyle={{ ...contentColumn, paddingVertical: spacing.xl, gap: 18 }}
         showsVerticalScrollIndicator={false}
       >
         <Card padding={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>

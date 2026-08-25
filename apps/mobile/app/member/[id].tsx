@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import {
   BackButton,
   NotificationBell,
@@ -53,7 +54,7 @@ export default function MemberScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40 }}
+        contentContainerStyle={{ ...contentColumn, paddingTop: spacing.xl, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
         <ProfileBody

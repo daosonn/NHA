@@ -11,6 +11,7 @@ import { PendingBanner } from '../../src/components/family/pending-banner';
 import type { PositionedNode } from '../../src/components/family/tree-layout';
 import { GroupStrip, type FamilyGroupSummary } from '../../src/components/home/group-strip';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { ContentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { SectionHeader } from '../../src/components/ui/section-header';
@@ -163,21 +164,23 @@ export default function FamilyTreeScreen() {
 
   return (
     <View className="flex-1 bg-page">
-      <AppHeader
-        left={<BackButton />}
-        center={<ScreenTitle title={t('family.title')} />}
-      />
+      <AppHeader left={<BackButton />} center={<ScreenTitle title={t('family.title')} />} />
 
       <View className="flex-1 gap-lg px-xl pb-xl pt-lg">
         {families !== undefined && families.length > 0 && (
-          <GroupStrip
-            groups={toStripGroups(families)}
-            remainingCount={0}
-            showTreeLink={false}
-            activeId={familyId ?? undefined}
-            onSelectGroup={setFamilyId}
-            onAddPress={() => router.push('/family/new')}
-          />
+          /* The canvas below keeps the whole window — it is a map, and more
+             room is more tree. The strip is not a map: capped, it stays with
+             the header above it instead of drifting out to the edge. */
+          <ContentColumn bleed>
+            <GroupStrip
+              groups={toStripGroups(families)}
+              remainingCount={0}
+              showTreeLink={false}
+              activeId={familyId ?? undefined}
+              onSelectGroup={setFamilyId}
+              onAddPress={() => router.push('/family/new')}
+            />
+          </ContentColumn>
         )}
 
         {isError ? (

@@ -187,6 +187,19 @@ build the family tree, post content with photos, and view member profiles.
 
 - [ ] Fix lỗi chính (main flows stable)
 
+### 1.8 Responsive tablet/desktop (added 2026-08-25)
+
+Nhóm mới, ngoài phạm vi 1.2.2 (task đó chỉ định nghĩa responsive là
+375–430px). Chiến lược + bảng chiều rộng: `01-frontend/design-system.md`
+§ Width and breakpoints; quy ước code: `01-frontend/architecture.md`
+§ Conventions.
+
+- [x] 1.8.1 Layout tokens + breakpoint (`@nha/tokens` layout.ts, tailwind `screens`) — done 2026-08-25
+- [x] 1.8.2 Content column cho mọi page scroller + header/footer/FAB — done 2026-08-25; screen dùng `FormScreen` được phủ tự động, kể cả màn mới của `main`. typecheck + prettier + check:i18n + web export sạch, **chưa duyệt bằng mắt trên 5 viewport**
+- [x] 1.8.3 Navigation ≥1024px (thanh nổi glass 76px chỉ icon, bo pill, hover mở 240px overlay; mounted trên Stack nên screen pushed vẫn giữ nav) — done 2026-08-25; bản đầu là sidebar 240px mở sẵn ở ≥1280, đổi cùng ngày sau review (`design-system.md` § Side navigation)
+- [ ] 1.8.4 Component còn lệch sau khi có column (recommendation-grid chiều cao cố định, photo-row 4 cột, album-grid 2 cột, clamp chiều rộng cây gia phả) — chưa đánh giá
+- [x] 1.8.5 Back an toàn — **đã có trên `main` từ PR #48** (`src/lib/back.ts`: `safeBack`/`useSafeBack`, `BackButton` tự lo khi không truyền `onPress`). Nhánh này từng làm trùng một bản riêng; merge 2026-08-25 giữ bản của `main` và bỏ bản trùng
+
 ## Out of Scope (this sprint)
 
 - Google OAuth (not scheduled in Sprints 1–3 — see `mvp-scope.md`)
