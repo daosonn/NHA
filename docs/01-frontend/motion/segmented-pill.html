@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Segmented pill</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;padding:40px;background:#EDEBE7;font-family:'Be Vietnam Pro',sans-serif;display:flex;justify-content:center}
+.seg-wrap{position:relative;background:#EFEBE7;border-radius:999px;padding:4px;height:44px;box-sizing:border-box;display:inline-flex;align-items:center;overflow:hidden}
+.seg-thumb{position:absolute;top:4px;height:36px;left:0;border-radius:999px;background:#FFFFFF;box-shadow:0 1px 3px rgba(24,24,27,.12);transition:transform 320ms cubic-bezier(.22,1,.36,1),width 320ms cubic-bezier(.22,1,.36,1)}
+.seg-item{position:relative;text-align:center;padding:9px 18px;border-radius:999px;cursor:pointer;font:600 13.5px/1 'Be Vietnam Pro',sans-serif;white-space:nowrap;color:#A9A29B;transition:color 200ms cubic-bezier(.4,0,.2,1);background:none;border:none}
+.seg-item.active{color:#18181B}
+</style>
+</head>
+<body>
+
+<div class="seg-wrap" id="segWrap">
+  <div class="seg-thumb" id="segThumb"></div>
+  <button class="seg-item active" data-i="0">Timeline</button>
+  <button class="seg-item" data-i="1">Album</button>
+  <button class="seg-item" data-i="2">Memo</button>
+</div>
+
+<script>
+const wrap = document.getElementById('segWrap');
+const thumb = document.getElementById('segThumb');
+const items = wrap.querySelectorAll('.seg-item');
+
+function moveThumb(el) {
+  thumb.style.width = el.offsetWidth + 'px';
+  thumb.style.transform = 'translateX(' + el.offsetLeft + 'px)';
+}
+
+items.forEach(el => {
+  el.addEventListener('click', () => {
+    items.forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+    moveThumb(el);
+  });
+});
+
+window.addEventListener('load', () => moveThumb(wrap.querySelector('.active')));
+</script>
+</body>
+</html>

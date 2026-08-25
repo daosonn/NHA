@@ -1,6 +1,8 @@
 import { Pressable, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { colors, elevation, radius } from '../../theme';
+import { useSlidingThumb } from '../motion/sliding-thumb';
 import { Text } from './text';
 
 export type SegmentedOption<T extends string> = {
@@ -26,6 +28,10 @@ export type SegmentedTabsProps<T extends string> = {
  * node, badges and the active timeline node. Adding a sixth use would dilute
  * all five.
  *
+ * The pill is ONE thumb that slides between segments (segmented-pill demo,
+ * via `useSlidingThumb`) rather than a background each segment paints when
+ * active — the journey is what tells you the selection moved.
+ *
  * Segments are `flex-1`, so three or four options share the width evenly on
  * any handset instead of being sized to their text.
  */
@@ -35,6 +41,8 @@ export function SegmentedTabs<T extends string>({
   onChange,
   accessibilityLabel,
 }: SegmentedTabsProps<T>) {
+  const thumb = useSlidingThumb(value);
+
   return (
     <View
       accessibilityRole="tablist"
@@ -47,6 +55,23 @@ export function SegmentedTabs<T extends string>({
         backgroundColor: colors.background.subtle,
       }}
     >
+      {/* Behind the segments; pointerEvents off so it never eats a tap. */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          {
+            position: 'absolute',
+            left: 0,
+            top: 4,
+            height: 44,
+            borderRadius: radius.full,
+            backgroundColor: colors.background.card,
+          },
+          elevation.card,
+          thumb.style,
+        ]}
+      />
+
       {options.map((option) => {
         const active = option.value === value;
 
@@ -54,21 +79,18 @@ export function SegmentedTabs<T extends string>({
           <Pressable
             key={option.value}
             onPress={() => onChange(option.value)}
+            onLayout={thumb.itemLayout(option.value)}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
-            style={[
-              {
-                flex: 1,
-                height: 44,
-                borderRadius: radius.full,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 5,
-              },
-              active && { backgroundColor: colors.background.card },
-              active && elevation.card,
-            ]}
+            style={{
+              flex: 1,
+              height: 44,
+              borderRadius: radius.full,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 5,
+            }}
           >
             <Text
               variant="body2"

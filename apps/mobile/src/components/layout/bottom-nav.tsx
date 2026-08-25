@@ -4,17 +4,17 @@ import { BlurView } from 'expo-blur';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { History, House, Plus, Sparkles, UserRound } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
-import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, elevation, radius } from '../../theme';
-import { duration, easing } from '../../theme/motion';
+import { easing } from '../../theme/motion';
 import { AnimatedPressable } from '../motion/animated-pressable';
 import { usePop } from '../motion/pop';
 import { usePressScale } from '../motion/press';
+import { useSlidingThumb } from '../motion/sliding-thumb';
 import { Text } from '../ui/text';
 
 /**
@@ -230,58 +230,11 @@ export function BottomNav({ state, navigation }: BottomTabBarProps) {
   const m = metrics(width);
 
   // The selected-tab block is ONE pill that slides between slots
-  // (`.nha-tab-underline`, worn as a block): 320ms with the bounce curve,
-  // width animating with it since the slots flex. Slot positions come from
-  // their own onLayout, so the pill survives rotation and bar rescaling.
-  const layouts = useRef<Record<string, { x: number; width: number }>>({});
-  const pillX = useSharedValue(0);
-  const pillWidth = useSharedValue(0);
-  const pillShown = useSharedValue(0);
-  const pillPlaced = useRef(false);
-
+  // (`useSlidingThumb` — the segmented-pill mechanic), on the bounce curve.
+  // The compose screen is a route but not a tab — the pill bows out.
   const focusedRoute = state.routes[state.index];
-  const focusedKey = focusedRoute?.key;
   const focusedIsTab = focusedRoute !== undefined && TABS[focusedRoute.name] !== undefined;
-
-  const placePill = (animated: boolean) => {
-    // The compose screen is a route but not a tab — the pill bows out.
-    const target = focusedKey !== undefined ? layouts.current[focusedKey] : undefined;
-    if (!focusedIsTab || target === undefined) {
-      pillShown.value = withTiming(0, { duration: duration.select, easing: easing.snap });
-      return;
-    }
-    if (!animated || !pillPlaced.current) {
-      // First measurement, or a re-layout: appear in place, no travel.
-      pillX.value = target.x;
-      pillWidth.value = target.width;
-      pillShown.value = 1;
-      pillPlaced.current = true;
-      return;
-    }
-    pillShown.value = withTiming(1, { duration: duration.select, easing: easing.snap });
-    pillX.value = withTiming(target.x, { duration: duration.sheet, easing: easing.bounce });
-    pillWidth.value = withTiming(target.width, { duration: duration.sheet, easing: easing.bounce });
-  };
-
-  useEffect(() => {
-    placePill(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs on tab
-    // change; layout updates re-place via each slot's own onLayout.
-  }, [state.index]);
-
-  const slotLayout = (key: string) => (event: LayoutChangeEvent) => {
-    const { x, width: w } = event.nativeEvent.layout;
-    layouts.current[key] = { x, width: w };
-    // The focused slot moved or was measured for the first time: snap the
-    // pill onto it without a journey.
-    if (key === focusedKey) placePill(false);
-  };
-
-  const pillStyle = useAnimatedStyle(() => ({
-    opacity: pillShown.value,
-    width: pillWidth.value,
-    transform: [{ translateX: pillX.value }],
-  }));
+  const pill = useSlidingThumb(focusedIsTab ? (focusedRoute?.key ?? null) : null, easing.bounce);
 
   return (
     <View
@@ -326,7 +279,7 @@ export function BottomNav({ state, navigation }: BottomTabBarProps) {
               borderRadius: radius['2xl'],
               backgroundColor: colors.coral.light,
             },
-            pillStyle,
+            pill.style,
           ]}
         />
 
@@ -358,7 +311,7 @@ export function BottomNav({ state, navigation }: BottomTabBarProps) {
               icon={config.icon}
               selected={focused}
               onPress={go}
-              onLayout={slotLayout(route.key)}
+              onLayout={pill.itemLayout(route.key)}
               m={m}
             />
           );
