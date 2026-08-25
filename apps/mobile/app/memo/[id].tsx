@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { safeBack } from '../../src/lib/back';
 import { Ellipsis, Pencil } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -57,7 +58,7 @@ export default function MemoScreen() {
     setActionsOpen(false);
     // Leave first, delete second: the list this note came from is behind us,
     // and the screen would otherwise flash its "gone" state on the way out.
-    router.back();
+    safeBack(router, '/');
     deleteMemo.mutate(memo, {
       onSuccess: () => toast.success(t('member.memoDelete.toast')),
       onError: () => toast.failure(t('errors.generic')),
@@ -72,7 +73,7 @@ export default function MemoScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton />}
         center={<ScreenTitle title={t('member.memoDetail.title')} />}
         right={
           memo === undefined ? undefined : (

@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { safeBack } from '../../src/lib/back';
 import { Lock } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -60,7 +61,7 @@ export default function ChangePasswordScreen() {
   if (profile.data?.hasPassword === false) {
     return (
       <FormScreen
-        onBack={() => router.back()}
+        onBack={() => safeBack(router, '/settings')}
         title={t('settings.password.set.title')}
         footer={
           <Button
@@ -103,7 +104,7 @@ export default function ChangePasswordScreen() {
       {
         onSuccess: () => {
           toast.success(t('settings.password.changed'));
-          router.back();
+          safeBack(router, '/settings');
         },
       },
     );
@@ -128,7 +129,7 @@ export default function ChangePasswordScreen() {
 
   return (
     <FormScreen
-      onBack={() => router.back()}
+      onBack={() => safeBack(router, '/settings')}
       title={t('settings.password.title')}
       footer={
         <>

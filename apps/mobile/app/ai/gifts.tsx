@@ -97,7 +97,7 @@ export default function GiftAskScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton fallback="/ai" />}
         center={<ScreenTitle title={t('ai.gifts.title')} />}
       />
 

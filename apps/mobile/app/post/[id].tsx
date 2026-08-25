@@ -204,7 +204,7 @@ export default function PostDetailScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton />}
         center={<ScreenTitle title={t('post.title')} />}
       />
 

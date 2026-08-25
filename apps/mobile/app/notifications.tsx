@@ -134,14 +134,16 @@ export default function NotificationsScreen() {
     router.push(
       target.kind === 'post'
         ? { pathname: '/post/[id]', params: { id: target.id } }
-        : { pathname: '/member/[id]', params: { id: target.id } },
+        : target.kind === 'video'
+          ? { pathname: '/video/[id]', params: { id: target.id } }
+          : { pathname: '/member/[id]', params: { id: target.id } },
     );
   };
 
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton />}
         center={<ScreenTitle title={t('nav.notifications')} />}
         right={
           unread > 0 ? (

@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { safeBack } from '../../src/lib/back';
 import { Check } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -108,13 +109,13 @@ export default function NewFamilyScreen() {
     return (
       <FormScreen
         title={t('family.new.doneTitle')}
-        onClose={() => router.back()}
+        onClose={() => safeBack(router, '/')}
         footer={
           <Button
             label={t('family.new.done')}
             size="large"
             fullWidth
-            onPress={() => router.back()}
+            onPress={() => safeBack(router, '/')}
           />
         }
       >
@@ -164,7 +165,7 @@ export default function NewFamilyScreen() {
   return (
     <FormScreen
       title={t('family.new.title')}
-      onClose={() => router.back()}
+      onClose={() => safeBack(router, '/')}
       footer={
         <>
           {errorKey !== null && (

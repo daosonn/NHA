@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { safeBack } from '../../src/lib/back';
 import { ArrowDown, ArrowUp, Minus, PenLine, Plus, Volume2, VolumeX, X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
@@ -45,7 +46,7 @@ export default function VideoStoryScreen() {
         <Text variant="body2" color={colors.text.body}>
           {t('video.noPlan')}
         </Text>
-        <Button label={t('common.back')} variant="secondary" onPress={() => router.back()} />
+        <Button label={t('common.back')} variant="secondary" onPress={() => safeBack(router, '/video/setup')} />
       </View>
     );
   }
@@ -134,7 +135,7 @@ export default function VideoStoryScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton fallback="/video/setup" />}
         center={<ScreenTitle title={t('video.storyScenesTitle')} />}
       />
 
