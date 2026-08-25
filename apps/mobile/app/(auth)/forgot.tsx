@@ -9,6 +9,7 @@ import { Button } from '../../src/components/ui/button';
 import { Text } from '../../src/components/ui/text';
 import { TextField } from '../../src/components/ui/text-field';
 import { colors } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Step one of the reset: name the account. Nothing is sent from here —
@@ -28,7 +29,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <FormScreen
-      onBack={() => router.back()}
+      onBack={() => goBack(router)}
       footer={
         <Button
           label={t('auth.verify.continue')}

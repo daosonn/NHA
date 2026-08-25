@@ -15,6 +15,7 @@ import {
 } from '../../src/features/settings/use-notification-settings';
 import type { NotificationSettings } from '../../src/lib/api';
 import { colors, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * The three groups, in the order somebody is likeliest to want them off:
@@ -107,7 +108,7 @@ export default function NotificationSettingsScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack(router)} />}
         center={<ScreenTitle title={t('settings.notifications.title')} />}
       />
 

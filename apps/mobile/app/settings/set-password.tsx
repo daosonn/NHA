@@ -18,6 +18,7 @@ import {
 } from '../../src/features/auth/use-password-reset';
 import { ApiError } from '../../src/lib/api';
 import { colors } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 const CODE_LENGTH = 6;
 const RESEND_SECONDS = 60;
@@ -130,7 +131,7 @@ export default function SetPasswordScreen() {
   if (step === 'password') {
     return (
       <FormScreen
-        onBack={() => router.back()}
+        onBack={() => goBack(router)}
         title={t('settings.password.set.title')}
         footer={
           <>

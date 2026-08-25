@@ -14,6 +14,7 @@ import { useChangePassword } from '../../src/features/auth/use-change-password';
 import { useMyProfile } from '../../src/features/member/use-profile';
 import { ApiError } from '../../src/lib/api';
 import { colors } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 const MIN_PASSWORD = 8;
 const MAX_PASSWORD = 72;
@@ -60,7 +61,7 @@ export default function ChangePasswordScreen() {
   if (profile.data?.hasPassword === false) {
     return (
       <FormScreen
-        onBack={() => router.back()}
+        onBack={() => goBack(router)}
         title={t('settings.password.set.title')}
         footer={
           <Button
@@ -103,7 +104,7 @@ export default function ChangePasswordScreen() {
       {
         onSuccess: () => {
           toast.success(t('settings.password.changed'));
-          router.back();
+          goBack(router);
         },
       },
     );
@@ -128,7 +129,7 @@ export default function ChangePasswordScreen() {
 
   return (
     <FormScreen
-      onBack={() => router.back()}
+      onBack={() => goBack(router)}
       title={t('settings.password.title')}
       footer={
         <>

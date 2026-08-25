@@ -17,6 +17,7 @@ import { useMyVideos, useShareVideo, useVideoJob } from '../../src/features/vide
 import { apiAccessToken, video } from '../../src/lib/api';
 import { downloadAuthenticated, objectUrlFor } from '../../src/lib/download';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 32 (11k) "Progress you can walk away from" + màn 33 (11l) "Watch, save, share".
@@ -180,7 +181,7 @@ export default function VideoJobScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack(router)} />}
         center={
           <ScreenTitle
             title={data?.status === 'DONE' ? t('video.title') : t('video.makingTitle')}
@@ -330,7 +331,7 @@ export default function VideoJobScreen() {
             <Text variant="caption" color={colors.text.body}>
               {data.error}
             </Text>
-            <Button label={t('common.back')} variant="secondary" onPress={() => router.back()} />
+            <Button label={t('common.back')} variant="secondary" onPress={() => goBack(router)} />
           </Card>
         )}
 
@@ -450,7 +451,7 @@ export default function VideoJobScreen() {
                 label={t('video.edit')}
                 variant="neutral"
                 size="large"
-                onPress={() => router.back()}
+                onPress={() => goBack(router)}
                 renderIcon={({ size, color }) => (
                   <Pencil size={size} color={color} strokeWidth={2.1} />
                 )}

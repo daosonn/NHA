@@ -241,8 +241,9 @@ function CatFace({ happyEyes }: { happyEyes: boolean }) {
         strokeLinejoin="round"
         fill="none"
       />
+      {/* Ria dời ra ngoài 2px so với kit (2026-08-25) — đầu trong sát mắt quá. */}
       <Path
-        d="M14 37 L23 38.6 M14 42.6 L23 41.8 M58 37 L49 38.6 M58 42.6 L49 41.8"
+        d="M12 37 L21 38.6 M12 42.6 L21 41.8 M60 37 L51 38.6 M60 42.6 L51 41.8"
         stroke={CREAM}
         strokeWidth={1.5}
         strokeLinecap="round"
@@ -356,8 +357,9 @@ export function CatSleeping({ size = 112 }: CatProps) {
           strokeLinejoin="round"
           fill="none"
         />
+        {/* Ria dời ra ngoài 2px so với kit (2026-08-25), cùng lý do CatFace. */}
         <Path
-          d="M13.5 36.5 L21 38.4 M13 41.6 L21 41.4 M45.5 36.5 L38 38.4 M46 41.6 L38 41.4"
+          d="M11.5 36.5 L19 38.4 M11 41.6 L19 41.4 M47.5 36.5 L40 38.4 M48 41.6 L40 41.4"
           stroke={CREAM}
           strokeWidth={1.5}
           strokeLinecap="round"
@@ -412,8 +414,9 @@ export function CatPeek({ size = 84 }: CatProps) {
             strokeLinejoin="round"
             fill="none"
           />
+          {/* Ria dời ra ngoài 1.5px so với kit (2026-08-25), cùng lý do CatFace. */}
           <Path
-            d="M4 22 L11 23.4 M4 26.6 L11 26.2 M42 22 L35 23.4 M42 26.6 L35 26.2"
+            d="M2.5 22 L9.5 23.4 M2.5 26.6 L9.5 26.2 M43.5 22 L36.5 23.4 M43.5 26.6 L36.5 26.2"
             stroke={CREAM}
             strokeWidth={1.3}
             strokeLinecap="round"

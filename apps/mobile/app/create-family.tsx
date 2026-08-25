@@ -12,6 +12,7 @@ import { TextField } from '../src/components/ui/text-field';
 import { useCreateFamily, useJoinFamily } from '../src/features/family/use-family-mutations';
 import { ApiError } from '../src/lib/api';
 import { colors } from '../src/theme';
+import { goBack } from '../src/lib/navigation';
 
 type Mode = 'create' | 'join';
 
@@ -61,7 +62,7 @@ export default function CreateFamilyScreen() {
         await join.mutateAsync({ inviteCode: code.trim().toUpperCase() });
       }
       // Back to Home, which now has a family to show.
-      router.back();
+      goBack(router);
     } catch {
       // Rendered from `active.error` below; nothing to do here.
     }
@@ -69,7 +70,7 @@ export default function CreateFamilyScreen() {
 
   return (
     <FormScreen
-      onBack={() => router.back()}
+      onBack={() => goBack(router)}
       footer={
         <>
           {active.error !== null && (

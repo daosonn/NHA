@@ -19,6 +19,7 @@ import { Text } from '../../src/components/ui/text';
 import { useCreateMemo, useMemo, useUpdateMemo } from '../../src/features/member/use-memos';
 import { ApiError, type MemoDetail } from '../../src/lib/api';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 const TITLE_MAX = 120;
 const CONTENT_MAX = 5000;
@@ -119,8 +120,8 @@ export default function MemoEditorScreen() {
       memo={existing.data ?? null}
       familyId={familyId ?? null}
       memberId={memberId ?? null}
-      onDone={() => router.back()}
-      onCancel={() => router.back()}
+      onDone={() => goBack(router)}
+      onCancel={() => goBack(router)}
     />
   );
 }

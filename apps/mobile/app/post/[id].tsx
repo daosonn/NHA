@@ -30,6 +30,7 @@ import { formatFullDate } from '../../src/lib/date';
 import type { CommentSummary } from '../../src/lib/api';
 import { colors, spacing } from '../../src/theme';
 import { enter, exit } from '../../src/theme/motion';
+import { goBack } from '../../src/lib/navigation';
 
 const MAX_COMMENT = 2000;
 
@@ -209,7 +210,7 @@ export default function PostDetailScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack(router)} />}
         center={<ScreenTitle title={t('post.title')} />}
       />
 

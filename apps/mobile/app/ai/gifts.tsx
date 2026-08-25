@@ -28,6 +28,7 @@ import { families, profiles } from '../../src/lib/api';
 import { formatFullDate } from '../../src/lib/date';
 import { queryKeys } from '../../src/lib/query-keys';
 import { colors, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /** Màn 21 (11a) — "Who, when, how much — nothing else". */
 
@@ -87,7 +88,7 @@ export default function GiftAskScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack(router)} />}
         center={<ScreenTitle title={t('ai.gifts.title')} />}
       />
 

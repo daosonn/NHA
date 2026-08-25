@@ -15,6 +15,7 @@ import { useSession } from '../../src/features/auth/session';
 import { useCreateFamily } from '../../src/features/family/use-family-mutations';
 import { ApiError, type FamilyDetail } from '../../src/lib/api';
 import { colors, radius } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Shorter than the server's 100. A group name is read inside a 34px avatar
@@ -108,13 +109,13 @@ export default function NewFamilyScreen() {
     return (
       <FormScreen
         title={t('family.new.doneTitle')}
-        onClose={() => router.back()}
+        onClose={() => goBack(router)}
         footer={
           <Button
             label={t('family.new.done')}
             size="large"
             fullWidth
-            onPress={() => router.back()}
+            onPress={() => goBack(router)}
           />
         }
       >
@@ -164,7 +165,7 @@ export default function NewFamilyScreen() {
   return (
     <FormScreen
       title={t('family.new.title')}
-      onClose={() => router.back()}
+      onClose={() => goBack(router)}
       footer={
         <>
           {errorKey !== null && (

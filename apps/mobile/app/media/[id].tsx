@@ -11,6 +11,7 @@ import { apiAccessToken, media } from '../../src/lib/api';
 import { objectUrlFor } from '../../src/lib/download';
 import { mediaSource } from '../../src/lib/media-source';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Xem một ảnh hoặc một đoạn phim của gia đình, chiếm cả màn hình.
@@ -138,7 +139,7 @@ export default function MediaViewerScreen() {
         )}
 
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => goBack(router)}
           accessibilityRole="button"
           accessibilityLabel={t('common.close')}
           style={{

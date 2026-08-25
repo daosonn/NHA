@@ -24,6 +24,7 @@ import {
 import { ApiError, type AlbumItemDetail } from '../../src/lib/api';
 import { mediaSource, thumbnailSource } from '../../src/lib/media-source';
 import { colors, elevation, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 const COLUMNS = 3;
 /**
@@ -166,7 +167,7 @@ export default function AlbumScreen() {
 
   const header = (title: string) => (
     <AppHeader
-      left={<BackButton onPress={() => router.back()} />}
+      left={<BackButton onPress={() => goBack(router)} />}
       center={<ScreenTitle title={title} />}
       right={
         album.data === undefined ? undefined : (
@@ -387,7 +388,7 @@ export default function AlbumScreen() {
           deleteAlbum.mutate(detail.id, {
             onSuccess: () => {
               setEditing(false);
-              router.back();
+              goBack(router);
               toast.success(t('albums.toast.deleted'));
             },
           })

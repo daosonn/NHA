@@ -18,6 +18,7 @@ import {
 import { ApiError, type ProfileDetail } from '../../src/lib/api';
 import { dayOnly, formatFullDate } from '../../src/lib/date';
 import { colors, radius } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 const MAX_BIO = 5000;
 const MAX_INTERESTS = 50;
@@ -162,7 +163,7 @@ export default function ProfileEditScreen() {
 
   if (query.isPending) {
     return (
-      <FormScreen title={t('profileEdit.title')} onClose={() => router.back()}>
+      <FormScreen title={t('profileEdit.title')} onClose={() => goBack(router)}>
         <View style={{ paddingTop: 40, alignItems: 'center' }}>
           <ActivityIndicator color={colors.coral.primary} />
         </View>
@@ -172,7 +173,7 @@ export default function ProfileEditScreen() {
 
   if (query.isError || query.data === undefined) {
     return (
-      <FormScreen title={t('profileEdit.title')} onClose={() => router.back()}>
+      <FormScreen title={t('profileEdit.title')} onClose={() => goBack(router)}>
         <View style={{ paddingTop: 24, gap: 12 }}>
           <Text variant="body1" color={colors.text.muted}>
             {t('profileEdit.loadFailed')}
@@ -195,12 +196,12 @@ export default function ProfileEditScreen() {
       onSave={(input) => {
         mutation.mutate(input, {
           onSuccess: () => {
-            router.back();
+            goBack(router);
             toast.success(t('profileEdit.toast.saved'));
           },
         });
       }}
-      onCancel={() => router.back()}
+      onCancel={() => goBack(router)}
     />
   );
 }
@@ -351,7 +352,9 @@ function ProfileEditForm({
           }
         />
 
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
+        {/* `center`, not `flex-end`: the field is 56 tall since the floating
+            label moved inside it, and a bottom-hung 44 button read as sunk. */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <View style={{ flex: 1 }}>
             <TextField
               label={t('profileEdit.addInterestLabel')}

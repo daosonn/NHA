@@ -16,6 +16,7 @@ import { useCreateAndRender } from '../../src/features/video/use-video';
 import { thumbnailSource } from '../../src/lib/media-source';
 import { colors, radius, spacing } from '../../src/theme';
 import { useTypeface } from '../../src/theme/typeface';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 31 (11j) — "Story on top, then the scenes — reorder, retime, rewrite as much
@@ -43,7 +44,7 @@ export default function VideoStoryScreen() {
         <Text variant="body2" color={colors.text.body}>
           {t('video.noPlan')}
         </Text>
-        <Button label={t('common.back')} variant="secondary" onPress={() => router.back()} />
+        <Button label={t('common.back')} variant="secondary" onPress={() => goBack(router)} />
       </View>
     );
   }
@@ -132,7 +133,7 @@ export default function VideoStoryScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack(router)} />}
         center={<ScreenTitle title={t('video.storyScenesTitle')} />}
       />
 

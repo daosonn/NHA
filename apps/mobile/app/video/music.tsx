@@ -16,6 +16,7 @@ import { useVideoDraft } from '../../src/features/video/draft';
 import { useVideoMusic } from '../../src/features/video/use-video';
 import { media, video } from '../../src/lib/api';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 29 (11n) — "Songs grouped by mood, or your own".
@@ -95,10 +96,10 @@ export default function VideoMusicScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack(router)} />}
         center={<ScreenTitle title={t('video.musicTitle')} />}
         right={
-          <Pressable onPress={() => router.back()} accessibilityRole="button" hitSlop={8}>
+          <Pressable onPress={() => goBack(router)} accessibilityRole="button" hitSlop={8}>
             <Text variant="body2" weight="semibold" color={colors.coral.hover}>
               {t('common.done')}
             </Text>

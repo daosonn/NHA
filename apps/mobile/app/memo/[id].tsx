@@ -17,6 +17,7 @@ import { TextLink } from '../../src/components/ui/text-link';
 import { useDeleteMemo, useMemo } from '../../src/features/member/use-memos';
 import { relativeTime } from '../../src/lib/date';
 import { colors, elevation, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /** Room for the floating action bar. */
 const BOTTOM_INSET = 120;
@@ -57,7 +58,7 @@ export default function MemoScreen() {
     setActionsOpen(false);
     // Leave first, delete second: the list this note came from is behind us,
     // and the screen would otherwise flash its "gone" state on the way out.
-    router.back();
+    goBack(router);
     deleteMemo.mutate(memo, {
       onSuccess: () => toast.success(t('member.memoDelete.toast')),
       onError: () => toast.failure(t('errors.generic')),
@@ -72,7 +73,7 @@ export default function MemoScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack(router)} />}
         center={<ScreenTitle title={t('member.memoDetail.title')} />}
         right={
           memo === undefined ? undefined : (

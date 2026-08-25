@@ -19,6 +19,7 @@ import { ai, posts } from '../../src/lib/api';
 import type { MessageVariant } from '../../src/lib/api';
 import { mediaSource } from '../../src/lib/media-source';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 26 (11g) — "Make a card": chọn độ dài lời nhắn (Short/Standard/Heartfelt),
@@ -167,7 +168,7 @@ export default function CardScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack(router)} />}
         center={<ScreenTitle title={t('ai.card.title')} />}
       />
 

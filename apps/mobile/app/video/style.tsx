@@ -9,6 +9,7 @@ import { Text } from '../../src/components/ui/text';
 import { useVideoDraft } from '../../src/features/video/draft';
 import type { VideoStyleId } from '../../src/lib/api';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 30 (11o) — "Six openings: album, cinematic, old film, letter, petals, polaroid.
@@ -191,10 +192,10 @@ export default function VideoStyleScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack(router)} />}
         center={<ScreenTitle title={t('video.styleTitle')} />}
         right={
-          <Pressable onPress={() => router.back()} accessibilityRole="button" hitSlop={8}>
+          <Pressable onPress={() => goBack(router)} accessibilityRole="button" hitSlop={8}>
             <Text variant="body2" weight="semibold" color={colors.coral.hover}>
               {t('common.done')}
             </Text>

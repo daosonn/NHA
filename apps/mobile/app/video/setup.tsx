@@ -26,6 +26,7 @@ import { queryKeys } from '../../src/lib/query-keys';
 import { colors, radius, spacing } from '../../src/theme';
 import { useTypeface } from '../../src/theme/typeface';
 import { useState } from 'react';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 27 (11h) — "Story in your own words, length up to 3 min, style, music, photos".
@@ -103,7 +104,7 @@ export default function VideoSetupScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack(router)} />}
         center={<ScreenTitle title={t('video.title')} />}
       />
 

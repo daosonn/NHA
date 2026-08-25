@@ -17,6 +17,7 @@ import { useVideoPhotos } from '../../src/features/video/use-video-photos';
 import { media } from '../../src/lib/api';
 import { thumbnailSource } from '../../src/lib/media-source';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 28 (11m) — "Sources by family group, numbered order, add more".
@@ -104,7 +105,7 @@ export default function VideoPhotosScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack(router)} />}
         center={<ScreenTitle title={t('video.photosTitle')} />}
       />
 
@@ -336,7 +337,7 @@ export default function VideoPhotosScreen() {
           size="large"
           fullWidth
           disabled={draft.mediaIds.length === 0}
-          onPress={() => router.back()}
+          onPress={() => goBack(router)}
         />
       </View>
     </View>

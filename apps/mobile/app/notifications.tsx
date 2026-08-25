@@ -32,6 +32,7 @@ import type { NotificationDetail, NotificationType } from '../src/lib/api';
 import { relativeTime } from '../src/lib/date';
 import { colors, radius, spacing } from '../src/theme';
 import { enter } from '../src/theme/motion';
+import { goBack } from '../src/lib/navigation';
 
 /** How many rows join the entrance cascade on first paint (Home's rule). */
 const CASCADE_ROWS = 6;
@@ -146,7 +147,7 @@ export default function NotificationsScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack(router)} />}
         center={<ScreenTitle title={t('nav.notifications')} />}
         right={
           unread > 0 ? (

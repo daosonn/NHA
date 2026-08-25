@@ -23,6 +23,7 @@ import type { GiftIdeaResult, GiftSource } from '../../src/lib/api';
 import { mediaSource } from '../../src/lib/media-source';
 import { formatFullDate } from '../../src/lib/date';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 22 (11b) — "All five ideas in one scroll, each with its sources and where to buy"
@@ -107,7 +108,7 @@ export default function GiftResultsScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack(router)} />}
         center={<ScreenTitle title={t('ai.gifts.title')} />}
         right={
           <Pressable

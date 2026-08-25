@@ -30,6 +30,7 @@ import { families } from '../../src/lib/api';
 import type { MessageVariant } from '../../src/lib/api';
 import { queryKeys } from '../../src/lib/query-keys';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 24 (11e) "Three ways to say it" + màn 25 (11f) "Say it differently".
@@ -118,7 +119,7 @@ export default function MessageScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack(router)} />}
         center={<ScreenTitle title={t('ai.message.title')} />}
       />
 
