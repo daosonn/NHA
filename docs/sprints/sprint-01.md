@@ -30,7 +30,7 @@ build the family tree, post content with photos, and view member profiles.
       — done 2026-08-17: merged in PR #2
 - [x] 1.1.6 Đăng xuất (revoke refresh token) — done 2026-08-17: single-use
       refresh rotation + revoke on logout, merged in PR #2
-- [x] 1.1.7 Khôi phục mật khẩu (quên mật khẩu — `PasswordResetToken`; added 2026-08-14, see `database.md`) — API done 2026-08-18 (PR #12); FE nối xong 2026-08-19 (3 màn: gửi mã, kiểm mã, đặt lại)
+- [x] 1.1.7 Khôi phục mật khẩu (quên mật khẩu — `PasswordResetToken`; added 2026-08-14, see `database.md`) — API done 2026-08-18 (PR #12); FE nối xong 2026-08-19 (3 màn: gửi mã, kiểm mã, đặt lại). — đảo thứ tự 2026-08-24: còn 2 màn, mật khẩu trước → mã sau làm bước xác nhận (màn `verify` gộp vào `reset`)
 - [x] 1.1.8 Google login (OAuth authorization code, `OAuthAccount` — customer requirement, added 2026-08-17; see `02-backend/architecture.md`) — done 2026-08-18: backend merged in PR #3, happy path verified end-to-end với credentials thật (consent screen External + test user) — **FE chưa dùng được**: callback trả JSON, không redirect về app (2026-08-20, xem `api-contract.md`); nút social đã gỡ khỏi 3 màn auth
 - [ ] 1.1.9 Facebook login (chung flow OAuth với 1.1.8 — added 2026-08-17; LINE deferred chờ quyền email, X phase 2) — backend merged in PR #3; chờ verify E2E (cần accept tester role trên Meta app); FE chặn cùng lý do với 1.1.8
 
@@ -51,9 +51,10 @@ build the family tree, post content with photos, and view member profiles.
       (`app/moments.tsx` đã xoá khi gộp vào Home — xem
       `docs/01-frontend/architecture.md` § Wiring status).
 - [ ] 1.2.4 Empty/loading state (UI đầy đủ) — done cho Home, cây gia phả,
-      post detail, Omoide, Life Profile, album, invite (rà lại 2026-08-20).
-      Còn thiếu trạng thái lỗi: `memo/[id]`, `memo/edit` (của mình) và các
-      màn AI/video merge từ `main` (của tác giả).
+      post detail, Omoide, Life Profile, album, invite (rà lại 2026-08-20);
+      các màn AI/video xong 2026-08-24 (UX pass: lỗi/rỗng/loading mọi màn AI,
+      giữ kết quả khi regenerate, đã verify tsc+i18n+prettier+bundle).
+      Còn thiếu trạng thái lỗi: `memo/[id]`, `memo/edit` (của mình).
 - [x] 1.2.5 Widget dịp đặc biệt trên Home (countdown + theme — sinh nhật/ngày giỗ derived từ LifeProfile; added 2026-08-14, see `database.md`) — API done 2026-08-18 (PR #11: `GET /families/:familyId/special-dates`); FE nối xong 2026-08-19
 
 ### 1.3 Tạo nhóm gia đình — Family Group
@@ -194,10 +195,10 @@ Nhóm mới, ngoài phạm vi 1.2.2 (task đó chỉ định nghĩa responsive l
 § Conventions.
 
 - [x] 1.8.1 Layout tokens + breakpoint (`@nha/tokens` layout.ts, tailwind `screens`) — done 2026-08-25
-- [x] 1.8.2 Content column cho toàn bộ screen (27 file, header/footer/FAB) — done 2026-08-25; typecheck + prettier + check:i18n + web export sạch, **chưa duyệt bằng mắt trên 5 viewport**
+- [x] 1.8.2 Content column cho mọi page scroller + header/footer/FAB — done 2026-08-25; screen dùng `FormScreen` được phủ tự động, kể cả màn mới của `main`. typecheck + prettier + check:i18n + web export sạch, **chưa duyệt bằng mắt trên 5 viewport**
 - [x] 1.8.3 Navigation ≥1024px (thanh nổi glass 76px chỉ icon, bo pill, hover mở 240px overlay; mounted trên Stack nên screen pushed vẫn giữ nav) — done 2026-08-25; bản đầu là sidebar 240px mở sẵn ở ≥1280, đổi cùng ngày sau review (`design-system.md` § Side navigation)
 - [ ] 1.8.4 Component còn lệch sau khi có column (recommendation-grid chiều cao cố định, photo-row 4 cột, album-grid 2 cột, clamp chiều rộng cây gia phả) — chưa đánh giá
-- [x] 1.8.5 Back an toàn: `goBack()` fallback về Home thay cho 48 chỗ gọi `router.back()` — done 2026-08-25 (`src/lib/navigation.ts`)
+- [x] 1.8.5 Back an toàn — **đã có trên `main` từ PR #48** (`src/lib/back.ts`: `safeBack`/`useSafeBack`, `BackButton` tự lo khi không truyền `onPress`). Nhánh này từng làm trùng một bản riêng; merge 2026-08-25 giữ bản của `main` và bỏ bản trùng
 
 ## Out of Scope (this sprint)
 

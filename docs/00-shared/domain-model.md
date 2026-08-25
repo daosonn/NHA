@@ -100,11 +100,15 @@ it — no cross-owner references.
 
 ### Plans (decided 2026-08-14; **feature dropped 2026-08-20**)
 
-**Not being built.** Quality Time (WBS 2.6) was dropped on 2026-08-20, and
-a Plan only ever existed to hold its output — see `project-status.md` →
-Important Decisions. Every AI suggestion the product ships is now
-read-once. The rules below stand as the record of the decision, and as the
-starting point if this is revived.
+**Not being built.** Quality Time (WBS 2.6) was dropped on 2026-08-20 —
+see `project-status.md` → Important Decisions. Every AI _suggestion_ the
+product ships is read-once. **One correction (2026-08-24): the `Plan`
+table did not stay empty** — the AI team's gift-save reuses it to store
+♡-saved gift ideas (owner-private, fed back to the AI as "past gifts, do
+not re-suggest"; see `database.md` → Plan). The dropped feature is the
+shared quality-time plan, not the table. The rules below stand as the
+record of the original decision, and as the starting point if Quality
+Time is revived.
 
 - AI-drafted plans (surprise / quality time) are **saved** — they are
   followed over days, not read-once suggestions like gift ideas.

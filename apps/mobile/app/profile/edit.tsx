@@ -1,4 +1,5 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { safeBack } from '../../src/lib/back';
 import { Plus, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,7 +19,6 @@ import {
 import { ApiError, type ProfileDetail } from '../../src/lib/api';
 import { dayOnly, formatFullDate } from '../../src/lib/date';
 import { colors, radius } from '../../src/theme';
-import { goBack } from '../../src/lib/navigation';
 
 const MAX_BIO = 5000;
 const MAX_INTERESTS = 50;
@@ -141,6 +141,7 @@ function InterestChips({
  */
 export default function ProfileEditScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const toast = useToast();
   const { familyId, memberId } = useLocalSearchParams<{
     familyId?: string;
@@ -162,7 +163,7 @@ export default function ProfileEditScreen() {
 
   if (query.isPending) {
     return (
-      <FormScreen title={t('profileEdit.title')} onClose={() => goBack()}>
+      <FormScreen title={t('profileEdit.title')} onClose={() => safeBack(router, '/profile')}>
         <View style={{ paddingTop: 40, alignItems: 'center' }}>
           <ActivityIndicator color={colors.coral.primary} />
         </View>
@@ -172,7 +173,7 @@ export default function ProfileEditScreen() {
 
   if (query.isError || query.data === undefined) {
     return (
-      <FormScreen title={t('profileEdit.title')} onClose={() => goBack()}>
+      <FormScreen title={t('profileEdit.title')} onClose={() => safeBack(router, '/profile')}>
         <View style={{ paddingTop: 24, gap: 12 }}>
           <Text variant="body1" color={colors.text.muted}>
             {t('profileEdit.loadFailed')}
@@ -195,12 +196,12 @@ export default function ProfileEditScreen() {
       onSave={(input) => {
         mutation.mutate(input, {
           onSuccess: () => {
-            goBack();
+            safeBack(router, '/profile');
             toast.success(t('profileEdit.toast.saved'));
           },
         });
       }}
-      onCancel={() => goBack()}
+      onCancel={() => safeBack(router, '/profile')}
     />
   );
 }

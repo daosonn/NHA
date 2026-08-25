@@ -183,9 +183,10 @@ every idea carries its provenance (shape mirrors the shipped UI,
 `messages` adds nothing structural (regenerate = the same call again).
 
 ~~`quality-time`~~ — **dropped 2026-08-20 together with the whole of WBS
-2.6**, so there is no third suggestion kind and nothing saves a `Plan`.
-Every suggestion the product ships is read-once. See `project-status.md`
-→ Important Decisions.
+2.6**, so there is no third suggestion kind. Every _suggestion_ is
+read-once — but note (corrected 2026-08-24) gift-save does write a `Plan`
+row per ♡-saved idea, read back as `past_gifts` (see `database.md` →
+Plan). See `project-status.md` → Important Decisions.
 
 ### `POST /videos` + status
 

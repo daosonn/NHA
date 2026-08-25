@@ -1,3 +1,5 @@
+import { useRouter } from 'expo-router';
+import { safeBack } from '../../src/lib/back';
 import { Lock, Mail, UserRound } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,12 +15,12 @@ import { TextField } from '../../src/components/ui/text-field';
 import { authErrorKey } from '../../src/features/auth/auth-error';
 import { useSession } from '../../src/features/auth/session';
 import { colors } from '../../src/theme';
-import { goBack } from '../../src/lib/navigation';
 
 const MIN_PASSWORD = 8;
 
 export default function SignUpScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const { register } = useSession();
 
   const [name, setName] = useState('');
@@ -35,8 +37,9 @@ export default function SignUpScreen() {
   /**
    * Registration returns a token pair immediately — the server has no email
    * confirmation step (`docs/00-shared/api-contract.md`), so this lands
-   * straight in the app. `verify.tsx` stays built and unreachable until that
-   * endpoint exists rather than pretending to check something.
+   * straight in the app rather than pretending to check something. (The old
+   * standalone code screen, `verify.tsx`, was removed 2026-08-24 when the
+   * reset flow folded its code entry into `/reset`.)
    */
   const submit = async () => {
     setSubmitting(true);
@@ -52,7 +55,7 @@ export default function SignUpScreen() {
 
   return (
     <FormScreen
-      onBack={() => goBack('/welcome')}
+      onBack={() => safeBack(router, '/welcome')}
       footer={
         <>
           {errorKey !== null && (

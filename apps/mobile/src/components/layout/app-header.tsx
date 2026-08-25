@@ -53,12 +53,35 @@ export function AppHeader({ left, center, right, paddingRight = spacing.xl }: Ap
             paddingRight,
             flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'space-between',
           }}
         >
-          {left ?? <View />}
-          {center}
-          {right ?? <View />}
+          {/* Hai "ray" hai bên flex:1 nên LUÔN rộng bằng nhau — tiêu đề mới thật
+              sự nằm giữa. Bản cũ space-between với <View /> rỗng (width 0) đẩy
+              tâm tiêu đề lệch (rộng-trái − rộng-phải)/2: màn có nút back mà không
+              có chuông là tiêu đề dạt phải ~16px, và tiêu đề còn NHẢY khi slot
+              phải xuất hiện/biến mất theo điều kiện (vd nút "đọc hết" của màn
+              thông báo). */}
+          <View
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+            }}
+          >
+            {left}
+          </View>
+          <View style={{ flexShrink: 1, alignItems: 'center' }}>{center}</View>
+          <View
+            style={{
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+            }}
+          >
+            {right}
+          </View>
         </View>
       </ContentColumn>
     </BlurView>

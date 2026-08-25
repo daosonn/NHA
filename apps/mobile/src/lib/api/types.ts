@@ -462,6 +462,16 @@ export type ProfileDetail = {
    * photograph, and the app draws initials.
    */
   avatarMediaId: string | null;
+  /**
+   * Whether this account can sign in with a password. `false` means a
+   * social-only account (signed up with Google/Facebook): Settings offers
+   * "set a password" — the emailed-code reset flow — instead of the
+   * change-password form, which requires a current password that does not
+   * exist. Only your own route (`GET /me/profile`) carries a value; read
+   * through a family it is always `null` — how somebody else signs in is
+   * not the family's business.
+   */
+  hasPassword: boolean | null;
   updatedAt: IsoDateTime;
 };
 
@@ -575,6 +585,8 @@ export type NotificationPayload = {
   title?: string;
   occursOn?: string;
   daysUntil?: number;
+  /** kind 'video_done' — server ghi snake_case `video_job_id` */
+  videoJobId?: string;
 };
 
 /** `GET /api/me/notifications` (WBS 3.1.2). */

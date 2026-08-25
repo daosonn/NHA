@@ -15,11 +15,11 @@ import { SelectField } from '../src/components/ui/select-field';
 import { Text } from '../src/components/ui/text';
 import { useSession } from '../src/features/auth/session';
 import { useMemberForUser } from '../src/features/family/use-member-for-user';
+import { useMyProfile } from '../src/features/member/use-profile';
 import { LOCALE_NAMES, SUPPORTED_LOCALES, type Locale } from '../src/i18n';
 import { setLocale } from '../src/i18n/locale';
 import { useLocale } from '../src/i18n/use-locale';
 import { colors, radius, spacing } from '../src/theme';
-import { goBack } from '../src/lib/navigation';
 
 /**
  * A row that goes somewhere.
@@ -97,11 +97,16 @@ export default function SettingsScreen() {
   // The account carries no picture; the member row in the active family does.
   const me = useMemberForUser(user?.id ?? null);
   const locale = useLocale();
+  // A social-only account (signed up with Google/Facebook) has no password,
+  // so its row says "Set a password" — "requires your current one" would be
+  // a lie. The destination screen makes the same call from the same field.
+  const profile = useMyProfile();
+  const socialOnly = profile.data?.hasPassword === false;
 
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => goBack()} />}
+        left={<BackButton fallback="/profile" />}
         center={<ScreenTitle title={t('settings.title')} />}
       />
 
@@ -129,8 +134,8 @@ export default function SettingsScreen() {
         <Card padding={16} style={{ gap: 20 }}>
           <NavRow
             icon={KeyRound}
-            label={t('settings.password.title')}
-            hint={t('settings.password.row')}
+            label={socialOnly ? t('settings.password.set.title') : t('settings.password.title')}
+            hint={socialOnly ? t('settings.password.set.row') : t('settings.password.row')}
             onPress={() => router.push('/settings/password')}
           />
 

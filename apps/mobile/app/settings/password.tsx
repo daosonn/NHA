@@ -1,3 +1,5 @@
+import { useRouter } from 'expo-router';
+import { safeBack } from '../../src/lib/back';
 import { Lock } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,10 +10,11 @@ import { Button } from '../../src/components/ui/button';
 import { Text } from '../../src/components/ui/text';
 import { TextField } from '../../src/components/ui/text-field';
 import { useToast } from '../../src/components/ui/toast';
+import { useSession } from '../../src/features/auth/session';
 import { useChangePassword } from '../../src/features/auth/use-change-password';
+import { useMyProfile } from '../../src/features/member/use-profile';
 import { ApiError } from '../../src/lib/api';
 import { colors } from '../../src/theme';
-import { goBack } from '../../src/lib/navigation';
 
 const MIN_PASSWORD = 8;
 const MAX_PASSWORD = 72;
@@ -28,16 +31,58 @@ const MAX_PASSWORD = 72;
  * device is signed out — that is the server's doing and the point of the
  * feature — but this one keeps working, on the fresh pair the response
  * carries (`features/auth/use-change-password.ts`).
+ *
+ * A **social-only** account (`hasPassword: false` on `GET /me/profile`) has
+ * no current password to type, so it gets a different screen entirely: an
+ * explanation and a way into `/settings/set-password`, which is the emailed
+ * six-digit-code reset flow worn as "set a password" — the deliberate path
+ * for these accounts (`api-contract.md` → Auth). Rendering the form and
+ * letting it 400 would be a dead control.
  */
 export default function ChangePasswordScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const toast = useToast();
+  const { user } = useSession();
 
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirmation, setConfirmation] = useState('');
 
   const change = useChangePassword();
+  const profile = useMyProfile();
+
+  // Social-only account: offer "set a password" instead of the form. An
+  // errored or still-loading profile falls through to the form — the server
+  // enforces the real rule either way, this branch is only the better door.
+  // Nothing is sent from here: the code goes out on the next screen, after
+  // the password is chosen, so it arrives when there is something for it
+  // to confirm.
+  if (profile.data?.hasPassword === false) {
+    return (
+      <FormScreen
+        onBack={() => safeBack(router, '/settings')}
+        title={t('settings.password.set.title')}
+        footer={
+          <Button
+            label={t('auth.verify.continue')}
+            size="large"
+            fullWidth
+            disabled={user?.email == null}
+            onPress={() => router.push('/settings/set-password')}
+          />
+        }
+      >
+        <Text variant="body2" color={colors.text.muted}>
+          {t('settings.password.set.explain')}
+        </Text>
+
+        <Text variant="caption" color={colors.text.subtle}>
+          {t('settings.password.set.howItWorks')}
+        </Text>
+      </FormScreen>
+    );
+  }
 
   const tooShort = next.length > 0 && next.length < MIN_PASSWORD;
   // Only complain once there is enough typed for it to be a real mismatch.
@@ -59,7 +104,7 @@ export default function ChangePasswordScreen() {
       {
         onSuccess: () => {
           toast.success(t('settings.password.changed'));
-          goBack();
+          safeBack(router, '/settings');
         },
       },
     );
@@ -84,7 +129,7 @@ export default function ChangePasswordScreen() {
 
   return (
     <FormScreen
-      onBack={() => goBack()}
+      onBack={() => safeBack(router, '/settings')}
       title={t('settings.password.title')}
       footer={
         <>

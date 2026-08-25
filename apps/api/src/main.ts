@@ -1,4 +1,8 @@
-import { ValidationPipe } from '@nestjs/common';
+// PHẢI đứng đầu: nới threadpool của libuv trước khi `sharp` hay bất cứ thứ gì
+// chạm tới file được nạp. Xem lý do trong chính file đó.
+import './threadpool';
+
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
@@ -62,5 +66,12 @@ async function bootstrap() {
   );
 
   await app.listen(process.env.PORT ?? 3000);
+
+  // Hai con số này quyết định app nhanh hay chậm khi nhiều người dùng cùng lúc,
+  // và cả hai đều vô hình nếu không in ra — một lần chỉnh sai là ngồi đoán.
+  new Logger('Bootstrap').log(
+    `threadpool=${process.env.UV_THREADPOOL_SIZE ?? '4 (mặc định)'} · ` +
+      `render tối đa=${process.env.VIDEO_MAX_CONCURRENT_RENDERS ?? 2} cùng lúc`,
+  );
 }
 void bootstrap();

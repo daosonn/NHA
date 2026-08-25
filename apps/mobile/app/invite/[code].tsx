@@ -22,9 +22,9 @@ import {
   useInvitationPreview,
 } from '../../src/features/family/use-invitations';
 import { ApiError } from '../../src/lib/api';
+import { useSafeBack } from '../../src/lib/back';
 import { daysUntil } from '../../src/lib/date';
 import { colors, radius, spacing } from '../../src/theme';
-import { goBack } from '../../src/lib/navigation';
 
 const HERO_AVATAR = 60;
 
@@ -79,8 +79,8 @@ export default function InvitationScreen() {
   const accept = useAcceptInvitation();
 
   // This screen is reached from a share link as often as from inside the app,
-  // which is what `goBack` exists for — see `src/lib/navigation.ts`.
-  const close = () => goBack();
+  // which is what `useSafeBack` exists for — see `src/lib/back.ts`.
+  const close = useSafeBack('/');
 
   const join = () => {
     if (code === undefined) return;

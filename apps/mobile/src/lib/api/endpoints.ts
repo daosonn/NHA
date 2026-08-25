@@ -408,6 +408,9 @@ export const ai = {
     familyId: string,
     body: { template: string; message: string; toName: string; fromName: string; heading?: string },
   ) => apiRequest<{ media_id: string }>(`/families/${familyId}/cards`, { method: 'POST', body }),
+
+  /** Screen 26 — background art of one template (public, cache-friendly — like `video.musicFileUrl`). */
+  cardTemplateImageUrl: (template: string) => `${apiBaseUrl()}/cards/templates/${template}/image`,
 };
 
 export const video = {

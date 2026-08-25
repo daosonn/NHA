@@ -10,13 +10,17 @@ export type PillProps = {
 };
 
 /**
- * The selectable pill: solid CORAL when chosen, white with a hairline when not
- * (11h kind chips, 11m filters, 11n moods, 11g message lengths, 11f
- * "Warmer / More formal").
+ * The selectable pill: coral TINT with deep-coral text when chosen, white with
+ * a hairline when not (11h kind chips, 11m filters, 11n moods, 11g message
+ * lengths, 11f "Warmer / More formal").
  *
- * The mockups drew the chosen chip near-black; the app fills it with the brand
- * coral instead, so "what I picked" reads in the same colour as every other
- * committed choice in the product. Changed on Sơn's call, 19/08.
+ * History: the mockups drew the chosen chip near-black; 19/08 (Sơn's call) it
+ * became solid coral with white text. That pairing is 2.4:1 — below what the
+ * design system allows on a label ("solid coral cannot carry a label"), and
+ * unreadable in daylight for the grandparents this app is for. 24/08 it moved
+ * to the doc's sanctioned branded fill: coral.deep on coral.light (4.6:1), the
+ * same treatment as the active nav tab. Solid coral stays reserved for the
+ * primary button. If the team prefers near-black, change it here only.
  */
 export function Pill({ label, selected, onPress }: PillProps) {
   return (
@@ -30,17 +34,19 @@ export function Pill({ label, selected, onPress }: PillProps) {
         justifyContent: 'center',
         borderRadius: radius.full,
         backgroundColor: selected
-          ? pressed
-            ? colors.coral.dark
-            : colors.coral.primary
+          ? colors.coral.light
           : pressed
             ? colors.coral.soft
             : colors.background.card,
-        borderWidth: selected ? 0 : 1,
-        borderColor: colors.state.borderNeutral,
+        borderWidth: 1,
+        borderColor: selected ? colors.coral.border : colors.state.borderNeutral,
       })}
     >
-      <Text variant="caption" weight="semibold" color={selected ? colors.text.white : colors.text.primary}>
+      <Text
+        variant="caption"
+        weight="semibold"
+        color={selected ? colors.coral.deep : colors.text.primary}
+      >
         {label}
       </Text>
     </Pressable>

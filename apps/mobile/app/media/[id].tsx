@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { safeBack } from '../../src/lib/back';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Volume2, VolumeX } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -11,7 +12,6 @@ import { apiAccessToken, media } from '../../src/lib/api';
 import { objectUrlFor } from '../../src/lib/download';
 import { mediaSource } from '../../src/lib/media-source';
 import { colors, radius, spacing } from '../../src/theme';
-import { goBack } from '../../src/lib/navigation';
 
 /**
  * Xem một ảnh hoặc một đoạn phim của gia đình, chiếm cả màn hình.
@@ -25,6 +25,7 @@ import { goBack } from '../../src/lib/navigation';
  */
 export default function MediaViewerScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const { id, mime } = useLocalSearchParams<{ id: string; mime?: string }>();
   const isVideo = (mime ?? '').startsWith('video');
   const fileUrl = media.streamUrl(id);
@@ -34,24 +35,32 @@ export default function MediaViewerScreen() {
    * đưa cho thẻ phát một blob — cùng cách màn phim kỷ niệm đang dùng.
    */
   const [webUri, setWebUri] = useState<string | null>(null);
+  // Tải hỏng (token hết hạn, media bị xoá, rớt mạng) phải NÓI RA — trước đây
+  // promise reject không ai bắt và màn đứng đen vĩnh viễn, không lời giải thích.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
   useEffect(() => {
     if (!isVideo || Platform.OS !== 'web') return;
     let cancelled = false;
     let created: string | null = null;
-    void objectUrlFor(fileUrl, apiAccessToken()).then((url) => {
-      if (cancelled) {
-        URL.revokeObjectURL(url);
-        return;
-      }
-      created = url;
-      setWebUri(url);
-    });
+    objectUrlFor(fileUrl, apiAccessToken())
+      .then((url) => {
+        if (cancelled) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        created = url;
+        setWebUri(url);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadFailed(true);
+      });
     return () => {
       cancelled = true;
       if (created !== null) URL.revokeObjectURL(created);
       setWebUri(null);
     };
-  }, [fileUrl, isVideo]);
+  }, [fileUrl, isVideo, retryTick]);
 
   const playerSource = !isVideo
     ? null
@@ -99,7 +108,43 @@ export default function MediaViewerScreen() {
           contentFit="contain"
           transition={160}
           accessibilityLabel={t('post.openPhoto')}
+          onError={() => setLoadFailed(true)}
         />
+      )}
+
+      {/* Tải hỏng: nói ra + cho thử lại tại chỗ, thay vì màn đen câm lặng */}
+      {loadFailed && (
+        <View
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: '42%',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <Text variant="body2" color={colors.text.white} style={{ textAlign: 'center' }}>
+            {t('errors.generic')}
+          </Text>
+          <Pressable
+            onPress={() => {
+              setLoadFailed(false);
+              setRetryTick((n) => n + 1);
+            }}
+            accessibilityRole="button"
+            style={{
+              paddingHorizontal: 18,
+              paddingVertical: 10,
+              borderRadius: radius.full,
+              backgroundColor: 'rgba(255,255,255,0.16)',
+            }}
+          >
+            <Text variant="body2" weight="semibold" color={colors.text.white}>
+              {t('common.retry')}
+            </Text>
+          </Pressable>
+        </View>
       )}
 
       {/* Các nút nổi trên ảnh: màn này không có thanh tiêu đề, vì một tấm ảnh
@@ -138,7 +183,7 @@ export default function MediaViewerScreen() {
         )}
 
         <Pressable
-          onPress={() => goBack()}
+          onPress={() => safeBack(router, '/')}
           accessibilityRole="button"
           accessibilityLabel={t('common.close')}
           style={{

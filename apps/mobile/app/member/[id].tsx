@@ -16,7 +16,6 @@ import { useFamilyTree } from '../../src/features/family/use-family-tree';
 import { toMemberProfile } from '../../src/features/member/member-profile';
 import { useMemberProfile } from '../../src/features/member/use-profile';
 import { spacing } from '../../src/theme';
-import { goBack } from '../../src/lib/navigation';
 
 /**
  * The Life Profile — the centre of the product.
@@ -48,7 +47,7 @@ export default function MemberScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => goBack()} />}
+        left={<BackButton />}
         center={<ScreenTitle title={profile.displayName} />}
         right={<NotificationBell />}
         paddingRight={spacing.lg}

@@ -140,6 +140,9 @@ export interface AnalyzeResult {
   mock: boolean;
 }
 
+/** Trần chờ một call sang apps/ai. Xem lý do ở `request()`. */
+const AI_CALL_TIMEOUT_MS = 70_000;
+
 @Injectable()
 export class AiClientService {
   private readonly baseUrl: string;
@@ -257,11 +260,20 @@ export class AiClientService {
           ...(this.token ? { 'x-internal-token': this.token } : {}),
         },
         body: body === undefined ? undefined : JSON.stringify(body),
+        // `fetch` không có timeout mặc định, nên một call kẹt là một request treo
+        // vô hạn: người dùng nhìn spinner không bao giờ dứt, và mỗi cái treo giữ
+        // một kết nối. 70s = trần 60s mà AI service tự đặt cho OpenAI, cộng chỗ
+        // cho nó kịp trả về lỗi của chính nó thay vì bị mình cắt trước.
+        signal: AbortSignal.timeout(AI_CALL_TIMEOUT_MS),
       });
-    } catch {
-      // Nguyên tắc sản phẩm: core phải sống khi AI chết — lỗi rõ ràng, không crash chuỗi khác
+    } catch (error) {
+      // Nguyên tắc sản phẩm: core phải sống khi AI chết — lỗi rõ ràng, không crash chuỗi khác.
+      // Phân biệt hai cảnh: chưa chạy service, và service nhận rồi nhưng quá lâu.
+      const timedOut = (error as Error)?.name === 'TimeoutError';
       throw new ServiceUnavailableException(
-        'AI service is not reachable — start apps/ai (uvicorn) or set AI_SERVICE_URL',
+        timedOut
+          ? `AI service did not answer within ${AI_CALL_TIMEOUT_MS / 1000}s`
+          : 'AI service is not reachable — start apps/ai (uvicorn) or set AI_SERVICE_URL',
       );
     }
     if (!rsp.ok) {

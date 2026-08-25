@@ -1,11 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { AlertTriangle, ExternalLink, Eye, Heart, RotateCw, Sparkles } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import {
+  AlertTriangle,
+  ExternalLink,
+  Eye,
+  Gift,
+  Heart,
+  RotateCw,
+  Sparkles,
+} from 'lucide-react-native';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Linking, Pressable, ScrollView, View } from 'react-native';
 
+import { InlineError } from '../../src/components/ai/inline-error';
 import { Sheet } from '../../src/components/ai/sheet';
 import { SourceChip } from '../../src/components/ai/source-chip';
 import { AppHeader } from '../../src/components/layout/app-header';
@@ -14,17 +23,18 @@ import { BackButton, ScreenTitle } from '../../src/components/layout/header-slot
 import { Button } from '../../src/components/ui/button';
 import { Card } from '../../src/components/ui/card';
 import { Chip } from '../../src/components/ui/chip';
+import { EmptyState } from '../../src/components/ui/empty-state';
 import { PhotoPlaceholder } from '../../src/components/ui/photo-placeholder';
 import { Text } from '../../src/components/ui/text';
+import { useToast } from '../../src/components/ui/toast';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { useAiLocale } from '../../src/features/ai/use-ai-locale';
 import { useGiftIdeas, useSaveGiftIdea } from '../../src/features/ai/use-gift-ideas';
-import { ai } from '../../src/lib/api';
-import type { GiftIdeaResult, GiftSource } from '../../src/lib/api';
+import { ai, ApiError } from '../../src/lib/api';
+import type { GiftIdeaResult, GiftIdeasResponse, GiftSource } from '../../src/lib/api';
 import { mediaSource } from '../../src/lib/media-source';
 import { formatFullDate } from '../../src/lib/date';
 import { colors, radius, spacing } from '../../src/theme';
-import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 22 (11b) — "All five ideas in one scroll, each with its sources and where to buy"
@@ -51,28 +61,49 @@ export default function GiftResultsScreen() {
   const ideas = useGiftIdeas(familyId, params.memberId ?? null);
   const save = useSaveGiftIdea(familyId, params.memberId ?? null);
   const locale = useAiLocale();
+  const toast = useToast();
   const [savedTitles, setSavedTitles] = useState<string[]>([]);
+  /** Kết quả thành công gần nhất — giữ lại để regenerate không xoá trắng màn hình. */
+  const [held, setHeld] = useState<GiftIdeasResponse | null>(null);
   const [open, setOpen] = useState<OpenSource | null>(null);
 
-  /** `force` = nút ↻: bỏ qua cache, hỏi AI lại (mất token, nên phải do người bấm). */
-  const ask = (force = false) =>
-    ideas.mutate({
-      occasionLabel: params.occasion,
-      occasionDate: params.occasionDate || undefined,
-      budgetLabel: params.budget,
-      locale, // ý tưởng phải cùng ngôn ngữ với màn hình người dùng đang xem
-      maxIdeas: 5, // design 11b: "All five ideas in one scroll"
+  /** Lượt hỏi gần nhất có force hay không — retry phải lặp lại ĐÚNG lượt đã hỏng,
+   * không được âm thầm hạ xuống bản cache. */
+  const lastForce = useRef(false);
 
-      force,
-    });
+  /** `force` = nút ↻: bỏ qua cache, hỏi AI lại (mất token, nên phải do người bấm). */
+  const ask = (force = lastForce.current) => {
+    lastForce.current = force;
+    ideas.mutate(
+      {
+        occasionLabel: params.occasion,
+        occasionDate: params.occasionDate || undefined,
+        budgetLabel: params.budget,
+        locale, // ý tưởng phải cùng ngôn ngữ với màn hình người dùng đang xem
+        maxIdeas: 5, // design 11b: "All five ideas in one scroll"
+
+        force,
+      },
+      { onSuccess: (result) => setHeld(result) },
+    );
+  };
 
   useEffect(() => {
     if (familyId && params.memberId && params.occasion) ask();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [familyId, params.memberId, params.occasion, params.budget]);
 
-  const data = ideas.data;
+  const data = held;
   const counts = data?.evidence_read ?? {};
+
+  /** Saved = đã lưu từ trước (server trả về) ∪ vừa lưu lượt này (optimistic). */
+  const savedSet = new Set([...(data?.saved_ideas ?? []).map((s) => s.title), ...savedTitles]);
+
+  /** 503 AI_UNAVAILABLE → câu "AI đang tắt"; lỗi khác dùng câu chung. */
+  const ideasErrorMessage =
+    ideas.error instanceof ApiError && !ideas.error.isAiUnavailable
+      ? t('errors.generic')
+      : t('ai.gifts.error');
 
   /**
    * Sheet 11d — lần theo nguồn AI đã trích. Nguồn giờ là `sig_…` (signal trong hồ
@@ -86,14 +117,24 @@ export default function GiftResultsScreen() {
   const resolved = source.data?.[0] ?? null;
 
   const onSave = (idea: GiftIdeaResult) => {
-    if (savedTitles.includes(idea.title)) return;
+    if (savedSet.has(idea.title)) return;
     setSavedTitles((current) => [...current, idea.title]);
-    save.mutate({
-      title: idea.title,
-      why: idea.why,
-      priceRange: idea.price_range ?? undefined,
-      occasionLabel: params.occasion,
-    });
+    save.mutate(
+      {
+        title: idea.title,
+        why: idea.why,
+        priceRange: idea.price_range ?? undefined,
+        occasionLabel: params.occasion,
+      },
+      {
+        onSuccess: () => toast.success(t('ai.gifts.savedToast')),
+        onError: () => {
+          // rollback optimistic — nút trở lại "Save" để bấm lại được
+          setSavedTitles((current) => current.filter((title) => title !== idea.title));
+          toast.failure(t('ai.gifts.saveFailed'));
+        },
+      },
+    );
   };
 
   /** Mở đúng trang tìm kiếm của sàn với từ khoá tiếng Nhật + dải giá đã dùng. */
@@ -103,30 +144,76 @@ export default function GiftResultsScreen() {
     const range = idea.resolve
       ? `&price_from=${idea.resolve.price_min}&price_to=${idea.resolve.price_max}`
       : '';
-    void Linking.openURL(`https://shopping.yahoo.co.jp/search?p=${encodeURIComponent(kw)}${range}`);
+    void Linking.openURL(
+      `https://shopping.yahoo.co.jp/search?p=${encodeURIComponent(kw)}${range}`,
+    ).catch(() => toast.failure(t('ai.gifts.linkFailed')));
   };
+
+  // familyId chưa về là trạng thái TẠM (đang đọc families/AsyncStorage) — chờ,
+  // đừng chớp màn "thiếu ngữ cảnh" rồi lại đổi ý.
+  if (familyId === null && params.memberId && params.occasion) {
+    return (
+      <View className="flex-1 bg-page">
+        <AppHeader
+          left={<BackButton fallback="/ai" />}
+          center={<ScreenTitle title={t('ai.gifts.title')} />}
+          paddingRight={spacing.lg}
+        />
+        <View style={{ paddingTop: 40, alignItems: 'center' }}>
+          <ActivityIndicator color={colors.coral.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  // Mở thẳng màn 22 mà thiếu ngữ cảnh (deep link cũ…) — chỉ về form, không heading "undefined".
+  if (!familyId || !params.memberId || !params.occasion) {
+    return (
+      <View className="flex-1 bg-page">
+        <AppHeader
+          left={<BackButton fallback="/ai" />}
+          center={<ScreenTitle title={t('ai.gifts.title')} />}
+          paddingRight={spacing.lg}
+        />
+        <EmptyState
+          renderIcon={({ size, color }) => <Gift size={size} color={color} strokeWidth={2.1} />}
+          title={t('ai.gifts.missingTitle')}
+          description={t('ai.gifts.missingBody')}
+          actionLabel={t('ai.gifts.missingAction')}
+          onActionPress={() => router.replace('/ai/gifts')}
+        />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => goBack()} />}
+        left={<BackButton fallback="/ai" />}
         center={<ScreenTitle title={t('ai.gifts.title')} />}
         right={
           <Pressable
             onPress={() => {
               if (!ideas.isPending) ask(true);
             }}
+            disabled={ideas.isPending}
             accessibilityRole="button"
             accessibilityLabel={t('ai.gifts.regenerate')}
-            style={{
+            accessibilityState={{ disabled: ideas.isPending }}
+            style={({ pressed }) => ({
               width: 40,
               height: 40,
               borderRadius: radius.full,
               alignItems: 'center',
               justifyContent: 'center',
-            }}
+              opacity: pressed ? 0.55 : 1,
+            })}
           >
-            <RotateCw size={18} color={colors.text.primary} strokeWidth={2.1} />
+            <RotateCw
+              size={18}
+              color={ideas.isPending ? colors.state.disabledText : colors.text.primary}
+              strokeWidth={2.1}
+            />
           </Pressable>
         }
         paddingRight={spacing.lg}
@@ -143,10 +230,12 @@ export default function GiftResultsScreen() {
       >
         <View style={{ gap: 4 }}>
           <Text serif weight="bold" style={{ fontSize: 25, lineHeight: 31, letterSpacing: -0.4 }}>
-            {t('ai.gifts.resultsTitle', {
-              count: data?.ideas.length ?? 5,
-              name: params.memberName,
-            })}
+            {data
+              ? t('ai.gifts.resultsTitle', {
+                  count: data.ideas.length,
+                  name: params.memberName ?? '',
+                })
+              : t('ai.gifts.title')}
           </Text>
           <Text variant="caption" color={colors.text.muted}>
             {params.occasion}
@@ -162,22 +251,23 @@ export default function GiftResultsScreen() {
           </Card>
         )}
 
-        {ideas.isError && (
-          <Card padding={16} style={{ gap: 10 }}>
-            <Text variant="body2" color={colors.text.body}>
-              {t('ai.gifts.error')}
-            </Text>
-            <Button
-              label={t('common.retry')}
-              variant="secondary"
-              size="small"
-              onPress={() => ask()}
-            />
-          </Card>
+        {/* Có kết quả cũ thì lỗi hiện TRÊN danh sách; chưa có gì thì card lỗi đứng một mình */}
+        {ideas.isError && <InlineError message={ideasErrorMessage} onRetry={() => ask()} />}
+
+        {/* Lượt hỏi trả về 0 ý tưởng — nói vì sao và mời thử lại (force, vì cache đã rỗng).
+            Lỗi thì nhường chỗ cho card lỗi ở trên: hai nút retry chồng nhau là đánh đố. */}
+        {data && data.ideas.length === 0 && !ideas.isPending && !ideas.isError && (
+          <EmptyState
+            renderIcon={({ size, color }) => <Gift size={size} color={color} strokeWidth={2.1} />}
+            title={t('ai.gifts.noIdeasTitle')}
+            description={t('ai.gifts.noIdeasBody')}
+            actionLabel={t('common.retry')}
+            onActionPress={() => ask(true)}
+          />
         )}
 
-        {data && (
-          <>
+        {data && data.ideas.length > 0 && (
+          <View style={{ gap: 12, opacity: ideas.isPending ? 0.55 : 1 }}>
             {/* Lượt này từ cache (0 token) — nói ra để nút ↻ có nghĩa */}
             {data.cached && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -445,7 +535,11 @@ export default function GiftResultsScreen() {
                       {idea.products.map((p) => (
                         <Pressable
                           key={p.url}
-                          onPress={() => void Linking.openURL(p.url)}
+                          onPress={() =>
+                            void Linking.openURL(p.url).catch(() =>
+                              toast.failure(t('ai.gifts.linkFailed')),
+                            )
+                          }
                           accessibilityRole="link"
                           style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
                         >
@@ -524,21 +618,28 @@ export default function GiftResultsScreen() {
                   {/* Không tra được sản phẩm: nói rõ vì sao rồi mới mời tự tìm */}
                   {idea.products.length === 0 && (
                     <Text variant="badge" color={colors.text.subtle}>
-                      {data.shops_enabled ? t('ai.gifts.noProducts') : t('ai.gifts.shopsOff')}
+                      {data.shops_enabled
+                        ? idea.resolve?.error
+                          ? t('ai.gifts.shopCheckFailed')
+                          : t('ai.gifts.noProducts')
+                        : t('ai.gifts.shopsOff')}
                     </Text>
                   )}
 
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     <Button
-                      label={
-                        savedTitles.includes(idea.title) ? t('ai.gifts.saved') : t('ai.gifts.save')
-                      }
-                      variant={savedTitles.includes(idea.title) ? 'secondary' : 'neutral'}
+                      label={savedSet.has(idea.title) ? t('ai.gifts.saved') : t('ai.gifts.save')}
+                      variant={savedSet.has(idea.title) ? 'secondary' : 'neutral'}
                       size="small"
-                      disabled={savedTitles.includes(idea.title)}
+                      accessibilityState={{ selected: savedSet.has(idea.title) }}
                       onPress={() => onSave(idea)}
                       renderIcon={({ size, color }) => (
-                        <Heart size={size} color={color} strokeWidth={2.1} />
+                        <Heart
+                          size={size}
+                          color={color}
+                          strokeWidth={2.1}
+                          fill={savedSet.has(idea.title) ? color : 'transparent'}
+                        />
                       )}
                     />
                     {!!idea.search_keywords_ja && (
@@ -560,7 +661,7 @@ export default function GiftResultsScreen() {
             <Text variant="badge" color={colors.text.subtle} style={{ textAlign: 'center' }}>
               {t('ai.privacyFooter')}
             </Text>
-          </>
+          </View>
         )}
       </ScrollView>
 
@@ -601,7 +702,20 @@ export default function GiftResultsScreen() {
           </Text>
         )}
 
-        {resolved?.text ? (
+        {/* Tra nguồn thất bại ≠ nguồn đã mất — thất bại thì mời thử lại, không đổ cho bài gốc */}
+        {source.isError ? (
+          <View style={{ gap: 10 }}>
+            <Text variant="body2" color={colors.text.body}>
+              {t('ai.gifts.sourceLoadFailed')}
+            </Text>
+            <Button
+              label={t('common.retry')}
+              variant="secondary"
+              size="small"
+              onPress={() => void source.refetch()}
+            />
+          </View>
+        ) : resolved?.text ? (
           <Text variant="body2" color={colors.text.secondary}>
             {resolved.kind === 'memo' ? `“${resolved.text}”` : `“${resolved.text}”`}
             {resolved.author_name ? (
@@ -665,7 +779,10 @@ export default function GiftResultsScreen() {
                 setOpen(null);
               }}
               accessibilityRole="button"
-              accessibilityLabel={t('ai.gifts.save')}
+              accessibilityLabel={
+                savedSet.has(open.idea.title) ? t('ai.gifts.saved') : t('ai.gifts.save')
+              }
+              accessibilityState={{ selected: savedSet.has(open.idea.title) }}
               style={({ pressed }) => ({
                 width: 44,
                 height: 44,
@@ -679,11 +796,9 @@ export default function GiftResultsScreen() {
             >
               <Heart
                 size={18}
-                color={
-                  savedTitles.includes(open.idea.title) ? colors.coral.hover : colors.text.secondary
-                }
+                color={savedSet.has(open.idea.title) ? colors.coral.hover : colors.text.secondary}
                 strokeWidth={2.1}
-                fill={savedTitles.includes(open.idea.title) ? colors.coral.hover : 'transparent'}
+                fill={savedSet.has(open.idea.title) ? colors.coral.hover : 'transparent'}
               />
             </Pressable>
           )}

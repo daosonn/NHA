@@ -1,5 +1,7 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
+import { safeBack } from '../../src/lib/back';
 import { Plus, Sparkles } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,13 +13,13 @@ import { ContentColumn, contentColumn } from '../../src/components/layout/conten
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Button } from '../../src/components/ui/button';
 import { Text } from '../../src/components/ui/text';
+import { useToast } from '../../src/components/ui/toast';
 import { useSession } from '../../src/features/auth/session';
 import { useVideoDraft } from '../../src/features/video/draft';
 import { useVideoPhotos } from '../../src/features/video/use-video-photos';
 import { media } from '../../src/lib/api';
 import { thumbnailSource } from '../../src/lib/media-source';
 import { colors, radius, spacing } from '../../src/theme';
-import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 28 (11m) — "Sources by family group, numbered order, add more".
@@ -29,6 +31,8 @@ type Filter = 'all' | 'mine' | string; // string = familyId
 
 export default function VideoPhotosScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
+  const toast = useToast();
   const { user } = useSession();
   const { draft, update } = useVideoDraft();
 
@@ -96,6 +100,11 @@ export default function VideoPhotosScreen() {
           [up.id]: up.mimeType.startsWith('video/') ? 'video' : 'image',
         },
       });
+    } catch {
+      // Upload hỏng (mạng, file quá lớn, 401) mà không nói gì thì người dùng
+      // chỉ thấy spinner tắt rồi… không có gì — cùng chuẩn báo lỗi với upload
+      // avatar bên màn hồ sơ.
+      toast.failure(t('errors.generic'));
     } finally {
       setUploading(false);
     }
@@ -104,7 +113,7 @@ export default function VideoPhotosScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => goBack()} />}
+        left={<BackButton fallback="/video/setup" />}
         center={<ScreenTitle title={t('video.photosTitle')} />}
       />
 
@@ -338,7 +347,7 @@ export default function VideoPhotosScreen() {
             size="large"
             fullWidth
             disabled={draft.mediaIds.length === 0}
-            onPress={() => goBack()}
+            onPress={() => safeBack(router, '/video/setup')}
           />
         </ContentColumn>
       </View>

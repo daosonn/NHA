@@ -6,8 +6,11 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
+  Res,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
+import { createReadStream } from 'node:fs';
 import {
   CurrentUser,
   type AuthUser,
@@ -102,7 +105,7 @@ export class AiController {
   @Post('families/:familyId/cards')
   @ApiOperation({
     summary:
-      'Screen 26 — render a greeting card PNG server-side (5 designs, 0 tokens); returns a media id to view or attach to a post',
+      'Screen 26 — render a greeting card PNG server-side (15 hand-designed backgrounds, 0 tokens); returns a media id to view or attach to a post',
   })
   renderCard(
     @CurrentUser() user: AuthUser,
@@ -110,6 +113,25 @@ export class AiController {
     @Body() dto: CardRenderDto,
   ): Promise<{ media_id: string }> {
     return this.cardService.render(user.userId, familyId, dto);
+  }
+
+  @Public()
+  @Get('cards/templates/:template/image')
+  @ApiOperation({
+    summary:
+      'Screen 26 — background art of one card template (bundled app asset, no user data → public so the picker can draw it without headers, same reasoning as the music route)',
+  })
+  cardTemplateImage(
+    @Param('template') template: string,
+    @Res() res: Response,
+  ): void {
+    const { path: p, size } = this.cardService.templateImage(template);
+    res.status(200).set({
+      'content-type': 'image/jpeg',
+      'content-length': String(size),
+      'cache-control': 'public, max-age=86400',
+    });
+    createReadStream(p).pipe(res);
   }
 
   @Public()

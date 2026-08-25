@@ -1,9 +1,10 @@
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { Bell, ChevronLeft, Settings } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { useUnreadCount } from '../../features/notification/use-notifications';
+import { useSafeBack } from '../../lib/back';
 
 import { colors, radius } from '../../theme';
 import { BrandMark } from '../ui/brand-mark';
@@ -75,13 +76,22 @@ export function ScreenTitle({ title }: { title: string }) {
   );
 }
 
-/** Leading slot for any pushed screen. */
-export function BackButton({ onPress }: { onPress?: () => void }) {
+/**
+ * Leading slot for any pushed screen.
+ *
+ * Không truyền `onPress` thì tự "quay lại an toàn": có history thì back,
+ * không có (reload web / deep link / mở từ thông báo) thì replace về
+ * `fallback` — trước đây mọi màn truyền `() => router.back()` trần và nút
+ * chết kèm lỗi GO_BACK trong đúng các kịch bản đó. Chỉ truyền `onPress`
+ * khi màn thật sự cần logic riêng (xác nhận bỏ nháp…).
+ */
+export function BackButton({ onPress, fallback = '/' }: { onPress?: () => void; fallback?: Href }) {
   const { t } = useTranslation();
+  const goBack = useSafeBack(fallback);
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={onPress ?? goBack}
       accessibilityRole="button"
       accessibilityLabel={t('common.back')}
       hitSlop={8}

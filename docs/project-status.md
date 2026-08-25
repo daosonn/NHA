@@ -105,17 +105,21 @@ screens.
   place a width becomes a structural decision, and the five tab screens stop
   reserving 140–160px of bottom room once nothing is floating there.
 
-  **Going back can no longer dead-end.** All 48 `router.back()` call sites now
-  go through `goBack()` (`src/lib/navigation.ts`), which lands on Home — or on
-  Welcome, from the signed-out screens — when there is nothing behind the
-  screen. This was already a real hole rather than a precaution: a link to a
-  post, a person or an invitation is regularly opened cold, and then that
-  screen is the first entry in the history. The back arrow did nothing on web
-  and, on native, calling `back()` with an empty stack takes the navigator down
-  — recovering from which means mounting the whole tree again. The invitation
-  screen had hand-rolled exactly this guard for itself; the helper is that
-  logic, applied everywhere. Thirteen screens turned out to have used the
-  router for nothing else, so their `useRouter()` went with it.
+  **The same safe-back fix got built twice, and that is worth recording.** A
+  bare `router.back()` dead-ends whenever a screen is the first entry in the
+  history — which on the web is any reload, any deep link, any tap on a
+  notification — and on native it throws `GO_BACK` and takes the navigator with
+  it. PR #48 fixed it on `main` as `src/lib/back.ts` (`safeBack` /
+  `useSafeBack`, plus a `BackButton` that handles it when given no `onPress`).
+  This branch, cut before that landed and never re-fetched, built the identical
+  helper independently. The merge on 2026-08-25 kept `main`'s — it has
+  per-screen fallbacks (`/ai`, `/albums`, `/settings`, `/profile`,
+  `/video/setup`) where the branch's had one blanket `/` — and deleted the
+  duplicate. The cost was ~30 files of conflict for nothing.
+
+  The lesson is the one `CLAUDE.md` § 8.1 already gives: read what teammates
+  landed on `main` **before** writing code, not at merge time. Nothing about
+  the duplication was detectable from the branch.
 
   A **right-hand column** (Instagram has one, Threads does not) was considered
   and **deferred** — it needs a decision about what belongs in it, and moving
@@ -186,8 +190,33 @@ screens.
   blocked twice over: the OAuth callback cannot return tokens to the app, and
   the Meta tester invite is unaccepted. 1.2.4 (empty/loading states) is ours
   and small — `app/memo/[id].tsx` and `app/memo/edit.tsx` have no error
-  state; the AI and video screens merged from `main` are missing several and
-  belong to their author. "Fix lỗi chính" is the remaining sweep.
+  state; the AI and video screens' gaps were closed 2026-08-24 (see below).
+  "Fix lỗi chính" is the remaining sweep.
+
+- **AI-screens UX pass (2026-08-24).** All five AI surfaces (hub, gift ask,
+  gift results, message, card) plus video setup/story got the missing
+  error/empty/loading states, driven by a 7-persona audit and an adversarial
+  review (21 findings fixed). The through-line: no AI failure is silent any
+  more — every mutation surfaces `InlineError` (new shared component) with a
+  retry, a 503 `AI_UNAVAILABLE` now reaches screens as `ApiError.code` /
+  `.isAiUnavailable` and reads as "AI is off", and a failed regenerate keeps
+  the previous results on screen instead of destroying them. Also: message
+  source chips resolve real evidence via the existing `/evidence` route,
+  cards can be saved to the device and the shared post opened, over-limit
+  messages are counted and blocked before the server truncates them, the
+  card renderer skips the salutation for empty names (server + preview now
+  agree), `budgetLabel(0, n)` no longer halves the price floor server-side,
+  and the video storyboard request stops hardcoding `locale: 'ja'`.
+  **One recorded decision was overridden**: the selected `Pill` is now
+  coral-tint + deep-coral text (4.6:1) per design-system contrast rules,
+  replacing solid coral + white (2.4:1, Sơn's 19/08 call) — ratify or revert
+  in `src/components/ai/pill.tsx`. Verified: mobile tsc, api tsc/lint/build,
+  check:i18n (719 keys), prettier on touched files, Metro web bundle, live
+  card render. Left for the backend owner: per-variant labeled evidence refs
+  for messages, localized card salutation (PNG still draws English "Dear"),
+  toName/fromName DTO cap 40 vs 100-char names (mobile clamps for now),
+  thumbnails on `GiftSource`, splitting video create+render (ghost PENDING
+  jobs on render failure), and `mock.py` ignoring `locale`.
 - **Four bugs found by hand in one sitting (2026-08-20)**, all of a kind the
   app should catch itself: a catalogue key printed raw under somebody's name
   (`family.relation.parent` — the field was called `relation` and documented
@@ -1013,9 +1042,14 @@ dev` **did not regenerate the client**, and the stale client survived
   recorded so nobody re-derives them:
   - **Every AI suggestion the product ships is read-once.** Nothing is
     persisted; the "AI output you follow over days" case is gone.
-  - **`Plan` and `PlanShare` stay in the schema, unused.** They shipped in
-    the sprint-0 migration and are empty; dropping them costs a migration
-    for something that may come back. Nothing reads or writes them.
+  - ~~**`Plan` and `PlanShare` stay in the schema, unused.**~~ — **no longer
+    true for `Plan` (corrected 2026-08-24): the AI team's gift-save reuses
+    it.** `ai.service.ts` writes a `Plan` row per ♡-saved gift idea (title
+    convention `gift:<name>`, owner-private) and `ai-context.service.ts`
+    reads them back as `past_gifts` so a saved gift is never re-suggested.
+    Only `PlanShare` is truly unused. Do not drop `Plan` as "empty and
+    harmless" — it carries live data. The Quality Time _feature_ stays
+    dropped; only the table found a second life.
   - The Plan API was **written and verified** (49-case live smoke test,
     2026-08-20) but deliberately **not merged** — branch `feature/plans`
     if this is revived. Same for `feature/ai-suggestions`, which had the
@@ -1233,7 +1267,8 @@ relationshipType, status, expiresAt }`. `Family.inviteCode` stays as the
   personal albums private / profile gallery derived); Memo = private
   notes about a member (author-only, always); ~~AI plans are saved
   (`Plan` + `PlanShare` — owner edits, view-only sharing)~~ — **the
-  feature was dropped 2026-08-20, tables kept unused**; birth/death
+  feature was dropped 2026-08-20; `Plan` was then reused by gift-save
+  (corrected 2026-08-24, see the Quality Time decision above)**; birth/death
   dates live on LifeProfile; wiki edits logged (`EditHistory`); diverse
   reactions (base LIKE/LOVE/HAHA/WOW/SAD); solar-only dates (product
   targets the Japanese market); special-date widgets (`SpecialDate`).

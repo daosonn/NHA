@@ -31,7 +31,6 @@ import {
 import type { NotificationDetail, NotificationType } from '../src/lib/api';
 import { relativeTime } from '../src/lib/date';
 import { colors, radius, spacing } from '../src/theme';
-import { goBack } from '../src/lib/navigation';
 
 /** One glyph per kind, so the list is scannable before it is read. */
 const ICON: Record<NotificationType, typeof Heart> = {
@@ -136,14 +135,16 @@ export default function NotificationsScreen() {
     router.push(
       target.kind === 'post'
         ? { pathname: '/post/[id]', params: { id: target.id } }
-        : { pathname: '/member/[id]', params: { id: target.id } },
+        : target.kind === 'video'
+          ? { pathname: '/video/[id]', params: { id: target.id } }
+          : { pathname: '/member/[id]', params: { id: target.id } },
     );
   };
 
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => goBack()} />}
+        left={<BackButton />}
         center={<ScreenTitle title={t('nav.notifications')} />}
         right={
           unread > 0 ? (

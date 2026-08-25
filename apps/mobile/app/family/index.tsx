@@ -28,7 +28,6 @@ import {
 import { useFamilies } from '../../src/features/family/use-families';
 import { useRemoveMember, useSaveMember } from '../../src/features/family/use-member-mutations';
 import { useFamilyTree } from '../../src/features/family/use-family-tree';
-import { goBack } from '../../src/lib/navigation';
 import {
   ApiError,
   type FamilySummary,
@@ -165,10 +164,7 @@ export default function FamilyTreeScreen() {
 
   return (
     <View className="flex-1 bg-page">
-      <AppHeader
-        left={<BackButton onPress={() => goBack()} />}
-        center={<ScreenTitle title={t('family.title')} />}
-      />
+      <AppHeader left={<BackButton />} center={<ScreenTitle title={t('family.title')} />} />
 
       <View className="flex-1 gap-lg px-xl pb-xl pt-lg">
         {families !== undefined && families.length > 0 && (

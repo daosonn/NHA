@@ -106,6 +106,9 @@ export function TextField({
 
         <TextInput
           {...rest}
+          // The visible label is a sibling Text, not programmatically attached —
+          // without this a screen reader announces only the placeholder.
+          accessibilityLabel={rest.accessibilityLabel ?? label}
           value={value}
           onChangeText={onChangeText}
           onFocus={() => setFocused(true)}
@@ -126,7 +129,11 @@ export function TextField({
         />
 
         {maxLength !== undefined && (
-          <Text variant="badge" color={colors.text.subtle} style={{ marginTop: multiline ? 4 : 0 }}>
+          <Text
+            variant="caption"
+            color={colors.text.subtle}
+            style={{ marginTop: multiline ? 4 : 0 }}
+          >
             {`${value.length}/${maxLength}`}
           </Text>
         )}
@@ -147,8 +154,13 @@ export function TextField({
         )}
       </View>
 
+      {/* Caption size, not badge: this line is the recovery path after a
+          validation error — 10px is unreadable for the readers this app is for. */}
       {(error ?? hint) !== undefined && (
-        <Text variant="badge" color={invalid ? colors.themes.destructive.text : colors.text.subtle}>
+        <Text
+          variant="caption"
+          color={invalid ? colors.themes.destructive.text : colors.text.subtle}
+        >
           {error ?? hint}
         </Text>
       )}

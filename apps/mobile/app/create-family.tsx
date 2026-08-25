@@ -1,3 +1,5 @@
+import { useRouter } from 'expo-router';
+import { safeBack } from '../src/lib/back';
 import { Hash, UsersRound } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,7 +13,6 @@ import { TextField } from '../src/components/ui/text-field';
 import { useCreateFamily, useJoinFamily } from '../src/features/family/use-family-mutations';
 import { ApiError } from '../src/lib/api';
 import { colors } from '../src/theme';
-import { goBack } from '../src/lib/navigation';
 
 type Mode = 'create' | 'join';
 
@@ -41,6 +42,7 @@ function errorKey(error: unknown, mode: Mode): string {
  */
 export default function CreateFamilyScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
 
   const [mode, setMode] = useState<Mode>('create');
   const [name, setName] = useState('');
@@ -60,7 +62,7 @@ export default function CreateFamilyScreen() {
         await join.mutateAsync({ inviteCode: code.trim().toUpperCase() });
       }
       // Back to Home, which now has a family to show.
-      goBack();
+      safeBack(router, '/');
     } catch {
       // Rendered from `active.error` below; nothing to do here.
     }
@@ -68,7 +70,7 @@ export default function CreateFamilyScreen() {
 
   return (
     <FormScreen
-      onBack={() => goBack()}
+      onBack={() => safeBack(router, '/')}
       footer={
         <>
           {active.error !== null && (

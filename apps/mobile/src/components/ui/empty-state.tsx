@@ -50,7 +50,7 @@ export function EmptyState({
       </View>
 
       <View style={{ alignItems: 'center', gap: 3 }}>
-        <Text variant="body1" weight="semibold">
+        <Text variant="body1" weight="semibold" style={{ textAlign: 'center' }}>
           {title}
         </Text>
 
