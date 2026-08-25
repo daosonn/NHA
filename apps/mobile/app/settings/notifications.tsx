@@ -1,9 +1,9 @@
-import { useRouter } from 'expo-router';
 import { TriangleAlert } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, ScrollView, Switch, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Card } from '../../src/components/ui/card';
 import { EmptyState } from '../../src/components/ui/empty-state';
@@ -15,6 +15,7 @@ import {
 } from '../../src/features/settings/use-notification-settings';
 import type { NotificationSettings } from '../../src/lib/api';
 import { colors, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * The three groups, in the order somebody is likeliest to want them off:
@@ -91,7 +92,6 @@ function ToggleRow({
  */
 export default function NotificationSettingsScreen() {
   const { t } = useTranslation();
-  const router = useRouter();
   const toast = useToast();
 
   const query = useNotificationSettings();
@@ -107,7 +107,7 @@ export default function NotificationSettingsScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack()} />}
         center={<ScreenTitle title={t('settings.notifications.title')} />}
       />
 
@@ -124,7 +124,7 @@ export default function NotificationSettingsScreen() {
         />
       ) : (
         <ScrollView
-          contentContainerStyle={{ padding: spacing.xl, gap: 14 }}
+          contentContainerStyle={{ ...contentColumn, paddingVertical: spacing.xl, gap: 14 }}
           showsVerticalScrollIndicator={false}
         >
           <Card padding={18} style={{ gap: 20 }}>

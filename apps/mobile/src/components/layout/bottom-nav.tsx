@@ -79,13 +79,17 @@ function metrics(width: number) {
 
 type Metrics = ReturnType<typeof metrics>;
 
-type TabConfig = { labelKey: string; icon: LucideIcon };
+export type TabConfig = { labelKey: string; icon: LucideIcon };
 
 /**
  * Home · Omoide · + · AI · Profile — the five destinations from the mockups.
  * The family tree is *not* a tab; it is reached from the group strip on Home.
+ *
+ * Exported because `side-nav.tsx` draws the same destinations turned vertical.
+ * One list, so the two navigations cannot come to disagree about what the app
+ * has in it, what each one is called, or which glyph stands for it.
  */
-const TABS: Record<string, TabConfig> = {
+export const TABS: Record<string, TabConfig> = {
   index: { labelKey: 'nav.tab.home', icon: House },
   omoide: { labelKey: 'nav.tab.omoide', icon: History },
   ai: { labelKey: 'nav.tab.ai', icon: Sparkles },
@@ -93,7 +97,7 @@ const TABS: Record<string, TabConfig> = {
 };
 
 /** The centre action, still the one filled control on the bar. */
-const COMPOSE_ROUTE = 'new';
+export const COMPOSE_ROUTE = 'new';
 
 /**
  * One destination. `flex: 1`, so the four share whatever the bar has left
@@ -123,7 +127,13 @@ function Slot({
       style={{
         flex: 1,
         height: m.itemHeight,
-        borderRadius: radius['2xl'],
+        // A pill inside a pill. It was `2xl` (18), which pinched: the bar's own
+        // cap is a 34 radius, and an 18-radius corner leaves only ~3px of
+        // clearance on the corner diagonal against 6px along the flat — so the
+        // selected chip looked both squarer than the bar it sits in and crowded
+        // against its end. At `full` the chip's cap is concentric enough with
+        // the bar's that the clearance is an even 6px the whole way round.
+        borderRadius: radius.full,
         alignItems: 'center',
         justifyContent: 'center',
         gap: 3,

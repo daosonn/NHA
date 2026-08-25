@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 
 import { AppHeader } from '../src/components/layout/app-header';
+import { contentColumnBleed } from '../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../src/components/layout/header-slots';
 import { EmptyState } from '../src/components/ui/empty-state';
 import { IconBadge } from '../src/components/ui/icon-badge';
@@ -30,6 +31,7 @@ import {
 import type { NotificationDetail, NotificationType } from '../src/lib/api';
 import { relativeTime } from '../src/lib/date';
 import { colors, radius, spacing } from '../src/theme';
+import { goBack } from '../src/lib/navigation';
 
 /** One glyph per kind, so the list is scannable before it is read. */
 const ICON: Record<NotificationType, typeof Heart> = {
@@ -141,7 +143,7 @@ export default function NotificationsScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack()} />}
         center={<ScreenTitle title={t('nav.notifications')} />}
         right={
           unread > 0 ? (
@@ -179,7 +181,7 @@ export default function NotificationsScreen() {
           ItemSeparatorComponent={() => (
             <View style={{ height: 1, backgroundColor: colors.background.subtle }} />
           )}
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ ...contentColumnBleed, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
           onEndReachedThreshold={0.5}
           onEndReached={() => {

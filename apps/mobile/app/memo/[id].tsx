@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
+import { ContentColumn, contentColumn } from '../../src/components/layout/content-column';
 import { useToast } from '../../src/components/ui/toast';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { MemoActionsSheet } from '../../src/components/member/memo-actions-sheet';
@@ -17,6 +18,7 @@ import { TextLink } from '../../src/components/ui/text-link';
 import { useDeleteMemo, useMemo } from '../../src/features/member/use-memos';
 import { relativeTime } from '../../src/lib/date';
 import { colors, elevation, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /** Room for the floating action bar. */
 const BOTTOM_INSET = 120;
@@ -57,7 +59,7 @@ export default function MemoScreen() {
     setActionsOpen(false);
     // Leave first, delete second: the list this note came from is behind us,
     // and the screen would otherwise flash its "gone" state on the way out.
-    router.back();
+    goBack();
     deleteMemo.mutate(memo, {
       onSuccess: () => toast.success(t('member.memoDelete.toast')),
       onError: () => toast.failure(t('errors.generic')),
@@ -72,7 +74,7 @@ export default function MemoScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack()} />}
         center={<ScreenTitle title={t('member.memoDetail.title')} />}
         right={
           memo === undefined ? undefined : (
@@ -112,7 +114,7 @@ export default function MemoScreen() {
         <>
           <ScrollView
             contentContainerStyle={{
-              paddingHorizontal: spacing.xl,
+              ...contentColumn,
               paddingTop: 18,
               paddingBottom: BOTTOM_INSET,
               gap: 14,
@@ -187,25 +189,34 @@ export default function MemoScreen() {
           {/* Only the edit action is drawn. The mockup's bare image and link
               icons have nothing behind them, and a dead control costs more
               trust than a visibly missing one. */}
-          <View style={{ position: 'absolute', right: spacing.xl, bottom: 34 }}>
-            <Pressable
-              onPress={openEditor}
-              accessibilityRole="button"
-              accessibilityLabel={t('member.memoDetail.edit')}
-              style={[
-                {
-                  width: 46,
-                  height: 46,
-                  borderRadius: radius.full,
-                  backgroundColor: colors.coral.primary,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                },
-                elevation.floating,
-              ]}
-            >
-              <Pencil size={21} color={colors.text.white} strokeWidth={2.1} />
-            </Pressable>
+          {/* Pinned to the column's right edge rather than the window's: at
+              1440 those are 400px apart and only one of them is anywhere near
+              the memo. The strip carrying it now spans the width, so it is
+              `box-none` — otherwise it would swallow the scroll. */}
+          <View
+            style={{ position: 'absolute', left: 0, right: 0, bottom: 34 }}
+            pointerEvents="box-none"
+          >
+            <ContentColumn style={{ alignItems: 'flex-end' }} pointerEvents="box-none">
+              <Pressable
+                onPress={openEditor}
+                accessibilityRole="button"
+                accessibilityLabel={t('member.memoDetail.edit')}
+                style={[
+                  {
+                    width: 46,
+                    height: 46,
+                    borderRadius: radius.full,
+                    backgroundColor: colors.coral.primary,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  },
+                  elevation.floating,
+                ]}
+              >
+                <Pencil size={21} color={colors.text.white} strokeWidth={2.1} />
+              </Pressable>
+            </ContentColumn>
           </View>
 
           <MemoActionsSheet

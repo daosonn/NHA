@@ -9,6 +9,7 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, View } from 'react-n
 import { Sheet } from '../../src/components/ai/sheet';
 import { SourceChip } from '../../src/components/ai/source-chip';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Button } from '../../src/components/ui/button';
 import { Card } from '../../src/components/ui/card';
@@ -23,6 +24,7 @@ import type { GiftIdeaResult, GiftSource } from '../../src/lib/api';
 import { mediaSource } from '../../src/lib/media-source';
 import { formatFullDate } from '../../src/lib/date';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 22 (11b) — "All five ideas in one scroll, each with its sources and where to buy"
@@ -107,7 +109,7 @@ export default function GiftResultsScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack()} />}
         center={<ScreenTitle title={t('ai.gifts.title')} />}
         right={
           <Pressable
@@ -132,7 +134,7 @@ export default function GiftResultsScreen() {
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: spacing.xl,
+          ...contentColumn,
           paddingTop: 14,
           paddingBottom: 40,
           gap: 12,

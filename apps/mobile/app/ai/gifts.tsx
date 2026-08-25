@@ -12,6 +12,7 @@ import { OccasionSheet, type OccasionChoice } from '../../src/components/ai/occa
 import { SectionLabel } from '../../src/components/ai/section-label';
 import { SelectRow } from '../../src/components/ai/select-row';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Avatar } from '../../src/components/ui/avatar';
 import { AvatarStack } from '../../src/components/ui/avatar-stack';
@@ -28,6 +29,7 @@ import { families, profiles } from '../../src/lib/api';
 import { formatFullDate } from '../../src/lib/date';
 import { queryKeys } from '../../src/lib/query-keys';
 import { colors, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /** Màn 21 (11a) — "Who, when, how much — nothing else". */
 
@@ -87,13 +89,13 @@ export default function GiftAskScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack()} />}
         center={<ScreenTitle title={t('ai.gifts.title')} />}
       />
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: spacing.xl,
+          ...contentColumn,
           paddingTop: 14,
           paddingBottom: 40,
           gap: 8,

@@ -11,6 +11,7 @@ import { TextField } from '../../src/components/ui/text-field';
 import { authErrorKey } from '../../src/features/auth/auth-error';
 import { useRequestPasswordReset } from '../../src/features/auth/use-password-reset';
 import { colors } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Step one of three: prove which account, then the code screen, then a new
@@ -43,7 +44,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <FormScreen
-      onBack={() => router.back()}
+      onBack={() => goBack('/welcome')}
       footer={
         <>
           {request.error !== null && (

@@ -8,6 +8,7 @@ import { CommentActionsSheet } from '../../src/components/feed/comment-actions-s
 import { PostCard } from '../../src/components/feed/post-card';
 import { LikeButton } from '../../src/components/feed/like-button';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { ContentColumn, contentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Avatar } from '../../src/components/ui/avatar';
 import { Button } from '../../src/components/ui/button';
@@ -28,6 +29,7 @@ import { usePost, useSetReaction } from '../../src/features/feed/use-post';
 import { formatFullDate } from '../../src/lib/date';
 import type { CommentSummary } from '../../src/lib/api';
 import { colors, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 const MAX_COMMENT = 2000;
 
@@ -204,7 +206,7 @@ export default function PostDetailScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack()} />}
         center={<ScreenTitle title={t('post.title')} />}
       />
 
@@ -222,7 +224,12 @@ export default function PostDetailScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <ScrollView
-            contentContainerStyle={{ padding: spacing.xl, gap: 16, paddingBottom: 40 }}
+            contentContainerStyle={{
+              ...contentColumn,
+              paddingTop: spacing.xl,
+              gap: 16,
+              paddingBottom: 40,
+            }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
@@ -276,7 +283,7 @@ export default function PostDetailScreen() {
             )}
           </ScrollView>
 
-          <View style={{ paddingHorizontal: spacing.xl, paddingBottom: 28, gap: 8 }}>
+          <ContentColumn style={{ paddingBottom: 28, gap: 8 }}>
             {/* Says which mode the composer is in, and offers the way out.
                 Without it, tapping Edit silently changes what the send
                 button does — and the only clue would be text appearing in a
@@ -321,7 +328,7 @@ export default function PostDetailScreen() {
                 )}
               />
             </View>
-          </View>
+          </ContentColumn>
 
           <CommentActionsSheet
             comment={acting}

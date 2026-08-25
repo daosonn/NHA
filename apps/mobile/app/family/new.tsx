@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { Check } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +14,7 @@ import { useSession } from '../../src/features/auth/session';
 import { useCreateFamily } from '../../src/features/family/use-family-mutations';
 import { ApiError, type FamilyDetail } from '../../src/lib/api';
 import { colors, radius } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Shorter than the server's 100. A group name is read inside a 34px avatar
@@ -77,7 +77,6 @@ function GroupMark() {
  */
 export default function NewFamilyScreen() {
   const { t } = useTranslation();
-  const router = useRouter();
   const { user } = useSession();
 
   const [name, setName] = useState('');
@@ -108,14 +107,9 @@ export default function NewFamilyScreen() {
     return (
       <FormScreen
         title={t('family.new.doneTitle')}
-        onClose={() => router.back()}
+        onClose={() => goBack()}
         footer={
-          <Button
-            label={t('family.new.done')}
-            size="large"
-            fullWidth
-            onPress={() => router.back()}
-          />
+          <Button label={t('family.new.done')} size="large" fullWidth onPress={() => goBack()} />
         }
       >
         <View style={{ alignItems: 'center', gap: 12, paddingTop: 8 }}>
@@ -164,7 +158,7 @@ export default function NewFamilyScreen() {
   return (
     <FormScreen
       title={t('family.new.title')}
-      onClose={() => router.back()}
+      onClose={() => goBack()}
       footer={
         <>
           {errorKey !== null && (

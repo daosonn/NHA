@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Volume2, VolumeX } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -11,6 +11,7 @@ import { apiAccessToken, media } from '../../src/lib/api';
 import { objectUrlFor } from '../../src/lib/download';
 import { mediaSource } from '../../src/lib/media-source';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Xem một ảnh hoặc một đoạn phim của gia đình, chiếm cả màn hình.
@@ -24,7 +25,6 @@ import { colors, radius, spacing } from '../../src/theme';
  */
 export default function MediaViewerScreen() {
   const { t } = useTranslation();
-  const router = useRouter();
   const { id, mime } = useLocalSearchParams<{ id: string; mime?: string }>();
   const isVideo = (mime ?? '').startsWith('video');
   const fileUrl = media.streamUrl(id);
@@ -138,7 +138,7 @@ export default function MediaViewerScreen() {
         )}
 
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => goBack()}
           accessibilityRole="button"
           accessibilityLabel={t('common.close')}
           style={{

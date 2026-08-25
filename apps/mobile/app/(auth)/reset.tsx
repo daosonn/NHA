@@ -12,6 +12,7 @@ import { authErrorKey } from '../../src/features/auth/auth-error';
 import { useConfirmPasswordReset } from '../../src/features/auth/use-password-reset';
 import { ApiError } from '../../src/lib/api';
 import { colors } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 const MIN_PASSWORD = 8;
 const MAX_PASSWORD = 72;
@@ -75,7 +76,7 @@ export default function ResetPasswordScreen() {
 
   return (
     <FormScreen
-      onBack={() => router.back()}
+      onBack={() => goBack('/welcome')}
       footer={
         <>
           {errorKey !== null && (

@@ -1,11 +1,12 @@
 import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { ImageOff, Lock } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumnBleed } from '../../src/components/layout/content-column';
 import { ScreenTitle } from '../../src/components/layout/header-slots';
 import {
   MEMO_CATEGORIES,
@@ -19,6 +20,7 @@ import { Text } from '../../src/components/ui/text';
 import { useCreateMemo, useMemo, useUpdateMemo } from '../../src/features/member/use-memos';
 import { ApiError, type MemoDetail } from '../../src/lib/api';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 const TITLE_MAX = 120;
 const CONTENT_MAX = 5000;
@@ -93,7 +95,6 @@ function CategoryPills({
  */
 export default function MemoEditorScreen() {
   const { t } = useTranslation();
-  const router = useRouter();
   const { id, familyId, memberId } = useLocalSearchParams<{
     id?: string;
     familyId?: string;
@@ -119,8 +120,8 @@ export default function MemoEditorScreen() {
       memo={existing.data ?? null}
       familyId={familyId ?? null}
       memberId={memberId ?? null}
-      onDone={() => router.back()}
-      onCancel={() => router.back()}
+      onDone={() => goBack()}
+      onCancel={() => goBack()}
     />
   );
 }
@@ -266,7 +267,12 @@ function MemoEditorForm({
       />
 
       <ScrollView
-        contentContainerStyle={{ paddingTop: 14, paddingBottom: 40, gap: 12 }}
+        contentContainerStyle={{
+          ...contentColumnBleed,
+          paddingTop: 14,
+          paddingBottom: 40,
+          gap: 12,
+        }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >

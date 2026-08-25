@@ -1,14 +1,15 @@
-import { useRouter } from 'expo-router';
 import { Check } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Text } from '../../src/components/ui/text';
 import { useVideoDraft } from '../../src/features/video/draft';
 import type { VideoStyleId } from '../../src/lib/api';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 30 (11o) — "Six openings: album, cinematic, old film, letter, petals, polaroid.
@@ -185,16 +186,15 @@ function Preview({ id }: { id: VideoStyleId }) {
 
 export default function VideoStyleScreen() {
   const { t } = useTranslation();
-  const router = useRouter();
   const { draft, update } = useVideoDraft();
 
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack()} />}
         center={<ScreenTitle title={t('video.styleTitle')} />}
         right={
-          <Pressable onPress={() => router.back()} accessibilityRole="button" hitSlop={8}>
+          <Pressable onPress={() => goBack()} accessibilityRole="button" hitSlop={8}>
             <Text variant="body2" weight="semibold" color={colors.coral.hover}>
               {t('common.done')}
             </Text>
@@ -204,7 +204,7 @@ export default function VideoStyleScreen() {
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: spacing.xl,
+          ...contentColumn,
           paddingTop: 14,
           paddingBottom: 40,
           gap: 12,

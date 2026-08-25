@@ -15,6 +15,7 @@ import {
   useVerifyResetCode,
 } from '../../src/features/auth/use-password-reset';
 import { colors } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 const CODE_LENGTH = 6;
 const RESEND_SECONDS = 60;
@@ -107,7 +108,7 @@ export default function VerifyScreen() {
 
   return (
     <FormScreen
-      onBack={() => router.back()}
+      onBack={() => goBack('/welcome')}
       footer={
         <>
           {errorKey !== null && (
@@ -133,7 +134,7 @@ export default function VerifyScreen() {
             label={resetting ? t('auth.verify.differentEmail') : t('auth.verify.changeEmail')}
             variant="ghost"
             fullWidth
-            onPress={() => router.back()}
+            onPress={() => goBack('/welcome')}
           />
         </>
       }

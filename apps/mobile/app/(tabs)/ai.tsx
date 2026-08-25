@@ -9,6 +9,7 @@ import { specialDateIcon, specialDateKindKey } from '../../src/components/ai/occ
 import { DateTile } from '../../src/components/ai/date-tile';
 import { SelectRow } from '../../src/components/ai/select-row';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { NotificationBell, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Avatar } from '../../src/components/ui/avatar';
 import { Button } from '../../src/components/ui/button';
@@ -20,9 +21,15 @@ import { useOccasionLabel, useSpecialDates } from '../../src/features/ai/use-spe
 import { families, type SpecialDateItem } from '../../src/lib/api';
 import { formatDayMonth } from '../../src/lib/date';
 import { queryKeys } from '../../src/lib/query-keys';
-import { colors, radius, spacing } from '../../src/theme';
+import { colors, radius, spacing, useLayout } from '../../src/theme';
 
-/** Clears the bottom nav (56pt plus the home indicator). */
+/**
+ * Room the floating bottom bar needs at the end of the scroll.
+ *
+ * Only while the bar is at the bottom. From 1024px up the same destinations
+ * are a rail down the left, which overlaps nothing, so reserving this much
+ * there would just be 140px of dead space under the last row.
+ */
 const BOTTOM_INSET = 140;
 
 /** Icon-tile colours of the MAKE SOMETHING rows — straight from the mockup. */
@@ -65,6 +72,7 @@ function weekdayIndex(isoDate: string): number | null {
  */
 export default function AiScreen() {
   const { t } = useTranslation();
+  const { expanded } = useLayout();
   const router = useRouter();
   const { familyId } = useActiveFamily();
   const dates = useSpecialDates(familyId);
@@ -123,9 +131,9 @@ export default function AiScreen() {
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: spacing.xl,
+          ...contentColumn,
           paddingTop: 14,
-          paddingBottom: BOTTOM_INSET,
+          paddingBottom: expanded ? spacing['4xl'] : BOTTOM_INSET,
           gap: 16,
         }}
         showsVerticalScrollIndicator={false}

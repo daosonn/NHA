@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SocialButtons } from '../../src/components/auth/social-buttons';
+import { ContentColumn } from '../../src/components/layout/content-column';
 import { AvatarStack } from '../../src/components/ui/avatar-stack';
 import { BrandMark } from '../../src/components/ui/brand-mark';
 import { Button } from '../../src/components/ui/button';
@@ -73,7 +74,7 @@ export default function WelcomeScreen() {
         <AvatarStack items={FACES} size={34} surface={colors.coral.light} remaining={6} />
       </View>
 
-      <View style={{ paddingTop: 26, paddingHorizontal: spacing.xl, gap: 10 }}>
+      <ContentColumn style={{ paddingTop: 26, gap: 10 }}>
         <Button
           label={t('auth.welcome.create')}
           size="large"
@@ -82,19 +83,12 @@ export default function WelcomeScreen() {
         />
 
         <SocialButtons layout="stack" continueWording />
-      </View>
+      </ContentColumn>
 
       {/* What is left of the gap — a quarter of the slack, not all of it. */}
       <View style={{ flex: 1 }} />
 
-      <View
-        style={{
-          paddingHorizontal: spacing.xl,
-          paddingBottom: insets.bottom + 24,
-          alignItems: 'center',
-          gap: 14,
-        }}
-      >
+      <ContentColumn style={{ paddingBottom: insets.bottom + 24, alignItems: 'center', gap: 14 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <Text variant="body1" color={colors.text.muted}>
             {t('auth.welcome.haveAccount')}
@@ -113,7 +107,7 @@ export default function WelcomeScreen() {
         >
           {t('auth.welcome.legal')}
         </Text>
-      </View>
+      </ContentColumn>
     </View>
   );
 }

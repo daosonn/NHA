@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { Lock, Mail, UserRound } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,12 +13,12 @@ import { TextField } from '../../src/components/ui/text-field';
 import { authErrorKey } from '../../src/features/auth/auth-error';
 import { useSession } from '../../src/features/auth/session';
 import { colors } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 const MIN_PASSWORD = 8;
 
 export default function SignUpScreen() {
   const { t } = useTranslation();
-  const router = useRouter();
   const { register } = useSession();
 
   const [name, setName] = useState('');
@@ -53,7 +52,7 @@ export default function SignUpScreen() {
 
   return (
     <FormScreen
-      onBack={() => router.back()}
+      onBack={() => goBack('/welcome')}
       footer={
         <>
           {errorKey !== null && (

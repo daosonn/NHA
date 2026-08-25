@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { colors, radius, spacing } from '../../theme';
 import { AppHeader } from './app-header';
+import { ContentColumn, contentColumn } from './content-column';
 import { BackButton, ScreenTitle } from './header-slots';
 
 export type FormScreenProps = {
@@ -66,7 +67,7 @@ export function FormScreen({ onBack, onClose, title, children, footer }: FormScr
         <ScrollView
           contentContainerStyle={{
             flexGrow: 1,
-            paddingHorizontal: spacing.xl,
+            ...contentColumn,
             paddingBottom: spacing.xl,
             gap: 22,
           }}
@@ -77,9 +78,7 @@ export function FormScreen({ onBack, onClose, title, children, footer }: FormScr
         </ScrollView>
 
         {footer !== undefined && (
-          <View style={{ paddingHorizontal: spacing.xl, paddingBottom: 36, gap: 12 }}>
-            {footer}
-          </View>
+          <ContentColumn style={{ paddingBottom: 36, gap: 12 }}>{footer}</ContentColumn>
         )}
       </KeyboardAvoidingView>
     </View>

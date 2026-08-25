@@ -7,6 +7,7 @@ import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { AlbumFormSheet } from '../../src/components/album/album-form-sheet';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { Text } from '../../src/components/ui/text';
@@ -14,6 +15,7 @@ import { useAlbums, useCreateAlbum } from '../../src/features/album/use-albums';
 import type { AlbumSummary } from '../../src/lib/api';
 import { mediaSource } from '../../src/lib/media-source';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 const GRID_GAP = 12;
 
@@ -143,12 +145,17 @@ export default function AlbumsScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack()} />}
         center={<ScreenTitle title={t('albums.title')} />}
       />
 
       <ScrollView
-        contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40, gap: 14 }}
+        contentContainerStyle={{
+          ...contentColumn,
+          paddingTop: spacing.xl,
+          paddingBottom: 40,
+          gap: 14,
+        }}
         showsVerticalScrollIndicator={false}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>

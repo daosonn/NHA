@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { InvitePreview } from '../../src/components/family/invite-preview';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { ScreenTitle } from '../../src/components/layout/header-slots';
 import { Avatar } from '../../src/components/ui/avatar';
 import { BrandMark } from '../../src/components/ui/brand-mark';
@@ -23,6 +24,7 @@ import {
 import { ApiError } from '../../src/lib/api';
 import { daysUntil } from '../../src/lib/date';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 const HERO_AVATAR = 60;
 
@@ -76,12 +78,9 @@ export default function InvitationScreen() {
   const preview = useInvitationPreview(code ?? null);
   const accept = useAcceptInvitation();
 
-  const close = () => {
-    // Reached from a share link as often as from inside the app, and then
-    // there is nothing behind it to go back to.
-    if (router.canGoBack()) router.back();
-    else router.replace('/');
-  };
+  // This screen is reached from a share link as often as from inside the app,
+  // which is what `goBack` exists for — see `src/lib/navigation.ts`.
+  const close = () => goBack();
 
   const join = () => {
     if (code === undefined) return;
@@ -162,7 +161,12 @@ export default function InvitationScreen() {
       {header}
 
       <ScrollView
-        contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40, gap: 18 }}
+        contentContainerStyle={{
+          ...contentColumn,
+          paddingTop: spacing.xl,
+          paddingBottom: 40,
+          gap: 18,
+        }}
         showsVerticalScrollIndicator={false}
       >
         <View style={{ alignItems: 'center', gap: 14 }}>

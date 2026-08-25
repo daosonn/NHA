@@ -14,6 +14,7 @@ import { SectionLabel } from '../../src/components/ai/section-label';
 import { SelectRow } from '../../src/components/ai/select-row';
 import { SourceChip } from '../../src/components/ai/source-chip';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Avatar } from '../../src/components/ui/avatar';
 import { Button } from '../../src/components/ui/button';
@@ -30,6 +31,7 @@ import { families } from '../../src/lib/api';
 import type { MessageVariant } from '../../src/lib/api';
 import { queryKeys } from '../../src/lib/query-keys';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 24 (11e) "Three ways to say it" + màn 25 (11f) "Say it differently".
@@ -118,13 +120,13 @@ export default function MessageScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack()} />}
         center={<ScreenTitle title={t('ai.message.title')} />}
       />
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: spacing.xl,
+          ...contentColumn,
           paddingTop: 14,
           paddingBottom: 40,
           gap: 12,

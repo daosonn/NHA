@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { Lock } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +11,7 @@ import { useToast } from '../../src/components/ui/toast';
 import { useChangePassword } from '../../src/features/auth/use-change-password';
 import { ApiError } from '../../src/lib/api';
 import { colors } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 const MIN_PASSWORD = 8;
 const MAX_PASSWORD = 72;
@@ -31,7 +31,6 @@ const MAX_PASSWORD = 72;
  */
 export default function ChangePasswordScreen() {
   const { t } = useTranslation();
-  const router = useRouter();
   const toast = useToast();
 
   const [current, setCurrent] = useState('');
@@ -60,7 +59,7 @@ export default function ChangePasswordScreen() {
       {
         onSuccess: () => {
           toast.success(t('settings.password.changed'));
-          router.back();
+          goBack();
         },
       },
     );
@@ -85,7 +84,7 @@ export default function ChangePasswordScreen() {
 
   return (
     <FormScreen
-      onBack={() => router.back()}
+      onBack={() => goBack()}
       title={t('settings.password.title')}
       footer={
         <>

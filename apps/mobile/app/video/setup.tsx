@@ -10,6 +10,7 @@ import { MemberSheet } from '../../src/components/ai/member-sheet';
 import { Pill } from '../../src/components/ai/pill';
 import { SelectRow } from '../../src/components/ai/select-row';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Avatar } from '../../src/components/ui/avatar';
 import { AvatarStack } from '../../src/components/ui/avatar-stack';
@@ -25,6 +26,7 @@ import type { VideoTargetSec } from '../../src/lib/api';
 import { queryKeys } from '../../src/lib/query-keys';
 import { colors, radius, spacing } from '../../src/theme';
 import { useTypeface } from '../../src/theme/typeface';
+import { goBack } from '../../src/lib/navigation';
 import { useState } from 'react';
 
 /**
@@ -103,13 +105,13 @@ export default function VideoSetupScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack()} />}
         center={<ScreenTitle title={t('video.title')} />}
       />
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: spacing.xl,
+          ...contentColumn,
           paddingTop: 14,
           paddingBottom: 24,
           gap: 12,

@@ -15,6 +15,7 @@ import { TextLink } from '../../src/components/ui/text-link';
 import { authErrorKey } from '../../src/features/auth/auth-error';
 import { useSession } from '../../src/features/auth/session';
 import { colors } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 export default function SignInScreen() {
   const { t } = useTranslation();
@@ -48,7 +49,7 @@ export default function SignInScreen() {
 
   return (
     <FormScreen
-      onBack={() => router.back()}
+      onBack={() => goBack('/welcome')}
       footer={
         <>
           {errorKey !== null && (

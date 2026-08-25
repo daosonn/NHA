@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, SectionList, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumnBleed } from '../../src/components/layout/content-column';
 import { NotificationBell, ScreenTitle } from '../../src/components/layout/header-slots';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { IconBadge } from '../../src/components/ui/icon-badge';
@@ -12,9 +13,15 @@ import { GRID_GAP, PhotoRow } from '../../src/components/omoide/photo-row';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { useFamilyPhotos, type PhotoTile } from '../../src/features/omoide/use-family-photos';
 import { formatFullDate } from '../../src/lib/date';
-import { colors, radius, spacing } from '../../src/theme';
+import { colors, radius, spacing, useLayout } from '../../src/theme';
 
-/** Room for the bottom nav plus the home indicator. */
+/**
+ * Room the floating bottom bar needs at the end of the scroll.
+ *
+ * Only while the bar is at the bottom. From 1024px up the same destinations
+ * are a rail down the left, which overlaps nothing, so reserving this much
+ * there would just be 140px of dead space under the last row.
+ */
 const BOTTOM_INSET = 140;
 
 /**
@@ -32,6 +39,7 @@ const BOTTOM_INSET = 140;
  */
 export default function OmoideScreen() {
   const { t } = useTranslation();
+  const { expanded } = useLayout();
   const router = useRouter();
   const { familyId } = useActiveFamily();
 
@@ -88,7 +96,10 @@ export default function OmoideScreen() {
         // The date heading stays put while its own photos scroll under it,
         // so you always know what you are looking at.
         stickySectionHeadersEnabled
-        contentContainerStyle={{ paddingBottom: BOTTOM_INSET }}
+        contentContainerStyle={{
+          ...contentColumnBleed,
+          paddingBottom: expanded ? spacing['4xl'] : BOTTOM_INSET,
+        }}
         showsVerticalScrollIndicator={false}
         onEndReachedThreshold={0.5}
         onEndReached={() => {

@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Check, Flower2, PenLine, Share2 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Pill } from '../../src/components/ai/pill';
 import { SectionLabel } from '../../src/components/ai/section-label';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Button } from '../../src/components/ui/button';
 import { Text } from '../../src/components/ui/text';
@@ -19,6 +20,7 @@ import { ai, posts } from '../../src/lib/api';
 import type { MessageVariant } from '../../src/lib/api';
 import { mediaSource } from '../../src/lib/media-source';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 26 (11g) — "Make a card": chọn độ dài lời nhắn (Short/Standard/Heartfelt),
@@ -95,7 +97,6 @@ const LENGTH_KEY: Record<MessageVariant['length'], string> = {
 
 export default function CardScreen() {
   const { t } = useTranslation();
-  const router = useRouter();
   const { familyId } = useActiveFamily();
   const { user } = useSession();
   const params = useLocalSearchParams<{
@@ -167,13 +168,13 @@ export default function CardScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack()} />}
         center={<ScreenTitle title={t('ai.card.title')} />}
       />
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: spacing.xl,
+          ...contentColumn,
           paddingTop: 14,
           paddingBottom: 40,
           gap: 10,

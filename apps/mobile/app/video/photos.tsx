@@ -1,6 +1,5 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
 import { Plus, Sparkles } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +7,7 @@ import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { Pill } from '../../src/components/ai/pill';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { ContentColumn, contentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Button } from '../../src/components/ui/button';
 import { Text } from '../../src/components/ui/text';
@@ -17,6 +17,7 @@ import { useVideoPhotos } from '../../src/features/video/use-video-photos';
 import { media } from '../../src/lib/api';
 import { thumbnailSource } from '../../src/lib/media-source';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 28 (11m) — "Sources by family group, numbered order, add more".
@@ -28,7 +29,6 @@ type Filter = 'all' | 'mine' | string; // string = familyId
 
 export default function VideoPhotosScreen() {
   const { t } = useTranslation();
-  const router = useRouter();
   const { user } = useSession();
   const { draft, update } = useVideoDraft();
 
@@ -104,13 +104,13 @@ export default function VideoPhotosScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack()} />}
         center={<ScreenTitle title={t('video.photosTitle')} />}
       />
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: spacing.xl,
+          ...contentColumn,
           paddingTop: 14,
           paddingBottom: 130,
           gap: 12,
@@ -310,34 +310,37 @@ export default function VideoPhotosScreen() {
           left: 0,
           right: 0,
           bottom: 0,
-          padding: spacing.xl,
+          paddingTop: spacing.xl,
           paddingBottom: 28,
           backgroundColor: colors.background.card,
           borderTopWidth: 1,
           borderTopColor: colors.state.borderDefault,
-          gap: 10,
         }}
       >
-        <View
-          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-        >
-          <Text variant="caption" weight="semibold">
-            {t('video.chosenSummary', { count: draft.mediaIds.length })}
-          </Text>
-          {draft.mediaIds.length > 0 && (
-            <Text variant="caption" color={colors.text.muted}>
-              1 → {draft.mediaIds.length}
+        {/* The bar spans the window, so its surface and top border still read
+            as chrome. What is on it belongs to the column, with the grid. */}
+        <ContentColumn style={{ gap: 10 }}>
+          <View
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+          >
+            <Text variant="caption" weight="semibold">
+              {t('video.chosenSummary', { count: draft.mediaIds.length })}
             </Text>
-          )}
-        </View>
-        <Button
-          label={t('video.useThese')}
-          variant="primary"
-          size="large"
-          fullWidth
-          disabled={draft.mediaIds.length === 0}
-          onPress={() => router.back()}
-        />
+            {draft.mediaIds.length > 0 && (
+              <Text variant="caption" color={colors.text.muted}>
+                1 → {draft.mediaIds.length}
+              </Text>
+            )}
+          </View>
+          <Button
+            label={t('video.useThese')}
+            variant="primary"
+            size="large"
+            fullWidth
+            disabled={draft.mediaIds.length === 0}
+            onPress={() => goBack()}
+          />
+        </ContentColumn>
       </View>
     </View>
   );

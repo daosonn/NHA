@@ -1,5 +1,4 @@
 import * as DocumentPicker from 'expo-document-picker';
-import { useRouter } from 'expo-router';
 import { Check, Music2, Pause, Play, Upload } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +7,7 @@ import { ActivityIndicator, Platform, Pressable, ScrollView, View } from 'react-
 import { Pill } from '../../src/components/ai/pill';
 import { SelectRow } from '../../src/components/ai/select-row';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Card } from '../../src/components/ui/card';
 import { IconBadge } from '../../src/components/ui/icon-badge';
@@ -16,6 +16,7 @@ import { useVideoDraft } from '../../src/features/video/draft';
 import { useVideoMusic } from '../../src/features/video/use-video';
 import { media, video } from '../../src/lib/api';
 import { colors, radius, spacing } from '../../src/theme';
+import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 29 (11n) — "Songs grouped by mood, or your own".
@@ -26,7 +27,6 @@ import { colors, radius, spacing } from '../../src/theme';
 export default function VideoMusicScreen() {
   const { t, i18n } = useTranslation();
   const isJapanese = (i18n.language || '').toLowerCase().startsWith('ja');
-  const router = useRouter();
   const { draft, update } = useVideoDraft();
   const catalog = useVideoMusic();
 
@@ -95,10 +95,10 @@ export default function VideoMusicScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack()} />}
         center={<ScreenTitle title={t('video.musicTitle')} />}
         right={
-          <Pressable onPress={() => router.back()} accessibilityRole="button" hitSlop={8}>
+          <Pressable onPress={() => goBack()} accessibilityRole="button" hitSlop={8}>
             <Text variant="body2" weight="semibold" color={colors.coral.hover}>
               {t('common.done')}
             </Text>
@@ -109,7 +109,7 @@ export default function VideoMusicScreen() {
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: spacing.xl,
+          ...contentColumn,
           paddingTop: 14,
           paddingBottom: 40,
           gap: 12,

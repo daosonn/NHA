@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../src/components/layout/app-header';
+import { contentColumn } from '../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../src/components/layout/header-slots';
 import { Avatar } from '../src/components/ui/avatar';
 import { Button } from '../src/components/ui/button';
@@ -18,6 +19,7 @@ import { LOCALE_NAMES, SUPPORTED_LOCALES, type Locale } from '../src/i18n';
 import { setLocale } from '../src/i18n/locale';
 import { useLocale } from '../src/i18n/use-locale';
 import { colors, radius, spacing } from '../src/theme';
+import { goBack } from '../src/lib/navigation';
 
 /**
  * A row that goes somewhere.
@@ -99,12 +101,12 @@ export default function SettingsScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => router.back()} />}
+        left={<BackButton onPress={() => goBack()} />}
         center={<ScreenTitle title={t('settings.title')} />}
       />
 
       <ScrollView
-        contentContainerStyle={{ padding: spacing.xl, gap: 18 }}
+        contentContainerStyle={{ ...contentColumn, paddingVertical: spacing.xl, gap: 18 }}
         showsVerticalScrollIndicator={false}
       >
         <Card padding={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
