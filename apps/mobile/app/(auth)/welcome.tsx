@@ -4,13 +4,14 @@ import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SocialButtons } from '../../src/components/auth/social-buttons';
+import { AuthShell } from '../../src/components/layout/auth-shell';
 import { ContentColumn } from '../../src/components/layout/content-column';
 import { AvatarStack } from '../../src/components/ui/avatar-stack';
 import { BrandMark } from '../../src/components/ui/brand-mark';
 import { Button } from '../../src/components/ui/button';
 import { Text } from '../../src/components/ui/text';
 import { TextLink } from '../../src/components/ui/text-link';
-import { colors, spacing } from '../../src/theme';
+import { colors, spacing, useLayout } from '../../src/theme';
 
 /** Faces of a family that already exists — proof, not decoration. */
 const FACES = [
@@ -24,6 +25,59 @@ export default function WelcomeScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { expanded } = useLayout();
+
+  /** The two ways in. Identical on both layouts, so written once. */
+  const actions = (
+    <>
+      <Button
+        label={t('auth.welcome.create')}
+        size="large"
+        fullWidth
+        onPress={() => router.push('/sign-up')}
+      />
+
+      <SocialButtons layout="stack" continueWording />
+    </>
+  );
+
+  /** Already have an account, and the legal line. Also identical. */
+  const aside = (
+    <>
+      <View
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+      >
+        <Text variant="body1" color={colors.text.muted}>
+          {t('auth.welcome.haveAccount')}
+        </Text>
+        <TextLink
+          label={t('auth.welcome.signIn')}
+          variant="body1"
+          onPress={() => router.push('/sign-in')}
+        />
+      </View>
+
+      <Text
+        variant="badge"
+        color={colors.text.subtle}
+        style={{ textAlign: 'center', maxWidth: 290, alignSelf: 'center' }}
+      >
+        {t('auth.welcome.legal')}
+      </Text>
+    </>
+  );
+
+  /**
+   * On a wide window the hero becomes the card's left pane — the shell draws
+   * it, from the same copy — and this screen is only the actions beside it.
+   */
+  if (expanded) {
+    return (
+      <View className="flex-1 bg-page">
+        <AuthShell footer={aside}>{actions}</AuthShell>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-page">
@@ -39,6 +93,10 @@ export default function WelcomeScreen() {
         Content is centred **inside** the header rather than pinned to its
         top, so the mark and the title stay optically placed however tall the
         header ends up on a given handset.
+
+        It still stretches edge to edge, which is the decision recorded in
+        `design-system.md` — the wide-window version above is a different
+        layout, not a revisiting of that one.
       */}
       <View
         style={{
@@ -74,40 +132,12 @@ export default function WelcomeScreen() {
         <AvatarStack items={FACES} size={34} surface={colors.coral.light} remaining={6} />
       </View>
 
-      <ContentColumn style={{ paddingTop: 26, gap: 10 }}>
-        <Button
-          label={t('auth.welcome.create')}
-          size="large"
-          fullWidth
-          onPress={() => router.push('/sign-up')}
-        />
-
-        <SocialButtons layout="stack" continueWording />
-      </ContentColumn>
+      <ContentColumn style={{ paddingTop: 26, gap: 10 }}>{actions}</ContentColumn>
 
       {/* What is left of the gap — a quarter of the slack, not all of it. */}
       <View style={{ flex: 1 }} />
 
-      <ContentColumn style={{ paddingBottom: insets.bottom + 24, alignItems: 'center', gap: 14 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Text variant="body1" color={colors.text.muted}>
-            {t('auth.welcome.haveAccount')}
-          </Text>
-          <TextLink
-            label={t('auth.welcome.signIn')}
-            variant="body1"
-            onPress={() => router.push('/sign-in')}
-          />
-        </View>
-
-        <Text
-          variant="badge"
-          color={colors.text.subtle}
-          style={{ textAlign: 'center', maxWidth: 290 }}
-        >
-          {t('auth.welcome.legal')}
-        </Text>
-      </ContentColumn>
+      <ContentColumn style={{ paddingBottom: insets.bottom + 24, gap: 14 }}>{aside}</ContentColumn>
     </View>
   );
 }

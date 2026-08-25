@@ -199,6 +199,7 @@ Nhóm mới, ngoài phạm vi 1.2.2 (task đó chỉ định nghĩa responsive l
 - [x] 1.8.3 Navigation ≥1024px (thanh nổi glass 76px chỉ icon, bo pill, hover mở 240px overlay; mounted trên Stack nên screen pushed vẫn giữ nav) — done 2026-08-25; bản đầu là sidebar 240px mở sẵn ở ≥1280, đổi cùng ngày sau review (`design-system.md` § Side navigation)
 - [ ] 1.8.4 Component còn lệch sau khi có column (recommendation-grid chiều cao cố định, photo-row 4 cột, album-grid 2 cột, clamp chiều rộng cây gia phả) — chưa đánh giá
 - [x] 1.8.5 Back an toàn — **đã có trên `main` từ PR #48** (`src/lib/back.ts`: `safeBack`/`useSafeBack`, `BackButton` tự lo khi không truyền `onPress`). Nhánh này từng làm trùng một bản riêng; merge 2026-08-25 giữ bản của `main` và bỏ bản trùng
+- [x] 1.8.6 Màn auth trên desktop: hai nửa màn hình trải hết (brand + mèo trái, form phải), mỗi pane căn cột 420 bên trong — done 2026-08-25 (`layout/auth-shell.tsx`, `FormScreen variant="auth"`); bản đầu là card 960 căn giữa, đổi cùng ngày vì card giữa màn 1920 đọc ra là dialog; dưới 1024px không đổi
 
 ## Out of Scope (this sprint)
 

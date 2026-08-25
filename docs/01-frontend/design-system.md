@@ -345,6 +345,75 @@ wrapper: `react-native-web` turns every `accessibilityRole="button"` into a real
 `<button>`, and a button around four buttons swallows the presses inside it —
 the same trap the group strip is written around.
 
+### Auth on a wide window
+
+From `lg` up, Welcome and the four password screens become **two halves of the
+window**: the brand on the left, the form on the right, both full height, split
+down the middle.
+
+The content column alone was not enough here, and this is the one place in the
+app where that is true. It kept the form at a readable 600 — nothing stretched
+— but an auth screen is a full-height column by construction: hero at the top,
+actions under it, the slack pushed to the bottom. At 1280 that reads as a coral
+band the width of the window with a 58px mark alone in the middle of it, and a
+form pinned to the top of an otherwise empty page. Correct, and not what
+somebody signing in to a website is shown.
+
+|            | Value                                                                 |
+| ---------- | --------------------------------------------------------------------- |
+| Split      | 50 / 50, both panes `flex: 1`, full height, no divider                |
+| Brand pane | `coral.light`; mark 52, headline, subtitle, `CatHappy` 104, faces 32  |
+| Form pane  | `background.card`; the form centred, footer as the tail of that group |
+| Contents   | each pane centres a **420** column inside itself, padding 40          |
+
+**It was a centred 960px card first, on 2026-08-25, and that was wrong in a
+way worth keeping written down.** A card floating in the middle of a 1920px
+window is a _dialog_, and a sign-in screen is not a dialog interrupting
+something — it is the page. Filling the window is what makes it read as one.
+
+The panes are full-bleed; their **contents are not**. Half of 1920 is 960, and
+neither a headline nor a form belongs at that width, so each pane centres a
+420px column — the same reasoning as the content column elsewhere, at the width
+a form wants rather than the width a feed wants.
+
+No divider: `coral.light` against white is already an edge, and a hairline on
+top of a colour change is a line for its own sake.
+
+**The footer is not pinned here.** `FormScreen` pins it on a phone for exactly
+one reason — the software keyboard, which will cover a submit button that
+scrolls. A physical keyboard covers nothing, and pinning it to the bottom of a
+1080px pane would leave 400px of white between the last field and the button
+that submits it. So submit and the social buttons are the tail of the same
+centred group.
+
+The brand pane says what the app is, from the **same copy Welcome already
+uses** (`auth.welcome.title` / `.subtitle`, the mark, the avatar stack) — moved
+into `layout/auth-shell.tsx` rather than copied, so arriving and signing in are
+met by the same sentence. No new i18n keys.
+
+**The cat is here on purpose**, `CatHappy`, directly above the faces so it
+reads as being _with_ the family rather than as a second illustration. That is
+a deliberate reading of the motion kit's rule, not an oversight:
+`motion/README.md` reserves the cats for one-time emotional moments and forbids
+them in chrome and on daily actions, and this pane is neither — it is the app
+introducing itself, on the screen whose whole job is that. `CatHappy` of the
+four because the pane is a welcome, not a wait.
+
+The header goes: a full-width blurred bar carrying one back arrow, above two
+full-height panes, belongs to neither. Back sits absolutely at the top-left of
+the form pane, so it cannot pull the form off centre.
+
+**Below `lg` nothing changes at all.** Welcome keeps its edge-to-edge coral
+hero, and `FormScreen` keeps the shape it has. That matters, because a centred,
+shrunken Welcome card was tried and reverted on 2026-08-21 — this does not
+reopen that: it applies only where there is a pointer and 1024px, which is not
+what was reverted.
+
+It is opt-in per screen, `FormScreen variant="auth"`, and only signing in and
+out use it. `FormScreen` also serves "New family", "Change password" and
+"Edit profile"; a marketing headline beside a form somebody already inside the
+app opened on purpose would be a different mistake.
+
 ### Card
 
 White, radius 20, padding 14–20, shadow
