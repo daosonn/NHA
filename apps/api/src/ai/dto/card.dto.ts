@@ -1,9 +1,11 @@
 import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
-import type { CardTemplateId } from '../card.service';
+import { CARD_TEMPLATE_IDS, type CardTemplateId } from '../card.service';
 
-/** Màn 26 (11g) — "Five designs, live preview" → render PNG server-side */
+/** Màn 26 (11g) — 15 nền hoa màu nước tự thiết kế → render PNG server-side */
 export class CardRenderDto {
-  @IsIn(['marigold', 'birthday', 'tulip', 'tet', 'kraft'])
+  // Danh sách id sống trong card.service (cạnh bảng TEMPLATES) — thêm mẫu mới
+  // là một chỗ, DTO tự theo.
+  @IsIn([...CARD_TEMPLATE_IDS])
   template!: CardTemplateId;
 
   @IsString()

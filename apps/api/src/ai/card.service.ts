@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
@@ -16,142 +16,86 @@ import {
 import { AiContextService } from './ai-context.service';
 
 /**
- * Thiệp (màn 26 · 11g) — render server-side bằng SVG → sharp → PNG, 0 token.
- * 5 mẫu theo design: Marigold · Birthday · Tulip · Tết · Kraft.
+ * Thiệp (màn 26 · 11g) — render server-side, 0 token.
+ *
+ * Nền là 15 bức hoa màu nước do Sơn thiết kế (assets/card-templates, xem
+ * README ở đó) thay cho 5 mẫu SVG vẽ tay cũ. Vì nền giờ là TRANH, mỗi mẫu
+ * phải khai báo VÙNG TRỐNG dành cho chữ — hoa của mẫu này mọc từ đáy thì chữ
+ * nằm trên, mẫu kia ôm hết mép trái thì chữ dạt phải; đặt chữ giữa mọi mẫu
+ * như bản cũ là chữ đè lên hoa.
+ *
+ * Chữ vẫn vẽ bằng ffmpeg drawtext + fontfile (KHÔNG vẽ trong SVG — librsvg
+ * không thấy font hệ thống, kana/kanji ra dấu hỏi, đã dính 19/08).
+ *
  * Trả về một Media row (không gắn post) — mobile hiển thị qua GET /media/:id,
  * còn "share với family" thì tạo post đính media này như mọi post khác.
  */
 
-export type CardTemplateId =
-  'marigold' | 'birthday' | 'tulip' | 'tet' | 'kraft';
+/** Chữ nằm ở đâu trên nền — theo chỗ mà bức tranh chừa ra. */
+type CardZone = 'top' | 'center' | 'lower' | 'right';
 
+export const CARD_TEMPLATE_IDS = [
+  't01',
+  't02',
+  't03',
+  't04',
+  't05',
+  't06',
+  't07',
+  't09',
+  't10',
+  't11',
+  't12',
+  't13',
+  't15',
+  't16',
+  't17',
+] as const;
+
+export type CardTemplateId = (typeof CARD_TEMPLATE_IDS)[number];
+
+// 3:4 — đúng khổ file trong assets/card-templates, nền không bị crop.
+// (Bản 5 mẫu cũ là 1080×1520; mobile preview đổi aspectRatio theo.)
 const W = 1080;
-const H = 1520;
+const H = 1440;
 
-type Theme = {
-  bg: string;
-  frame: string;
-  accent: string;
+type Template = {
+  zone: CardZone;
+  /** màu thân lời nhắn — tối, ăn theo tông tranh */
   ink: string;
+  /** màu "Dear …" + ký tên — màu hoa của chính mẫu đó */
+  accent: string;
+  /** màu dòng dịp phía trên — nhạt hơn accent */
   sub: string;
-  deco: (t: Theme) => string;
 };
 
-/** Hoa cúc vạn thọ — vòng cánh hoa đơn giản quanh 1 nhụy */
-function flower(
-  cx: number,
-  cy: number,
-  r: number,
-  petal: string,
-  core: string,
-): string {
-  const petals = Array.from({ length: 8 }, (_, i) => {
-    const a = (i / 8) * Math.PI * 2;
-    return `<ellipse cx="${cx + Math.cos(a) * r}" cy="${cy + Math.sin(a) * r}" rx="${r * 0.62}" ry="${r * 0.38}" fill="${petal}" transform="rotate(${(a * 180) / Math.PI}, ${cx + Math.cos(a) * r}, ${cy + Math.sin(a) * r})"/>`;
-  }).join('');
-  return `${petals}<circle cx="${cx}" cy="${cy}" r="${r * 0.45}" fill="${core}"/>`;
-}
-
 /**
- * Bốn góc một nét cong mảnh — thứ làm tấm thiệp trông "được in" chứ không phải
- * một khung chữ nhật. Vẽ 1 góc rồi lật qua tâm cho ba góc còn lại.
+ * Bảng mẫu — `apps/mobile/app/ai/card.tsx` giữ bản sao y hệt (zone + màu) để
+ * preview client nói cùng một điều với PNG server. Màu lấy theo tông từng bức.
+ * id đặt theo số thứ tự bộ thiết kế gốc của Sơn (t08/t14 không tồn tại).
  */
-function corners(color: string, inset: number, len: number): string {
-  const a = inset;
-  const b = inset + len;
-  const one = (
-    x1: number,
-    y1: number,
-    x2: number,
-    y2: number,
-    cx: number,
-    cy: number,
-  ) =>
-    `<path d="M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}" fill="none" stroke="${color}" stroke-width="2.5" opacity="0.75"/>`;
-  return [
-    one(a, b, b, a, a, a),
-    one(W - a, b, W - b, a, W - a, a),
-    one(a, H - b, b, H - a, a, H - a),
-    one(W - a, H - b, W - b, H - a, W - a, H - a),
-  ].join('');
-}
-
-/**
- * Bảng màu ĐẬM đúng mockup 11g (thiệp giấy màu, không phải giấy trắng viền màu).
- * `apps/mobile/app/ai/card.tsx` giữ y hệt bộ này — preview phải trùng PNG.
- */
-const THEMES: Record<CardTemplateId, Theme> = {
-  marigold: {
-    bg: '#F7DE8B',
-    frame: '#B98A1F',
-    accent: '#8A6B14',
-    ink: '#4A3B22',
-    sub: '#8A6B14',
-    deco: (t) =>
-      flower(W - 150, 170, 46, t.frame, t.accent) +
-      flower(150, H - 170, 34, t.frame, t.accent),
-  },
-  birthday: {
-    bg: '#F9C89B',
-    frame: '#C2652F',
-    accent: '#A9531F',
-    ink: '#43302C',
-    sub: '#8C4F26',
-    deco: (t) =>
-      [0, 1, 2, 3, 4]
-        .map(
-          (i) =>
-            `<circle cx="${140 + i * 200}" cy="${i % 2 ? 150 : 190}" r="${14 + (i % 3) * 6}" fill="${i % 2 ? t.frame : t.accent}" opacity="0.65"/>`,
-        )
-        .join('') +
-      `<rect x="${W / 2 - 3}" y="120" width="6" height="70" fill="${t.accent}"/><path d="M ${W / 2 - 40} 120 q 40 -50 80 0 z" fill="${t.frame}"/>`,
-  },
-  tulip: {
-    bg: '#F6C9DC',
-    frame: '#B7548E',
-    accent: '#8E3E6C',
-    ink: '#5A2C44',
-    sub: '#96477A',
-    deco: (t) =>
-      [0, 1, 2]
-        .map((i) => {
-          const x = 170 + i * 90;
-          return `<path d="M ${x} 200 q -22 -44 0 -66 q 22 22 0 66" fill="${t.frame}"/><path d="M ${x} 200 v 62" stroke="${t.accent}" stroke-width="6" fill="none"/>`;
-        })
-        .join(''),
-  },
-  tet: {
-    bg: '#A62B22',
-    frame: '#E8B84B',
-    accent: '#F6D77E',
-    ink: '#FFF4DC',
-    sub: '#F0CFA0',
-    deco: (t) =>
-      `<circle cx="${W - 160}" cy="170" r="60" fill="none" stroke="${t.frame}" stroke-width="5"/>` +
-      `<circle cx="${W - 160}" cy="170" r="40" fill="${t.frame}" opacity="0.3"/>` +
-      [0, 1, 2, 3, 4]
-        .map((i) =>
-          flower(
-            120 + i * 30,
-            H - 150 + (i % 2) * 20,
-            12,
-            '#F6D77E',
-            '#E8B84B',
-          ),
-        )
-        .join(''),
-  },
-  kraft: {
-    bg: '#E7DCC8',
-    frame: '#8A744C',
-    accent: '#6B5B3E',
-    ink: '#463A26',
-    sub: '#7C6C50',
-    deco: (t) =>
-      `<line x1="120" y1="150" x2="${W - 120}" y2="150" stroke="${t.frame}" stroke-width="3" stroke-dasharray="2 10"/>` +
-      `<line x1="120" y1="${H - 150}" x2="${W - 120}" y2="${H - 150}" stroke="${t.frame}" stroke-width="3" stroke-dasharray="2 10"/>`,
-  },
+const TEMPLATES: Record<CardTemplateId, Template> = {
+  t01: { zone: 'center', ink: '#4A4C3A', accent: '#647353', sub: '#8A8F76' }, // suzuran — linh lan 2 góc
+  t02: { zone: 'top', ink: '#2E3036', accent: '#C26A55', sub: '#8B8E96' }, // anemone — hoa dồn đáy
+  t03: { zone: 'right', ink: '#6B5260', accent: '#A86379', sub: '#A38A96' }, // sweet pea — hoa leo mép trái
+  t04: { zone: 'top', ink: '#664A39', accent: '#B3743F', sub: '#A08874' }, // ranunculus — hoa dồn đáy
+  t05: { zone: 'center', ink: '#5B5445', accent: '#AB8A3E', sub: '#948A72' }, // mẫu đơn trắng — vòng hoa
+  t06: { zone: 'center', ink: '#6A4F3C', accent: '#C47A50', sub: '#A78B77' }, // cúc đào — vòng hoa
+  t07: { zone: 'center', ink: '#4F4634', accent: '#A2762C', sub: '#8F8468' }, // khung hoa cottage
+  t09: { zone: 'center', ink: '#414D69', accent: '#5F74A8', sub: '#7F89A3' }, // cẩm tú cầu 4 góc
+  t10: { zone: 'center', ink: '#494E42', accent: '#6D7D4E', sub: '#878E7C' }, // hoa đồng nội
+  t11: { zone: 'center', ink: '#5A4A2B', accent: '#A9822F', sub: '#998A68' }, // cúc vàng
+  t12: { zone: 'center', ink: '#74424E', accent: '#B8617A', sub: '#A5838E' }, // mẫu đơn hồng
+  t13: { zone: 'center', ink: '#7C5260', accent: '#C26B85', sub: '#AA8A96' }, // anh đào
+  t15: { zone: 'lower', ink: '#5E4930', accent: '#B06F28', sub: '#9C8867' }, // vườn cam — quả ôm mép trên
+  t16: { zone: 'top', ink: '#565142', accent: '#9C7A52', sub: '#918A76' }, // đồng cỏ chiều — hoa cao nửa dưới
+  t17: { zone: 'lower', ink: '#575065', accent: '#8878AD', sub: '#8F8A9E' }, // tử đằng — hoa rủ mép trên
 };
+
+/** Fallback khi id lọt qua validate mà không có trong bảng (không bao giờ nên xảy ra). */
+const DEFAULT_TEMPLATE: CardTemplateId = 't15';
+
+const ASSETS_DIR = () => path.join(process.cwd(), 'assets', 'card-templates');
 
 /** Đường dẫn cho filter ffmpeg (dấu \ và : phải escape). */
 function ffPath(p: string): string {
@@ -202,6 +146,24 @@ export class CardService {
     private readonly context: AiContextService,
   ) {}
 
+  /**
+   * File nền của một mẫu — cho GET /cards/templates/:id/image (public, để
+   * mobile vẽ picker + preview bằng đúng bức tranh sẽ nằm trong PNG).
+   */
+  templateImage(template: string): { path: string; size: number } {
+    if (!(template in TEMPLATES)) {
+      throw new NotFoundException(`Không có mẫu thiệp "${template}"`);
+    }
+    const p = path.join(ASSETS_DIR(), `${template}.jpg`);
+    if (!existsSync(p)) {
+      // Asset được commit thẳng vào repo — thiếu là repo hỏng, không phải request hỏng.
+      throw new NotFoundException(
+        `Thiếu file nền ${template}.jpg trong assets/card-templates`,
+      );
+    }
+    return { path: p, size: statSync(p).size };
+  }
+
   async render(
     userId: string,
     familyId: string,
@@ -214,49 +176,27 @@ export class CardService {
     },
   ): Promise<{ media_id: string }> {
     await this.context.assertMembership(userId, familyId);
-    const t = THEMES[input.template] ?? THEMES.marigold;
+    const id: CardTemplateId =
+      input.template in TEMPLATES ? input.template : DEFAULT_TEMPLATE;
+    const t = TEMPLATES[id];
 
-    // ---- 1) Nền + khung + hoa văn: SVG → sharp (hình khối thì librsvg vẽ tốt) ----
-    const svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.5"/>
-          <stop offset="55%" stop-color="#FFFFFF" stop-opacity="0"/>
-          <stop offset="100%" stop-color="${t.frame}" stop-opacity="0.09"/>
-        </linearGradient>
-      </defs>
-
-      <rect width="${W}" height="${H}" fill="${t.bg}"/>
-      <rect width="${W}" height="${H}" fill="url(#paper)"/>
-
-      <rect x="46" y="46" width="${W - 92}" height="${H - 92}" fill="none" stroke="${t.frame}" stroke-width="5" rx="30"/>
-      <rect x="64" y="64" width="${W - 128}" height="${H - 128}" fill="none" stroke="${t.frame}" stroke-width="1.5" rx="22" opacity="0.55"/>
-      ${corners(t.frame, 84, 58)}
-      ${t.deco(t)}
-
-      <!-- gạch ngắn dưới tên + hai chấm nhỏ hai bên, đúng mockup 11g.
-           Không có tên (deep link) thì bỏ cả gạch — app cũng ẩn dòng chào,
-           preview và PNG phải nói cùng một điều. -->
-      ${
-        input.toName.trim()
-          ? `<line x1="${W / 2 - 92}" y1="446" x2="${W / 2 + 92}" y2="446" stroke="${t.frame}" stroke-width="2.5"/>
-      <circle cx="${W / 2 - 108}" cy="446" r="4" fill="${t.accent}"/>
-      <circle cx="${W / 2 + 108}" cy="446" r="4" fill="${t.accent}"/>`
-          : ''
-      }
-    </svg>`;
-
+    // ---- 1) Nền: bức tranh của mẫu, phủ kín đúng khổ (asset đã là 1080×1440
+    // nên resize gần như no-op — giữ để an toàn nếu ai thay file khác khổ) ----
     const base = path.join(
       this.storage.tempDir,
       `card_base_${randomUUID()}.png`,
     );
     await mkdir(path.dirname(base), { recursive: true });
-    await writeFile(base, await sharp(Buffer.from(svg)).png().toBuffer());
+    await sharp(this.templateImage(id).path)
+      .resize(W, H, { fit: 'cover' })
+      .png()
+      .toFile(base);
 
-    // ---- 2) Chữ: ffmpeg drawtext với FONTFILE ----
-    // KHÔNG vẽ chữ trong SVG: librsvg trong sharp không thấy font hệ thống nên
-    // mọi ký tự kana/kanji ra dấu hỏi (đã dính 19/08). Engine video vẽ chữ Nhật
-    // bằng drawtext + fontfile và chạy đúng — thiệp dùng lại đúng cách đó.
+    // ---- 2) Chữ: ffmpeg drawtext với FONTFILE, đặt vào VÙNG TRỐNG của mẫu ----
+    // Vùng 'right' (hoa ôm mép trái): khối chữ hẹp lại và dịch tâm sang phải.
+    const xOff = t.zone === 'right' ? 168 : 0;
+    const wrapWidth = t.zone === 'right' ? 470 : W - 280;
+
     const fonts = loadFonts();
     const tmp = path.join(this.storage.tempDir, `card_${randomUUID()}.png`);
     const layers: string[] = [];
@@ -280,18 +220,48 @@ export class CardService {
       await writeFile(tf, body, 'utf8');
       layers.push(
         `drawtext=fontfile='${ffPath(font)}':textfile='${ffPath(tf)}'` +
-          `:fontsize=${size}:fontcolor=${color}:x=(w-text_w)/2:y=${y}`,
+          `:fontsize=${size}:fontcolor=${color}:x=(w-text_w)/2${xOff ? `+${xOff}` : ''}:y=${Math.round(y)}`,
       );
     };
 
+    // Dịp tự thêm dài tới 80 ký tự nhưng thiệp chỉ có một dòng — cắt hiển thị
+    // ở 40, còn validate thì không cắt (xem CardRenderDto).
     const headingRaw = (input.heading ?? '').trim();
-    if (headingRaw) {
-      // Dịp tự thêm dài tới 80 ký tự nhưng thiệp chỉ có một dòng 1080px —
-      // cắt hiển thị ở 40, còn validate thì không cắt (xem CardRenderDto).
-      const heading =
-        headingRaw.length > 40
-          ? `${headingRaw.slice(0, 39).trimEnd()}…`
-          : headingRaw;
+    const heading =
+      headingRaw.length > 40
+        ? `${headingRaw.slice(0, 39).trimEnd()}…`
+        : headingRaw;
+    const hasHeading = heading.length > 0;
+    const hasDear = input.toName.trim().length > 0;
+
+    const msgSize = 36;
+    const lineH = 52;
+    const lines = wrapLines(input.message, maxUnitsFor(wrapWidth, msgSize), 10);
+
+    // Khối chữ xếp dọc: dịp → Dear → lời nhắn → ký tên. Tính TỔNG CAO trước
+    // rồi mới neo theo vùng — mẫu 'lower' mà neo kiểu cũ (băng cố định giữa
+    // trang) là lời nhắn dài chui ngược lên giàn hoa.
+    const headingBlock = hasHeading ? 30 + 30 : 0; // chữ + khoảng thở
+    const dearBlock = hasDear ? 54 + 36 : 0;
+    const messageBlock = lines.length * lineH + 38;
+    const signatureBlock = 40;
+    const totalH = headingBlock + dearBlock + messageBlock + signatureBlock;
+
+    // Neo theo vùng trống của tranh. Hai vế min/max giữ khối chữ không tràn
+    // khỏi mép giấy khi lời nhắn dài bất thường (validate cho tới 600 ký tự).
+    const margin = 100;
+    let y0: number;
+    if (t.zone === 'top') {
+      y0 = 128;
+    } else if (t.zone === 'lower') {
+      y0 = Math.min(Math.round(H * 0.42), H - totalH - margin);
+    } else {
+      y0 = Math.round((H - totalH) / 2);
+    }
+    y0 = Math.max(margin, y0);
+
+    let y = y0;
+    if (hasHeading) {
       // Latin thì giãn chữ cho ra dáng "BIRTHDAY"; tiếng Nhật đã đủ thoáng.
       // Giãn làm bề rộng gần gấp đôi nên chỉ giãn khi còn ngắn.
       const isLatin = /^[\u0020-\u024F]+$/.test(heading);
@@ -301,31 +271,24 @@ export class CardService {
             ? spaced(heading.toUpperCase())
             : heading.toUpperCase()
           : heading,
-        34,
+        30,
         t.sub,
-        272,
+        y,
       );
+      y += headingBlock;
     }
     // Tên rỗng thì không chào ai cả — một dòng "Dear " lơ lửng là lỗi in ấn.
-    if (input.toName.trim()) {
-      await draw(`Dear ${input.toName}`, 62, t.ink, 344);
+    if (hasDear) {
+      await draw(`Dear ${input.toName}`, 54, t.accent, y);
+      y += dearBlock;
     }
-
-    // Xuống dòng theo bề rộng hiển thị + kinsoku (tiếng Nhật không có dấu cách)
-    const size = 38;
-    const lines = wrapLines(input.message, maxUnitsFor(W - 240, size), 10);
-    const lineH = 54;
-    // Căn giữa khối chữ trong VÙNG giữa gạch dưới tên và dòng ký tên — căn giữa
-    // theo cả trang thì lời nhắn tụt xuống và chừa một khoảng trống lớn ở đáy.
-    const bandTop = 520;
-    const bandBottom = H - 300;
-    const startY =
-      (bandTop + bandBottom) / 2 - ((lines.length - 1) * lineH) / 2;
-    for (const [i, line] of lines.entries())
-      await draw(line, size, t.ink, startY + i * lineH);
-
+    for (const line of lines) {
+      await draw(line, msgSize, t.ink, y);
+      y += lineH;
+    }
+    y += 38;
     // Ký tên có gạch HAI ĐẦU — một đầu trông như bị cắt mất (Sơn nhặt ra 19/08)
-    await draw(`— ${input.fromName} —`, 42, t.accent, H - 262);
+    await draw(`— ${input.fromName} —`, 38, t.accent, y);
 
     await run(FFMPEG, [
       '-y',
