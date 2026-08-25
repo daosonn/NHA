@@ -192,6 +192,10 @@ export function TextField({
           placeholderTextColor={colors.text.subtle}
           style={{
             flex: 1,
+            // Web: an <input> has an intrinsic minimum width (~170px) that
+            // wins over flex shrinking — on a 320px screen the row then
+            // shoves its counter and trailing button out through the border.
+            minWidth: 0,
             padding: 0,
             ...typeface,
             fontSize: multiline ? typography.fontSize.body1.fontSize : 14,
