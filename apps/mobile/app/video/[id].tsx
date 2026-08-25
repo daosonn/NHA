@@ -8,6 +8,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 
 import { SelectRow } from '../../src/components/ai/select-row';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { CatHappy, CatSitting } from '../../src/components/motion/cats';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Button } from '../../src/components/ui/button';
 import { Card } from '../../src/components/ui/card';
@@ -199,6 +200,12 @@ export default function VideoJobScreen() {
         {/* ---------- màn 32 (11k): đang render ---------- */}
         {data && (data.status === 'PENDING' || data.status === 'PROCESSING') && (
           <>
+            {/* Mèo mắt cụp — đang mải làm việc (mapping mèo 2026-08-25).
+                Đúng chỗ kit cho phép: chờ AI là khoảnh khắc một-lần có cảm xúc. */}
+            <View style={{ alignItems: 'center', paddingTop: 6 }}>
+              <CatSitting size={92} />
+            </View>
+
             <Card padding={15} style={{ gap: 10 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Clapperboard size={16} color={colors.coral.hover} strokeWidth={2.1} />
@@ -330,6 +337,12 @@ export default function VideoJobScreen() {
         {/* ---------- màn 33 (11l): xong ---------- */}
         {data?.status === 'DONE' && (
           <>
+            {/* Mèo mắt vui — video dựng xong (mapping mèo 2026-08-25). Trên
+                đầu màn thay vì cạnh player: player là nhân vật chính. */}
+            <View style={{ alignItems: 'center' }}>
+              <CatHappy size={76} />
+            </View>
+
             <View
               style={{ borderRadius: radius['2xl'], overflow: 'hidden', backgroundColor: '#000' }}
             >

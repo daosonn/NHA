@@ -217,6 +217,7 @@ export default function HomeScreen() {
     if (families.length === 0) {
       return (
         <EmptyState
+          cat
           renderIcon={({ size, color }) => <HousePlus size={size} color={color} strokeWidth={2} />}
           title={t('home.noFamilyTitle')}
           description={t('home.noFamilyBody')}
@@ -247,6 +248,7 @@ export default function HomeScreen() {
         ListEmptyComponent={
           feed.isPending ? null : (
             <EmptyState
+              cat
               renderIcon={({ size, color }) => (
                 <HousePlus size={size} color={color} strokeWidth={2} />
               )}

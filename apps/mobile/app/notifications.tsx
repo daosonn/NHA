@@ -172,6 +172,7 @@ export default function NotificationsScreen() {
         />
       ) : items.length === 0 ? (
         <EmptyState
+          cat
           renderIcon={(props) => <BellOff {...props} strokeWidth={2} />}
           title={t('notifications.emptyTitle')}
           description={t('notifications.emptyBody')}

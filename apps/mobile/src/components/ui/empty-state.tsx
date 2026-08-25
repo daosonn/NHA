@@ -1,12 +1,21 @@
 import { View } from 'react-native';
 
 import { colors, radius } from '../../theme';
+import { CatSleeping } from '../motion/cats';
 import { Button } from './button';
 import { Text } from './text';
 
 export type EmptyStateProps = {
   /** Lucide icon, given the size and colour to draw at. */
   renderIcon: (props: { size: number; color: string }) => React.ReactNode;
+  /**
+   * Draws the kit's sleeping cat instead of the icon — nothing here yet, so
+   * it went to sleep (mapping decided 2026-08-25: empty = sleeping, running
+   * = eyes-down, done = happy). For genuinely empty moments only — an error
+   * or a "gone" state keeps its icon: a playful cat next to "something went
+   * wrong" reads as the app not taking the problem seriously.
+   */
+  cat?: boolean;
   title: string;
   description?: string;
   /** Drawn only alongside `onActionPress` — see below. */
@@ -29,6 +38,7 @@ export type EmptyStateProps = {
  */
 export function EmptyState({
   renderIcon,
+  cat = false,
   title,
   description,
   actionLabel,
@@ -36,18 +46,22 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <View style={{ alignItems: 'center', gap: 10, paddingVertical: 36, paddingHorizontal: 24 }}>
-      <View
-        style={{
-          width: 52,
-          height: 52,
-          borderRadius: radius.full,
-          backgroundColor: colors.background.subtle,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {renderIcon({ size: 22, color: colors.text.subtle })}
-      </View>
+      {cat ? (
+        <CatSleeping size={110} />
+      ) : (
+        <View
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: radius.full,
+            backgroundColor: colors.background.subtle,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {renderIcon({ size: 22, color: colors.text.subtle })}
+        </View>
+      )}
 
       <View style={{ alignItems: 'center', gap: 3 }}>
         <Text variant="body1" weight="semibold">

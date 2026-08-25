@@ -79,6 +79,7 @@ export default function OmoideScreen() {
     if (days.length === 0) {
       return (
         <EmptyState
+          cat
           renderIcon={({ size, color }) => <Images size={size} color={color} strokeWidth={2} />}
           title={t('omoide.emptyTitle')}
           description={t('omoide.emptyBody')}

@@ -272,6 +272,7 @@ export default function AlbumScreen() {
 
         {detail.items.length === 0 ? (
           <EmptyState
+            cat
             renderIcon={(props) => <ImagePlus {...props} strokeWidth={2} />}
             title={t('albums.emptyTitle')}
             description={t('albums.emptyBody')}
