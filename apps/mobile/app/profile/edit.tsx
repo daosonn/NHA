@@ -4,6 +4,7 @@ import { Plus, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { FormScreen } from '../../src/components/layout/form-screen';
 import { useToast } from '../../src/components/ui/toast';
@@ -19,6 +20,7 @@ import {
 import { ApiError, type ProfileDetail } from '../../src/lib/api';
 import { dayOnly, formatFullDate } from '../../src/lib/date';
 import { colors, radius } from '../../src/theme';
+import { pop } from '../../src/theme/motion';
 
 const MAX_BIO = 5000;
 const MAX_INTERESTS = 50;
@@ -83,8 +85,11 @@ function InterestChips({
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
       {interests.map((interest) => (
-        <View
+        // A chip pops as it arrives (chip-input demo) — keyed on the word, so
+        // only a genuinely new one springs, not the row re-rendering.
+        <Animated.View
           key={interest}
+          entering={pop}
           style={{
             flexDirection: 'row',
             alignItems: 'center',
@@ -116,7 +121,7 @@ function InterestChips({
           >
             <X size={11} color={colors.text.muted} strokeWidth={2.6} />
           </Pressable>
-        </View>
+        </Animated.View>
       ))}
     </View>
   );
@@ -352,30 +357,27 @@ function ProfileEditForm({
           }
         />
 
-        {/* `center`, not `flex-end`: the field is 56 tall since the floating
-            label moved inside it, and a bottom-hung 44 button read as sunk. */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <View style={{ flex: 1 }}>
-            <TextField
-              label={t('profileEdit.addInterestLabel')}
-              value={draftInterest}
-              onChangeText={setDraftInterest}
-              placeholder={t('profileEdit.addInterestPlaceholder')}
-              maxLength={100}
-              onSubmitEditing={addInterest}
-              returnKeyType="done"
+        {/* The chip-input demo's merged box: the Add button lives INSIDE the
+            field, so the pair can never fall out of alignment again. */}
+        <TextField
+          label={t('profileEdit.addInterestLabel')}
+          value={draftInterest}
+          onChangeText={setDraftInterest}
+          placeholder={t('profileEdit.addInterestPlaceholder')}
+          maxLength={100}
+          onSubmitEditing={addInterest}
+          returnKeyType="done"
+          trailing={
+            <Button
+              label={t('profileEdit.addInterest')}
+              variant="primary"
+              size="medium"
+              disabled={draftInterest.trim() === ''}
+              onPress={addInterest}
+              renderIcon={({ size, color }) => <Plus size={size} color={color} strokeWidth={2.1} />}
             />
-          </View>
-
-          <Button
-            label={t('profileEdit.addInterest')}
-            variant="secondary"
-            size="medium"
-            disabled={draftInterest.trim() === ''}
-            onPress={addInterest}
-            renderIcon={({ size, color }) => <Plus size={size} color={color} strokeWidth={2.1} />}
-          />
-        </View>
+          }
+        />
       </View>
 
       <TextField

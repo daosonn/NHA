@@ -41,6 +41,11 @@ export type TextFieldProps = Omit<TextInputProps, 'style'> & {
   renderIcon?: (props: { size: number; color: string }) => React.ReactNode;
   /** The tiny uppercase section style of the AI mockups (ANYTHING TO ADD, EDIT…). */
   uppercaseLabel?: boolean;
+  /**
+   * Rendered inside the box, after the counter — the chip-input demo's
+   * merged Add button. The caller owns its enabled/disabled state.
+   */
+  trailing?: React.ReactNode;
 };
 
 /**
@@ -70,6 +75,7 @@ export function TextField({
   multiline = false,
   uppercaseLabel = false,
   placeholder,
+  trailing,
   ...rest
 }: TextFieldProps) {
   const { t } = useTranslation();
@@ -143,6 +149,9 @@ export function TextField({
         {floating && (
           <Animated.Text
             numberOfLines={1}
+            // The demo's `pointer-events: none` — the label sits OVER the
+            // input, and without this a tap on it fails to focus the field.
+            pointerEvents="none"
             style={[
               {
                 position: 'absolute',
@@ -223,6 +232,12 @@ export function TextField({
           >
             {`${maxLength - value.length}`}
           </Text>
+        )}
+
+        {trailing !== undefined && (
+          // Pull toward the demo's tighter inset — the box pads 14, a solid
+          // button wants to sit nearer the edge than an icon does.
+          <View style={{ marginRight: -8 }}>{trailing}</View>
         )}
 
         {secure && (

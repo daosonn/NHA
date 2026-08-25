@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import {
+  BounceIn,
   Easing,
   FadeIn,
   FadeInDown,
@@ -131,13 +132,16 @@ export const toastIn = WEB
     }).duration(duration.sheet);
 
 /**
- * `nhaPop` — a tick or heart appearing: springs past full size and back.
- * For state flips inside a control (checkbox, reaction), not entrances.
- * Custom Keyframe: do not use as `entering` on web (see the WEB note above);
- * the imperative twin `usePop` (`components/motion/pop.ts`) is web-safe.
+ * `nhaPop` as an entrance — something small arriving: an interest chip, a
+ * badge. Springs past full size and back over 320ms (the chip-input demo,
+ * `docs/01-frontend/motion/chip-input-merged.html`). Web gets the predefined
+ * `BounceIn` (same spirit, safe path — see the WEB note above); for state
+ * flips inside a control, the imperative twin `usePop` stays the tool.
  */
-export const pop = new Keyframe({
-  0: { transform: [{ scale: 0.72 }] },
-  60: { transform: [{ scale: 1.12 }], easing: easing.settle },
-  100: { transform: [{ scale: 1 }], easing: easing.settle },
-}).duration(duration.select);
+export const pop = WEB
+  ? BounceIn.duration(duration.sheet)
+  : new Keyframe({
+      0: { transform: [{ scale: 0.72 }] },
+      60: { transform: [{ scale: 1.12 }], easing: easing.settle },
+      100: { transform: [{ scale: 1 }], easing: easing.settle },
+    }).duration(duration.sheet);
