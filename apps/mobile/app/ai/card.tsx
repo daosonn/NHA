@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Check, Download, Flower2, PenLine, Share2 } from 'lucide-react-native';
+import { Check, Download, PenLine, Share2 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Platform, Pressable, ScrollView, View } from 'react-native';
@@ -25,68 +25,69 @@ import { colors, radius, spacing } from '../../src/theme';
 
 /**
  * Màn 26 (11g) — "Make a card": chọn độ dài lời nhắn (Short/Standard/Heartfelt),
- * 5 mẫu thiết kế có badge "fits", live preview vẽ bằng View; "Save the card"
- * render PNG server-side (sharp, 0 token); nút share tròn đính PNG lên timeline.
+ * 15 nền hoa màu nước tự thiết kế (assets/card-templates bên API) có badge
+ * "fits", live preview đặt chữ lên ĐÚNG bức tranh sẽ nằm trong PNG; "Save the
+ * card" render server-side (0 token); nút share tròn đính PNG lên timeline.
  */
 
-type TemplateId = 'marigold' | 'birthday' | 'tulip' | 'tet' | 'kraft';
+type TemplateId =
+  | 't01'
+  | 't02'
+  | 't03'
+  | 't04'
+  | 't05'
+  | 't06'
+  | 't07'
+  | 't09'
+  | 't10'
+  | 't11'
+  | 't12'
+  | 't13'
+  | 't15'
+  | 't16'
+  | 't17';
 
-/** Màu khớp `apps/api/src/ai/card.service.ts` THEMES — preview phải giống PNG. */
+/** Chữ nằm ở vùng trống nào của bức tranh — mirror `CardZone` bên API. */
+type Zone = 'top' | 'center' | 'lower' | 'right';
+
+/**
+ * Bản sao bảng TEMPLATES của `apps/api/src/ai/card.service.ts` (zone + màu) —
+ * preview phải nói cùng một điều với PNG. Ảnh nền lấy qua
+ * `ai.cardTemplateImageUrl(id)` (route public, cache 1 ngày).
+ * maxChars theo vùng: vùng giữa/trên rộng, vùng lệch phải hẹp nhất.
+ */
 const TEMPLATES: {
   id: TemplateId;
-  bg: string;
-  frame: string;
-  accent: string;
+  zone: Zone;
   ink: string;
+  accent: string;
   sub: string;
   maxChars: number;
 }[] = [
-  {
-    id: 'marigold',
-    bg: '#F7DE8B',
-    frame: '#B98A1F',
-    accent: '#8A6B14',
-    ink: '#4A3B22',
-    sub: '#8A6B14',
-    maxChars: 220,
-  },
-  {
-    id: 'birthday',
-    bg: '#F9C89B',
-    frame: '#C2652F',
-    accent: '#A9531F',
-    ink: '#43302C',
-    sub: '#8C4F26',
-    maxChars: 200,
-  },
-  {
-    id: 'tulip',
-    bg: '#F6C9DC',
-    frame: '#B7548E',
-    accent: '#8E3E6C',
-    ink: '#5A2C44',
-    sub: '#96477A',
-    maxChars: 160,
-  },
-  {
-    id: 'tet',
-    bg: '#A62B22',
-    frame: '#E8B84B',
-    accent: '#F6D77E',
-    ink: '#FFF4DC',
-    sub: '#F0CFA0',
-    maxChars: 120,
-  },
-  {
-    id: 'kraft',
-    bg: '#E7DCC8',
-    frame: '#8A744C',
-    accent: '#6B5B3E',
-    ink: '#463A26',
-    sub: '#7C6C50',
-    maxChars: 180,
-  },
+  { id: 't15', zone: 'lower', ink: '#5E4930', accent: '#B06F28', sub: '#9C8867', maxChars: 200 },
+  { id: 't01', zone: 'center', ink: '#4A4C3A', accent: '#647353', sub: '#8A8F76', maxChars: 220 },
+  { id: 't02', zone: 'top', ink: '#2E3036', accent: '#C26A55', sub: '#8B8E96', maxChars: 240 },
+  { id: 't03', zone: 'right', ink: '#6B5260', accent: '#A86379', sub: '#A38A96', maxChars: 140 },
+  { id: 't04', zone: 'top', ink: '#664A39', accent: '#B3743F', sub: '#A08874', maxChars: 240 },
+  { id: 't05', zone: 'center', ink: '#5B5445', accent: '#AB8A3E', sub: '#948A72', maxChars: 220 },
+  { id: 't06', zone: 'center', ink: '#6A4F3C', accent: '#C47A50', sub: '#A78B77', maxChars: 220 },
+  { id: 't07', zone: 'center', ink: '#4F4634', accent: '#A2762C', sub: '#8F8468', maxChars: 200 },
+  { id: 't09', zone: 'center', ink: '#414D69', accent: '#5F74A8', sub: '#7F89A3', maxChars: 220 },
+  { id: 't10', zone: 'center', ink: '#494E42', accent: '#6D7D4E', sub: '#878E7C', maxChars: 220 },
+  { id: 't11', zone: 'center', ink: '#5A4A2B', accent: '#A9822F', sub: '#998A68', maxChars: 220 },
+  { id: 't12', zone: 'center', ink: '#74424E', accent: '#B8617A', sub: '#A5838E', maxChars: 200 },
+  { id: 't13', zone: 'center', ink: '#7C5260', accent: '#C26B85', sub: '#AA8A96', maxChars: 220 },
+  { id: 't16', zone: 'top', ink: '#565142', accent: '#9C7A52', sub: '#918A76', maxChars: 240 },
+  { id: 't17', zone: 'lower', ink: '#575065', accent: '#8878AD', sub: '#8F8A9E', maxChars: 200 },
 ];
+
+/** Overlay chữ của preview đặt theo vùng trống — mirror cách neo của server. */
+const ZONE_STYLE: Record<Zone, object> = {
+  top: { justifyContent: 'flex-start', paddingTop: '9%' },
+  center: { justifyContent: 'center' },
+  lower: { justifyContent: 'center', paddingTop: '36%' },
+  right: { justifyContent: 'center', paddingLeft: '36%' },
+};
 
 type VariantParam = { length: MessageVariant['length']; text: string };
 
@@ -123,7 +124,7 @@ export default function CardScreen() {
   const [length, setLength] = useState<MessageVariant['length']>(
     variants[1]?.length ?? variants[0]?.length ?? 'standard',
   );
-  const [template, setTemplate] = useState<TemplateId>('marigold');
+  const [template, setTemplate] = useState<TemplateId>('t15');
   const [message, setMessage] = useState(
     variants.find((v) => v.length === (variants[1]?.length ?? 'standard'))?.text ??
       variants[0]?.text ??
@@ -249,7 +250,7 @@ export default function CardScreen() {
           </>
         )}
 
-        {/* DESIGN — 5 mẫu, badge "fits" khi lời nhắn vừa khuôn */}
+        {/* DESIGN — 15 nền tự thiết kế, badge "fits" khi lời nhắn vừa khuôn */}
         <SectionLabel label={t('ai.card.design')} />
         <ScrollView
           horizontal
@@ -274,16 +275,22 @@ export default function CardScreen() {
                 <View
                   style={{
                     width: 78,
-                    height: 98,
+                    height: 104,
                     borderRadius: radius.xl,
-                    backgroundColor: tp.bg,
+                    overflow: 'hidden',
                     borderWidth: selected ? 2.5 : 1,
                     borderColor: selected ? colors.coral.primary : colors.state.borderNeutral,
-                    padding: 10,
-                    paddingTop: 16,
-                    gap: 5,
+                    backgroundColor: colors.background.subtle,
                   }}
                 >
+                  {/* Thumbnail là ĐÚNG bức tranh của mẫu — mấy vạch màu giả chữ
+                      của bản 5 mẫu cũ không nói được thiệp hoa trông thế nào. */}
+                  <Image
+                    source={{ uri: ai.cardTemplateImageUrl(tp.id) }}
+                    style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+                    contentFit="cover"
+                    transition={120}
+                  />
                   {fits && (
                     <View
                       style={{
@@ -329,43 +336,6 @@ export default function CardScreen() {
                       </Text>
                     </View>
                   )}
-                  {/* mấy vạch chữ mô phỏng của mockup */}
-                  <View
-                    style={{
-                      height: 5,
-                      width: '72%',
-                      borderRadius: 3,
-                      backgroundColor: tp.frame,
-                      opacity: 0.9,
-                    }}
-                  />
-                  <View
-                    style={{
-                      height: 4,
-                      width: '88%',
-                      borderRadius: 2,
-                      backgroundColor: tp.frame,
-                      opacity: 0.45,
-                    }}
-                  />
-                  <View
-                    style={{
-                      height: 4,
-                      width: '80%',
-                      borderRadius: 2,
-                      backgroundColor: tp.frame,
-                      opacity: 0.45,
-                    }}
-                  />
-                  <View
-                    style={{
-                      height: 4,
-                      width: '62%',
-                      borderRadius: 2,
-                      backgroundColor: tp.frame,
-                      opacity: 0.45,
-                    }}
-                  />
                 </View>
                 <Text
                   variant="badge"
@@ -379,11 +349,11 @@ export default function CardScreen() {
           })}
         </ScrollView>
 
-        {/* Live preview: PNG thật sau khi render, còn lại là preview View có hoa góc */}
+        {/* Live preview: PNG thật sau khi render, còn lại là chữ đặt sống lên tranh */}
         {mediaId && !imageFailed ? (
           <Image
             source={mediaSource(mediaId)}
-            style={{ width: '100%', aspectRatio: 1080 / 1520, borderRadius: radius.xl }}
+            style={{ width: '100%', aspectRatio: 1080 / 1440, borderRadius: radius.xl }}
             contentFit="cover"
             transition={150}
             // PNG tải hỏng thì quay về preview sống thay vì ô trống — nhưng PNG
@@ -393,42 +363,35 @@ export default function CardScreen() {
         ) : (
           <View
             style={{
-              aspectRatio: 1080 / 1520,
+              aspectRatio: 1080 / 1440,
               borderRadius: radius.xl,
-              backgroundColor: active.bg,
-              padding: 12,
+              overflow: 'hidden',
+              backgroundColor: colors.background.subtle,
               boxShadow: '0 10px 26px rgba(24,24,27,0.16)',
             }}
           >
-            {/* khung kép — giống PNG server render (46px + 64px) */}
+            {/* Nền là ĐÚNG bức tranh của mẫu — chữ đặt vào vùng trống của nó,
+                cùng cách neo với PNG server (bảng TEMPLATES + ZONE_STYLE). */}
+            <Image
+              source={{ uri: ai.cardTemplateImageUrl(active.id) }}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+              contentFit="cover"
+              transition={150}
+            />
+
             <View
               style={{
-                flex: 1,
-                borderRadius: radius.lg,
-                borderWidth: 2,
-                borderColor: active.frame,
-                padding: 6,
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                alignItems: 'center',
+                paddingHorizontal: '9%',
+                ...ZONE_STYLE[active.zone],
               }}
             >
-              <View
-                style={{
-                  flex: 1,
-                  borderRadius: radius.md,
-                  borderWidth: 1,
-                  borderColor: active.frame,
-                  opacity: 1,
-                  paddingHorizontal: 22,
-                  justifyContent: 'center',
-                  gap: 10,
-                }}
-              >
-                <View style={{ position: 'absolute', top: 10, left: 10 }}>
-                  <Flower2 size={20} color={active.frame} strokeWidth={2} />
-                </View>
-                <View style={{ position: 'absolute', bottom: 10, right: 10 }}>
-                  <Flower2 size={20} color={active.frame} strokeWidth={2} />
-                </View>
-
+              <View style={{ maxWidth: 250, gap: 9 }}>
                 {!!params.occasion && (
                   <Text
                     weight="bold"
@@ -446,49 +409,19 @@ export default function CardScreen() {
 
                 {/* vào bằng deep link thì không có tên — bỏ hẳn dòng "Dear" */}
                 {toName !== '' && (
-                  <>
-                    <Text
-                      serif
-                      weight="bold"
-                      color={active.ink}
-                      style={{
-                        textAlign: 'center',
-                        fontSize: 23,
-                        lineHeight: 29,
-                        fontStyle: 'italic',
-                      }}
-                    >
-                      {t('ai.card.dear', { name: toName })}
-                    </Text>
-
-                    {/* gạch ngắn + hai chấm dưới tên */}
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 7,
-                      }}
-                    >
-                      <View
-                        style={{
-                          width: 4,
-                          height: 4,
-                          borderRadius: 2,
-                          backgroundColor: active.accent,
-                        }}
-                      />
-                      <View style={{ width: 74, height: 1.5, backgroundColor: active.frame }} />
-                      <View
-                        style={{
-                          width: 4,
-                          height: 4,
-                          borderRadius: 2,
-                          backgroundColor: active.accent,
-                        }}
-                      />
-                    </View>
-                  </>
+                  <Text
+                    serif
+                    weight="bold"
+                    color={active.accent}
+                    style={{
+                      textAlign: 'center',
+                      fontSize: 23,
+                      lineHeight: 29,
+                      fontStyle: 'italic',
+                    }}
+                  >
+                    {t('ai.card.dear', { name: toName })}
+                  </Text>
                 )}
 
                 <Text
