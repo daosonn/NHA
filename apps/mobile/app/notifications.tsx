@@ -11,6 +11,7 @@ import {
 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { AppHeader } from '../src/components/layout/app-header';
 import { BackButton, ScreenTitle } from '../src/components/layout/header-slots';
@@ -30,6 +31,10 @@ import {
 import type { NotificationDetail, NotificationType } from '../src/lib/api';
 import { relativeTime } from '../src/lib/date';
 import { colors, radius, spacing } from '../src/theme';
+import { enter } from '../src/theme/motion';
+
+/** How many rows join the entrance cascade on first paint (Home's rule). */
+const CASCADE_ROWS = 6;
 
 /** One glyph per kind, so the list is scannable before it is read. */
 const ICON: Record<NotificationType, typeof Heart> = {
@@ -175,7 +180,13 @@ export default function NotificationsScreen() {
         <FlatList
           data={items}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <Row item={item} onPress={() => open(item)} />}
+          renderItem={({ item, index }) => (
+            // Rows past the cascade (and rows mounted later by scrolling)
+            // rise immediately — same reasoning as the Home feed.
+            <Animated.View entering={enter.up(index < CASCADE_ROWS ? index : 0)}>
+              <Row item={item} onPress={() => open(item)} />
+            </Animated.View>
+          )}
           ItemSeparatorComponent={() => (
             <View style={{ height: 1, backgroundColor: colors.background.subtle }} />
           )}

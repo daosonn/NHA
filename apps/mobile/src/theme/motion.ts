@@ -1,4 +1,12 @@
-import { Easing, FadeIn, FadeOut, FadeOutDown, Keyframe } from 'react-native-reanimated';
+import { Platform } from 'react-native';
+import {
+  Easing,
+  FadeIn,
+  FadeInDown,
+  FadeOut,
+  FadeOutDown,
+  Keyframe,
+} from 'react-native-reanimated';
 import { motion } from '@nha/tokens';
 
 /**
@@ -31,24 +39,48 @@ export const CARD_PRESS_SCALE = 0.99;
 export const tickTiming = { scaleMs: 260, fadeMs: 160 } as const;
 
 /**
+ * On web, a custom `Keyframe` entrance breaks layout after it finishes:
+ * Reanimated (4.5) schedules a cleanup for every animation name it does not
+ * recognise, and that cleanup pins the element `position: absolute` at a
+ * snapshot (`layoutReanimation/web/componentUtils.js`, the
+ * `!(animationName in Animations)` branch). Out of flow, the element's list
+ * cell collapses to 0 and later rows draw on top of earlier ones. The
+ * predefined builders (`FadeIn`, `FadeInDown`, …) are in that `Animations`
+ * table and skip the broken path — so web gets the nearest predefined
+ * equivalent, native keeps the exact spec keyframes.
+ */
+const WEB = Platform.OS === 'web';
+
+/**
  * Content entering a screen. Pass the item's index and siblings arrive
  * staggered (`.nha-enter`, `--stagger`); omit it for a lone element.
  */
 export const enter = {
   /** `nhaFadeUp` — rises 16px while fading in. The default entrance. */
   up: (index = 0) =>
-    new Keyframe({
-      0: { opacity: 0, transform: [{ translateY: 16 }] },
-      100: { opacity: 1, transform: [{ translateY: 0 }], easing: easing.settle },
-    })
-      .duration(duration.enter)
-      .delay(index * stagger),
+    WEB
+      ? FadeInDown.duration(duration.enter)
+          .easing(easing.settle)
+          .delay(index * stagger)
+      : new Keyframe({
+          0: { opacity: 0, transform: [{ translateY: 16 }] },
+          100: { opacity: 1, transform: [{ translateY: 0 }], easing: easing.settle },
+        })
+          .duration(duration.enter)
+          .delay(index * stagger),
   /** `nhaFadeIn` — opacity only, for things that must not move. */
   fade: (index = 0) =>
     FadeIn.duration(duration.enter)
       .easing(easing.settle)
       .delay(index * stagger),
 } as const;
+
+/**
+ * Content swapped in place — a tab or filter replacing a panel. Select-speed
+ * (`--dur-select`) and no travel: the reader has not gone anywhere, only the
+ * panel has, so the 520ms rise of `enter` would read as a page load.
+ */
+export const swapIn = FadeIn.duration(duration.select).easing(easing.snap);
 
 /** Leaving is quicker than arriving — nothing to read on the way out. */
 export const exit = {
@@ -73,16 +105,21 @@ export const screenTransition = {
 /**
  * `nhaToast` — rises with a small overshoot before settling. The bounce
  * lives in the keyframes, so the easing between them stays `settle`.
+ * Web loses the overshoot (predefined rise only — see the WEB note above).
  */
-export const toastIn = new Keyframe({
-  0: { opacity: 0, transform: [{ translateY: 18 }, { scale: 0.96 }] },
-  60: { opacity: 1, transform: [{ translateY: -3 }, { scale: 1.01 }], easing: easing.settle },
-  100: { opacity: 1, transform: [{ translateY: 0 }, { scale: 1 }], easing: easing.settle },
-}).duration(duration.sheet);
+export const toastIn = WEB
+  ? FadeInDown.duration(duration.sheet).easing(easing.settle)
+  : new Keyframe({
+      0: { opacity: 0, transform: [{ translateY: 18 }, { scale: 0.96 }] },
+      60: { opacity: 1, transform: [{ translateY: -3 }, { scale: 1.01 }], easing: easing.settle },
+      100: { opacity: 1, transform: [{ translateY: 0 }, { scale: 1 }], easing: easing.settle },
+    }).duration(duration.sheet);
 
 /**
  * `nhaPop` — a tick or heart appearing: springs past full size and back.
  * For state flips inside a control (checkbox, reaction), not entrances.
+ * Custom Keyframe: do not use as `entering` on web (see the WEB note above);
+ * the imperative twin `usePop` (`components/motion/pop.ts`) is web-safe.
  */
 export const pop = new Keyframe({
   0: { transform: [{ scale: 0.72 }] },
