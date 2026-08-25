@@ -442,6 +442,7 @@
     "tagHint": "Tagged people get this moment on their profile."
   },
   "ai": {
+    "daysAway_zero": "today",
     "daysAway_one": "in {{count}} day",
     "daysAway_other": "in {{count}} days",
     "giftIdeas": "Gift ideas",
@@ -496,7 +497,22 @@
       "cachedRound": "from cache",
       "tapRefresh": "tap the refresh icon for new ideas",
       "sourceBy": "— {{name}}",
-      "sourceGone": "The original post is gone, but what the family noticed stayed in the profile."
+      "sourceGone": "The original post is gone, but what the family noticed stayed in the profile.",
+      "savedToast": "Idea saved.",
+      "saveFailed": "That did not save. Try again.",
+      "missingTitle": "Nothing to suggest yet",
+      "missingBody": "Pick who the gift is for and the occasion first — this screen opens from the gift form.",
+      "missingAction": "Open the gift form",
+      "noIdeasTitle": "No ideas this time",
+      "noIdeasBody": "Ideas come from the notes and photos your family has shared. Share a little more about them and try again.",
+      "sourceLoadFailed": "Could not load this source.",
+      "shopCheckFailed": "The marketplace check failed — try the search link.",
+      "linkFailed": "Could not open the link.",
+      "loadFamilyFailed": "Could not load your family.",
+      "fromLocked": "Always sent from you",
+      "budgetMin": "Minimum budget",
+      "budgetMax": "Maximum budget",
+      "savedSheetTitle": "Ideas you saved"
     },
     "privacyFooter": "Ideas come only from what your family has shared here.",
     "mockBadge": "Sample mode — no AI call was made",
@@ -520,7 +536,16 @@
       "toName": "To {{name}}",
       "fromName": "from {{name}}",
       "copy": "Copy",
-      "fromShared": "From a shared moment"
+      "error": "Could not write the message — please try again.",
+      "aiOff": "The AI helper is unavailable right now — please try again later.",
+      "empty": "No messages came back — please try again.",
+      "loadFamilyFailed": "Could not load your family.",
+      "fromSharedCount_one": "From {{count}} shared moment",
+      "fromSharedCount_other": "From {{count}} shared moments",
+      "sourcesTitle": "Where this came from",
+      "sourcesError": "Could not load where this came from.",
+      "tryAgain": "Write it again",
+      "copied": "Copied"
     },
     "card": {
       "title": "Make a card",
@@ -534,20 +559,39 @@
       "shared": "Shared",
       "shareCaption": "A card for {{name}}",
       "template": {
-        "marigold": "Marigold",
-        "birthday": "Birthday",
-        "tulip": "Tulip",
-        "tet": "Tet",
-        "kraft": "Kraft"
+        "t01": "Lily of the valley",
+        "t02": "Anemone",
+        "t03": "Sweet pea",
+        "t04": "Ranunculus",
+        "t05": "White peony",
+        "t06": "Zinnia",
+        "t07": "Cottage frame",
+        "t09": "Hydrangea",
+        "t10": "Wildflowers",
+        "t11": "Yellow cosmos",
+        "t12": "Peony",
+        "t13": "Cherry blossom",
+        "t15": "Mandarin grove",
+        "t16": "Summer meadow",
+        "t17": "Wisteria"
       },
       "message": "Message",
       "fits": "fits",
-      "savedCard": "Saved"
+      "savedCard": "Saved",
+      "error": "Could not make the card.",
+      "shareError": "Could not share the card.",
+      "tooLong_one": "{{count}} character over the limit for this design.",
+      "tooLong_other": "{{count}} characters over the limit for this design.",
+      "saveToPhotos": "Save to photos",
+      "savedToPhotos": "Saved to photos",
+      "saveFailed": "Could not save the card — try again.",
+      "viewPost": "View the post",
+      "emptyHint": "Write a message to save the card."
     },
     "hub": {
       "comingUp": "Coming up",
-      "datesThisMonth_one": "{{count}} date in the family this month.",
-      "datesThisMonth_other": "{{count}} dates in the family this month.",
+      "datesThisMonth_one": "{{count}} date coming up in the family.",
+      "datesThisMonth_other": "{{count}} dates coming up in the family.",
       "alsoThisSeason": "Also this season",
       "seeAll": "See all",
       "makeSomething": "Make something",
@@ -562,16 +606,24 @@
       "anniversaryYears": "{{name}} · {{years}} years",
       "anniversaryOf": "{{name}}'s anniversary",
       "memorialOf": "{{name}}'s memorial",
-      "customDate": "{{name}}'s day"
+      "customDate": "{{name}}'s day",
+      "loadFailed": "Could not load the family's dates.",
+      "noDatesTitle": "No dates yet",
+      "noDatesBody": "Dates come from the birthdays on family profiles. Add a birth date and it will show up here.",
+      "noDatesAction": "Open the family tree"
     },
     "memberSheet": {
-      "title": "Who is it for?"
+      "title": "Who is it for?",
+      "loadFailed": "Could not load the family members.",
+      "empty": "No family members yet."
     },
     "occasionSheet": {
       "title": "When is it?",
       "somethingElse": "Something else",
       "placeholder": "e.g. Just because",
-      "addOccasion": "Add this occasion"
+      "addOccasion": "Add this occasion",
+      "loadFailed": "Could not load the family's dates.",
+      "empty": "No saved dates yet — describe the occasion below."
     }
   },
   "settings": {
@@ -733,7 +785,7 @@
   },
   "omoide": {
     "summary": "{{photos}} photos by {{people}} people",
-    "openMoment": "Open the moment this photo belongs to",
+    "openMoment": "View this photo full screen",
     "loadFailed": "Could not load the photos.",
     "emptyTitle": "No photos yet",
     "emptyBody": "Everything the family shares with a photo or a video shows up here.",
@@ -787,7 +839,15 @@
     "photosCount_other": "{{count}} chosen",
     "noMusic": "No music",
     "buildStory": "Build the story",
-    "stitchQuick": "Or just stitch the photos in my order",
+    "stitchQuick": "Or just stitch the photos in my order (no AI)",
+    "serviceOff": "The AI helper is not available right now. Please try again in a little while.",
+    "stitchError": "Could not stitch the video — try again.",
+    "makeError": "Could not start the video — your story and edits are still here. Try again.",
+    "aiOff": "The AI helper is not available right now. You can still stitch the photos in your order, below.",
+    "loadFamilyFailed": "Could not load your family — try again.",
+    "needPhotosHint": "Choose at least one photo to continue.",
+    "seconds_one": "{{count}}s",
+    "seconds_other": "{{count}}s",
     "photosTitle": "Photos & clips",
     "chooseForMe": "Choose for me",
     "clipBadge": "Clip",
@@ -836,7 +896,6 @@
     "sceneN": "Scene {{n}}",
     "captionPlaceholder": "Caption shown in the video",
     "makeVideo": "Make the video",
-    "making": "Starting…",
     "makingTitle": "Making your video",
     "almostThere": "Almost there",
     "canLeave": "You can leave this screen — we will let you know.",
@@ -929,7 +988,8 @@
       "deleteExplain": "The album goes; the photos stay where they came from."
     },
     "item": {
-      "open": "Photo options",
+      "open": "View this photo full screen",
+      "actions": "Photo options",
       "setCover": "Use as cover",
       "isCover": "This is the cover",
       "remove": "Remove from album"
@@ -960,7 +1020,8 @@
       "eventIn": "{{what}} is in {{count}} day",
       "eventIn_other": "{{what}} is in {{count}} days",
       "care": "It has been a while since you heard from {{name}}",
-      "aiSuggestion": "A new suggestion is waiting for you"
+      "aiSuggestion": "A new suggestion is waiting for you",
+      "videoDone": "Your video “{{title}}” is ready"
     }
   }
 }

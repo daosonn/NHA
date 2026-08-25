@@ -33,7 +33,6 @@ import {
   type FamilyTree as FamilyTreePayload,
   type InvitationSummary,
 } from '../../src/lib/api';
-import { goBack } from '../../src/lib/navigation';
 
 /**
  * Every group, not the first three: on this screen the strip is the switch
@@ -164,10 +163,7 @@ export default function FamilyTreeScreen() {
 
   return (
     <View className="flex-1 bg-page">
-      <AppHeader
-        left={<BackButton onPress={() => goBack(router)} />}
-        center={<ScreenTitle title={t('family.title')} />}
-      />
+      <AppHeader left={<BackButton />} center={<ScreenTitle title={t('family.title')} />} />
 
       <View className="flex-1 gap-lg px-xl pb-xl pt-lg">
         {families !== undefined && families.length > 0 && (

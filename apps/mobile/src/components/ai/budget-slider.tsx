@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, type GestureResponderEvent } from 'react-native';
 
 import { colors, radius } from '../../theme';
@@ -21,11 +22,26 @@ export function formatJpy(n: number): string {
   return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
-/** "3.000〜8.000円", open-ended at the top: "15.000円〜". */
+/** "3.000〜8.000円", open-ended at the top: "15.000円〜".
+ * Sàn 0 LUÔN ra dạng mở đáy "〜8.000円": server (`parseJpyRange`) lọc bỏ số 0,
+ * và chuỗi "0〜8.000円" bị nó hiểu thành sàn 4.000 — nửa dải giá rẻ biến mất. */
 export function budgetLabel(lo: number, hi: number): string {
-  if (hi >= BUDGET_MAX)
-    return lo === 0 ? `〜${formatJpy(BUDGET_MAX)}円+` : `${formatJpy(lo)}円〜`;
+  if (hi >= BUDGET_MAX) return lo === 0 ? `〜${formatJpy(BUDGET_MAX)}円+` : `${formatJpy(lo)}円〜`;
+  if (lo === 0) return `〜${formatJpy(hi)}円`;
   return `${formatJpy(lo)}〜${formatJpy(hi)}円`;
+}
+
+// JPY là tiền tệ của sản phẩm — hiển thị luôn theo ja-JP, bất kể ngôn ngữ UI.
+const jpy = new Intl.NumberFormat('ja-JP', {
+  style: 'currency',
+  currency: 'JPY',
+  maximumFractionDigits: 0,
+});
+
+/** "¥3,000〜¥8,000" — CHỈ để hiển thị; chuỗi gửi API vẫn là `budgetLabel`. */
+export function budgetDisplayLabel(lo: number, hi: number): string {
+  if (hi >= BUDGET_MAX) return lo === 0 ? `〜${jpy.format(BUDGET_MAX)}+` : `${jpy.format(lo)}〜`;
+  return `${jpy.format(lo)}〜${jpy.format(hi)}`;
 }
 
 /**
@@ -62,6 +78,7 @@ export type BudgetSliderProps = {
  *  - mọi thứ vẽ bên trên đều `pointerEvents="none"` để không tự giành sự kiện.
  */
 export function BudgetSlider({ value, onChange }: BudgetSliderProps) {
+  const { t } = useTranslation();
   const [width, setWidth] = useState(0);
   const [lo, hi] = value;
   // Núm mà cử chỉ hiện tại đang giữ — chọn lúc chạm, giữ suốt lúc kéo, nên kéo
@@ -75,11 +92,11 @@ export function BudgetSlider({ value, onChange }: BudgetSliderProps) {
     return typeof pageX === 'number' && pageX !== 0 ? pageX - originX.current : locationX;
   };
 
-  const move = (v: number) => {
+  const move = (v: number, which: 'lo' | 'hi' | null = active.current) => {
     // Giữ hai núm cách nhau ít nhất một bậc: một khoảng ngân sách rộng 0 đồng
     // không có nghĩa gì, mà lại làm hai núm dính vào nhau không tách ra được.
-    if (active.current === 'lo') onChange([Math.min(v, hi - STEP), hi]);
-    else if (active.current === 'hi') onChange([lo, Math.max(v, lo + STEP)]);
+    if (which === 'lo') onChange([Math.min(v, hi - STEP), hi]);
+    else if (which === 'hi') onChange([lo, Math.max(v, lo + STEP)]);
   };
 
   return (
@@ -100,10 +117,13 @@ export function BudgetSlider({ value, onChange }: BudgetSliderProps) {
           // núm gần nhau thì pixel mới là thứ người dùng thực sự nhắm vào.
           const dLo = Math.abs(x - xForValue(lo, width));
           const dHi = Math.abs(x - xForValue(hi, width));
-          active.current = dLo === dHi ? (x >= xForValue(hi, width) ? 'hi' : 'lo') : dLo < dHi ? 'lo' : 'hi';
+          active.current =
+            dLo === dHi ? (x >= xForValue(hi, width) ? 'hi' : 'lo') : dLo < dHi ? 'lo' : 'hi';
           move(valueAtX(x, width));
         }}
         onResponderMove={(e) => move(valueAtX(xFromEvent(e), width))}
+        // ScrollView cha không được cướp cử chỉ giữa chừng — kéo đứt nửa đường.
+        onResponderTerminationRequest={() => false}
         onResponderRelease={() => {
           active.current = null;
         }}
@@ -158,6 +178,15 @@ export function BudgetSlider({ value, onChange }: BudgetSliderProps) {
               <View
                 key={i}
                 pointerEvents="none"
+                accessible
+                accessibilityRole="adjustable"
+                accessibilityLabel={i === 0 ? t('ai.gifts.budgetMin') : t('ai.gifts.budgetMax')}
+                accessibilityValue={{ min: 0, max: BUDGET_MAX, now: v, text: jpy.format(v) }}
+                accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+                onAccessibilityAction={(e) => {
+                  const delta = e.nativeEvent.actionName === 'increment' ? STEP : -STEP;
+                  move(clamp(v + delta, 0, BUDGET_MAX), i === 0 ? 'lo' : 'hi');
+                }}
                 style={{
                   position: 'absolute',
                   left: xForValue(v, width) - R,
@@ -175,7 +204,7 @@ export function BudgetSlider({ value, onChange }: BudgetSliderProps) {
         )}
       </View>
 
-      {/* Thang: 0 · 5.000 · 10.000 · 15.000 · 20.000円+
+      {/* Thang: ¥0 · ¥5,000 · ¥10,000 · ¥15,000 · ¥20,000+
           Đặt tuyệt đối, căn giữa ĐÚNG toạ độ của giá trị — trước đây dùng
           space-between nên các hộp chữ bị dàn đều và số lệch khỏi núm. */}
       <View style={{ height: 15 }} pointerEvents="none">
@@ -192,7 +221,7 @@ export function BudgetSlider({ value, onChange }: BudgetSliderProps) {
                 textAlign: 'center',
               }}
             >
-              {i === MARKS.length - 1 ? `${formatJpy(m)}円+` : formatJpy(m)}
+              {i === MARKS.length - 1 ? `${jpy.format(m)}+` : jpy.format(m)}
             </Text>
           ))}
       </View>

@@ -219,7 +219,7 @@ describe('AI + Video (screens 21-33)', () => {
   it('screen 26: renders a card PNG and returns a viewable media id', async () => {
     const card = await json<CardBody>(
       request(http).post(`/api/families/${familyId}/cards`).set(auth()).send({
-        template: 'marigold',
+        template: 't15',
         message: 'Happy birthday!',
         toName: 'Grandma',
         fromName: 'E2E',
@@ -239,7 +239,9 @@ describe('AI + Video (screens 21-33)', () => {
     // có thanh điệu từng ra tofu vì Georgia thiếu glyph Extended Additional
     const card = await json<CardBody>(
       request(http).post(`/api/families/${familyId}/cards`).set(auth()).send({
-        template: 'tet',
+        // t13 (anh đào) = mẫu vùng giữa; t15 ở test trên là vùng dưới — hai test
+        // phủ hai kiểu neo chữ khác nhau của bảng TEMPLATES mới.
+        template: 't13',
         message:
           'Chúc mừng năm mới! Cả nhà chúc bà mạnh khoẻ, bình an và thật nhiều niềm vui.',
         toName: 'Bà Nội',

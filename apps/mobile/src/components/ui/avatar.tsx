@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { useRef, useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View } from 'react-native';
 
@@ -101,7 +102,14 @@ export type AvatarProps = {
 export function Avatar({ size, name, mediaId, tone = 'light', ring, style }: AvatarProps) {
   const letters = name === undefined ? null : initials(name);
 
-  if (mediaId != null && mediaId !== '') {
+  // Ảnh tải hỏng (401 lúc token xoay vòng, 404, rớt mạng) thì RƠI XUỐNG tầng
+  // chữ cái đầu như thiết kế 3 tầng đã hứa — trước đây thiếu onError nên mặt
+  // người thành một vòng tròn xám trống ở mọi nơi có avatar. `key` theo mediaId
+  // để đổi người là trạng thái lỗi cũ tự về không.
+  const [failed, setFailed] = useState(false);
+  const failedFor = useRef<string | null>(null);
+
+  if (mediaId != null && mediaId !== '' && !(failed && failedFor.current === mediaId)) {
     // The ring lives on a wrapper: `expo-image` takes an `ImageStyle`, which
     // has no `boxShadow`, and the rings this app draws stack two of them.
     return (
@@ -126,6 +134,10 @@ export function Avatar({ size, name, mediaId, tone = 'light', ring, style }: Ava
           contentFit="cover"
           transition={140}
           style={{ width: '100%', height: '100%' }}
+          onError={() => {
+            failedFor.current = mediaId;
+            setFailed(true);
+          }}
         />
       </View>
     );

@@ -32,7 +32,6 @@ import type { NotificationDetail, NotificationType } from '../src/lib/api';
 import { relativeTime } from '../src/lib/date';
 import { colors, radius, spacing } from '../src/theme';
 import { enter } from '../src/theme/motion';
-import { goBack } from '../src/lib/navigation';
 
 /** How many rows join the entrance cascade on first paint (Home's rule). */
 const CASCADE_ROWS = 6;
@@ -140,14 +139,16 @@ export default function NotificationsScreen() {
     router.push(
       target.kind === 'post'
         ? { pathname: '/post/[id]', params: { id: target.id } }
-        : { pathname: '/member/[id]', params: { id: target.id } },
+        : target.kind === 'video'
+          ? { pathname: '/video/[id]', params: { id: target.id } }
+          : { pathname: '/member/[id]', params: { id: target.id } },
     );
   };
 
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => goBack(router)} />}
+        left={<BackButton />}
         center={<ScreenTitle title={t('nav.notifications')} />}
         right={
           unread > 0 ? (

@@ -16,7 +16,6 @@ import type { AlbumSummary } from '../../src/lib/api';
 import { mediaSource } from '../../src/lib/media-source';
 import { colors, radius, spacing } from '../../src/theme';
 import { enter } from '../../src/theme/motion';
-import { goBack } from '../../src/lib/navigation';
 
 const GRID_GAP = 12;
 
@@ -148,10 +147,7 @@ export default function AlbumsScreen() {
 
   return (
     <View className="flex-1 bg-page">
-      <AppHeader
-        left={<BackButton onPress={() => goBack(router)} />}
-        center={<ScreenTitle title={t('albums.title')} />}
-      />
+      <AppHeader left={<BackButton />} center={<ScreenTitle title={t('albums.title')} />} />
 
       <ScrollView
         contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40, gap: 14 }}

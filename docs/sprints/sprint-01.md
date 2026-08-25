@@ -51,9 +51,10 @@ build the family tree, post content with photos, and view member profiles.
       (`app/moments.tsx` đã xoá khi gộp vào Home — xem
       `docs/01-frontend/architecture.md` § Wiring status).
 - [ ] 1.2.4 Empty/loading state (UI đầy đủ) — done cho Home, cây gia phả,
-      post detail, Omoide, Life Profile, album, invite (rà lại 2026-08-20).
-      Còn thiếu trạng thái lỗi: `memo/[id]`, `memo/edit` (của mình) và các
-      màn AI/video merge từ `main` (của tác giả).
+      post detail, Omoide, Life Profile, album, invite (rà lại 2026-08-20);
+      các màn AI/video xong 2026-08-24 (UX pass: lỗi/rỗng/loading mọi màn AI,
+      giữ kết quả khi regenerate, đã verify tsc+i18n+prettier+bundle).
+      Còn thiếu trạng thái lỗi: `memo/[id]`, `memo/edit` (của mình).
 - [x] 1.2.5 Widget dịp đặc biệt trên Home (countdown + theme — sinh nhật/ngày giỗ derived từ LifeProfile; added 2026-08-14, see `database.md`) — API done 2026-08-18 (PR #11: `GET /families/:familyId/special-dates`); FE nối xong 2026-08-19
 
 ### 1.3 Tạo nhóm gia đình — Family Group

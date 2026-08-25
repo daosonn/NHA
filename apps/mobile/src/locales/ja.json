@@ -422,6 +422,7 @@
     "tagHint": "タグ付けされた人のプロフィールにこの思い出が並びます。"
   },
   "ai": {
+    "daysAway_zero": "今日",
     "daysAway_other": "あと{{count}}日",
     "giftIdeas": "贈り物のアイデア",
     "video": "動画",
@@ -474,7 +475,22 @@
       "cachedRound": "キャッシュ",
       "tapRefresh": "更新ボタンで新しい案を出せます",
       "sourceBy": "— {{name}}",
-      "sourceGone": "元の投稿はもうありませんが、気づいたことはプロフィールに残っています。"
+      "sourceGone": "元の投稿はもうありませんが、気づいたことはプロフィールに残っています。",
+      "savedToast": "アイデアを保存しました。",
+      "saveFailed": "保存できませんでした。もう一度お試しください。",
+      "missingTitle": "まだ提案できません",
+      "missingBody": "先に贈る相手と機会を選んでください。この画面はギフト提案のフォームから開きます。",
+      "missingAction": "ギフト提案を開く",
+      "noIdeasTitle": "今回は提案が見つかりませんでした",
+      "noIdeasBody": "提案は家族が共有したメモや写真をもとに作られます。本人についてもう少し共有してから、もう一度お試しください。",
+      "sourceLoadFailed": "この根拠を読み込めませんでした。",
+      "shopCheckFailed": "商品検索でエラーが発生しました。検索リンクからお探しください。",
+      "linkFailed": "リンクを開けませんでした。",
+      "loadFamilyFailed": "家族の情報を読み込めませんでした。",
+      "fromLocked": "贈り主はいつもあなたです",
+      "budgetMin": "予算の下限",
+      "budgetMax": "予算の上限",
+      "savedSheetTitle": "保存したアイデア"
     },
     "privacyFooter": "提案は家族がここで共有した情報だけをもとにしています。",
     "mockBadge": "サンプルモード — AIは呼び出されていません",
@@ -498,7 +514,15 @@
       "toName": "{{name}}さんへ",
       "fromName": "{{name}}より",
       "copy": "コピー",
-      "fromShared": "共有された思い出から"
+      "error": "メッセージを作成できませんでした。もう一度お試しください。",
+      "aiOff": "AIアシスタントは現在ご利用いただけません。しばらくしてからもう一度お試しください。",
+      "empty": "メッセージが作成されませんでした。もう一度お試しください。",
+      "loadFamilyFailed": "家族の情報を読み込めませんでした。",
+      "fromSharedCount_other": "共有された思い出{{count}}件から",
+      "sourcesTitle": "このメッセージのもと",
+      "sourcesError": "もとになった記録を読み込めませんでした。",
+      "tryAgain": "もう一度書く",
+      "copied": "コピーしました"
     },
     "card": {
       "title": "カードを作る",
@@ -512,19 +536,37 @@
       "shared": "共有しました",
       "shareCaption": "{{name}}へのカード",
       "template": {
-        "marigold": "マリーゴールド",
-        "birthday": "バースデー",
-        "tulip": "チューリップ",
-        "tet": "テト",
-        "kraft": "クラフト"
+        "t01": "すずらん",
+        "t02": "アネモネ",
+        "t03": "スイートピー",
+        "t04": "ラナンキュラス",
+        "t05": "白い芍薬",
+        "t06": "百日草",
+        "t07": "花の額縁",
+        "t09": "紫陽花",
+        "t10": "野の花",
+        "t11": "黄色いコスモス",
+        "t12": "牡丹",
+        "t13": "桜",
+        "t15": "みかん",
+        "t16": "夏の野原",
+        "t17": "藤"
       },
       "message": "メッセージ",
       "fits": "ぴったり",
-      "savedCard": "保存しました"
+      "savedCard": "保存しました",
+      "error": "カードを作成できませんでした。",
+      "shareError": "カードを共有できませんでした。",
+      "tooLong_other": "このデザインの上限を{{count}}文字超えています。",
+      "saveToPhotos": "写真に保存",
+      "savedToPhotos": "写真に保存しました",
+      "saveFailed": "カードを保存できませんでした。もう一度お試しください。",
+      "viewPost": "投稿を見る",
+      "emptyHint": "カードを保存するにはメッセージを入力してください。"
     },
     "hub": {
       "comingUp": "もうすぐの記念日",
-      "datesThisMonth_other": "今月、家族の記念日が{{count}}件あります。",
+      "datesThisMonth_other": "これからの1か月で、家族の記念日が{{count}}件あります。",
       "alsoThisSeason": "この季節のほかの日",
       "seeAll": "すべて見る",
       "makeSomething": "つくってみる",
@@ -536,19 +578,27 @@
       "memoryVideoDesc": "写真が物語の順番に並びます",
       "birthdayTurns": "{{name}}さん、{{age}}歳の誕生日",
       "birthdayOf": "{{name}}さんの誕生日",
-      "anniversaryYears": "{{name}} · {{years}}周年",
-      "anniversaryOf": "{{name}}の記念日",
+      "anniversaryYears": "{{name}}さん · {{years}}周年",
+      "anniversaryOf": "{{name}}さんの記念日",
       "memorialOf": "{{name}}さんの命日",
-      "customDate": "{{name}}の記念日"
+      "customDate": "{{name}}さんの大切な日",
+      "loadFailed": "記念日を読み込めませんでした。",
+      "noDatesTitle": "まだ記念日がありません",
+      "noDatesBody": "記念日は家族のプロフィールの誕生日から自動で作られます。生年月日を登録すると、ここに表示されます。",
+      "noDatesAction": "家系図を開く"
     },
     "memberSheet": {
-      "title": "どなたに？"
+      "title": "どなたに？",
+      "loadFailed": "家族のメンバーを読み込めませんでした。",
+      "empty": "まだ家族のメンバーがいません。"
     },
     "occasionSheet": {
       "title": "いつの機会？",
       "somethingElse": "その他の機会",
       "placeholder": "例：ふと思い立って",
-      "addOccasion": "この機会を追加"
+      "addOccasion": "この機会を追加",
+      "loadFailed": "家族の記念日を読み込めませんでした。",
+      "empty": "保存された記念日はまだありません。下の欄に機会をご記入ください。"
     }
   },
   "settings": {
@@ -704,7 +754,7 @@
   },
   "omoide": {
     "summary": "{{people}}人が投稿した写真 {{photos}}枚",
-    "openMoment": "この写真の投稿を開く",
+    "openMoment": "写真を大きく表示",
     "loadFailed": "写真を読み込めませんでした。",
     "emptyTitle": "まだ写真がありません",
     "emptyBody": "家族が写真や動画を共有すると、ここに集まります。",
@@ -759,6 +809,13 @@
     "noMusic": "音楽なし",
     "buildStory": "ストーリーを作る",
     "stitchQuick": "選んだ順につなぐだけ（AIなし）",
+    "serviceOff": "AIサービスは現在ご利用いただけません。しばらくしてからもう一度お試しください。",
+    "stitchError": "ムービーをつなげられませんでした。もう一度お試しください。",
+    "makeError": "ムービーを開始できませんでした。ストーリーと編集内容はそのまま残っています。もう一度お試しください。",
+    "aiOff": "AIサービスは現在ご利用いただけません。下のリンクから、写真を選んだ順につなぐことはできます。",
+    "loadFamilyFailed": "家族の情報を読み込めませんでした。もう一度お試しください。",
+    "needPhotosHint": "続けるには、写真を1枚以上選んでください。",
+    "seconds_other": "{{count}}秒",
     "photosTitle": "写真とクリップ",
     "chooseForMe": "おまかせで選ぶ",
     "clipBadge": "クリップ",
@@ -807,7 +864,6 @@
     "sceneN": "シーン{{n}}",
     "captionPlaceholder": "動画に表示されるキャプション",
     "makeVideo": "ムービーを作る",
-    "making": "開始しています…",
     "makingTitle": "ムービーを作成中",
     "almostThere": "もうすぐ完成",
     "canLeave": "この画面を離れても大丈夫 — できあがったらお知らせします。",
@@ -899,7 +955,8 @@
       "deleteExplain": "アルバムだけが消えます。写真は元の場所に残ります。"
     },
     "item": {
-      "open": "写真の操作",
+      "open": "写真を大きく表示",
+      "actions": "写真の操作",
       "setCover": "表紙にする",
       "isCover": "表紙になっています",
       "remove": "アルバムから外す"
@@ -928,7 +985,8 @@
       "eventToday": "今日は{{what}}です",
       "eventIn_other": "{{what}}まであと{{count}}日",
       "care": "{{name}}さんとしばらく連絡をとっていません",
-      "aiSuggestion": "新しい提案が届いています"
+      "aiSuggestion": "新しい提案が届いています",
+      "videoDone": "動画「{{title}}」ができあがりました"
     }
   }
 }

@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { safeBack } from '../../src/lib/back';
 import { Clock, Lock } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,7 +19,6 @@ import {
 } from '../../src/features/auth/use-password-reset';
 import { ApiError } from '../../src/lib/api';
 import { colors } from '../../src/theme';
-import { goBack } from '../../src/lib/navigation';
 
 const CODE_LENGTH = 6;
 const RESEND_SECONDS = 60;
@@ -131,7 +131,7 @@ export default function SetPasswordScreen() {
   if (step === 'password') {
     return (
       <FormScreen
-        onBack={() => goBack(router)}
+        onBack={() => safeBack(router, '/settings')}
         title={t('settings.password.set.title')}
         footer={
           <>

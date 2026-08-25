@@ -23,7 +23,6 @@ import { LOCALE_NAMES, SUPPORTED_LOCALES, type Locale } from '../src/i18n';
 import { setLocale } from '../src/i18n/locale';
 import { useLocale } from '../src/i18n/use-locale';
 import { colors, radius, spacing } from '../src/theme';
-import { goBack } from '../src/lib/navigation';
 
 /**
  * A row that goes somewhere.
@@ -114,7 +113,7 @@ export default function SettingsScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => goBack(router)} />}
+        left={<BackButton fallback="/profile" />}
         center={<ScreenTitle title={t('settings.title')} />}
       />
 

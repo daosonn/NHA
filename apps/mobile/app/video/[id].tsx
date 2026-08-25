@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { safeBack } from '../../src/lib/back';
 import { Check, Clapperboard, Download, Maximize2, Pencil, Play, Users } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +18,6 @@ import { useMyVideos, useShareVideo, useVideoJob } from '../../src/features/vide
 import { apiAccessToken, video } from '../../src/lib/api';
 import { downloadAuthenticated, objectUrlFor } from '../../src/lib/download';
 import { colors, radius, spacing } from '../../src/theme';
-import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 32 (11k) "Progress you can walk away from" + màn 33 (11l) "Watch, save, share".
@@ -112,24 +112,33 @@ export default function VideoJobScreen() {
    * (lỗi Sơn gặp 19/08). Native thì gửi header trực tiếp là được.
    */
   const [webUri, setWebUri] = useState<string | null>(null);
+  // Render mất vài phút — token có thể hết hạn đúng lúc chờ. Tải blob hỏng phải
+  // NÓI RA + cho thử lại: trước đây reject không ai bắt, job DONE mà khung phát
+  // đứng đen, người dùng tưởng render hỏng dù file có thật.
+  const [blobFailed, setBlobFailed] = useState(false);
+  const [blobRetry, setBlobRetry] = useState(0);
   useEffect(() => {
     if (Platform.OS !== 'web' || fileUrl === null) return;
     let cancelled = false;
     let created: string | null = null;
-    void objectUrlFor(fileUrl, apiAccessToken()).then((url) => {
-      if (cancelled) {
-        URL.revokeObjectURL(url);
-        return;
-      }
-      created = url;
-      setWebUri(url);
-    });
+    objectUrlFor(fileUrl, apiAccessToken())
+      .then((url) => {
+        if (cancelled) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        created = url;
+        setWebUri(url);
+      })
+      .catch(() => {
+        if (!cancelled) setBlobFailed(true);
+      });
     return () => {
       cancelled = true;
       if (created !== null) URL.revokeObjectURL(created);
       setWebUri(null);
     };
-  }, [fileUrl]);
+  }, [fileUrl, blobRetry]);
 
   const playerSource =
     fileUrl === null
@@ -181,7 +190,7 @@ export default function VideoJobScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => goBack(router)} />}
+        left={<BackButton fallback="/ai" />}
         center={
           <ScreenTitle
             title={data?.status === 'DONE' ? t('video.title') : t('video.makingTitle')}
@@ -331,7 +340,11 @@ export default function VideoJobScreen() {
             <Text variant="caption" color={colors.text.body}>
               {data.error}
             </Text>
-            <Button label={t('common.back')} variant="secondary" onPress={() => goBack(router)} />
+            <Button
+              label={t('common.back')}
+              variant="secondary"
+              onPress={() => safeBack(router, '/ai')}
+            />
           </Card>
         )}
 
@@ -382,8 +395,42 @@ export default function VideoJobScreen() {
               >
                 <Maximize2 size={16} color={colors.text.white} strokeWidth={2.2} />
               </Pressable>
+              {/* web: blob tải HỎNG (token hết hạn giữa lúc chờ render…) — nói ra + thử lại */}
+              {Platform.OS === 'web' && blobFailed && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 10,
+                    backgroundColor: 'rgba(0,0,0,0.65)',
+                  }}
+                >
+                  <Text variant="body2" color={colors.text.white} style={{ textAlign: 'center' }}>
+                    {t('errors.generic')}
+                  </Text>
+                  <Pressable
+                    onPress={() => {
+                      setBlobFailed(false);
+                      setBlobRetry((n) => n + 1);
+                    }}
+                    accessibilityRole="button"
+                    style={{
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: radius.full,
+                      backgroundColor: 'rgba(255,255,255,0.18)',
+                    }}
+                  >
+                    <Text variant="body2" weight="semibold" color={colors.text.white}>
+                      {t('common.retry')}
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
               {/* web: đang tải bytes về blob — nói rõ chứ không để khung đen im lặng */}
-              {Platform.OS === 'web' && webUri === null && (
+              {Platform.OS === 'web' && webUri === null && !blobFailed && (
                 <View
                   style={{
                     position: 'absolute',
@@ -451,7 +498,7 @@ export default function VideoJobScreen() {
                 label={t('video.edit')}
                 variant="neutral"
                 size="large"
-                onPress={() => goBack(router)}
+                onPress={() => safeBack(router, '/ai')}
                 renderIcon={({ size, color }) => (
                   <Pencil size={size} color={color} strokeWidth={2.1} />
                 )}

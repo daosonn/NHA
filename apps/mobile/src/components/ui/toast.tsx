@@ -1,6 +1,6 @@
 import { Check, TriangleAlert } from 'lucide-react-native';
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { AccessibilityInfo, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,6 +10,8 @@ import { Text } from './text';
 
 /** Long enough to read a short sentence, short enough not to be in the way. */
 const VISIBLE_MS = 3200;
+/** A failure asks for action, not just a glance — it gets longer to be read. */
+const FAILURE_VISIBLE_MS = 6000;
 
 type Tone = 'success' | 'failure';
 
@@ -52,7 +54,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     nextId.current += 1;
     setToast({ id: nextId.current, tone, message });
 
-    timer.current = setTimeout(() => setToast(null), VISIBLE_MS);
+    // `accessibilityRole="alert"` alone does not speak in React Native — the
+    // announcement has to be asked for, or every toast is silence to a screen
+    // reader (which is exactly the silent success this component exists to fix).
+    AccessibilityInfo.announceForAccessibility(message);
+
+    timer.current = setTimeout(
+      () => setToast(null),
+      tone === 'failure' ? FAILURE_VISIBLE_MS : VISIBLE_MS,
+    );
   }, []);
 
   const value = useMemo<ToastValue>(

@@ -23,7 +23,7 @@ import {
 import { ApiError } from '../../src/lib/api';
 import { daysUntil } from '../../src/lib/date';
 import { colors, radius, spacing } from '../../src/theme';
-import { goBack } from '../../src/lib/navigation';
+import { safeBack } from '../../src/lib/back';
 
 const HERO_AVATAR = 60;
 
@@ -80,7 +80,7 @@ export default function InvitationScreen() {
   const close = () => {
     // Reached from a share link as often as from inside the app, and then
     // there is nothing behind it to go back to.
-    goBack(router);
+    safeBack(router);
   };
 
   const join = () => {

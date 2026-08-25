@@ -1,5 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { safeBack } from '../../src/lib/back';
 import { ImageOff, Lock } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,7 +20,6 @@ import { Text } from '../../src/components/ui/text';
 import { useCreateMemo, useMemo, useUpdateMemo } from '../../src/features/member/use-memos';
 import { ApiError, type MemoDetail } from '../../src/lib/api';
 import { colors, radius, spacing } from '../../src/theme';
-import { goBack } from '../../src/lib/navigation';
 
 const TITLE_MAX = 120;
 const CONTENT_MAX = 5000;
@@ -120,8 +120,8 @@ export default function MemoEditorScreen() {
       memo={existing.data ?? null}
       familyId={familyId ?? null}
       memberId={memberId ?? null}
-      onDone={() => goBack(router)}
-      onCancel={() => goBack(router)}
+      onDone={() => safeBack(router, '/')}
+      onCancel={() => safeBack(router, '/')}
     />
   );
 }

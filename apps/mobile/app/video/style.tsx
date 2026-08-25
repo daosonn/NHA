@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { safeBack } from '../../src/lib/back';
 import { Check } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -9,7 +10,6 @@ import { Text } from '../../src/components/ui/text';
 import { useVideoDraft } from '../../src/features/video/draft';
 import type { VideoStyleId } from '../../src/lib/api';
 import { colors, radius, spacing } from '../../src/theme';
-import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 30 (11o) — "Six openings: album, cinematic, old film, letter, petals, polaroid.
@@ -192,10 +192,14 @@ export default function VideoStyleScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => goBack(router)} />}
+        left={<BackButton fallback="/video/setup" />}
         center={<ScreenTitle title={t('video.styleTitle')} />}
         right={
-          <Pressable onPress={() => goBack(router)} accessibilityRole="button" hitSlop={8}>
+          <Pressable
+            onPress={() => safeBack(router, '/video/setup')}
+            accessibilityRole="button"
+            hitSlop={8}
+          >
             <Text variant="body2" weight="semibold" color={colors.coral.hover}>
               {t('common.done')}
             </Text>

@@ -214,11 +214,7 @@ export function MemoList({
                 </Text>
               </View>
 
-              <MemoGrid
-                memos={group.memos}
-                onOpenMemo={onOpenMemo}
-                onMemoActions={onMemoActions}
-              />
+              <MemoGrid memos={group.memos} onOpenMemo={onOpenMemo} onMemoActions={onMemoActions} />
             </View>
           ))}
         </>
@@ -348,7 +344,5 @@ function groupByPerson(
       avatarKey: people?.find((p) => p.memberId === key)?.avatarKey ?? null,
       memos: value.memos,
     }))
-    .sort((a, b) =>
-      b.memos.length - a.memos.length || a.displayName.localeCompare(b.displayName),
-    );
+    .sort((a, b) => b.memos.length - a.memos.length || a.displayName.localeCompare(b.displayName));
 }

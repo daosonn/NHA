@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { AddPill } from '../../src/components/ai/add-pill';
+import { InlineError } from '../../src/components/ai/inline-error';
 import { MemberSheet } from '../../src/components/ai/member-sheet';
 import { Pill } from '../../src/components/ai/pill';
 import { SelectRow } from '../../src/components/ai/select-row';
@@ -17,16 +18,16 @@ import { Button } from '../../src/components/ui/button';
 import { Card } from '../../src/components/ui/card';
 import { IconBadge } from '../../src/components/ui/icon-badge';
 import { Text } from '../../src/components/ui/text';
+import { useAiLocale } from '../../src/features/ai/use-ai-locale';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { clipCountOf, useVideoDraft } from '../../src/features/video/draft';
 import { useCreateAndRender, useStoryboard } from '../../src/features/video/use-video';
-import { families } from '../../src/lib/api';
+import { ApiError, families } from '../../src/lib/api';
 import type { VideoTargetSec } from '../../src/lib/api';
 import { queryKeys } from '../../src/lib/query-keys';
 import { colors, radius, spacing } from '../../src/theme';
 import { useTypeface } from '../../src/theme/typeface';
 import { useState } from 'react';
-import { goBack } from '../../src/lib/navigation';
 
 /**
  * Màn 27 (11h) — "Story in your own words, length up to 3 min, style, music, photos".
@@ -37,6 +38,9 @@ import { goBack } from '../../src/lib/navigation';
 const KINDS = ['year', 'trip', 'birthday', 'memory'] as const;
 const LENGTHS: VideoTargetSec[] = [30, 90, 120, 180];
 
+/** 503 AI_UNAVAILABLE — nói thẳng là AI đang tắt thay vì một lỗi chung chung. */
+const isAiOff = (error: unknown): boolean => error instanceof ApiError && error.isAiUnavailable;
+
 export default function VideoSetupScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -44,6 +48,7 @@ export default function VideoSetupScreen() {
   const { draft, update, applyStoryboard } = useVideoDraft();
   const params = useLocalSearchParams<{ memberId?: string; memberName?: string }>();
   const typeface = useTypeface('medium');
+  const aiLocale = useAiLocale();
   const [memberSheet, setMemberSheet] = useState(false);
 
   const family = useQuery({
@@ -78,7 +83,7 @@ export default function VideoSetupScreen() {
         kindLabel: draft.customKind || t(`video.kind.${draft.kind}`),
         targetSec: draft.targetSec,
         mood: draft.mood,
-        locale: 'ja',
+        locale: aiLocale,
       },
       {
         onSuccess: (sb) => {
@@ -104,7 +109,7 @@ export default function VideoSetupScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton onPress={() => goBack(router)} />}
+        left={<BackButton fallback="/ai" />}
         center={<ScreenTitle title={t('video.title')} />}
       />
 
@@ -126,6 +131,11 @@ export default function VideoSetupScreen() {
             subtitle={t('video.aboutHint')}
             onPress={() => setMemberSheet(true)}
           />
+
+          {/* Không tải được danh sách người thân — nói ra và cho thử lại tại chỗ */}
+          {family.isError && !family.data && (
+            <InlineError message={t('video.loadFamilyFailed')} onRetry={() => family.refetch()} />
+          )}
 
           <ScrollView
             horizontal
@@ -194,7 +204,13 @@ export default function VideoSetupScreen() {
               {LENGTHS.map((s) => (
                 <Pill
                   key={s}
-                  label={s === 120 ? t('video.twoMin') : s === 180 ? t('video.threeMin') : `${s}s`}
+                  label={
+                    s === 120
+                      ? t('video.twoMin')
+                      : s === 180
+                        ? t('video.threeMin')
+                        : t('video.seconds', { count: s })
+                  }
                   selected={draft.targetSec === s}
                   onPress={() => update({ targetSec: s })}
                 />
@@ -306,19 +322,15 @@ export default function VideoSetupScreen() {
           />
         </Card>
 
-        {(storyboard.isPending || quick.isPending) && (
-          <View style={{ alignItems: 'center', paddingVertical: 6 }}>
-            <ActivityIndicator color={colors.coral.primary} />
-          </View>
-        )}
-
+        {/* 503 → chỉ sang lối "stitch in my order" ngay bên dưới; lỗi khác giữ câu cũ */}
         {storyboard.isError && (
           <Text
             variant="caption"
             color={colors.themes.destructive.text}
             style={{ textAlign: 'center' }}
+            accessibilityLiveRegion="polite"
           >
-            {t('video.storyboardError')}
+            {t(isAiOff(storyboard.error) ? 'video.aiOff' : 'video.storyboardError')}
           </Text>
         )}
 
@@ -328,15 +340,29 @@ export default function VideoSetupScreen() {
           variant="primary"
           size="large"
           fullWidth
-          disabled={!ready || storyboard.isPending || quick.isPending}
+          loading={storyboard.isPending}
+          disabled={!ready || quick.isPending}
           onPress={buildStory}
         />
+        {/* Nút xám phải có lời giải thích — thiếu ảnh là lý do duy nhất không tự lộ */}
+        {draft.mediaIds.length === 0 && (
+          <Text variant="caption" color={colors.text.muted} style={{ textAlign: 'center' }}>
+            {t('video.needPhotosHint')}
+          </Text>
+        )}
         <Pressable
           onPress={stitchQuick}
           disabled={!ready || storyboard.isPending || quick.isPending}
           accessibilityRole="button"
-          style={{ alignItems: 'center', paddingVertical: 6 }}
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 6,
+            paddingVertical: 6,
+          }}
         >
+          {quick.isPending && <ActivityIndicator size="small" color={colors.coral.hover} />}
           <Text
             variant="caption"
             weight="semibold"
@@ -345,6 +371,8 @@ export default function VideoSetupScreen() {
             {t('video.stitchQuick')}
           </Text>
         </Pressable>
+        {/* Đường ghép nhanh KHÔNG dùng AI — mọi lỗi ở đây là lỗi ghép, đừng đổ cho AI */}
+        {quick.isError && <InlineError message={t('video.stitchError')} onRetry={stitchQuick} />}
       </ScrollView>
 
       <MemberSheet
@@ -353,6 +381,10 @@ export default function VideoSetupScreen() {
         members={members}
         selectedId={target?.id ?? null}
         onSelect={(m) => update({ memberId: m.id, memberName: m.displayName })}
+        // query tắt (chưa có familyId) vẫn isPending mãi mãi — đừng quay vô hạn
+        loading={familyId !== null && family.isPending}
+        error={family.isError && !family.data}
+        onRetry={() => family.refetch()}
       />
     </View>
   );

@@ -75,7 +75,9 @@ export type RequestOptions = {
 };
 
 function isErrorBody(value: unknown): value is ApiErrorBody {
-  return typeof value === 'object' && value !== null && 'message' in value;
+  // Some routes send only a machine-readable code — the AI guard's 503 body
+  // is `{ code: 'AI_UNAVAILABLE' }` with no `message` — so either field counts.
+  return typeof value === 'object' && value !== null && ('message' in value || 'code' in value);
 }
 
 /**

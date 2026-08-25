@@ -167,6 +167,8 @@ export function TextField({
 
         <TextInput
           {...rest}
+          // The visible label is a sibling Text, not programmatically attached —
+          // without this a screen reader announces only the placeholder.
           accessibilityLabel={rest.accessibilityLabel ?? label}
           value={value}
           onChangeText={onChangeText}
@@ -199,6 +201,8 @@ export function TextField({
           }}
         />
 
+        {/* Single-line only: the floating redesign moved the multiline count
+            to the bottom corner below (counting down, warning near the cap). */}
         {maxLength !== undefined && !multiline && (
           <Text variant="badge" color={colors.text.subtle}>
             {`${value.length}/${maxLength}`}
@@ -237,8 +241,13 @@ export function TextField({
         )}
       </View>
 
+      {/* Caption size, not badge: this line is the recovery path after a
+          validation error — 10px is unreadable for the readers this app is for. */}
       {(error ?? hint) !== undefined && (
-        <Text variant="badge" color={invalid ? colors.themes.destructive.text : colors.text.subtle}>
+        <Text
+          variant="caption"
+          color={invalid ? colors.themes.destructive.text : colors.text.subtle}
+        >
           {error ?? hint}
         </Text>
       )}
