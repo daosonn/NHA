@@ -121,6 +121,39 @@ screens.
   landed on `main` **before** writing code, not at merge time. Nothing about
   the duplication was detectable from the branch.
 
+  **The auth screens needed more than the column, and they are the only ones
+  that did.** The column kept the sign-in form at a readable 600 — nothing
+  stretched — but an auth screen is a full-height column by construction, so at
+  1280 it read as a coral band the width of the window with a 58px mark alone
+  in it, and a form pinned to the top of an empty page. From `lg` up, Welcome
+  and the four password screens are now **two full-height halves of the
+  window**: brand on the left, form on the right, which is the shape every web
+  sign-in has.
+
+  It was a centred 960px card for an hour first, and that is worth keeping
+  written down: a card floating in the middle of a 1920px window is a **dialog**,
+  and signing in is not a dialog interrupting something — it is the page. What
+  survives from that attempt is the rule underneath it: the panes are full-bleed
+  but their contents are not, so each centres a **420** column and a half-window
+  pane never means a 960px-wide form.
+
+  The brand pane reuses Welcome's own mark and copy — no new i18n keys — and
+  carries `CatHappy` from the motion kit, directly above the family faces so the
+  cat reads as being with them. That is a deliberate reading of the kit's rule
+  (`motion/README.md`: one-time emotional moments, never chrome, never daily
+  actions), on the grounds that this pane is the app introducing itself and is
+  neither of those. The header goes, because a full-width bar carrying one back
+  arrow above two full-height panes belongs to neither; back sits absolutely at
+  the form pane's top-left so it cannot pull the form off centre. The footer is
+  **not** pinned — `FormScreen` pins it for the software keyboard, and a
+  physical keyboard covers nothing.
+
+  Below `lg` nothing changes, which matters: a centred, shrunken Welcome card
+  was tried and reverted on 2026-08-21, and this applies only where there is a
+  pointer and 1024px. It is opt-in per screen (`FormScreen variant="auth"`),
+  because the same shell around "New family" or "Change password" would be a
+  different mistake.
+
   A **right-hand column** (Instagram has one, Threads does not) was considered
   and **deferred** — it needs a decision about what belongs in it, and moving
   Home's occasion widget and recommendation shelf out of the feed changes the
