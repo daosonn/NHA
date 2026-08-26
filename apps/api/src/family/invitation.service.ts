@@ -7,7 +7,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma/prisma.service';
-import { InvitationStatus, RelationshipType } from '../generated/prisma/enums';
+import {
+  InvitationStatus,
+  NotificationType,
+  RelationshipType,
+} from '../generated/prisma/enums';
+import { NotificationService } from '../notification/notification.service';
 import { CreateInvitationDto } from './dto/create-invitation.dto';
 import {
   FamilyService,
@@ -37,6 +42,8 @@ export interface InvitationSummary {
   kinshipKey: string | null;
   status: InvitationDisplayStatus;
   inviterName: string;
+  /** Null when the code was meant to be handed over by hand. */
+  inviteeUserId: string | null;
   expiresAt: Date;
   createdAt: Date;
 }
@@ -61,6 +68,7 @@ export interface InvitationPreview {
 
 const invitationInclude = {
   inviter: { select: { name: true } },
+  family: { select: { name: true } },
 } as const;
 
 interface InvitationRecord {
@@ -74,7 +82,9 @@ interface InvitationRecord {
   status: InvitationStatus;
   expiresAt: Date;
   createdAt: Date;
+  inviteeUserId: string | null;
   inviter: { name: string };
+  family: { name: string };
 }
 
 @Injectable()
@@ -82,7 +92,41 @@ export class InvitationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly familyService: FamilyService,
+    private readonly notifications: NotificationService,
   ) {}
+
+  /**
+   * Turns the email the inviter typed into the account it belongs to.
+   *
+   * Delivery is an in-app notification, so an address with no account behind
+   * it has nowhere to arrive: this build rejects it rather than leaving an
+   * invitation nobody will ever see. Matching is exact, the same as login —
+   * addresses are stored as typed, so normalising here would find accounts
+   * their owners could not sign in to.
+   */
+  private async resolveInvitee(
+    familyId: string,
+    email: string,
+  ): Promise<{ id: string; name: string }> {
+    const invitee = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, name: true },
+    });
+    if (!invitee) {
+      throw new NotFoundException(
+        'No account uses that email — ask them to sign up first, or invite ' +
+          'them with a code instead',
+      );
+    }
+    const already = await this.prisma.familyMember.findUnique({
+      where: { familyId_userId: { familyId, userId: invitee.id } },
+      select: { id: true },
+    });
+    if (already) {
+      throw new ConflictException('They are already in this family');
+    }
+    return invitee;
+  }
 
   /**
    * Send an invite: the spot is reserved the moment it is sent
@@ -97,6 +141,9 @@ export class InvitationService {
     dto: CreateInvitationDto,
   ): Promise<InvitationSummary> {
     await this.familyService.requireMembership(familyId, userId);
+    const invitee = dto.email
+      ? await this.resolveInvitee(familyId, dto.email)
+      : null;
     const code = await this.generateCode();
     const expiresAt = this.nextExpiry();
 
@@ -169,6 +216,7 @@ export class InvitationService {
           familyId,
           memberId,
           inviterId: userId,
+          inviteeUserId: invitee?.id ?? null,
           code,
           name: dto.name,
           relationshipType: dto.relationshipType,
@@ -178,7 +226,43 @@ export class InvitationService {
         include: invitationInclude,
       });
     });
+
+    // After the commit, never inside it: a notification that cannot be
+    // delivered must not roll back an invitation that was written fine.
+    if (invitee) {
+      await this.notifications.create({
+        recipientUserId: invitee.id,
+        type: NotificationType.FAMILY_INVITE,
+        payload: {
+          kind: 'family_invite',
+          invitation_id: invitation.id,
+          code: invitation.code,
+          family_id: familyId,
+          family_name: invitation.family.name,
+          inviter_name: invitation.inviter.name,
+          as_name: invitation.name,
+        },
+      });
+    }
     return this.toSummary(invitation);
+  }
+
+  /**
+   * Invitations addressed to me and still live — the list behind "you have
+   * been invited". Codes handed over by hand never appear here: nobody was
+   * named, so there is no "me" to match.
+   */
+  async listMine(userId: string): Promise<InvitationSummary[]> {
+    const rows = await this.prisma.invitation.findMany({
+      where: {
+        inviteeUserId: userId,
+        status: InvitationStatus.PENDING,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+      include: invitationInclude,
+    });
+    return rows.map((row) => this.toSummary(row));
   }
 
   /**
@@ -272,12 +356,20 @@ export class InvitationService {
         id: true,
         familyId: true,
         memberId: true,
+        inviteeUserId: true,
         status: true,
         expiresAt: true,
         family: { select: { name: true } },
       },
     });
     if (!invitation || !this.isLive(invitation)) {
+      throw new NotFoundException('Invitation not found');
+    }
+    // Named invitations belong to the person named. A code handed over by
+    // hand (inviteeUserId null) stays open to whoever holds it, which is the
+    // whole point of that flow — but once an email is on it, the code is no
+    // longer a bearer token, and forwarding it must not give away the spot.
+    if (invitation.inviteeUserId && invitation.inviteeUserId !== userId) {
       throw new NotFoundException('Invitation not found');
     }
     const existing = await this.prisma.familyMember.findUnique({
@@ -448,6 +540,7 @@ export class InvitationService {
       kinshipKey: invitation.kinshipKey,
       status: expired ? 'EXPIRED' : invitation.status,
       inviterName: invitation.inviter.name,
+      inviteeUserId: invitation.inviteeUserId,
       expiresAt: invitation.expiresAt,
       createdAt: invitation.createdAt,
     };

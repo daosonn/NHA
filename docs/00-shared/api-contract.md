@@ -149,8 +149,9 @@ invitation codes are separate, same 8-char alphabet.
 | `DELETE /families/:familyId/invitations/:id`      | ✔    | `{ success, memberRemoved }` |
 | `GET /invitations/:code`                          | —    | `InvitationPreview`          |
 | `POST /invitations/:code/accept`                  | ✔    | `JoinFamilyResult`           |
+| `GET /me/invitations`                             | ✔    | `InvitationSummary[]`        |
 
-Create body: `{ name, relationshipType, kinshipKey?, newMemberIsFrom?,
+Create body: `{ name, relationshipType, email?, kinshipKey?, newMemberIsFrom?,
 relationshipLabel?, memberId? }`. Sending an invite **reserves the spot
 immediately** (design-system.md): the server creates the placeholder
 member and its relationship edge to the inviter in the same transaction —
@@ -159,8 +160,34 @@ is the edge direction from `features/family/kinship.ts` (Mother `true`, Daughter
 `false`). Pass `memberId` instead to invite an existing placeholder to
 its spot (no new edge). One live invitation per spot — a second is a 409.
 
+#### Inviting by email (added 2026-08-26)
+
+Pass `email` on create and the invitation is **addressed to that account**
+instead of being a code you hand over yourself:
+
+- The address must already belong to a registered user. It does not, and the
+  create is a **404** — delivery is an in-app notification, so an address with
+  no account behind it has nowhere to arrive. (Email delivery is not built;
+  `MailService` exists but is only wired to password reset.)
+- Matching is **exact**, the same comparison login uses. Addresses are stored
+  as typed, so normalising here would find accounts their owners cannot sign
+  in to. The address is trimmed, nothing more.
+- Already a member of that family → **409**.
+- On success the invitee gets a `FAMILY_INVITE` notification whose payload
+  carries `invitation_id`, `code`, `family_id`, `family_name`,
+  `inviter_name` and `as_name`. It is raised **after** the transaction
+  commits: an undeliverable notification must not roll back an invitation that
+  was written correctly.
+- `GET /me/invitations` lists the live invitations addressed to the caller —
+  what the notification links to.
+- **A named code stops being a bearer token.** `POST /invitations/:code/accept`
+  answers 404 for anyone other than the named invitee, so a forwarded code
+  cannot give away the reserved spot. Omit `email` and the old behaviour is
+  unchanged: `inviteeUserId` is null and whoever holds the code may accept.
+
 `InvitationSummary` is `{ id, familyId, memberId, code, name,
-relationshipType, kinshipKey, status, inviterName, expiresAt, createdAt }`.
+relationshipType, kinshipKey, status, inviterName, inviteeUserId, expiresAt,
+createdAt }`; `inviteeUserId` is null for a hand-over code.
 `status` is `PENDING | ACCEPTED | CANCELLED | EXPIRED`; `EXPIRED` is
 derived from `expiresAt` at read time, never stored. Invitations live
 **7 days**; resend starts the week over on the same code.

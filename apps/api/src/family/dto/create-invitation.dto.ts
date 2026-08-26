@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
+  IsEmail,
   IsEnum,
   IsNotEmpty,
   IsOptional,
@@ -19,6 +21,20 @@ export class CreateInvitationDto {
   @IsNotEmpty()
   @MaxLength(50)
   name!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Email of the person being invited. They must already have an account: ' +
+      'the invitation reaches them as an in-app notification, which is the ' +
+      'only delivery this build has. Omit it to get a code you hand over ' +
+      'yourself, which is how invitations worked before.',
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsEmail()
+  email?: string;
 
   @ApiPropertyOptional({
     description:

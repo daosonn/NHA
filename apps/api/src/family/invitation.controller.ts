@@ -79,6 +79,24 @@ export class FamilyInvitationController {
   }
 }
 
+/** Follows the `me/memos` convention: one controller per "mine" resource. */
+@ApiTags('invitations')
+@ApiBearerAuth()
+@Controller('me/invitations')
+export class MyInvitationController {
+  constructor(private readonly invitationService: InvitationService) {}
+
+  @Get()
+  @ApiOperation({
+    summary:
+      'Invitations addressed to me and still live — what the in-app ' +
+      'FAMILY_INVITE notification links to',
+  })
+  listMine(@CurrentUser() user: AuthUser): Promise<InvitationSummary[]> {
+    return this.invitationService.listMine(user.userId);
+  }
+}
+
 @ApiTags('invitations')
 @Controller('invitations')
 export class InvitationController {
