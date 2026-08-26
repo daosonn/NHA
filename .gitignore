@@ -35,6 +35,11 @@ backups/
 # Media uploads (local-disk storage for the MVP demo)
 apps/api/uploads/
 
+# Seed photos are supplied per machine, never committed — only the README is
+# (apps/api/prisma/seed-images/README.md explains why)
+apps/api/prisma/seed-images/*
+!apps/api/prisma/seed-images/README.md
+
 # VS Code (share only team-wide config)
 .vscode/*
 !.vscode/extensions.json

@@ -28,6 +28,48 @@ screens.
 
 ## Current Focus
 
+- **Backend infrastructure, not screens (2026-08-26).** The database moved out
+  from under everyone in PR #51: development runs on **shared Neon Cloud**, so
+  the team sees one set of data. Two things follow from that, and they are the
+  current line of work:
+
+  - **Demo data.** `pnpm seed` fills the shared database and is safe to
+    re-run. Photos are the exception — they come from
+    `apps/api/prisma/seed-images/` on each machine, because `Media` rows are
+    shared but the files in `apps/api/uploads/` are not.
+  - **Media storage.** Files on local disk cannot work for a shared team
+    database forever. `StorageService` has been decoupled from filesystem
+    paths (branch `refactor/storage-local-path-borrow`), and **Cloudflare R2
+    is proposed** in `deployment.md` — bucket and credentials verified, driver
+    not written.
+
+  Day-to-day rules for a shared database — never `prisma migrate reset` or
+  casual `migrate dev` on it, and `pnpm test:e2e` stays off it — are in
+  `docs/04-devops/local-environment.md` § Neon rules.
+
+  Untouched by all of this: `schema.prisma`, models, business logic, and
+  everything in `apps/mobile`. Frontend work continues independently.
+
+- **Media storage is the current backend line (2026-08-26).** Frontend layout
+  work below is paused — this is infrastructure, and it blocks the team rather
+  than any one screen.
+
+  `StorageService` no longer hands out absolute filesystem paths.
+  `absolutePathOf()` is gone; callers now ask for bytes (`readAll`), borrow a
+  path for a scope (`withLocalCopy`), or hold a borrow across a pipeline
+  (`newBorrow`, used by the video render). Behaviour is unchanged — the
+  local-disk backend still returns the stored file — but nothing outside
+  `StorageService` assumes a filesystem any more.
+
+  **Next: a Cloudflare R2 driver** behind the same interface, selected by
+  `STORAGE_DRIVER`. R2 is the proposal in `deployment.md`; the bucket and
+  credentials exist and are verified, the driver is not written. Reason for
+  R2 over S3: zero egress, which is the bill that matters for an app whose
+  users reopen the same photos for years.
+
+  Untouched by any of this: `schema.prisma`, models, business logic, and
+  everything in `apps/mobile`.
+
 - **The timeline finally has an editor (2026-08-26,
   `feature/motion-system`).** The Life Event API has been complete since
   1.6.8 (2026-08-19) and nothing in the app ever wrote to it — the
@@ -632,14 +674,16 @@ Raised by the frontend, neither actionable from `apps/mobile`.
 - Monorepo setup (pnpm workspace)
 - Next.js + Tailwind CSS bootstrap (`apps/web`)
 - NestJS bootstrap + bug fixes (`apps/api`)
-- PostgreSQL via Docker Compose
+- PostgreSQL via Docker Compose — now the **opt-in local** option; the team
+  database moved to Neon Cloud on 2026-08-26 (see Important Decisions)
 - Prisma ORM (schema, migration, CJS-compatible generated client)
 - ESLint + Prettier
 - Husky (`pre-commit` + `commit-msg`/commitlint)
 - Documentation structure scaffolded (`docs/00-shared`, `01-frontend`,
   `02-backend`, `03-ai`, `04-devops`)
 - One-shot machine setup: `pnpm bootstrap` (`scripts/setup.mjs`) — env files,
-  Postgres, migrations, Prisma client
+  Postgres, migrations, Prisma client; since 2026-08-26 it reads
+  `DATABASE_URL` first and starts Docker only for a local host
 - `pnpm-lock.yaml` now committed (was gitignored); stray nested workspace in
   `apps/web` removed
 
@@ -1144,6 +1188,10 @@ dev` **did not regenerate the client**, and the stale client survived
 
 ## In Progress
 
+- **Object storage for media (2026-08-26)**: step 1 done — `StorageService`
+  decoupled from filesystem paths (see Current Focus). Step 2 is the R2
+  driver. Architecture change, so it merges only after backend-owner review.
+
 - **Social login (Google + Facebook)** (2026-08-17): backend merged to
   `main` in PR #3 — `OAuthAccount` table + OAuth authorization-code
   endpoints in the AuthModule. **Google verified end-to-end 2026-08-18**
@@ -1161,6 +1209,51 @@ dev` **did not regenerate the client**, and the stale client survived
   see Important Decisions / PR #28.
 
 ## Important Decisions
+
+- **Development database moved to Neon Cloud, shared by the team
+  (2026-08-26)** — `apps/api` now points `DATABASE_URL` at managed Neon
+  PostgreSQL (`*.neon.tech`) instead of each machine's own Docker Postgres.
+  Everyone develops against the same data, so a family created on one machine
+  is there on the next.
+
+  What did **not** change: `schema.prisma`, the migrations, the models, the
+  business logic. Neon supplies PostgreSQL and nothing else — **Neon Auth is
+  not used or integrated**; `User`, `RefreshToken`, `PasswordResetToken` and
+  `OAuthAccount` stay this project's own, served by `AuthModule`, and the
+  application still reaches the database only through Prisma. Neon owns the
+  server, storage, uptime, plan-level backup/recovery and branching; the
+  project keeps owning schema, migrations, queries and the data itself.
+
+  Consequences, recorded so nobody re-derives them:
+
+  - **Local Docker Postgres survives as an opt-in workflow** — offline work,
+    destructive experiments, authoring a migration before the team sees it.
+    The two databases share a schema and nothing else; no data crosses, in
+    either direction.
+  - **A migration is now a team-visible act.** `prisma migrate reset` and
+    casual `prisma migrate dev` are out on the shared branch: author against a
+    database of your own, get the PR reviewed, then `prisma migrate deploy`.
+    `pnpm seed` and `pnpm test:e2e` also write real rows through
+    `DATABASE_URL` — likewise not on the shared branch.
+  - **`pnpm db:backup` / `pnpm db:restore` do not cover Neon.** They
+    `docker exec` into the local container; on Neon the equivalents are its own
+    backup/recovery and branches taken as restore points.
+  - **`apps/api/.env.example` now ships the Neon placeholder** as the default
+    with the localhost line commented underneath, so a new machine cannot
+    silently land on a private Docker database while believing it is on the
+    team's.
+  - **`pnpm bootstrap` reads `DATABASE_URL` before doing anything**, prints the
+    host, and starts Docker only when that host is local. An unedited
+    placeholder stops it with instructions instead of a Prisma connection
+    error.
+  - **One connection string, direct endpoint.** No `DIRECT_URL`, no
+    `shadowDatabaseUrl`; if anyone moves to a pooled (`-pooler`) endpoint,
+    migrations will need a direct one added explicitly.
+  - Production hosting stays undecided (`docs/04-devops/deployment.md`); this
+    decision is about development.
+
+  Both workflows and the full rule list:
+  `docs/04-devops/local-environment.md`.
 
 - **Notifications are in-app only for the MVP; push deferred (2026-08-20)**
   — closes the "Notification delivery method" open question in

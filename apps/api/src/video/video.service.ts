@@ -9,7 +9,8 @@ import path from 'node:path';
 import fs from 'node:fs';
 import os from 'node:os';
 import { PrismaService } from '../database/prisma/prisma.service';
-import { StorageService } from '../storage/storage.service';
+import type { Readable } from 'node:stream';
+import { type MediaBorrow, StorageService } from '../storage/storage.service';
 import {
   AiClientService,
   type StoryboardResult,
@@ -299,7 +300,8 @@ export class VideoService {
         error: null,
       },
     });
-    void this.renderWorker(jobId)
+    const media = this.storage.newBorrow();
+    void this.renderWorker(jobId, media)
       .catch(async (err) => {
         this.logger.error(`render ${jobId} failed: ${String(err)}`);
         await this.prisma.videoJob.update({
@@ -313,6 +315,7 @@ export class VideoService {
       // Nhường chỗ phải chạy CẢ KHI render lỗi, nếu không một lần thất bại là
       // hàng đợi tắc vĩnh viễn cho tới lúc restart.
       .finally(() => {
+        void media.dispose();
         this.rendering--;
         void this.startNextWaiting();
       });
@@ -363,11 +366,7 @@ export class VideoService {
     };
   }
 
-  stream(
-    storageKey: string,
-    start?: number,
-    end?: number,
-  ): ReturnType<StorageService['openRead']> {
+  stream(storageKey: string, start?: number, end?: number): Readable {
     return this.storage.openRead(storageKey, start, end);
   }
 
@@ -386,13 +385,14 @@ export class VideoService {
     // job: xoá post sẽ xoá file của mọi media đính kèm (post.service →
     // removeAllBestEffort), mà nếu đó cũng là file của job thì "Your videos" vẫn
     // ghi DONE nhưng bấm phát là hỏng — mất vĩnh viễn video đã render (đã dính).
-    const sourceAbs = this.storage.absolutePathOf(job.resultStorageKey);
     const tmpCopy = path.join(
       this.storage.tempDir,
       `share_${jobId}_${Date.now()}.mp4`,
     );
-    fs.mkdirSync(path.dirname(tmpCopy), { recursive: true });
-    fs.copyFileSync(sourceAbs, tmpCopy);
+    await this.storage.withLocalCopy(job.resultStorageKey, (sourceAbs) => {
+      fs.mkdirSync(path.dirname(tmpCopy), { recursive: true });
+      fs.copyFileSync(sourceAbs, tmpCopy);
+    });
     const postStorageKey = await this.storage.promote(tmpCopy, 'video/mp4');
     const size = await this.storage.sizeOf(postStorageKey);
 
@@ -426,7 +426,7 @@ export class VideoService {
 
   // ---------------- worker ----------------
 
-  private async renderWorker(jobId: string): Promise<void> {
+  private async renderWorker(jobId: string, media: MediaBorrow): Promise<void> {
     const job = await this.prisma.videoJob.findUniqueOrThrow({
       where: { id: jobId },
     });
@@ -464,13 +464,11 @@ export class VideoService {
 
     const musicId = options.musicId;
     const bpm = isLibraryTrack(musicId) ? trackBpm(musicId) : null;
-    const musicPath = await this.musicPathFor(musicId);
+    const musicPath = await this.musicPathFor(musicId, media);
 
     for (const s of plan.scenes) {
       if (s.kind === 'video') {
-        const abs = this.storage.absolutePathOf(
-          byId.get(s.mediaId)!.storageKey,
-        );
+        const abs = await media.path(byId.get(s.mediaId)!.storageKey);
         const probe = await probeMedia(abs).catch(() => null);
         if (probe && probe.duration > 0.5)
           s.durationS = Math.max(2, Math.min(s.durationS, probe.duration));
@@ -552,8 +550,8 @@ export class VideoService {
         dedicationJa: plan.dedication,
         creditLine: `NHA · ${new Date().toISOString().slice(0, 10)}`,
         palette,
-        photoAbs: photoScenes.map((s) =>
-          this.storage.absolutePathOf(byId.get(s.mediaId)!.storageKey),
+        photoAbs: await Promise.all(
+          photoScenes.map((s) => media.path(byId.get(s.mediaId)!.storageKey)),
         ),
         photoIds: photoScenes.map((s) => s.mediaId),
       };
@@ -611,7 +609,7 @@ export class VideoService {
         motion_prompt: '',
         reason: '',
       };
-      const abs = this.storage.absolutePathOf(byId.get(s.mediaId)!.storageKey);
+      const abs = await media.path(byId.get(s.mediaId)!.storageKey);
       tasks.push(async () => {
         const seg =
           s.kind === 'video'
@@ -641,7 +639,7 @@ export class VideoService {
       if (s.kind !== 'video') continue;
       // Người dùng tắt tiếng cảnh này ở màn duyệt → không trích tiếng của nó
       if (s.keepAudio === false) continue;
-      const abs = this.storage.absolutePathOf(byId.get(s.mediaId)!.storageKey);
+      const abs = await media.path(byId.get(s.mediaId)!.storageKey);
       const startS =
         (quick ? 0 : introDur) +
         bt.durations.slice(0, i).reduce((a, d) => a + d, 0);
@@ -782,7 +780,10 @@ export class VideoService {
     return 'none';
   }
 
-  private async musicPathFor(musicId: string): Promise<string | null> {
+  private async musicPathFor(
+    musicId: string,
+    media: MediaBorrow,
+  ): Promise<string | null> {
     if (musicId === 'none') return null;
     if (isLibraryTrack(musicId)) return ensureTrack(musicId);
     if (musicId.startsWith('media:')) {
@@ -790,7 +791,7 @@ export class VideoService {
         where: { id: musicId.slice('media:'.length) },
         select: { storageKey: true },
       });
-      return row ? this.storage.absolutePathOf(row.storageKey) : null;
+      return row ? await media.path(row.storageKey) : null;
     }
     return null;
   }

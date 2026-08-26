@@ -15,6 +15,7 @@ import { BackButton, ScreenTitle } from '../../src/components/layout/header-slot
 import { Button } from '../../src/components/ui/button';
 import { Card } from '../../src/components/ui/card';
 import { Text } from '../../src/components/ui/text';
+import { RenderProgress, STAGE_QUEUED } from '../../src/components/video/render-progress';
 import { useMyVideos, useShareVideo, useVideoJob } from '../../src/features/video/use-video';
 import { apiAccessToken, video } from '../../src/lib/api';
 import { downloadAuthenticated, objectUrlFor } from '../../src/lib/download';
@@ -22,72 +23,10 @@ import { colors, radius, spacing } from '../../src/theme';
 
 /**
  * Màn 32 (11k) "Progress you can walk away from" + màn 33 (11l) "Watch, save, share".
- * PROCESSING → progress + checklist giai đoạn (poll 2s); DONE → player + Save/Edit/Share
- * + "Your videos". Job bền trong DB nên rời màn rồi quay lại vẫn đúng trạng thái.
+ * PROCESSING → <RenderProgress> (progress + checklist giai đoạn + dải NEWS Alpha Club,
+ * poll 2s); DONE → player + Save/Edit/Share + "Your videos". Job bền trong DB nên rời
+ * màn rồi quay lại vẫn đúng trạng thái.
  */
-
-const GREEN = '#4B9E74';
-
-type StageState = 'done' | 'now' | 'todo';
-
-/** `stage` server đặt cho job đang đợi tới lượt (`video.service.ts`). */
-const STAGE_QUEUED = 'queued';
-
-/**
- * Checklist 11k theo THỨ TỰ TRÌNH CHIẾU (Opening → Scenes → Closing card → Music),
- * suy từ stage thật của worker ('opening'/'closing_prep'/'scene:i/n'/'music').
- */
-function buildChecklist(
-  stage: string | null,
-  progress: number,
-  t: (key: string, opts?: Record<string, unknown>) => string,
-): { label: string; state: StageState }[] {
-  // Đang đợi tới lượt thì CHƯA có bước nào đang chạy — để "Opening" sáng lên là
-  // nói sai với người đang đọc nó.
-  if (stage === STAGE_QUEUED) {
-    return [
-      { label: t('video.stageOpening'), state: 'todo' },
-      { label: t('video.stageScenes'), state: 'todo' },
-      { label: t('video.stageClosing'), state: 'todo' },
-      { label: t('video.stageMusic'), state: 'todo' },
-    ];
-  }
-
-  const m = /^scene:(\d+)\/(\d+)$/.exec(stage ?? '');
-  const i = m ? Number(m[1]) : 0;
-  const n = m ? Number(m[2]) : 0;
-  const inScenes = m !== null;
-  const inMusic = stage === 'music' || progress >= 85;
-
-  const rows: { label: string; state: StageState }[] = [];
-  rows.push({ label: t('video.stageOpening'), state: inScenes || inMusic ? 'done' : 'now' });
-
-  if (inScenes) {
-    if (i > 1)
-      rows.push({
-        label:
-          i - 1 === 1
-            ? t('video.sceneN', { n: 1 })
-            : t('video.stageScenesRange', { from: 1, to: i - 1 }),
-        state: 'done',
-      });
-    rows.push({ label: t('video.stageSceneOf', { i, n }), state: 'now' });
-    if (i < n)
-      rows.push({
-        label:
-          i + 1 === n
-            ? t('video.sceneN', { n })
-            : t('video.stageScenesRange', { from: i + 1, to: n }),
-        state: 'todo',
-      });
-  } else {
-    rows.push({ label: t('video.stageScenes'), state: inMusic ? 'done' : 'todo' });
-  }
-
-  rows.push({ label: t('video.stageClosing'), state: inMusic ? 'done' : 'todo' });
-  rows.push({ label: t('video.stageMusic'), state: inMusic ? 'now' : 'todo' });
-  return rows;
-}
 
 export default function VideoJobScreen() {
   const { t } = useTranslation();
@@ -217,118 +156,8 @@ export default function VideoJobScreen() {
               <CatSitting size={92} />
             </View>
 
-            <Card padding={15} style={{ gap: 10 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Clapperboard size={16} color={colors.coral.hover} strokeWidth={2.1} />
-                <Text variant="body1" weight="bold" style={{ flex: 1 }}>
-                  {queued ? t('video.queued') : t('video.almostThere')}
-                </Text>
-                {!queued && (
-                  <Text variant="body1" weight="bold">
-                    {data.progress}%
-                  </Text>
-                )}
-              </View>
-
-              <View
-                style={{
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: colors.background.subtle,
-                  overflow: 'hidden',
-                }}
-              >
-                <View
-                  style={{
-                    width: `${Math.max(3, data.progress)}%`,
-                    height: '100%',
-                    borderRadius: 4,
-                    backgroundColor: colors.coral.primary,
-                  }}
-                />
-              </View>
-
-              <Text variant="caption" color={colors.text.body}>
-                {queued ? t('video.queuedHint') : t('video.canLeave')}
-              </Text>
-            </Card>
-
-            {/* checklist ✓ xanh / ● coral / ○ xám (11k) */}
-            <View style={{ gap: 13, paddingHorizontal: 4, paddingTop: 4 }}>
-              {buildChecklist(data.stage, data.progress, t).map((row, k) => (
-                <View key={k} style={{ flexDirection: 'row', alignItems: 'center', gap: 11 }}>
-                  {row.state === 'done' ? (
-                    <View
-                      style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: 10,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: GREEN,
-                      }}
-                    >
-                      <Check size={12} color={colors.text.white} strokeWidth={3.2} />
-                    </View>
-                  ) : row.state === 'now' ? (
-                    <View
-                      style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: 10,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: colors.coral.light,
-                      }}
-                    >
-                      <View
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: 4,
-                          backgroundColor: colors.coral.brand,
-                        }}
-                      />
-                    </View>
-                  ) : (
-                    <View
-                      style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: 10,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: colors.background.subtle,
-                      }}
-                    >
-                      <View
-                        style={{
-                          width: 7,
-                          height: 7,
-                          borderRadius: 4,
-                          backgroundColor: colors.state.borderDashed,
-                        }}
-                      />
-                    </View>
-                  )}
-                  <Text
-                    variant="body2"
-                    weight={row.state === 'now' ? 'semibold' : 'regular'}
-                    color={row.state === 'todo' ? colors.text.lightMuted : colors.text.primary}
-                  >
-                    {row.label}
-                  </Text>
-                </View>
-              ))}
-            </View>
-
-            <Text
-              variant="badge"
-              color={colors.text.subtle}
-              style={{ textAlign: 'center', paddingTop: 8 }}
-            >
-              {t('ai.privacyFooter')}
-            </Text>
+            {/* Card tiến độ (checklist gộp vào trong) + dải NEWS Alpha Club trong lúc chờ */}
+            <RenderProgress stage={data.stage} progress={data.progress} queued={queued} />
           </>
         )}
 

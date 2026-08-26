@@ -7,6 +7,7 @@ import {
   PostType,
   RelationshipType,
 } from '../src/generated/prisma/enums';
+import { materialiseSeedImages, type SeedImage } from './seed-images';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -77,6 +78,119 @@ async function ensureRelationship(
     update: {},
     create: { familyId, fromMemberId, toMemberId, type },
   });
+}
+
+interface PostSeed {
+  type: PostType;
+  content?: string;
+  eventTitle?: string;
+  eventDate?: Date;
+  place?: string;
+}
+
+async function ensurePost(
+  authorUserId: string,
+  familyId: string,
+  seed: PostSeed,
+): Promise<{ id: string }> {
+  const existing = await prisma.post.findFirst({
+    where: seed.eventTitle
+      ? { authorUserId, eventTitle: seed.eventTitle }
+      : { authorUserId, content: seed.content },
+    select: { id: true },
+  });
+  if (existing) {
+    return existing;
+  }
+  return prisma.post.create({
+    data: { authorUserId, ...seed, families: { create: { familyId } } },
+    select: { id: true },
+  });
+}
+
+/**
+ * Media rows are shared through the database; the files behind them are not
+ * (see seed-images.ts). Matching on storageKey means the row survives a
+ * re-seed on another machine, where the same slot now holds a different
+ * photo — only the size has to catch up.
+ */
+async function ensureMedia(
+  image: SeedImage,
+  uploaderUserId: string,
+  postId: string,
+): Promise<{ id: string }> {
+  const existing = await prisma.media.findFirst({
+    where: { storageKey: image.storageKey },
+    select: { id: true },
+  });
+  if (existing) {
+    await prisma.media.update({
+      where: { id: existing.id },
+      data: { mimeType: image.mimeType, sizeBytes: image.sizeBytes, postId },
+    });
+    return existing;
+  }
+  return prisma.media.create({
+    data: { ...image, uploaderUserId, postId },
+    select: { id: true },
+  });
+}
+
+async function ensureLifeEvent(
+  profileId: string,
+  createdById: string,
+  event: {
+    title: string;
+    eventDate: string;
+    place?: string;
+    description?: string;
+  },
+): Promise<void> {
+  const existing = await prisma.lifeEvent.findFirst({
+    where: { profileId, title: event.title },
+    select: { id: true },
+  });
+  if (existing) {
+    return;
+  }
+  await prisma.lifeEvent.create({
+    data: {
+      profileId,
+      createdById,
+      title: event.title,
+      eventDate: new Date(event.eventDate),
+      place: event.place,
+      description: event.description,
+    },
+  });
+}
+
+async function ensureAlbum(
+  ownerUserId: string,
+  name: string,
+  description: string,
+  mediaIds: string[],
+): Promise<void> {
+  if (mediaIds.length === 0) {
+    return;
+  }
+  const existing = await prisma.album.findFirst({
+    where: { ownerUserId, name },
+    select: { id: true },
+  });
+  const album =
+    existing ??
+    (await prisma.album.create({
+      data: { ownerUserId, name, description, coverMediaId: mediaIds[0] },
+      select: { id: true },
+    }));
+  for (const mediaId of mediaIds) {
+    await prisma.albumItem.upsert({
+      where: { albumId_mediaId: { albumId: album.id, mediaId } },
+      update: {},
+      create: { albumId: album.id, mediaId },
+    });
+  }
 }
 
 async function main(): Promise<void> {
@@ -166,38 +280,109 @@ async function main(): Promise<void> {
   });
 
   // Sample posts shared to 山田家 — ready for the Post API / home feed (1.5).
-  const postContent = '今日はおばあちゃんの誕生日ケーキを作りました🎂';
-  const existingPost = await prisma.post.findFirst({
-    where: { authorUserId: hanako.id, content: postContent },
+  const cakePost = await ensurePost(hanako.id, yamada.id, {
+    type: PostType.POST,
+    content: '今日はおばあちゃんの誕生日ケーキを作りました🎂',
+  });
+  const hakonePost = await ensurePost(taro.id, yamada.id, {
+    type: PostType.EVENT,
+    eventTitle: '家族旅行（箱根）',
+    eventDate: new Date('2026-09-15'),
+    content: '秋の家族旅行を計画しています',
+    place: '神奈川県箱根町',
+  });
+  const gardenPost = await ensurePost(hanako.id, yamada.id, {
+    type: PostType.POST,
+    content: '庭のあじさいが咲きました。母が植えた株です。',
+  });
+  const newYearPost = await ensurePost(taro.id, yamada.id, {
+    type: PostType.EVENT,
+    eventTitle: 'お正月（実家）',
+    eventDate: new Date('2026-01-02'),
+    content: '久しぶりに全員そろいました',
+    place: '静岡県三島市',
+  });
+
+  // Life profiles — the profile screen looks empty without these.
+  await prisma.lifeProfile.update({
+    where: { userId: hanako.id },
+    data: {
+      bio: '写真と料理が好きです。家族の記録を少しずつ残しています。',
+      birthDate: new Date('1990-04-12'),
+      birthPlace: '東京都世田谷区',
+      occupation: 'グラフィックデザイナー',
+      interests: ['料理', '写真', '園芸'],
+      updatedById: hanako.id,
+    },
+  });
+  await prisma.lifeProfile.update({
+    where: { userId: taro.id },
+    data: {
+      bio: '山登りと将棋。週末は子どもと近所の川へ。',
+      birthDate: new Date('1988-08-30'),
+      birthPlace: '静岡県三島市',
+      occupation: '建築士',
+      interests: ['登山', '将棋', 'カメラ'],
+      updatedById: taro.id,
+    },
+  });
+
+  const hanakoProfile = await prisma.lifeProfile.findUniqueOrThrow({
+    where: { userId: hanako.id },
     select: { id: true },
   });
-  if (!existingPost) {
-    await prisma.post.create({
-      data: {
-        authorUserId: hanako.id,
-        type: PostType.POST,
-        content: postContent,
-        families: { create: { familyId: yamada.id } },
-      },
-    });
-  }
-  const eventTitle = '家族旅行（箱根）';
-  const existingEvent = await prisma.post.findFirst({
-    where: { authorUserId: taro.id, eventTitle },
+  const grandpaProfile = await prisma.lifeProfile.findUnique({
+    where: { memberId: grandpa.id },
     select: { id: true },
   });
-  if (!existingEvent) {
-    await prisma.post.create({
-      data: {
-        authorUserId: taro.id,
-        type: PostType.EVENT,
-        eventTitle,
-        eventDate: new Date('2026-09-15'),
-        content: '秋の家族旅行を計画しています',
-        families: { create: { familyId: yamada.id } },
-      },
+
+  // A timeline needs more than one point to read as a timeline.
+  await ensureLifeEvent(hanakoProfile.id, hanako.id, {
+    title: '大学卒業',
+    eventDate: '2013-03-25',
+    place: '東京都',
+  });
+  await ensureLifeEvent(hanakoProfile.id, hanako.id, {
+    title: '結婚',
+    eventDate: '2017-10-08',
+    place: '東京都渋谷区',
+    description: '小さな式を家族だけで',
+  });
+  await ensureLifeEvent(hanakoProfile.id, hanako.id, {
+    title: '長男が生まれる',
+    eventDate: '2020-06-14',
+  });
+  if (grandpaProfile) {
+    await ensureLifeEvent(grandpaProfile.id, hanako.id, {
+      title: '工務店を開業',
+      eventDate: '1975-04-01',
+      place: '静岡県三島市',
+      description: '祖父が一人で始めた店。今の家もここで建てた。',
+    });
+    await ensureLifeEvent(grandpaProfile.id, hanako.id, {
+      title: '金婚式',
+      eventDate: '2023-11-03',
     });
   }
+
+  // Photos: files first (per machine), then the rows that point at them.
+  const images = await materialiseSeedImages();
+  const mediaIds: string[] = [];
+  const postsForPhotos = [cakePost, hakonePost, gardenPost, newYearPost];
+  for (const [index, image] of images.entries()) {
+    // Two photos per post, in order, so the first posts are never empty.
+    const target =
+      postsForPhotos[Math.floor(index / 2) % postsForPhotos.length];
+    const media = await ensureMedia(image, hanako.id, target.id);
+    mediaIds.push(media.id);
+  }
+
+  await ensureAlbum(
+    hanako.id,
+    '家族のアルバム',
+    '山田家のふだんの写真',
+    mediaIds,
+  );
 
   console.log('Seed complete:', {
     users: await prisma.user.count(),
@@ -205,6 +390,9 @@ async function main(): Promise<void> {
     members: await prisma.familyMember.count(),
     relationships: await prisma.relationship.count(),
     posts: await prisma.post.count(),
+    lifeEvents: await prisma.lifeEvent.count(),
+    media: await prisma.media.count(),
+    albums: await prisma.album.count(),
   });
   console.log(
     `Logins: hanako@example.com, taro@example.com / ${SEED_PASSWORD}`,
