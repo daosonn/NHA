@@ -208,10 +208,12 @@ break for everybody at once.
 - **Use a separate Neon branch for a feature or an experimental migration.** A
   branch is a copy-on-write clone of the shared data: point your `DATABASE_URL`
   at it, break whatever you like, delete it when you are done.
-- **`pnpm seed` and `pnpm test:e2e` write through `DATABASE_URL`.** The seed
-  upserts demo accounts and families; the e2e suite drives the real API and
-  creates real users, families, media, posts and video jobs. Run both on
-  Workflow B or on your own Neon branch — never on the shared branch.
+- **`pnpm test:e2e` writes real rows through `DATABASE_URL`.** It drives the
+  real API and creates users, families, media, posts and video jobs, none of
+  which it cleans up. Run it on Workflow B or on your own Neon branch — never
+  on the shared branch. `pnpm seed` is the opposite case and _is_ safe here:
+  it only upserts, deletes nothing, and filling the shared demo data is its
+  purpose (§ Seeding demo data).
 - **`pnpm db:backup` and `pnpm db:restore` do not touch Neon.** They
   `docker exec` into the `nha-postgres` container, so they only ever see the
   local database (§ Backup & restore below). Neon's backup/recovery is whatever
@@ -261,6 +263,58 @@ Take one before destructive experiments (mass deletes, migration surgery)
 and before `prisma migrate reset`. Production backups (managed PITR) are a
 deployment decision for later — this covers the local Docker database and
 the demo box.
+
+## Seeding demo data
+
+```powershell
+pnpm seed
+```
+
+Creates the demo dataset: two accounts (`hanako@example.com`,
+`taro@example.com`, password `password-123`), two families (invite codes
+`YAMADA22`, `SUZUKI22`), members and relationships for the tree, four posts,
+life profiles with bio/birth date, a handful of life events for the timeline,
+and — when photos are available — media attached to the posts plus one album.
+
+**It is idempotent.** Every write is an upsert or guarded by an existence
+check, and it deletes nothing, so re-running adds nothing and breaks nothing.
+That is what makes it safe on the shared Neon database: filling the team's
+demo data is the job it exists for.
+
+### Photos
+
+Photos are the one part that cannot be shared through the database. `Media`
+rows live in Neon; the files they name live in `apps/api/uploads/`, which is
+local to each machine. A row whose file is missing is a 404 when the app
+streams it.
+
+So the seed writes the files itself, from photos you supply:
+
+```
+apps/api/prisma/seed-images/     ← drop .jpg/.png/.webp/.heic here
+```
+
+Read in filename order, up to 8, resized to 1600px on the long edge and
+converted to JPEG. They land on **fixed storage keys** — `seed/01.jpg`,
+`seed/02.jpg`, … — which is what keeps the shared rows valid everywhere: each
+person fills the same slots with their own pictures. Set `SEED_IMAGES_DIR` to
+read from somewhere else.
+
+The photos are gitignored on purpose; only
+`apps/api/prisma/seed-images/README.md` is committed. Consequences worth
+knowing before someone reports a bug:
+
+- **No photos on your machine** → the seed says so and skips media entirely.
+  Everything else still seeds.
+- **Fewer photos than whoever seeded first** → the extra rows are already in
+  Neon and their files are missing on your machine, so those specific images
+  404 until you add more.
+- **Different photos than a teammate** → same rows, different pictures. Not a
+  bug; the slots are shared, the contents are not.
+
+Media in a shared dev database is only really solved by object storage (S3/R2)
+behind `StorageService`, which is designed to be swapped without a schema
+change. Until that decision is made (`deployment.md`), this is the workaround.
 
 ## Environment Variables
 
