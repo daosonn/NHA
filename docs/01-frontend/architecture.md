@@ -96,12 +96,15 @@ scripts/
   check-i18n.mjs          `pnpm --filter mobile check:i18n`
 ```
 
-The five tabs are **Home · Omoide · + · AI · Profile**, matching the
-mockups and `design-system.md`. The family tree is _not_ a tab: it is
-reached by tapping the group strip on Home, so the tab bar stays about
-content rather than navigation structure. That puts weight on the strip
-being legible as a way in — it was not, and was redrawn 2026-08-21
-(`design-system.md` § Group strip).
+The tab destinations are **Home · Omoide · AI · Profile**, with the
+**family tree on the bar's centre button** (owner's call 2026-08-26,
+deviating from the mockups' compose + — ratify or revert, see
+`design-system.md` § Bottom navigation). The tree is still _not_ a tab —
+the centre pushes `/family` above the tabs. Posting starts from the
+compose bar pinned at the top of Home (`home/compose-bar.tsx`) → `/new`,
+which keeps its tab route but no bar slot of its own. The group strip
+moved to the family screen with this change; its 2026-08-21 redraw story
+stays in `design-system.md` § Group strip.
 
 **The five destinations are drawn by two components, mounted at two
 different levels.** `BottomNav` is the tab navigator's own `tabBar`, so it

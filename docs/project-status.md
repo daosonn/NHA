@@ -28,6 +28,21 @@ screens.
 
 ## Current Focus
 
+- **Home's IA swapped: tree to the bar's centre, posting to the top of the
+  feed (2026-08-26, `feature/motion-system`) — owner's call, deviates from
+  the mockups, ratify or revert.** The diagnosis: Home showed two `+`
+  buttons meaning different things — the strip's "new group" beside the
+  bar's unlabelled "new post" — and the bar's + kept being read as "add
+  family". The swap: the bar's centre disc is now the **family tree**
+  (`Network` glyph, pushes `/family`; same change mirrored on the desktop
+  rail's coral disc), Home's pinned row is now a **compose bar** ("Share
+  today's moment…" → `/new`), and the **group strip left Home** for the
+  family screen, where switching lives with the trees. Two recorded costs:
+  posting from another tab is two taps now (via Home), and the family
+  SWITCHER is no longer above the feed — switching means the tree screen.
+  `/new` keeps its tab route (no bar slot). Verified: tsc, prettier,
+  check:i18n (770 keys); not looked at on a device.
+
 - **Backend infrastructure, not screens (2026-08-26).** The database moved out
   from under everyone in PR #51: development runs on **shared Neon Cloud**, so
   the team sees one set of data. Two things follow from that, and they are the

@@ -126,6 +126,7 @@
     "noFamilyTitle": "まだ家族がありません",
     "noFamilyBody": "家族を作って一緒に残したい人を招待するか、受け取ったコードで参加してください。",
     "startFamily": "家族を作る・参加する",
+    "composePrompt": "今日の思い出を残しましょう…",
     "loadFailed": "家族の一覧を読み込めませんでした。",
     "retry": "もう一度",
     "switchToGroup": "{{name}}に切り替える",

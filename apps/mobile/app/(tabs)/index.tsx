@@ -6,8 +6,8 @@ import { ActivityIndicator, View } from 'react-native';
 import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 
 import { PostCard } from '../../src/components/feed/post-card';
+import { ComposeBar } from '../../src/components/home/compose-bar';
 import { EventWidget } from '../../src/components/home/event-widget';
-import { GroupStrip, type FamilyGroupSummary } from '../../src/components/home/group-strip';
 import { SwipeCue } from '../../src/components/home/moment-peek';
 import { RecommendationGrid } from '../../src/components/home/recommendation-grid';
 import { AppHeader } from '../../src/components/layout/app-header';
@@ -24,7 +24,7 @@ import { useSetReaction } from '../../src/features/feed/use-post';
 import { useAlbums } from '../../src/features/album/use-albums';
 import { useSpecialDates } from '../../src/features/ai/use-special-dates';
 import { useRecommendations } from '../../src/features/home/use-recommendations';
-import type { FamilySummary, PostDetail } from '../../src/lib/api';
+import type { PostDetail } from '../../src/lib/api';
 import { colors, spacing, useLayout } from '../../src/theme';
 import { enter } from '../../src/theme/motion';
 
@@ -40,23 +40,12 @@ const CASCADE_CARDS = 4;
  */
 const BOTTOM_INSET = 160;
 
-/** How many faces the strip draws before it collapses the rest into "+N". */
-const VISIBLE_GROUPS = 3;
-
 function FeedCard({
   post,
   ...rest
 }: { post: PostDetail } & Omit<React.ComponentProps<typeof PostCard>, 'post' | 'onToggleLike'>) {
   const setReaction = useSetReaction(post.id);
   return <PostCard post={post} onToggleLike={(type) => setReaction.mutate(type)} {...rest} />;
-}
-
-function toStripGroups(families: FamilySummary[]): FamilyGroupSummary[] {
-  return families.slice(0, VISIBLE_GROUPS).map((family) => ({
-    id: family.id,
-    name: family.name,
-    coverMediaId: family.coverMediaId,
-  }));
 }
 
 export default function HomeScreen() {
@@ -178,19 +167,14 @@ export default function HomeScreen() {
           header row on a wide window is a bell and 1500px of nothing. */}
       <AppHeader left={<BrandWordmark />} right={<NotificationBell />} paddingRight={spacing.lg} />
 
-      {/* Pinned, not scrolled with the feed. It is the only way into the
-          family tree, and as the feed's first row it was gone after one
-          flick. The + starts another group; somebody with no family at all
-          lands on `/create-family` from the empty state below. */}
+      {/* Pinned, not scrolled with the feed. The family strip stood here
+          until 2026-08-26 — it moved to the family screen when the tree
+          took the bar's centre slot, and posting moved up in its place
+          (owner's call, § Bottom navigation): the top of the feed is where
+          a new moment starts. */}
       {families !== undefined && families.length > 0 && (
         <ContentColumn style={{ paddingTop: 4, paddingBottom: 10 }}>
-          <GroupStrip
-            groups={toStripGroups(families)}
-            remainingCount={Math.max(0, families.length - VISIBLE_GROUPS)}
-            onPress={() => router.push('/family')}
-            onAddPress={() => router.push('/family/new')}
-            scrollY={scrollY}
-          />
+          <ComposeBar onPress={() => router.push('/new')} />
         </ContentColumn>
       )}
 

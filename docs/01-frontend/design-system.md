@@ -198,9 +198,17 @@ Home · Omoide · **+** · AI · Profile.
   `full` the two caps are concentric enough that the clearance is an even 6px
   the whole way round, and no padding had to change to get it.
 - Inactive: icon and label `text.secondary`, label medium.
-- The centre **+** is a 50px `coral.primary` circle, vertically centred and
-  unlabelled — it is the one filled control and reads as a button, not a
-  destination.
+- The centre is a 50px `coral.primary` circle, vertically centred and
+  unlabelled. **It is the family tree now** (`Network` glyph — the strip's
+  own lesson: structure, not "more people"), opening `/family` as a pushed
+  screen. It was the compose **+** until 2026-08-26 — owner's call,
+  **deviating from the mockups, ratify or revert**: Home showed two +
+  buttons meaning different things (the strip's "new group", the bar's
+  "new post"), and the misread was always "add family". Posting moved to
+  the **compose bar at the top of Home** (`home/compose-bar.tsx`: pen,
+  "Share today's moment…", a 36px coral disc; one tap opens `/new`). The
+  known cost, recorded: posting from another tab is now two taps (via
+  Home) instead of one.
 
 Redrawn 2026-08-21 from a full-width slab with a hairline top border. A slab
 cuts the page in two; inset with a radius, content keeps running underneath
@@ -263,7 +271,7 @@ reveals the words.
 | ----------- | --------------- | ----------------------------------- |
 | Width       | 76 (a pill)     | 240                                 |
 | Brand       | mark only, 26px | mark only                           |
-| Compose     | 48px coral disc | coral pill, label right of the mark |
+| Family tree | 48px coral disc | coral pill, label right of the mark |
 | Destination | 48px glyph      | glyph, then label                   |
 
 Three things make opening read as one object moving rather than two states
@@ -515,7 +523,12 @@ a profile read as a person rather than as a toolbar.
 
 ### Group strip
 
-The family switcher above the fold on Home: overlapped 34px faces, a dashed
+**On the family screen only since 2026-08-26** — it left Home when the
+tree took the bottom bar's centre slot and the compose bar took the
+strip's place at the top of the feed (§ Bottom navigation). Switching
+families now happens where the trees are. The strip itself is unchanged:
+
+The family switcher: overlapped 34px faces, a dashed
 coral circle that starts an invite, then the way into the family tree.
 
 That last one is a **filled cap** at the tray's right end: 40px tall,

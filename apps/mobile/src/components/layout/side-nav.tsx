@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import { usePathname, useRouter } from 'expo-router';
-import { Plus } from 'lucide-react-native';
+import { Network } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -283,15 +283,18 @@ export function SideNav() {
           <BrandMark size={26} />
         </View>
 
+        {/* The family tree, mirroring the bottom bar's centre (owner's call,
+            2026-08-26 — it was the compose +; posting now starts from Home's
+            compose bar, which desktop shows too). */}
         <Row
-          label={t('nav.newMoment')}
-          icon={Plus}
+          label={t('home.familyTree')}
+          icon={Network}
           tint={colors.text.white}
           background={colors.coral.primary}
           strokeWidth={2.3}
           accessibilityRole="button"
           open={open}
-          onPress={() => router.navigate('/new')}
+          onPress={() => router.navigate('/family')}
         />
 
         <View style={{ gap: 4 }}>

@@ -2,7 +2,8 @@ import { BlurView } from 'expo-blur';
 // expo-router 57 vendors react-navigation; `expo-router/js-tabs` is the
 // non-deprecated entry point for the JS tab navigator and its types.
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
-import { History, House, Plus, Sparkles, UserRound } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { History, House, Network, Sparkles, UserRound } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
@@ -88,8 +89,11 @@ type Metrics = ReturnType<typeof metrics>;
 export type TabConfig = { labelKey: string; icon: LucideIcon };
 
 /**
- * Home · Omoide · + · AI · Profile — the five destinations from the mockups.
- * The family tree is *not* a tab; it is reached from the group strip on Home.
+ * Home · Omoide · 🌳 · AI · Profile — the four tab destinations plus the
+ * family tree in the centre (owner's call, 2026-08-26; the mockups' centre
+ * was a + that posted, but two + buttons on one Home screen — the strip's
+ * "new group" and the bar's "new post" — kept being read as the same thing.
+ * Posting moved to the compose bar at the top of Home).
  *
  * Exported because `side-nav.tsx` draws the same destinations turned vertical.
  * One list, so the two navigations cannot come to disagree about what the app
@@ -102,11 +106,15 @@ export const TABS: Record<string, TabConfig> = {
   profile: { labelKey: 'nav.tab.profile', icon: UserRound },
 };
 
-/** The centre action, still the one filled control on the bar. */
-export const COMPOSE_ROUTE = 'new';
+/**
+ * The tab route whose bar slot the centre button occupies. The compose
+ * screen still lives at `/new` — it is reached from Home's compose bar —
+ * but its slot on the bar now opens the family tree.
+ */
+export const CENTER_ROUTE = 'new';
 
 /** Its own component so the press hook is not called inside a `.map()`. */
-function ComposeButton({ label, onPress, m }: { label: string; onPress: () => void; m: Metrics }) {
+function TreeButton({ label, onPress, m }: { label: string; onPress: () => void; m: Metrics }) {
   const press = usePressScale({
     background: { rest: colors.coral.primary, pressed: colors.coral.dark },
   });
@@ -130,7 +138,9 @@ function ComposeButton({ label, onPress, m }: { label: string; onPress: () => vo
         press.style,
       ]}
     >
-      <Plus size={m.composeIcon} color={colors.text.white} strokeWidth={2.3} />
+      {/* `Network`, not `UsersRound` — the strip's old lesson: beside rows of
+          faces "more people" says nothing, structure does. */}
+      <Network size={m.composeIcon} color={colors.text.white} strokeWidth={2.3} />
     </AnimatedPressable>
   );
 }
@@ -232,6 +242,7 @@ function Slot({
  */
 export function BottomNav({ state, navigation }: BottomTabBarProps) {
   const { t } = useTranslation();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
@@ -306,8 +317,17 @@ export function BottomNav({ state, navigation }: BottomTabBarProps) {
             }
           };
 
-          if (route.name === COMPOSE_ROUTE) {
-            return <ComposeButton key={route.key} label={t('nav.newMoment')} onPress={go} m={m} />;
+          if (route.name === CENTER_ROUTE) {
+            return (
+              <TreeButton
+                key={route.key}
+                label={t('home.openFamilyTree')}
+                // A pushed screen, not the tab under this slot — the compose
+                // screen keeps the route, the tree takes the button.
+                onPress={() => router.push('/family')}
+                m={m}
+              />
+            );
           }
 
           const config = TABS[route.name];

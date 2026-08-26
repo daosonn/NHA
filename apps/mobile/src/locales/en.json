@@ -127,6 +127,7 @@
     "noFamilyTitle": "No family yet",
     "noFamilyBody": "Create one and invite the people you want to keep things with, or join with a code someone sent you.",
     "startFamily": "Create or join a family",
+    "composePrompt": "Share today's moment…",
     "loadFailed": "Could not load your families.",
     "retry": "Try again",
     "switchToGroup": "Switch to {{name}}",
