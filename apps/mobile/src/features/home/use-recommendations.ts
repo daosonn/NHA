@@ -22,8 +22,14 @@ export type RecommendationTarget = { kind: 'post'; id: string } | { kind: 'album
 
 export type RecommendationTile = {
   target: RecommendationTarget;
-  /** Cover photograph, fetched through `mediaSource`. */
+  /** Cover photograph — the grid picks stream vs poster frame by `mimeType`. */
   mediaId: string;
+  /**
+   * Vì sao phải mang theo: một moment có thể chỉ có CLIP, và bytes video nhét
+   * vào <Image> không decode được — ô "A look back" từng trắng tinh vì đúng
+   * chuyện này. Biết mime thì grid xin poster frame thay vì stream gốc.
+   */
+  mimeType: string;
   title: string;
   meta?: string;
 };
@@ -123,11 +129,19 @@ export function useRecommendations(
 
     const add = (entry: Dated | undefined, tile: { title: string; meta?: string }) => {
       if (entry === undefined || taken.has(entry.post.id)) return;
-      const cover = entry.post.media[0];
+      // Ưu tiên tấm ẢNH đầu tiên làm bìa; bài chỉ toàn clip thì lấy clip đầu —
+      // grid sẽ xin poster frame của nó chứ không nhét video vào <Image>.
+      const cover =
+        entry.post.media.find((m) => m.mimeType.startsWith('image/')) ?? entry.post.media[0];
       if (cover === undefined) return;
 
       taken.add(entry.post.id);
-      tiles.push({ target: { kind: 'post', id: entry.post.id }, mediaId: cover.id, ...tile });
+      tiles.push({
+        target: { kind: 'post', id: entry.post.id },
+        mediaId: cover.id,
+        mimeType: cover.mimeType,
+        ...tile,
+      });
     };
 
     // 1. Same date, earlier year.
@@ -171,6 +185,10 @@ export function useRecommendations(
       tiles.push({
         target: { kind: 'album', id: album.id },
         mediaId: album.coverMediaId,
+        // AlbumSummary không mang mime của bìa — coi là ảnh (bìa do người dùng
+        // chọn tay, gần như luôn là ảnh); nếu là clip thì grid đã có
+        // placeholder + onError đỡ phía sau, không còn ô trắng.
+        mimeType: 'image/jpeg',
         title: t('home.recommend.album', { name: album.name }),
         meta: t('home.recommend.photoCount', { count: album.itemCount }),
       });

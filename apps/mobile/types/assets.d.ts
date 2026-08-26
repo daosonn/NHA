@@ -12,3 +12,14 @@ declare module '*.otf' {
   const asset: number;
   export default asset;
 }
+
+/** Bundled bitmaps (src/fixtures/news.ts) — same numeric module id as fonts. */
+declare module '*.jpg' {
+  const asset: number;
+  export default asset;
+}
+
+declare module '*.png' {
+  const asset: number;
+  export default asset;
+}

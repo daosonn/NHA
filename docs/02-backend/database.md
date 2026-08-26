@@ -792,3 +792,9 @@ for posted content, and time-capsule unlock — see `domain-model.md`.
 - IDs are uuid (matches existing `User` model).
 - Do not expose Prisma models directly as API contracts — map through DTOs
   (`CLAUDE.md` § 5).
+- The development database is **shared Neon Cloud PostgreSQL** (2026-08-26).
+  Author a migration against a database of your own — the opt-in local Docker
+  Postgres or your own Neon branch — and apply the reviewed one to shared with
+  `prisma migrate deploy`. Never `prisma migrate reset` or `prisma migrate dev`
+  against the shared branch. Both workflows and the full rules:
+  `docs/04-devops/local-environment.md` § Neon rules.
