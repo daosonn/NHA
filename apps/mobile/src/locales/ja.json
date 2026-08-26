@@ -134,6 +134,7 @@
       "today": "今日",
       "tomorrow": "明日",
       "inDays_other": "あと{{count}}日",
+      "birthdayTag": "誕生日",
       "more_other": "ほかに{{count}}件"
     },
     "recommend": {

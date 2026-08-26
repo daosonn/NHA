@@ -49,6 +49,45 @@ screens.
   bordered box read wrong inside that card. Verified: mobile tsc, prettier,
   check:i18n; not yet looked at on a device.
 
+  **The birthday theme landed the same day.** `CONFETTI_CANDLES` — the theme
+  the widget GET has carried since 1.2.5 with nothing drawing it — now has
+  its card (`components/home/birthday-card.tsx`, drafted as
+  `docs/01-frontend/motion/birthday-theme-card.html`): swaying garland,
+  drifting confetti, a party hat wobbling on the person's avatar, candles
+  flickering on a cake, and a tap answering with a firework burst where the
+  finger landed (the card navigates nowhere, so it can afford to celebrate;
+  no `accessibilityRole`, since a button that does nothing should not be
+  announced as one). Every loop animates SVG transform/opacity only, on the
+  cats' `rotateAbout` idiom — now exported from `motion/cats.tsx`.
+  Illustration colours stay literal per the cats' rule; the corals are the
+  tokens' own. `FLORAL_BORDER` still falls back to the bunting card.
+  Corrected the same day after a first look: on web every burst landed at the
+  card's centre (`locationX` does not exist in react-native-web's
+  nativeEvent — page coordinates against `measureInWindow` do), and the
+  draft's fixed sizes rattled inside the column's 560px card — the cake and
+  presents now scale with the card (capped 1.5×), the volley is five bursts
+  offset by fractions of the card, confetti covers the middle band, and the
+  card keeps the photo theme's 196px so the slot doesn't jump between
+  themes. The burst itself also changed shape: the draft's 8 lines anchored
+  at the centre scale into a spiderweb, so a burst is now particle dots
+  flying outward, shrinking and fading, the middle opening up behind them —
+  three interleaved shells (outer in the burst colour, a half-step-offset
+  middle and a late core in a lighter partner colour), so it blooms.
+  The background gradient was the third same-day fix: an `<svg>` with no
+  width/height attributes defaults to 300×150, so it covered a corner of the
+  card — it now takes the measured size, over a `coral.light` base coat.
+  **The AI hub's featured occasion IS the same card** when the date is a
+  birthday: the hub renders `BirthdayCard` itself (with the person's real
+  photo — the hub can resolve `avatarKey`, Home's widget payload cannot),
+  and its three prefilled chips (Gift/Message/Video) are gone for that case
+  — owner's call, same day, after a dressed-with-buttons version was built
+  first: one occasion must look like one occasion on both screens. The cost
+  is named here on purpose: those chips carried the person and occasion into
+  the makers; for a birthday that entry now goes through the MAKE SOMETHING
+  rows, which open the makers empty. Non-birthday occasions keep the
+  three-button card unchanged. Verified: tsc, prettier, check:i18n (727 keys); the animations
+  themselves have not been watched in a browser yet.
+
 - **The app stopped simply growing (2026-08-25).** Every screen used to be
   `viewport - two gutters` wide at any size, which is right on a phone and
   wrong from about 600px up: at 1440 a post card was 1400px across and a line

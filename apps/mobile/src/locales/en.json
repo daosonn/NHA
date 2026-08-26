@@ -136,6 +136,7 @@
       "tomorrow": "Tomorrow",
       "inDays": "In {{count}} day",
       "inDays_other": "In {{count}} days",
+      "birthdayTag": "Birthday",
       "more": "{{count}} more coming up",
       "more_other": "{{count}} more coming up"
     },

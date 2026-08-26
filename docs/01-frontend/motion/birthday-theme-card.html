@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Birthday theme card</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;padding:40px;background:#EDEBE7;font-family:'Be Vietnam Pro',sans-serif;display:flex;justify-content:center}
+@keyframes flicker{0%,100%{transform:scaleY(1) scaleX(1) translateY(0)}25%{transform:scaleY(1.15) scaleX(.92) translateY(-0.6px)}50%{transform:scaleY(.9) scaleX(1.05) translateY(0.3px)}75%{transform:scaleY(1.08) scaleX(.96) translateY(-0.3px)}}
+@keyframes drift{0%{transform:translate(0,0)}50%{transform:translate(-6px,8px)}100%{transform:translate(0,0)}}
+@keyframes hatWobble{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+@keyframes buntingSway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+@keyframes fireworkPop{0%{opacity:0;transform:scale(.2)}30%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.7)}}
+.card{position:relative;overflow:hidden;width:353px;box-sizing:border-box;background:linear-gradient(165deg,#FDE7E2 0%,#FBD9D0 100%);border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:13px;cursor:pointer}
+.confetti{position:absolute;border-radius:999px;background:#F0705F;opacity:.5;animation:drift 7s ease-in-out infinite}
+.tag{align-self:flex-start;height:24px;padding:0 11px;border-radius:999px;background:#fff;display:flex;align-items:center;gap:6px;position:relative}
+.tag span{font:600 11px/1 'Be Vietnam Pro',sans-serif;letter-spacing:.3px;color:#B8422F}
+.row{display:flex;align-items:center;gap:12px;position:relative}
+.avatar-wrap{position:relative;width:50px;height:50px;flex:none}
+.avatar{width:50px;height:50px;border-radius:999px;background:repeating-linear-gradient(135deg,#EFEDEA 0 6px,#E4E1DC 6px 12px)}
+.hat{position:absolute;left:10px;top:-15px;transform-origin:15px 26px;animation:hatWobble 2.6s ease-in-out infinite}
+.title{font:600 16px/21px 'Be Vietnam Pro',sans-serif;letter-spacing:-.15px;color:#18181B}
+.subtitle{font:400 12px/16px 'Be Vietnam Pro',sans-serif;color:#966C63}
+.footer-row{display:flex;align-items:flex-end;justify-content:space-between;padding:2px 0;position:relative}
+.garland{position:absolute;left:22px;top:0;opacity:.95;z-index:5}
+.flag{transform-origin:var(--fx) 8px;animation:buntingSway 3.2s ease-in-out infinite}
+.flame{transform-origin:var(--fx) var(--fy);animation:flicker var(--fdur) ease-in-out var(--fdelay) infinite}
+.fireworks{position:absolute;left:0;top:0;pointer-events:none}
+.fw{transform-origin:var(--cx) var(--cy);animation:fireworkPop 900ms cubic-bezier(.22,1,.36,1) both}
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+  <svg class="garland" width="331" height="26" viewBox="0 0 331 26" preserveAspectRatio="none">
+    <path d="M0 8 Q14.05 20 28.1 8 T56.2 8 T84.3 8 T112.4 8 T140.5 8 T168.6 8 T196.7 8 T224.8 8 T252.9 8 T281 8 T309 8 T331 8" fill="none" stroke="#D4604A" stroke-width="1.6"></path>
+    <g id="flags"></g>
+  </svg>
+
+  <div id="confettiLayer"></div>
+
+  <div class="tag">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D4604A" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21h16"></path><path d="M5 21v-6a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v6"></path><path d="M4 16.5c1.6 0 1.6 1.2 3.2 1.2s1.6-1.2 3.2-1.2 1.6 1.2 3.2 1.2 1.6-1.2 3.2-1.2 1.6 1.2 3.2 1.2"></path><path d="M12 12V9"></path><path d="M12 6.5V6"></path></svg>
+    <span>BIRTHDAY</span>
+  </div>
+
+  <div class="row">
+    <div class="avatar-wrap">
+      <div class="avatar"></div>
+      <svg class="hat" width="30" height="26" viewBox="0 0 30 26">
+        <path d="M15 1 L27 24 L3 24 Z" fill="#F58B7B"></path>
+        <path d="M6 24 L24 24 L25.4 26 L4.6 26 Z" fill="#D4604A"></path>
+        <circle cx="10" cy="10" r="1.6" fill="#FFFFFF"></circle><circle cx="19" cy="14" r="1.6" fill="#FDE7E2"></circle><circle cx="15" cy="7" r="1.6" fill="#FFFFFF"></circle><circle cx="12" cy="17" r="1.6" fill="#FDE7E2"></circle>
+        <circle cx="15" cy="1" r="2.4" fill="#F0B429"></circle>
+      </svg>
+    </div>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+      <span class="title">Grandma turns 70</span>
+      <span class="subtitle">Sunday 30 August · in 11 days</span>
+    </div>
+  </div>
+
+  <div class="footer-row">
+    <svg width="70" height="46" viewBox="0 0 70 46" fill="none">
+      <rect x="4" y="20" width="26" height="24" rx="3" fill="#F0B429"></rect>
+      <rect x="4" y="30" width="26" height="6" fill="#D4604A"></rect>
+      <rect x="14" y="20" width="6" height="24" fill="#D4604A"></rect>
+      <path d="M17 20 q-7-10 -1-14 q4 3 1 14 Z" fill="#D4604A"></path>
+      <path d="M17 20 q7-10 1-14 q-4 3 -1 14 Z" fill="#D4604A"></path>
+      <rect x="34" y="10" width="30" height="34" rx="3" fill="#7FA98C"></rect>
+      <rect x="34" y="22" width="30" height="6" fill="#F5E6D8"></rect>
+      <rect x="46" y="10" width="6" height="34" fill="#F5E6D8"></rect>
+      <path d="M49 10 q-8-9 -1-13 q5 3 1 13 Z" fill="#F0B429"></path>
+      <path d="M49 10 q8-9 1-13 q-5 3 -1 13 Z" fill="#F0B429"></path>
+    </svg>
+    <svg width="88" height="54" viewBox="0 0 88 54" fill="none">
+      <ellipse cx="44" cy="49" rx="38" ry="5" fill="#D4604A" opacity=".16"></ellipse>
+      <rect x="6" y="30" width="76" height="18" rx="4" fill="#F0705F"></rect>
+      <rect x="6" y="30" width="76" height="5" rx="2.5" fill="#FBD9D0"></rect>
+      <rect x="13" y="17" width="62" height="14" rx="4" fill="#F58B7B"></rect>
+      <rect x="13" y="17" width="62" height="5" rx="2.5" fill="#FDE7E2"></rect>
+      <g fill="#D4604A"><circle cx="22" cy="26" r="2"></circle><circle cx="37" cy="23" r="2"></circle><circle cx="52" cy="26" r="2"></circle><circle cx="67" cy="23" r="2"></circle></g>
+      <g id="flames"></g>
+    </svg>
+  </div>
+
+  <svg id="fireworks" class="fireworks" width="353" height="200" viewBox="0 0 353 200" style="display:none"></svg>
+</div>
+
+<script>
+const COLORS = ['#F58B7B', '#D4604A', '#F0B429', '#7FA98C', '#B893CE'];
+
+// garland flags
+const flagsG = document.getElementById('flags');
+for (let i = 0; i < 12; i++) {
+  const x = i * 28.1, x1 = x + 6.75, x2 = x + 13.5;
+  const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  p.setAttribute('d', `M${x} 8 L${x1} 19 L${x2} 8 Z`);
+  p.setAttribute('fill', COLORS[i % COLORS.length]);
+  p.classList.add('flag');
+  p.style.setProperty('--fx', x + 'px');
+  p.style.animationDelay = (i * 0.24) + 's';
+  flagsG.appendChild(p);
+}
+
+// candle flames (3 candles on top tier, cx relative to 88x54 viewBox)
+const flamesG = document.getElementById('flames');
+const flamePos = [
+  { cx: 30, cy: 11, cy2: 12, wx: 29.1, wy: 12, dur: '420ms', delay: '0ms' },
+  { cx: 44, cy: 8, cy2: 9, wx: 43.1, wy: 9, dur: '455ms', delay: '90ms' },
+  { cx: 58, cy: 11, cy2: 12, wx: 57.1, wy: 12, dur: '490ms', delay: '180ms' },
+];
+flamePos.forEach(f => {
+  const wick = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  wick.setAttribute('x', f.wx); wick.setAttribute('y', f.wy); wick.setAttribute('width', 1.8); wick.setAttribute('height', 10);
+  wick.setAttribute('fill', '#F5E6D8');
+  flamesG.appendChild(wick);
+
+  const outer = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+  outer.setAttribute('cx', f.cx); outer.setAttribute('cy', f.cy); outer.setAttribute('rx', 2.4); outer.setAttribute('ry', 3.4);
+  outer.setAttribute('fill', '#F0705F');
+  outer.classList.add('flame');
+  outer.style.setProperty('--fx', f.cx); outer.style.setProperty('--fy', f.cy);
+  outer.style.setProperty('--fdur', f.dur); outer.style.setProperty('--fdelay', f.delay);
+  flamesG.appendChild(outer);
+
+  const core = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+  core.setAttribute('cx', f.cx); core.setAttribute('cy', f.cy2); core.setAttribute('rx', 1.1); core.setAttribute('ry', 1.6);
+  core.setAttribute('fill', '#F0B429');
+  core.classList.add('flame');
+  core.style.setProperty('--fx', f.cx); core.style.setProperty('--fy', f.cy2);
+  core.style.setProperty('--fdur', f.dur); core.style.setProperty('--fdelay', f.delay);
+  flamesG.appendChild(core);
+});
+
+// drifting confetti dots (top area)
+const confettiLayer = document.getElementById('confettiLayer');
+const dots = [
+  { left: '55%', top: '5%', size: 3, delay: '0s', dur: '7s' },
+  { left: '78%', top: '18%', size: 2.4, delay: '.3s', dur: '8.2s' },
+  { left: '28%', top: '10%', size: 2.2, delay: '.6s', dur: '6.6s' },
+  { left: '88%', top: '35%', size: 2.8, delay: '.1s', dur: '7.6s' },
+  { left: '40%', top: '2%', size: 2, delay: '.5s', dur: '9s' },
+  { left: '68%', top: '8%', size: 2.6, delay: '.8s', dur: '7s' },
+];
+dots.forEach(d => {
+  const el = document.createElement('div');
+  el.className = 'confetti';
+  el.style.left = d.left; el.style.top = d.top;
+  el.style.width = d.size + 'px'; el.style.height = d.size + 'px';
+  el.style.animationDuration = d.dur; el.style.animationDelay = d.delay;
+  confettiLayer.appendChild(el);
+});
+
+// click -> fireworks burst at cursor position
+const card = document.getElementById('card');
+const fw = document.getElementById('fireworks');
+let fwTimeout;
+
+card.addEventListener('click', e => {
+  const rect = card.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  fw.innerHTML = '';
+  fw.style.display = 'block';
+
+  const bursts = [
+    { dx: 0, dy: 0, color: '#F58B7B', delay: 0 },
+    { dx: 26, dy: -14, color: '#D4604A', delay: 90 },
+    { dx: -22, dy: 12, color: '#F0B429', delay: 180 },
+  ];
+  bursts.forEach((b, i) => {
+    const cx = x + b.dx, cy = y + b.dy;
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.classList.add('fw');
+    g.style.setProperty('--cx', cx + 'px'); g.style.setProperty('--cy', cy + 'px');
+    g.style.animationDelay = b.delay + 'ms';
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2;
+      const r = 24 - i * 2;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', cx); line.setAttribute('y1', cy);
+      line.setAttribute('x2', cx + Math.cos(a) * r); line.setAttribute('y2', cy + Math.sin(a) * r);
+      line.setAttribute('stroke', b.color); line.setAttribute('stroke-width', 2); line.setAttribute('stroke-linecap', 'round');
+      g.appendChild(line);
+    }
+    fw.appendChild(g);
+  });
+
+  clearTimeout(fwTimeout);
+  fwTimeout = setTimeout(() => { fw.style.display = 'none'; fw.innerHTML = ''; }, 1000);
+});
+</script>
+</body>
+</html>

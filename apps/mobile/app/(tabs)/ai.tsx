@@ -8,6 +8,7 @@ import Animated from 'react-native-reanimated';
 
 import { specialDateIcon, specialDateKindKey } from '../../src/components/ai/occasion-kind';
 import { DateTile } from '../../src/components/ai/date-tile';
+import { BirthdayCard } from '../../src/components/home/birthday-card';
 import { SelectRow } from '../../src/components/ai/select-row';
 import { AppHeader } from '../../src/components/layout/app-header';
 import { contentColumn } from '../../src/components/layout/content-column';
@@ -202,7 +203,27 @@ export default function AiScreen() {
         )}
 
         {/* ---------- featured: the next date that needs a decision ---------- */}
-        {featured && featuredMember && (
+        {/* Sinh nhật hiện NGUYÊN card của Home — bánh, quà, pháo hoa khi bấm —
+            thay cho thẻ ba nút (bỏ theo quyết định 2026-08-26: cùng một dịp
+            phải trông là một dịp ở cả hai màn). Gift/Message/Video cho dịp này
+            đi qua các hàng MAKE SOMETHING bên dưới. */}
+        {featured && featuredMember && featured.theme === 'CONFETTI_CANDLES' && (
+          <Animated.View entering={enter.up(1)}>
+            <BirthdayCard
+              tag={t('home.occasion.birthdayTag')}
+              title={occasionLabel(featured)}
+              subtitle={featuredMeta}
+              more={null}
+              avatarName={featuredMember.displayName}
+              avatarMediaId={
+                family.data?.members.find((m) => m.id === featuredMember.memberId)?.avatarKey ??
+                null
+              }
+            />
+          </Animated.View>
+        )}
+
+        {featured && featuredMember && featured.theme !== 'CONFETTI_CANDLES' && (
           <Animated.View
             entering={enter.up(1)}
             style={{

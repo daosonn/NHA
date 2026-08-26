@@ -46,7 +46,7 @@ const inOut = Easing.inOut(Easing.ease);
  * but react-native-svg's web build turns them into a `transform-origin` DOM
  * attribute React rejects — the composed string works on every platform.
  */
-function rotateAbout(angle: number, x: number, y: number): string {
+export function rotateAbout(angle: number, x: number, y: number): string {
   'worklet';
   return `translate(${x} ${y}) rotate(${angle}) translate(${-x} ${-y})`;
 }

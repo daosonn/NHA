@@ -9,6 +9,7 @@ import type { SpecialDateItem } from '../../lib/api';
 import { formatFullDate } from '../../lib/date';
 import { colors, radius, spacing } from '../../theme';
 import { Text } from '../ui/text';
+import { BirthdayCard } from './birthday-card';
 
 const HEIGHT = 196;
 
@@ -102,9 +103,9 @@ export type EventWidgetProps = {
  * - **paging dots.** They were decoration pretending to be a control. The
  *   count of what is behind this one is said in words instead.
  *
- * The decoration stays bunting whatever `theme` says. `CONFETTI_CANDLES` and
- * `FLORAL_BORDER` have no drawing yet, and a plain white box for a memorial
- * would read as a widget that failed to load.
+ * `CONFETTI_CANDLES` gets its own drawing (`birthday-card.tsx`, 2026-08-26);
+ * every other theme stays bunting — `FLORAL_BORDER` has no drawing yet, and a
+ * plain white box for a memorial would read as a widget that failed to load.
  */
 export function EventWidget({ occasion, moreCount = 0 }: EventWidgetProps) {
   const { t } = useTranslation();
@@ -116,6 +117,19 @@ export function EventWidget({ occasion, moreCount = 0 }: EventWidgetProps) {
 
   const countdown = countdownLabel(occasion.daysUntil);
   const when = formatFullDate(occasion.nextOccurrence);
+
+  if (occasion.theme === 'CONFETTI_CANDLES') {
+    const countdownText = t(countdown.key, countdown.values);
+    return (
+      <BirthdayCard
+        tag={t('home.occasion.birthdayTag')}
+        title={occasionLabel(occasion)}
+        subtitle={when !== null ? `${when} · ${countdownText}` : countdownText}
+        more={moreCount > 0 ? t('home.occasion.more', { count: moreCount }) : null}
+        avatarName={occasion.members[0]?.displayName}
+      />
+    );
+  }
 
   return (
     <View
