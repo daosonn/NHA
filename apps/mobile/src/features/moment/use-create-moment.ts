@@ -46,6 +46,10 @@ export function useCreateMoment() {
     },
 
     onSuccess: (post) => {
+      // Dòng chung của Home gộp mọi nhà → bài mới tới bất kỳ nhà nào cũng làm
+      // nó stale. (Bài riêng tư không vào feed nào, invalidate cũng vô hại.)
+      void queryClient.invalidateQueries({ queryKey: queryKeys.myFeed() });
+
       // Only the families this post actually reached have a stale feed. A
       // private post reaches none, and invalidating everything would refetch
       // feeds that cannot have changed.

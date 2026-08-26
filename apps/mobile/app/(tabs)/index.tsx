@@ -19,7 +19,7 @@ import { useActiveFamily } from '../../src/features/family/active-family';
 import { useFamilies } from '../../src/features/family/use-families';
 import { takePendingInvite } from '../../src/features/family/pending-invite';
 import { useMemberLookup } from '../../src/features/family/use-member-for-user';
-import { useFamilyFeed } from '../../src/features/feed/use-family-feed';
+import { useMyFeed } from '../../src/features/feed/use-my-feed';
 import { useSetReaction } from '../../src/features/feed/use-post';
 import { useAlbums } from '../../src/features/album/use-albums';
 import { useSpecialDates } from '../../src/features/ai/use-special-dates';
@@ -83,7 +83,9 @@ export default function HomeScreen() {
   }, [router]);
 
   const { data: families, isPending, isError, refetch } = useFamilies();
-  const feed = useFamilyFeed(familyId);
+  // Feed là của CHUNG mọi nhà mình thuộc về (Sơn chốt 26/08) — nhà đang chọn
+  // chỉ còn điều khiển cây, dịp sắp tới, tra tên tác giả; không lọc feed nữa.
+  const feed = useMyFeed();
   const memberFor = useMemberLookup();
   const { data: occasions } = useSpecialDates(familyId);
 
@@ -236,7 +238,19 @@ export default function HomeScreen() {
           if (feed.hasNextPage && !feed.isFetchingNextPage) void feed.fetchNextPage();
         }}
         ListEmptyComponent={
-          feed.isPending ? null : (
+          feed.isPending ? null : feed.isError ? (
+            // Feed tải HỎNG khác với feed TRỐNG: 404/500/mất mạng mà hiện
+            // "chưa có bài" là nói sai với người đọc (Sơn dính 26/08 khi API
+            // cũ chưa có /me/feed). Nói thật + cho thử lại.
+            <EmptyState
+              renderIcon={({ size, color }) => (
+                <TriangleAlert size={size} color={color} strokeWidth={2} />
+              )}
+              title={t('home.loadFailed')}
+              actionLabel={t('home.retry')}
+              onActionPress={() => void feed.refetch()}
+            />
+          ) : (
             <EmptyState
               cat
               renderIcon={({ size, color }) => (

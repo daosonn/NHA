@@ -87,6 +87,18 @@ type FeedPage = { items: PostDetail[]; nextCursor: string | null };
 type FeedData = { pages: FeedPage[]; pageParams: unknown[] };
 
 /**
+ * Mọi khoá feed đang có trong cache: feed theo nhà `['families', id, 'posts']`
+ * (+ biến thể video-picker) và dòng chung của Home `['me', 'feed']`. Cùng một
+ * bài có thể nằm ở nhiều feed — trái tim phải chạm đủ.
+ */
+function isFeedKey(queryKey: readonly unknown[]): boolean {
+  return (
+    (queryKey[0] === 'families' && queryKey[2] === 'posts') ||
+    (queryKey[0] === 'me' && queryKey[1] === 'feed')
+  );
+}
+
+/**
  * Sửa một bài trong mọi trang của mọi feed đang nằm trong cache.
  *
  * Trả về ảnh chụp trước khi sửa để `onError` hoàn nguyên. Quét theo tiền tố
@@ -101,7 +113,7 @@ function patchFeeds(
   const snapshots: [readonly unknown[], FeedData][] = [];
 
   const entries = queryClient.getQueriesData<FeedData>({
-    predicate: ({ queryKey }) => queryKey[0] === 'families' && queryKey[2] === 'posts',
+    predicate: ({ queryKey }) => isFeedKey(queryKey),
   });
 
   for (const [queryKey, data] of entries) {

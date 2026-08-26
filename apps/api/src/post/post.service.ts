@@ -236,6 +236,43 @@ export class PostService {
     };
   }
 
+  /**
+   * Dòng thời gian CHUNG của một người: bài đã chia sẻ tới BẤT KỲ nhà nào họ
+   * đang là thành viên, mới nhất trước, phân trang cursor (Sơn chốt 26/08:
+   * Home không lọc theo nhà đang chọn — đứng ở nhà nào cũng thấy cả).
+   *
+   * Một bài đăng vào nhiều nhà chỉ xuất hiện MỘT lần: truy vấn trên bảng Post
+   * với `families.some`, không phải hợp các feed từng nhà. Quyền xem vẫn là
+   * "thành viên thì thấy hết" của từng nhà — không có nhà thì không có gì.
+   */
+  async listMyFeed(
+    userId: string,
+    query: { limit?: number; cursor?: string },
+  ): Promise<FamilyFeed> {
+    const limit = query.limit ?? FEED_DEFAULT_LIMIT;
+    const memberships = await this.prisma.familyMember.findMany({
+      where: { userId },
+      select: { familyId: true },
+    });
+    const familyIds = memberships.map((m) => m.familyId);
+    if (familyIds.length === 0) {
+      return { items: [], nextCursor: null };
+    }
+
+    const posts = await this.prisma.post.findMany({
+      where: { families: { some: { familyId: { in: familyIds } } } },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: limit + 1,
+      ...(query.cursor && { cursor: { id: query.cursor }, skip: 1 }),
+      include: this.detailInclude(userId),
+    });
+    const page = posts.slice(0, limit);
+    return {
+      items: page.map((post) => this.toDetail(userId, post)),
+      nextCursor: posts.length > limit ? page[page.length - 1].id : null,
+    };
+  }
+
   /** Visible to the author and to members of families it is shared to. */
   async getPost(userId: string, postId: string): Promise<PostDetail> {
     const post = await this.prisma.post.findUnique({

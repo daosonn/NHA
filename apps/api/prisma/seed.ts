@@ -7,7 +7,7 @@ import {
   PostType,
   RelationshipType,
 } from '../src/generated/prisma/enums';
-import { materialiseSeedImages, type SeedImage } from './seed-images';
+import { materialiseSeedImages, type SeedMedia } from './seed-images';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -20,6 +20,20 @@ const prisma = new PrismaClient({
 
 // Shared login password for every seeded account (dev/test only).
 const SEED_PASSWORD = 'password-123';
+
+/** Extra accounts for testing with more than two people signed in. */
+const DEMO_ACCOUNTS = [
+  { email: 'sato@example.com', name: '佐藤 健' },
+  { email: 'suzuki.misaki@example.com', name: '鈴木 美咲' },
+  { email: 'takahashi@example.com', name: '高橋 大輔' },
+  { email: 'tanaka@example.com', name: '田中 由紀' },
+  { email: 'ito@example.com', name: '伊藤 翔' },
+  { email: 'watanabe@example.com', name: '渡辺 彩' },
+  { email: 'nakamura@example.com', name: '中村 陸' },
+  { email: 'kobayashi@example.com', name: '小林 花音' },
+  { email: 'kato@example.com', name: '加藤 誠' },
+  { email: 'yoshida@example.com', name: '吉田 結衣' },
+];
 
 async function upsertUser(
   email: string,
@@ -115,23 +129,29 @@ async function ensurePost(
  * photo — only the size has to catch up.
  */
 async function ensureMedia(
-  image: SeedImage,
+  item: SeedMedia,
   uploaderUserId: string,
   postId: string,
 ): Promise<{ id: string }> {
   const existing = await prisma.media.findFirst({
-    where: { storageKey: image.storageKey },
+    where: { storageKey: item.storageKey },
     select: { id: true },
   });
   if (existing) {
     await prisma.media.update({
       where: { id: existing.id },
-      data: { mimeType: image.mimeType, sizeBytes: image.sizeBytes, postId },
+      data: { mimeType: item.mimeType, sizeBytes: item.sizeBytes, postId },
     });
     return existing;
   }
   return prisma.media.create({
-    data: { ...image, uploaderUserId, postId },
+    data: {
+      storageKey: item.storageKey,
+      mimeType: item.mimeType,
+      sizeBytes: item.sizeBytes,
+      uploaderUserId,
+      postId,
+    },
     select: { id: true },
   });
 }
@@ -365,24 +385,44 @@ async function main(): Promise<void> {
     });
   }
 
-  // Photos: files first (per machine), then the rows that point at them.
-  const images = await materialiseSeedImages();
-  const mediaIds: string[] = [];
+  // Media: files first (per machine), then the rows that point at them.
+  const seeded = await materialiseSeedImages();
+  const photoIds: string[] = [];
   const postsForPhotos = [cakePost, hakonePost, gardenPost, newYearPost];
-  for (const [index, image] of images.entries()) {
-    // Two photos per post, in order, so the first posts are never empty.
-    const target =
-      postsForPhotos[Math.floor(index / 2) % postsForPhotos.length];
-    const media = await ensureMedia(image, hanako.id, target.id);
-    mediaIds.push(media.id);
+  let photoIndex = 0;
+  for (const item of seeded) {
+    if (item.kind === 'image') {
+      // Two photos per post, in order, so the first posts are never empty.
+      const target =
+        postsForPhotos[Math.floor(photoIndex / 2) % postsForPhotos.length];
+      const media = await ensureMedia(item, hanako.id, target.id);
+      photoIds.push(media.id);
+      photoIndex += 1;
+      continue;
+    }
+    // A clip gets its own post: a video in the feed is the thing being
+    // shared, not an attachment to someone else's caption.
+    const clipPost = await ensurePost(taro.id, yamada.id, {
+      type: PostType.POST,
+      content: `家族の動画 ${item.storageKey.slice(-7, -4)}`,
+    });
+    await ensureMedia(item, taro.id, clipPost.id);
   }
 
   await ensureAlbum(
     hanako.id,
     '家族のアルバム',
     '山田家のふだんの写真',
-    mediaIds,
+    photoIds,
   );
+
+  // Ten standalone accounts, so several people can be logged in at once and
+  // the invite/join flow has real strangers to test with. Deliberately in no
+  // family: joining via an invite code is the thing worth exercising, and
+  // dropping ten extra nodes into 山田家 would wreck the tree demo.
+  for (const { email, name } of DEMO_ACCOUNTS) {
+    await upsertUser(email, name, passwordHash);
+  }
 
   console.log('Seed complete:', {
     users: await prisma.user.count(),
@@ -396,6 +436,10 @@ async function main(): Promise<void> {
   });
   console.log(
     `Logins: hanako@example.com, taro@example.com / ${SEED_PASSWORD}`,
+  );
+  console.log(
+    `Plus ${DEMO_ACCOUNTS.length} accounts in no family (same password): ` +
+      DEMO_ACCOUNTS.map((a) => a.email.split('@')[0]).join(', '),
   );
   console.log('Invite codes: YAMADA22 (山田家), SUZUKI22 (鈴木家)');
 }
