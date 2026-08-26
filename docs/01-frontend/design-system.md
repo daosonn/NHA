@@ -198,15 +198,18 @@ Home · Omoide · **+** · AI · Profile.
   `full` the two caps are concentric enough that the clearance is an even 6px
   the whole way round, and no padding had to change to get it.
 - Inactive: icon and label `text.secondary`, label medium.
-- The centre is a 50px `coral.primary` circle, vertically centred and
-  unlabelled. **It is the family tree now** (`Network` glyph — the strip's
-  own lesson: structure, not "more people"), opening `/family` as a pushed
-  screen. It was the compose **+** until 2026-08-26 — owner's call,
-  **deviating from the mockups, ratify or revert**: Home showed two +
-  buttons meaning different things (the strip's "new group", the bar's
-  "new post"), and the misread was always "add family". Posting moved to
-  the **compose bar at the top of Home** (`home/compose-bar.tsx`: pen,
-  "Share today's moment…", a 36px coral disc; one tap opens `/new`). The
+- **There is no raised centre button any more** (owner's calls, both
+  2026-08-26, **deviating from the mockups — ratify or revert**). The
+  mockups' centre was a raised coral + that posted, and it kept being
+  misread as "add family" beside the strip's own +. It became the family
+  tree for a few hours, still as a raised disc — and then the disc itself
+  went: one slot dressed as a button among four destinations reads as an
+  action, and the tree is not an action. The bar is now **five ordinary
+  slots** — Home · Omoide · **Family tree** (`Network` glyph, a real tab,
+  label 家系図) · AI · Profile — all sharing the same pill, pop and label
+  treatment. Posting moved to the **compose bar at the top of Home**
+  (`home/compose-bar.tsx`: pen, "Share today's moment…", a 36px coral
+  disc; one tap opens `/new`, which keeps its route but owns no slot). The
   known cost, recorded: posting from another tab is now two taps (via
   Home) instead of one.
 
@@ -267,12 +270,12 @@ standing permanently open beside a 600px column spends most of a third of a
 on the first screenshot of it. So the resting state is glyphs only, and hover
 reveals the words.
 
-|             | Closed          | Open (hover)                        |
-| ----------- | --------------- | ----------------------------------- |
-| Width       | 76 (a pill)     | 240                                 |
-| Brand       | mark only, 26px | mark only                           |
-| Family tree | 48px coral disc | coral pill, label right of the mark |
-| Destination | 48px glyph      | glyph, then label                   |
+|                                                                     | Closed          | Open (hover)      |
+| ------------------------------------------------------------------- | --------------- | ----------------- |
+| Width                                                               | 76 (a pill)     | 240               |
+| Brand                                                               | mark only, 26px | mark only         |
+| (no disc — five plain rows since 2026-08-26; compose lives on Home) |                 |
+| Destination                                                         | 48px glyph      | glyph, then label |
 
 Three things make opening read as one object moving rather than two states
 swapping:

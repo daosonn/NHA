@@ -6,10 +6,12 @@ import { useSession } from '../../src/features/auth/session';
 import { useLayout } from '../../src/theme';
 
 /**
- * Home · Omoide · + · AI · Profile.
+ * Home · Omoide · Family tree · AI · Profile.
  *
- * Screen order here is the order they appear in the bar. The family tree is
- * deliberately absent — it is reached from the group strip on Home.
+ * Screen order here is the order they appear in the bar. The tree became an
+ * ordinary tab on 2026-08-26 (owner's call — it had been the strip on Home,
+ * then briefly the bar's raised centre disc). `new` keeps its route for the
+ * compose screen but draws no slot: posting starts from Home's compose bar.
  */
 export default function TabsLayout() {
   const { status } = useSession();
@@ -33,9 +35,11 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="omoide" />
-      <Tabs.Screen name="new" />
+      <Tabs.Screen name="family" />
       <Tabs.Screen name="ai" />
       <Tabs.Screen name="profile" />
+      {/* A route with no slot — see the layout docstring. */}
+      <Tabs.Screen name="new" />
     </Tabs>
   );
 }

@@ -68,11 +68,11 @@ app/                      expo-router routes — file = route
     _layout.tsx           bottom nav (below 1024px), 5 tabs
     index.tsx             Home
     omoide.tsx            Omoide — shared album books
-    new.tsx               New moment
+    family.tsx            Family tree — a tab since 2026-08-26
+    new.tsx               New moment — route without a bar slot (Home's compose bar)
     ai.tsx                AI suggestions
     profile.tsx           My profile
   create-family.tsx       Create or join — the way out of an empty account
-  family/index.tsx        Family tree — pushed, not a tab
   family/invitations.tsx  Sent invitations — resend / cancel, from the tree's ✈
   family/new.tsx          Start a second family group, from the strip's +
   member/[id].tsx         Life Profile (Timeline / Album / Memo)
@@ -96,15 +96,15 @@ scripts/
   check-i18n.mjs          `pnpm --filter mobile check:i18n`
 ```
 
-The tab destinations are **Home · Omoide · AI · Profile**, with the
-**family tree on the bar's centre button** (owner's call 2026-08-26,
-deviating from the mockups' compose + — ratify or revert, see
-`design-system.md` § Bottom navigation). The tree is still _not_ a tab —
-the centre pushes `/family` above the tabs. Posting starts from the
-compose bar pinned at the top of Home (`home/compose-bar.tsx`) → `/new`,
-which keeps its tab route but no bar slot of its own. The group strip
-moved to the family screen with this change; its 2026-08-21 redraw story
-stays in `design-system.md` § Group strip.
+The tabs are **Home · Omoide · Family tree · AI · Profile** — five equal
+slots (owner's calls 2026-08-26, deviating from the mockups' raised
+compose + — ratify or revert, see `design-system.md` § Bottom
+navigation). The family tree **is a tab now**: `app/(tabs)/family.tsx`,
+selected state and sliding pill like any other, path still `/family`.
+Posting starts from the compose bar pinned at the top of Home
+(`home/compose-bar.tsx`) → `/new`, which keeps its tab route but draws no
+bar slot. The group strip moved to the family screen with this change;
+its 2026-08-21 redraw story stays in `design-system.md` § Group strip.
 
 **The five destinations are drawn by two components, mounted at two
 different levels.** `BottomNav` is the tab navigator's own `tabBar`, so it

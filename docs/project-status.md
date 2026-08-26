@@ -33,15 +33,18 @@ screens.
   the mockups, ratify or revert.** The diagnosis: Home showed two `+`
   buttons meaning different things — the strip's "new group" beside the
   bar's unlabelled "new post" — and the bar's + kept being read as "add
-  family". The swap: the bar's centre disc is now the **family tree**
-  (`Network` glyph, pushes `/family`; same change mirrored on the desktop
-  rail's coral disc), Home's pinned row is now a **compose bar** ("Share
-  today's moment…" → `/new`), and the **group strip left Home** for the
-  family screen, where switching lives with the trees. Two recorded costs:
-  posting from another tab is two taps now (via Home), and the family
-  SWITCHER is no longer above the feed — switching means the tree screen.
+  family". The swap, refined the same day: the tree first took the centre
+  as a raised coral disc, then the disc itself went — a slot dressed as a
+  button among four destinations reads as an action — so the bar is now
+  **five equal slots** with the **family tree an ordinary tab**
+  (`app/(tabs)/family.tsx`, `Network` glyph, selected pill like the rest;
+  the desktop rail matches with five plain rows and no disc). Home's
+  pinned row is a **compose bar** ("Share today's moment…" → `/new`), and
+  the **group strip left Home** for the family tab, where switching lives
+  with the trees. Two recorded costs: posting from another tab is two taps
+  now (via Home), and the family SWITCHER is no longer above the feed.
   `/new` keeps its tab route (no bar slot). Verified: tsc, prettier,
-  check:i18n (770 keys); not looked at on a device.
+  check:i18n (771 keys); not looked at on a device.
 
 - **Backend infrastructure, not screens (2026-08-26).** The database moved out
   from under everyone in PR #51: development runs on **shared Neon Cloud**, so

@@ -2,7 +2,6 @@ import { BlurView } from 'expo-blur';
 // expo-router 57 vendors react-navigation; `expo-router/js-tabs` is the
 // non-deprecated entry point for the JS tab navigator and its types.
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
-import { useRouter } from 'expo-router';
 import { History, House, Network, Sparkles, UserRound } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -31,9 +30,6 @@ const BASE = {
   height: 68,
   itemHeight: 52,
   icon: 22,
-  /** The centre action carries no label, so it is sized as a circle. */
-  compose: 50,
-  composeIcon: 24,
   label: 10,
 };
 
@@ -78,8 +74,6 @@ function metrics(width: number) {
     height: Math.round(BASE.height * scale),
     itemHeight: Math.round(BASE.itemHeight * scale),
     icon: Math.round(BASE.icon * scale),
-    compose: Math.round(BASE.compose * scale),
-    composeIcon: Math.round(BASE.composeIcon * scale),
     label: Math.round(BASE.label * scale * 10) / 10,
   };
 }
@@ -89,11 +83,14 @@ type Metrics = ReturnType<typeof metrics>;
 export type TabConfig = { labelKey: string; icon: LucideIcon };
 
 /**
- * Home · Omoide · 🌳 · AI · Profile — the four tab destinations plus the
- * family tree in the centre (owner's call, 2026-08-26; the mockups' centre
- * was a + that posted, but two + buttons on one Home screen — the strip's
- * "new group" and the bar's "new post" — kept being read as the same thing.
- * Posting moved to the compose bar at the top of Home).
+ * Home · Omoide · Family tree · AI · Profile — five ordinary slots (owner's
+ * calls, both 2026-08-26: the mockups' centre was a raised + that posted,
+ * misread as "add family" beside the strip's own +; it became the tree, and
+ * later the same day the raised disc itself went — one slot dressed as a
+ * button among four destinations kept reading as an action, so the tree is
+ * a destination like the others. Posting starts from Home's compose bar.
+ * `Network`, not `UsersRound` — the strip's old lesson: structure, not
+ * "more people".)
  *
  * Exported because `side-nav.tsx` draws the same destinations turned vertical.
  * One list, so the two navigations cannot come to disagree about what the app
@@ -102,53 +99,14 @@ export type TabConfig = { labelKey: string; icon: LucideIcon };
 export const TABS: Record<string, TabConfig> = {
   index: { labelKey: 'nav.tab.home', icon: House },
   omoide: { labelKey: 'nav.tab.omoide', icon: History },
+  family: { labelKey: 'nav.tab.family', icon: Network },
   ai: { labelKey: 'nav.tab.ai', icon: Sparkles },
   profile: { labelKey: 'nav.tab.profile', icon: UserRound },
 };
 
 /**
- * The tab route whose bar slot the centre button occupies. The compose
- * screen still lives at `/new` — it is reached from Home's compose bar —
- * but its slot on the bar now opens the family tree.
- */
-export const CENTER_ROUTE = 'new';
-
-/** Its own component so the press hook is not called inside a `.map()`. */
-function TreeButton({ label, onPress, m }: { label: string; onPress: () => void; m: Metrics }) {
-  const press = usePressScale({
-    background: { rest: colors.coral.primary, pressed: colors.coral.dark },
-  });
-
-  return (
-    <AnimatedPressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPressIn={press.onPressIn}
-      onPressOut={press.onPressOut}
-      style={[
-        {
-          width: m.compose,
-          height: m.compose,
-          marginHorizontal: 4,
-          borderRadius: radius.full,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        press.style,
-      ]}
-    >
-      {/* `Network`, not `UsersRound` — the strip's old lesson: beside rows of
-          faces "more people" says nothing, structure does. */}
-      <Network size={m.composeIcon} color={colors.text.white} strokeWidth={2.3} />
-    </AnimatedPressable>
-  );
-}
-
-/**
- * One destination. `flex: 1`, so the four share whatever the bar has left
- * after the compose circle — the row keeps its rhythm at any width without
- * anybody choosing a slot size.
+ * One destination. `flex: 1`, so the five share the bar evenly — the row
+ * keeps its rhythm at any width without anybody choosing a slot size.
  */
 function Slot({
   label,
@@ -242,7 +200,6 @@ function Slot({
  */
 export function BottomNav({ state, navigation }: BottomTabBarProps) {
   const { t } = useTranslation();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
@@ -317,19 +274,8 @@ export function BottomNav({ state, navigation }: BottomTabBarProps) {
             }
           };
 
-          if (route.name === CENTER_ROUTE) {
-            return (
-              <TreeButton
-                key={route.key}
-                label={t('home.openFamilyTree')}
-                // A pushed screen, not the tab under this slot — the compose
-                // screen keeps the route, the tree takes the button.
-                onPress={() => router.push('/family')}
-                m={m}
-              />
-            );
-          }
-
+          // `new` reaches here and draws nothing: the compose screen keeps
+          // its route (Home's compose bar opens it) but owns no slot.
           const config = TABS[route.name];
           if (config === undefined) return null;
 

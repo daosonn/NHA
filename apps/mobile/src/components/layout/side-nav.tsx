@@ -1,6 +1,5 @@
 import { BlurView } from 'expo-blur';
 import { usePathname, useRouter } from 'expo-router';
-import { Network } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -29,10 +28,11 @@ import { TABS } from './bottom-nav';
  */
 const DESTINATIONS: readonly {
   name: keyof typeof TABS;
-  href: '/' | '/omoide' | '/ai' | '/profile';
+  href: '/' | '/omoide' | '/family' | '/ai' | '/profile';
 }[] = [
   { name: 'index', href: '/' },
   { name: 'omoide', href: '/omoide' },
+  { name: 'family', href: '/family' },
   { name: 'ai', href: '/ai' },
   { name: 'profile', href: '/profile' },
 ];
@@ -283,20 +283,9 @@ export function SideNav() {
           <BrandMark size={26} />
         </View>
 
-        {/* The family tree, mirroring the bottom bar's centre (owner's call,
-            2026-08-26 — it was the compose +; posting now starts from Home's
-            compose bar, which desktop shows too). */}
-        <Row
-          label={t('home.familyTree')}
-          icon={Network}
-          tint={colors.text.white}
-          background={colors.coral.primary}
-          strokeWidth={2.3}
-          accessibilityRole="button"
-          open={open}
-          onPress={() => router.navigate('/family')}
-        />
-
+        {/* No raised disc any more (owner's calls, 2026-08-26): compose moved
+            to Home's bar, and the family tree is an ordinary destination —
+            the same five rows the bottom bar has as slots. */}
         <View style={{ gap: 4 }}>
           {DESTINATIONS.map(({ name, href }) => {
             const config = TABS[name];

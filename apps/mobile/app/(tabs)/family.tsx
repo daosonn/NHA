@@ -11,7 +11,7 @@ import type { PositionedNode } from '../../src/components/family/tree-layout';
 import { GroupStrip, type FamilyGroupSummary } from '../../src/components/home/group-strip';
 import { AppHeader } from '../../src/components/layout/app-header';
 import { ContentColumn } from '../../src/components/layout/content-column';
-import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
+import { ScreenTitle } from '../../src/components/layout/header-slots';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { SectionHeader } from '../../src/components/ui/section-header';
 import { Text } from '../../src/components/ui/text';
@@ -34,7 +34,7 @@ import {
   type FamilyTree as FamilyTreePayload,
   type InvitationSummary,
 } from '../../src/lib/api';
-import { colors, radius } from '../../src/theme';
+import { colors, radius, useLayout } from '../../src/theme';
 
 /**
  * Every group, not the first three: on this screen the strip is the switch
@@ -49,12 +49,15 @@ function toStripGroups(families: FamilySummary[]): FamilyGroupSummary[] {
 }
 
 /**
- * The family tree is a pushed screen, not a tab: it is reached by tapping the
- * group strip on Home, and it is a way *into* Life Profiles rather than a
- * destination of its own.
+ * The family tree, a tab since 2026-08-26 (owner's call — it lived behind
+ * Home's group strip, then briefly behind a raised centre disc on the bar;
+ * now it is an ordinary destination beside Home and Omoide). Still the way
+ * *into* Life Profiles, and still the screen where switching families lives:
+ * the strip at the top switches trees, since it left Home the same day.
  */
 export default function FamilyTreeScreen() {
   const { t } = useTranslation();
+  const { expanded } = useLayout();
   const router = useRouter();
   const toast = useToast();
   const { user } = useSession();
@@ -198,8 +201,8 @@ export default function FamilyTreeScreen() {
 
   return (
     <View className="flex-1 bg-page">
+      {/* A tab since 2026-08-26 — no back arrow; the bar below is the way out. */}
       <AppHeader
-        left={<BackButton />}
         center={<ScreenTitle title={t('family.title')} />}
         right={
           /* Lời mời đã gửi sống sau nút này (badge = số đang chờ) — banner
@@ -248,7 +251,9 @@ export default function FamilyTreeScreen() {
         }
       />
 
-      <View className="flex-1 gap-lg px-xl pb-xl pt-lg">
+      {/* Below 1024px the floating bar hangs over the canvas — the tree's own
+          bottom controls (hint pill, add button) need to sit clear of it. */}
+      <View className="flex-1 gap-lg px-xl pt-lg" style={{ paddingBottom: expanded ? 20 : 104 }}>
         {families !== undefined && families.length > 0 && (
           /* The canvas below keeps the whole window — it is a map, and more
              room is more tree. The strip is not a map: capped, it stays with
