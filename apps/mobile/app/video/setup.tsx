@@ -4,6 +4,7 @@ import { BookOpen, Music, PenLine } from 'lucide-react-native';
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, TextInput, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { AddPill } from '../../src/components/ai/add-pill';
 import { InlineError } from '../../src/components/ai/inline-error';
@@ -13,6 +14,7 @@ import { SelectRow } from '../../src/components/ai/select-row';
 import { AppHeader } from '../../src/components/layout/app-header';
 import { contentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
+import { useSlidingThumb } from '../../src/components/motion/sliding-thumb';
 import { Avatar } from '../../src/components/ui/avatar';
 import { AvatarStack } from '../../src/components/ui/avatar-stack';
 import { Button } from '../../src/components/ui/button';
@@ -51,6 +53,7 @@ export default function VideoSetupScreen() {
   const typeface = useTypeface('medium');
   const aiLocale = useAiLocale();
   const [memberSheet, setMemberSheet] = useState(false);
+  const frameThumb = useSlidingThumb(draft.aspect);
 
   const family = useQuery({
     queryKey: queryKeys.family(familyId ?? 'none'),
@@ -226,7 +229,8 @@ export default function VideoSetupScreen() {
               {t('video.frame')}
             </Text>
             <View style={{ flex: 1 }} />
-            {/* segmented 9:16 | 16:9 — nút trắng nổi trong rãnh xám */}
+            {/* segmented 9:16 | 16:9 — MỘT nút trắng trượt trong rãnh xám
+                (segmented-pill, useSlidingThumb) thay vì mỗi nửa tự bật nền */}
             <View
               style={{
                 flexDirection: 'row',
@@ -235,12 +239,28 @@ export default function VideoSetupScreen() {
                 backgroundColor: colors.background.subtle,
               }}
             >
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  {
+                    position: 'absolute',
+                    left: 0,
+                    top: 3,
+                    height: 30,
+                    borderRadius: radius.full,
+                    backgroundColor: colors.background.card,
+                    boxShadow: '0 1px 3px rgba(24,24,27,0.12)',
+                  },
+                  frameThumb.style,
+                ]}
+              />
               {(['portrait', 'landscape'] as const).map((a) => {
                 const selected = draft.aspect === a;
                 return (
                   <Pressable
                     key={a}
                     onPress={() => update({ aspect: a })}
+                    onLayout={frameThumb.itemLayout(a)}
                     accessibilityRole="button"
                     accessibilityState={{ selected }}
                     style={{
@@ -248,8 +268,6 @@ export default function VideoSetupScreen() {
                       height: 30,
                       justifyContent: 'center',
                       borderRadius: radius.full,
-                      backgroundColor: selected ? colors.background.card : 'transparent',
-                      boxShadow: selected ? '0 1px 3px rgba(24,24,27,0.12)' : undefined,
                     }}
                   >
                     <Text
