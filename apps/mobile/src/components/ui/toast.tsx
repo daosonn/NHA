@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, elevation, radius, spacing } from '../../theme';
 import { exit, toastIn } from '../../theme/motion';
+import { CatPeek } from '../motion/cats';
 import { Text } from './text';
 
 /** Long enough to read a short sentence, short enough not to be in the way. */
@@ -92,6 +93,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             bottom: insets.bottom + 90,
           }}
         >
+          {/* CatPeek was drawn to peek over an edge, and the toast's top edge
+              is exactly that — it sits behind the bar (rendered first), so
+              the bar hides its flat bottom. A "vừa xong" moment per the kit's
+              cat rule; the failure bar stays plain, a cat next to "that did
+              not save" reads as not taking it seriously. */}
+          {toast.tone === 'success' && (
+            // Chỉ ~4px của đáy mèo nằm sau bar — sâu hơn là mắt nó tụt
+            // xuống dưới mép (viewBox của CatPeek còn 8px đệm trên đầu).
+            <View style={{ position: 'absolute', top: -40, right: 16 }} pointerEvents="none">
+              <CatPeek size={86} />
+            </View>
+          )}
+
           <View
             accessibilityRole="alert"
             style={[
