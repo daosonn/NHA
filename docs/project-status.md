@@ -28,6 +28,27 @@ screens.
 
 ## Current Focus
 
+- **The timeline finally has an editor (2026-08-26,
+  `feature/motion-system`).** The Life Event API has been complete since
+  1.6.8 (2026-08-19) and nothing in the app ever wrote to it — the
+  timeline was read-only and `TimelineList.onAddEvent` sat unconnected
+  with a comment saying so. Per the owner's mockup
+  (`mockups/edit-timeline-view-edit.html`): your own Timeline tab gains a
+  "Your journey · Edit" row opening `app/profile/edit-timeline.tsx` — a
+  **staged** editor (Cancel · Edit timeline · Done) whose banner promises
+  "changes are only visible to you until Done" and whose code keeps it:
+  drafts are local, Done commits the batch (removes → edits → adds,
+  sequential; a partial failure reseeds from the server and asks for Done
+  again), Cancel discards. Entries auto-sort by date; new ones render
+  dimmed as "Draft · not published yet"; the form takes `1998` or a full
+  date. Spec + two deliberate limits (no photos in the editor — media is
+  fixed at creation; own profile only — the wiki/placeholder question
+  stays open) in `design-system.md` § Timeline editor. Verified: tsc,
+  prettier, check:i18n (765 keys), and the exact requests Done emits
+  replayed against the live API (create year-only and full, patch moving a
+  date, list re-orders, delete; throwaway account, rows cleaned up). The
+  screen itself has not been tapped through in a browser yet.
+
 - **The ghost-member bug: an invitation could not be taken back
   (2026-08-26, `feature/motion-system`).** Sending an invite reserves the
   spot (placeholder + edge + code, one transaction) and the server has had

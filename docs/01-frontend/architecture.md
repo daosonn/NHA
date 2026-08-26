@@ -76,6 +76,7 @@ app/                      expo-router routes — file = route
   family/invitations.tsx  Sent invitations — resend / cancel, from the tree's ✈
   family/new.tsx          Start a second family group, from the strip's +
   member/[id].tsx         Life Profile (Timeline / Album / Memo)
+  profile/edit-timeline.tsx  Staged editor for your own timeline (Cancel/Done)
   post/[id].tsx           Post detail — comments and reactions
   ai/gifts.tsx            Gift ideas — pushed from the AI tab
   invite/[code].tsx       Invitation — what an invite link opens

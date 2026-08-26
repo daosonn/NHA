@@ -140,6 +140,7 @@ export default function ProfileScreen() {
           memberId={memberId}
           ownProfile
           onEdit={() => router.push('/profile/edit')}
+          onEditTimeline={() => router.push('/profile/edit-timeline')}
           onChangeAvatar={() => void pickAvatar()}
           uploadingAvatar={updateAvatar.isPending}
           onAddMemo={() =>

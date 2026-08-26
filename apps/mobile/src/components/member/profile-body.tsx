@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import type { MemberProfile } from '../../features/member/member-profile';
@@ -10,8 +10,10 @@ import { useMemberGallery } from '../../features/member/use-member-gallery';
 import { useDeleteMemo, useMemberMemos, useMyMemos } from '../../features/member/use-memos';
 import { families, type MemoDetail } from '../../lib/api';
 import { queryKeys } from '../../lib/query-keys';
+import { colors } from '../../theme';
 import { enter, swapIn } from '../../theme/motion';
 import { SegmentedTabs } from '../ui/segmented-tabs';
+import { Text } from '../ui/text';
 import { AlbumGrid } from './album-grid';
 import { MemoActionsSheet } from './memo-actions-sheet';
 import { MemoList } from './memo-list';
@@ -30,6 +32,12 @@ export type ProfileBodyProps = {
   /** True on your own Profile tab, which reads the `/me` routes. */
   ownProfile?: boolean;
   onEdit?: () => void;
+  /**
+   * Opens the staged timeline editor (mockup "Edit timeline"). Only the own
+   * profile passes it — the same 2026-08-19 editability rule as `onEdit`;
+   * a placeholder's wiki-editable timeline is the open product question.
+   */
+  onEditTimeline?: () => void;
   onChangeAvatar?: () => void;
   uploadingAvatar?: boolean;
   onAddMemo?: () => void;
@@ -57,6 +65,7 @@ export function ProfileBody({
   memberId,
   ownProfile = false,
   onEdit,
+  onEditTimeline,
   onChangeAvatar,
   uploadingAvatar,
   onAddMemo,
@@ -133,12 +142,39 @@ export function ProfileBody({
       </Animated.View>
 
       {tab === 'timeline' && (
-        <Animated.View entering={swapIn}>
+        <Animated.View entering={swapIn} style={{ gap: 12 }}>
+          {/* The mockup's "Dad's journey · Edit" row — drawn only where the
+              editor is offered, so other people's pages are untouched. */}
+          {onEditTimeline !== undefined && events.length > 0 && (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'baseline',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Text serif weight="bold" style={{ fontSize: 22, lineHeight: 28 }}>
+                {t('member.journeyOwn')}
+              </Text>
+              <Pressable
+                onPress={onEditTimeline}
+                accessibilityRole="button"
+                accessibilityLabel={t('member.editTimeline.title')}
+                hitSlop={8}
+              >
+                <Text variant="caption" weight="semibold" color={colors.coral.dark}>
+                  {t('member.editTimelineLink')}
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
           <TimelineList
             events={events}
             loading={timeline.isPending && (ownProfile || memberId !== null)}
             failed={timeline.isError}
             onRetry={() => void timeline.refetch()}
+            onAddEvent={onEditTimeline}
           />
         </Animated.View>
       )}

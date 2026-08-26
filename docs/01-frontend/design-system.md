@@ -656,6 +656,34 @@ The member sheet is the second door to the same cancel: long-press a
 pending node and the destructive action reads "Cancel the invitation"
 instead of Remove.
 
+### Timeline editor
+
+Your own Timeline tab carries a serif "Your journey" heading with an
+**Edit** link (mockup `edit-timeline-view-edit.html`, 2026-08-26 — drawn
+locally in `mockups/`, distilled here). It opens a pushed screen whose
+header is **Cancel · Edit timeline · Done**, and whose whole point is that
+it is **staged**: the banner under the header says "Entries sort by year
+automatically. Changes are only visible to you until Done", and the screen
+keeps that promise — edits live in a local draft, and Done sends the batch
+(deletes, then edits, then additions). Cancel walks away and the drafts die
+with the screen.
+
+The pieces: a dashed **"Add an entry"** tile above the list; each entry as
+a white card on the same rail-and-dot thread the read view draws, with a
+serif year chip (`#FEF3F1`/`coral.deep`), pencil and trash at its top
+right; a new, uncommitted entry rendered dimmed with a gray year chip and
+"Draft · not published yet". The entry form is a sheet: a date field that
+accepts `1998` or `1998-06-12` (year-only lands on Jan 1), title
+(required), story, place.
+
+Two limits, both deliberate: **no photos in the editor** — media is fixed
+at creation server-side, and the picker/upload flow is its own piece of
+work (the add tile's copy says "Year, title, story" so it does not
+promise what the form lacks); and **own profile only** — the mockup is
+drawn on Dad's page, but offering this on placeholder (wiki) profiles is
+the recorded open question, and the editor is one `memberId` parameter
+away when the team decides.
+
 ## Logo
 
 Flat two-color mark: a solid coral house silhouette with a heart cut out
