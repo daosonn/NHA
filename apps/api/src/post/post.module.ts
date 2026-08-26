@@ -6,6 +6,7 @@ import { CommentController } from './comment.controller';
 import { CommentService } from './comment.service';
 import { NotificationModule } from '../notification/notification.module';
 import { FamilyPostsController } from './family-posts.controller';
+import { MeFeedController } from './me-feed.controller';
 import { PostController } from './post.controller';
 import { PostService } from './post.service';
 import { ReactionController } from './reaction.controller';
@@ -17,6 +18,7 @@ import { ReactionService } from './reaction.service';
   controllers: [
     PostController,
     FamilyPostsController,
+    MeFeedController,
     CommentController,
     ReactionController,
   ],
