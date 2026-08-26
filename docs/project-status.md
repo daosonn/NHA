@@ -38,10 +38,12 @@ screens.
   button among four destinations reads as an action — so the bar is now
   **five equal slots** with the **family tree an ordinary tab**
   (`app/(tabs)/family.tsx`, `Network` glyph, selected pill like the rest;
-  the desktop rail matches with five plain rows and no disc). Home's
-  pinned row is a **compose bar** ("Share today's moment…" → `/new`), and
-  the **group strip left Home** for the family tab, where switching lives
-  with the trees. Two recorded costs: posting from another tab is two taps
+  the desktop rail matches with five plain rows and no disc). Posting is a
+  **compose bar on Home** ("Share today's moment…" → `/new`) — pinned
+  above the feed for a few hours, then moved into the scrolling intro
+  right under the swipe cue (it pushed the celebration card below the
+  fold when pinned) — and the **group strip left Home** for the family
+  tab, where switching lives with the trees. Two recorded costs: posting from another tab is two taps
   now (via Home), and the family SWITCHER is no longer above the feed.
   `/new` keeps its tab route (no bar slot). Verified: tsc, prettier,
   check:i18n (771 keys); not looked at on a device.

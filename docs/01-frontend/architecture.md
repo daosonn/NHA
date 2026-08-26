@@ -101,9 +101,9 @@ slots (owner's calls 2026-08-26, deviating from the mockups' raised
 compose + — ratify or revert, see `design-system.md` § Bottom
 navigation). The family tree **is a tab now**: `app/(tabs)/family.tsx`,
 selected state and sliding pill like any other, path still `/family`.
-Posting starts from the compose bar pinned at the top of Home
-(`home/compose-bar.tsx`) → `/new`, which keeps its tab route but draws no
-bar slot. The group strip moved to the family screen with this change;
+Posting starts from the compose bar in Home's scrolling intro, under the
+swipe cue (`home/compose-bar.tsx`) → `/new`, which keeps its tab route
+but draws no bar slot. The group strip moved to the family screen with this change;
 its 2026-08-21 redraw story stays in `design-system.md` § Group strip.
 
 **The five destinations are drawn by two components, mounted at two

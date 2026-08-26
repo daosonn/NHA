@@ -11,7 +11,7 @@ import { EventWidget } from '../../src/components/home/event-widget';
 import { SwipeCue } from '../../src/components/home/moment-peek';
 import { RecommendationGrid } from '../../src/components/home/recommendation-grid';
 import { AppHeader } from '../../src/components/layout/app-header';
-import { ContentColumn, contentColumn } from '../../src/components/layout/content-column';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { BrandWordmark, NotificationBell } from '../../src/components/layout/header-slots';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { SectionHeader } from '../../src/components/ui/section-header';
@@ -157,6 +157,15 @@ export default function HomeScreen() {
       <Animated.View entering={enter.fade(2)}>
         <SwipeCue scrollY={scrollY} />
       </Animated.View>
+
+      {/* Right under the cue, at the top of the moments it points to — a new
+          moment starts where the existing ones begin. It sat pinned above the
+          feed for a few hours on 2026-08-26 before settling here: pinned, it
+          pushed the celebration card below the fold and read as chrome rather
+          than content. */}
+      <Animated.View entering={enter.up(3)}>
+        <ComposeBar onPress={() => router.push('/new')} />
+      </Animated.View>
     </View>
   );
 
@@ -167,17 +176,9 @@ export default function HomeScreen() {
           header row on a wide window is a bell and 1500px of nothing. */}
       <AppHeader left={<BrandWordmark />} right={<NotificationBell />} paddingRight={spacing.lg} />
 
-      {/* Pinned, not scrolled with the feed. The family strip stood here
-          until 2026-08-26 — it moved to the family screen when the tree
-          took the bar's centre slot, and posting moved up in its place
-          (owner's call, § Bottom navigation): the top of the feed is where
-          a new moment starts. */}
-      {families !== undefined && families.length > 0 && (
-        <ContentColumn style={{ paddingTop: 4, paddingBottom: 10 }}>
-          <ComposeBar onPress={() => router.push('/new')} />
-        </ContentColumn>
-      )}
-
+      {/* The family strip stood pinned here until 2026-08-26, when it moved
+          to the family screen. The compose bar that replaced it now lives in
+          the intro, under the swipe cue — see there. */}
       {renderBody()}
     </View>
   );
@@ -252,11 +253,11 @@ export default function HomeScreen() {
           ) : null
         }
         renderItem={({ item, index }: { item: PostDetail; index: number }) => (
-          // The first screenful continues the intro's cascade (indices 3, 4,
+          // The first screenful continues the intro's cascade (indices 4, 5,
           // …); cards mounted later by scrolling rise immediately — a card
           // that waits out a stagger delay mid-scroll reads as lag, not as
           // choreography.
-          <Animated.View entering={enter.up(index < CASCADE_CARDS ? 3 + index : 0)}>
+          <Animated.View entering={enter.up(index < CASCADE_CARDS ? 4 + index : 0)}>
             <FeedCard
               post={item}
               audienceLabel={audienceLabel(item)}

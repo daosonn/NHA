@@ -207,9 +207,13 @@ Home · Omoide · **+** · AI · Profile.
   action, and the tree is not an action. The bar is now **five ordinary
   slots** — Home · Omoide · **Family tree** (`Network` glyph, a real tab,
   label 家系図) · AI · Profile — all sharing the same pill, pop and label
-  treatment. Posting moved to the **compose bar at the top of Home**
+  treatment. Posting moved to a **compose bar on Home**
   (`home/compose-bar.tsx`: pen, "Share today's moment…", a 36px coral
-  disc; one tap opens `/new`, which keeps its route but owns no slot). The
+  disc; one tap opens `/new`, which keeps its route but owns no slot). It
+  started the day pinned above the feed and moved the same day into the
+  scrolling intro, **right under the swipe cue**: pinned, it pushed the
+  celebration card below the fold and read as chrome; under the cue it
+  sits at the top of the moments it creates. The
   known cost, recorded: posting from another tab is now two taps (via
   Home) instead of one.
 
@@ -527,8 +531,8 @@ a profile read as a person rather than as a toolbar.
 ### Group strip
 
 **On the family screen only since 2026-08-26** — it left Home when the
-tree took the bottom bar's centre slot and the compose bar took the
-strip's place at the top of the feed (§ Bottom navigation). Switching
+tree moved onto the bottom bar and posting became Home's compose bar
+(§ Bottom navigation). Switching
 families now happens where the trees are. The strip itself is unchanged:
 
 The family switcher: overlapped 34px faces, a dashed
