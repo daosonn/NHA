@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { createReadStream, type ReadStream } from 'node:fs';
-import { mkdir, rename, rm, stat } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { mkdir, readFile, rename, rm, stat } from 'node:fs/promises';
+import type { Readable } from 'node:stream';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import {
   Injectable,
@@ -27,6 +28,15 @@ const EXTENSION_BY_MIME: Record<string, string> = {
   'audio/aac': 'aac',
   'audio/wav': 'wav',
 };
+
+/**
+ * A borrowed on-disk path, valid until `dispose()`. See
+ * `StorageService.newBorrow` for why callers never delete what they borrow.
+ */
+export interface MediaBorrow {
+  path(storageKey: string): Promise<string>;
+  dispose(): Promise<void>;
+}
 
 /**
  * Local-disk storage backend for the MVP demo. Swappable for an
@@ -89,8 +99,14 @@ export class StorageService {
     }
   }
 
-  /** Opens a read stream; start/end are inclusive byte offsets. */
-  openRead(storageKey: string, start?: number, end?: number): ReadStream {
+  /**
+   * Opens a read stream; start/end are inclusive byte offsets.
+   *
+   * Declared as `Readable`, not fs's `ReadStream`: an object-store backend
+   * hands back a network stream, and no caller should be written against a
+   * type only the local-disk backend can satisfy.
+   */
+  openRead(storageKey: string, start?: number, end?: number): Readable {
     const path = this.resolvePath(storageKey);
     return start !== undefined
       ? createReadStream(path, { start, end })
@@ -124,12 +140,69 @@ export class StorageService {
   }
 
   /**
-   * Absolute path cho pipeline render video và cho bước phân tích ảnh (ffmpeg và
-   * sharp cần đường dẫn file thật, không dùng được stream). Vẫn đi qua
-   * resolvePath nên không thoát khỏi rootDir.
+   * The whole object as bytes, for callers that want content rather than a
+   * path (sharp, base64 encoding). One round trip on an object store, so
+   * never use it on video.
    */
-  absolutePathOf(storageKey: string): string {
-    return this.resolvePath(storageKey);
+  async readAll(storageKey: string): Promise<Buffer> {
+    try {
+      return await readFile(this.resolvePath(storageKey));
+    } catch (error) {
+      this.logger.error(`read failed for ${storageKey}: ${String(error)}`);
+      throw new InternalServerErrorException('Stored file is unavailable');
+    }
+  }
+
+  /**
+   * Borrows a real on-disk path for the duration of `fn`.
+   *
+   * ffmpeg and sharp cannot read a stream or a URL — they need a file. On the
+   * local-disk backend the borrow *is* the stored file and costs nothing; on
+   * an object store it becomes a download into tempDir. Either way the caller
+   * must never delete the path it is given: on local disk that is the user's
+   * only copy. Deleting belongs to the borrow, which is why cleanup lives
+   * here and not at the call site.
+   */
+  async withLocalCopy<T>(
+    storageKey: string,
+    fn: (path: string) => Promise<T> | T,
+  ): Promise<T> {
+    const borrow = this.newBorrow();
+    try {
+      return await fn(await borrow.path(storageKey));
+    } finally {
+      await borrow.dispose();
+    }
+  }
+
+  /**
+   * A longer-lived borrow, for pipelines that need several files across
+   * stages that cannot sit inside one callback — the video render is the
+   * only such caller. Pair every `newBorrow()` with `dispose()` in a
+   * `finally`, or on an object store the temp copies leak.
+   *
+   * `path()` is memoised per key, so asking twice downloads once.
+   */
+  newBorrow(): MediaBorrow {
+    // Local disk has nothing to copy and nothing to clean up: the stored file
+    // is already a real path. The seam exists so the call sites are written
+    // against a borrow now, and only this method changes for object storage.
+    const resolved = new Map<string, string>();
+    return {
+      path: (storageKey: string): Promise<string> => {
+        const cached = resolved.get(storageKey);
+        if (cached) {
+          return Promise.resolve(cached);
+        }
+        const path = this.resolvePath(storageKey);
+        resolved.set(storageKey, path);
+        return Promise.resolve(path);
+      },
+      dispose: (): Promise<void> => {
+        resolved.clear();
+        return Promise.resolve();
+      },
+    };
   }
 
   /**

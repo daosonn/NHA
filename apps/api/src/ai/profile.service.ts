@@ -5,7 +5,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { readFile } from 'node:fs/promises';
 import sharp from 'sharp';
 import { PrismaService } from '../database/prisma/prisma.service';
 import type { Prisma } from '../generated/prisma/client';
@@ -580,7 +579,7 @@ export class ProfileService {
       media.slice(0, VISION_MAX_IMAGES).map(async (m) => {
         if (!m.mimeType.startsWith('image/')) return null;
         try {
-          const raw = await readFile(this.storage.absolutePathOf(m.storageKey));
+          const raw = await this.storage.readAll(m.storageKey);
           const buf = await sharp(raw)
             .rotate() // tôn trọng EXIF orientation, rồi bỏ toàn bộ metadata (gồm GPS)
             .resize({
