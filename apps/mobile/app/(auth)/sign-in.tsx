@@ -49,6 +49,7 @@ export default function SignInScreen() {
 
   return (
     <FormScreen
+      variant="auth"
       onBack={() => safeBack(router, '/welcome')}
       footer={
         <>

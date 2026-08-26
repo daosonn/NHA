@@ -38,7 +38,7 @@ export function BrandWordmark() {
         accessibilityRole="header"
         style={{ fontSize: 22, lineHeight: 28, letterSpacing: 1.6, color: colors.coral.primary }}
       >
-        PRESENT
+        NHA
       </Text>
     </View>
   );

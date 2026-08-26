@@ -9,6 +9,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, View } from 'react-nat
 
 import { AlbumFormSheet } from '../../src/components/album/album-form-sheet';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { useToast } from '../../src/components/ui/toast';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import type { DraftMedia } from '../../src/components/moment/media-strip';
@@ -233,7 +234,12 @@ export default function AlbumScreen() {
       {header(detail.name)}
 
       <ScrollView
-        contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40, gap: 14 }}
+        contentContainerStyle={{
+          ...contentColumn,
+          paddingTop: spacing.xl,
+          paddingBottom: 40,
+          gap: 14,
+        }}
         showsVerticalScrollIndicator={false}
       >
         {detail.description !== null && detail.description !== '' && (

@@ -85,13 +85,17 @@ function metrics(width: number) {
 
 type Metrics = ReturnType<typeof metrics>;
 
-type TabConfig = { labelKey: string; icon: LucideIcon };
+export type TabConfig = { labelKey: string; icon: LucideIcon };
 
 /**
  * Home · Omoide · + · AI · Profile — the five destinations from the mockups.
  * The family tree is *not* a tab; it is reached from the group strip on Home.
+ *
+ * Exported because `side-nav.tsx` draws the same destinations turned vertical.
+ * One list, so the two navigations cannot come to disagree about what the app
+ * has in it, what each one is called, or which glyph stands for it.
  */
-const TABS: Record<string, TabConfig> = {
+export const TABS: Record<string, TabConfig> = {
   index: { labelKey: 'nav.tab.home', icon: House },
   omoide: { labelKey: 'nav.tab.omoide', icon: History },
   ai: { labelKey: 'nav.tab.ai', icon: Sparkles },
@@ -99,7 +103,7 @@ const TABS: Record<string, TabConfig> = {
 };
 
 /** The centre action, still the one filled control on the bar. */
-const COMPOSE_ROUTE = 'new';
+export const COMPOSE_ROUTE = 'new';
 
 /** Its own component so the press hook is not called inside a `.map()`. */
 function ComposeButton({ label, onPress, m }: { label: string; onPress: () => void; m: Metrics }) {
@@ -171,7 +175,11 @@ function Slot({
         {
           flex: 1,
           height: m.itemHeight,
-          borderRadius: radius['2xl'],
+          // `full`, not `2xl` (main's finding): the bar's own cap is a 34
+          // radius, and an 18-radius corner pinches to ~3px of clearance on
+          // the corner diagonal against 6px along the flat. At `full` the
+          // press-feedback shape stays concentric with the bar.
+          borderRadius: radius.full,
           alignItems: 'center',
           justifyContent: 'center',
           gap: 3,
@@ -276,7 +284,8 @@ export function BottomNav({ state, navigation }: BottomTabBarProps) {
               left: 0,
               top: (m.height - m.itemHeight) / 2,
               height: m.itemHeight,
-              borderRadius: radius['2xl'],
+              // Concentric with the bar's cap — see the slot's radius note.
+              borderRadius: radius.full,
               backgroundColor: colors.coral.light,
             },
             pill.style,

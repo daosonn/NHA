@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { ScreenTitle } from '../../src/components/layout/header-slots';
 import { AudiencePicker, type AudienceGroup } from '../../src/components/moment/audience-picker';
 import { MediaStrip, type DraftMedia } from '../../src/components/moment/media-strip';
@@ -19,9 +20,15 @@ import { useTaggableMembers } from '../../src/features/family/use-taggable-membe
 import { momentErrorKey } from '../../src/features/moment/moment-error';
 import { useCreateMoment } from '../../src/features/moment/use-create-moment';
 import type { FamilySummary } from '../../src/lib/api';
-import { colors, spacing } from '../../src/theme';
+import { colors, spacing, useLayout } from '../../src/theme';
 
-/** Clears the bottom nav (56pt plus the home indicator) with room to breathe. */
+/**
+ * Room the floating bottom bar needs at the end of the scroll.
+ *
+ * Only while the bar is at the bottom. From 1024px up the same destinations
+ * are a rail down the left, which overlaps nothing, so reserving this much
+ * there would just be 160px of dead space under the last row.
+ */
 const BOTTOM_INSET = 160;
 
 function toAudience(families: FamilySummary[]): AudienceGroup[] {
@@ -62,6 +69,7 @@ function toDraft(asset: ImagePicker.ImagePickerAsset, index: number): DraftMedia
 
 export default function NewMomentScreen() {
   const { t } = useTranslation();
+  const { expanded } = useLayout();
   const router = useRouter();
 
   const { user } = useSession();
@@ -157,7 +165,12 @@ export default function NewMomentScreen() {
       <AppHeader center={<ScreenTitle title={t('moment.title')} />} />
 
       <ScrollView
-        contentContainerStyle={{ padding: spacing.xl, paddingBottom: BOTTOM_INSET, gap: 20 }}
+        contentContainerStyle={{
+          ...contentColumn,
+          paddingTop: spacing.xl,
+          paddingBottom: expanded ? spacing['4xl'] : BOTTOM_INSET,
+          gap: 20,
+        }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >

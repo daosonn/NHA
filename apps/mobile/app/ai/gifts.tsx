@@ -18,6 +18,7 @@ import { SectionLabel } from '../../src/components/ai/section-label';
 import { SelectRow } from '../../src/components/ai/select-row';
 import { Sheet } from '../../src/components/ai/sheet';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Avatar } from '../../src/components/ui/avatar';
 import { AvatarStack } from '../../src/components/ui/avatar-stack';
@@ -103,7 +104,7 @@ export default function GiftAskScreen() {
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: spacing.xl,
+          ...contentColumn,
           paddingTop: 14,
           paddingBottom: 40,
           gap: 8,

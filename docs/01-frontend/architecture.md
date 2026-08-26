@@ -65,7 +65,7 @@ app/                      expo-router routes — file = route
     verify.tsx            6-digit code — sign-up and password reset both
     forgot.tsx            /  reset.tsx
   (tabs)/
-    _layout.tsx           bottom nav, 5 tabs
+    _layout.tsx           bottom nav (below 1024px), 5 tabs
     index.tsx             Home
     omoide.tsx            Omoide — shared album books
     new.tsx               New moment
@@ -78,11 +78,11 @@ app/                      expo-router routes — file = route
   ai/gifts.tsx            Gift ideas — pushed from the AI tab
   invite/[code].tsx       Invitation — what an invite link opens
   settings.tsx            Account & Settings — pushed from the Profile tab
-  _layout.tsx             providers: react-query, safe area, fonts
+  _layout.tsx             providers, plus the side nav from 1024px up
 src/
   components/ui/          design-system primitives (Button, Card, ...)
   components/<feature>/   feature components
-  components/layout/      app chrome (header, bottom nav)
+  components/layout/      app chrome (header, bottom nav, side nav, column)
   features/<feature>/     hooks + logic per feature
   theme/                  React Native mapping of @nha/tokens
   i18n/                   i18next setup and the stored-language helpers
@@ -99,6 +99,16 @@ reached by tapping the group strip on Home, so the tab bar stays about
 content rather than navigation structure. That puts weight on the strip
 being legible as a way in — it was not, and was redrawn 2026-08-21
 (`design-system.md` § Group strip).
+
+**The five destinations are drawn by two components, mounted at two
+different levels.** `BottomNav` is the tab navigator's own `tabBar`, so it
+lives and dies with `(tabs)`; that is correct on a phone, where a pushed
+screen is a new screen. `SideNav` — from 1024px up — is mounted in
+`app/_layout.tsx` beside the whole `Stack`, because a pushed screen sits
+_above_ the tab navigator and a rail mounted inside it would disappear the
+moment somebody opened a person's page. Only one is ever drawn; both read
+their labels and glyphs from the same `TABS` list. See `design-system.md`
+§ Side navigation.
 
 Routes stay thin: they compose components and call hooks. Business logic
 lives in `src/features/`.
@@ -270,6 +280,27 @@ rather than about design. See `design-system.md`.
   Tailwind config.
 - Minimum touch target 44px.
 - Every list needs an explicit empty state and loading state.
+- **Width is not a component's business.** A screen puts its content in the
+  column from `components/layout/content-column.tsx` — spread `contentColumn`
+  into a scrollable's `contentContainerStyle`, or wrap a part that does not
+  scroll in `<ContentColumn>`. Nothing else sets a page width, and a
+  component below the column may keep using `flex: 1` and `width: '100%'`
+  freely, because those now mean "as wide as the column".
+- **Never call `router.back()` directly.** Use `goBack()` from
+  `src/lib/navigation.ts`, which falls back to Home — or to a destination you
+  pass it — when there is nothing behind the screen. A link to a post, a
+  person or an invitation is regularly opened cold, and then that screen is
+  the first entry in the history: the back arrow either does nothing, leaves
+  the app, or on native takes the navigator down with it, and recovering from
+  that means mounting the whole tree again.
+- Responsive **structure** is decided in JavaScript against
+  `breakpoints` from the theme, not with class prefixes. Two reasons:
+  most of this app styles with inline `style` objects rather than
+  `className`, so `lg:` would only reach a quarter of it; and the place a
+  width has to be applied on a list is `contentContainerStyle`, which is a
+  style object and cannot take a class at all. `md:` / `lg:` prefixes are
+  fine for a local tweak inside a component that already uses classes —
+  never for the layout itself.
 
 ## Development loop (Windows)
 

@@ -8,6 +8,7 @@ import Animated from 'react-native-reanimated';
 
 import { AlbumFormSheet } from '../../src/components/album/album-form-sheet';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { Text } from '../../src/components/ui/text';
@@ -150,7 +151,12 @@ export default function AlbumsScreen() {
       <AppHeader left={<BackButton />} center={<ScreenTitle title={t('albums.title')} />} />
 
       <ScrollView
-        contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40, gap: 14 }}
+        contentContainerStyle={{
+          ...contentColumn,
+          paddingTop: spacing.xl,
+          paddingBottom: 40,
+          gap: 14,
+        }}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View

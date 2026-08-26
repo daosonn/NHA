@@ -5,7 +5,7 @@
  *
  * `@nha/tokens` builds to CommonJS precisely so this file can require it.
  */
-const { colors, radius, spacing, typography } = require('@nha/tokens');
+const { breakpoints, colors, layout, radius, spacing, typography } = require('@nha/tokens');
 
 /** `{ fontSize, lineHeight }` in px → Tailwind's `[size, lineHeight]` pairs. */
 const fontSize = Object.fromEntries(
@@ -29,6 +29,10 @@ module.exports = {
   darkMode: 'class',
   presets: [require('nativewind/preset')],
   theme: {
+    // Replaces Tailwind's default set rather than extending it. 'sm' and
+    // '2xl' are deliberately absent (see `@nha/tokens` layout.ts), and leaving
+    // them in would invite `sm:` back one class at a time.
+    screens: px(breakpoints),
     extend: {
       colors: {
         page: colors.background.page,
@@ -85,6 +89,11 @@ module.exports = {
       fontSize,
       spacing: px(spacing),
       borderRadius: px(radius),
+
+      // `max-w-content` for a component that already styles with classes, so it
+      // reaches the same ceiling as `contentColumn` instead of a second number
+      // that agrees with it by luck.
+      maxWidth: { content: `${layout.contentMaxWidth}px` },
     },
   },
   plugins: [],

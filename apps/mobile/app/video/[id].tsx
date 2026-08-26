@@ -9,6 +9,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 
 import { SelectRow } from '../../src/components/ai/select-row';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { CatHappy, CatSitting } from '../../src/components/motion/cats';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Button } from '../../src/components/ui/button';
@@ -200,7 +201,7 @@ export default function VideoJobScreen() {
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: spacing.xl,
+          ...contentColumn,
           paddingTop: 14,
           paddingBottom: 40,
           gap: 13,

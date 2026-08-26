@@ -28,6 +28,146 @@ screens.
 
 ## Current Focus
 
+- **The app stopped simply growing (2026-08-25).** Every screen used to be
+  `viewport - two gutters` wide at any size, which is right on a phone and
+  wrong from about 600px up: at 1440 a post card was 1400px across and a line
+  of its text ran ~200 characters. There was no app-shell or container layer
+  at all — `_layout.tsx` is providers plus a `Stack`, and each of the 27
+  screens rebuilt the same full-bleed `View` → `AppHeader` → padded scroller
+  by hand.
+
+  Content now lives in a **600px column, centred**, defined once in
+  `components/layout/content-column.tsx` and applied to every page scroller,
+  pinned header row, footer bar and floating button. It is **not** a
+  breakpoint, which is the point: because the ceiling counts the gutters,
+  anything under 600px is laid out exactly as before, so the phone design is
+  untouched rather than re-derived, and 600 / 768 / 1024 / 1440 are all fixed
+  by one rule. Chrome (the blurred header bar, a footer's surface) and the
+  family-tree canvas stay full-bleed on purpose — a map wants the room, and
+  chrome that stops short of the edge stops reading as chrome.
+
+  Breakpoints exist as `md` 768 / `lg` 1024 / `xl` 1280, on Tailwind's own
+  numbers so a `lg:` class and a JS comparison cannot disagree. **No `sm`** —
+  a breakpoint belongs in this app only where the layout stops working, not
+  because a popular screen is that wide. Decided against putting responsive
+  logic in `md:`/`lg:` class prefixes: 96 files style with inline `style`
+  objects against 32 with `className`, and a list's width has to be set on
+  `contentContainerStyle`, which cannot take a class.
+
+  **The navigation followed, the same day.** From 1024px the bottom bar
+  becomes a **76px bar of glyphs** floating down the left, which **opens to
+  240px under the pointer** — over the content, not pushing it. It is the
+  bottom bar stood up: same 30-blur glass under 86% white, inset 16 from the
+  edge, hugging its contents, with a 38px corner that makes it that bar's pill
+  turned vertical. Direction was set by
+  the team: it should feel like Threads or Instagram on the web, and those two
+  turned out to be the layout already planned — a left rail and one centred
+  column, at 630–640px against our 600.
+
+  The first attempt got this wrong and was corrected the same day, which is
+  worth recording. It made the labelled 240px sidebar the **resting** state
+  from 1280px up. On a 1920px window that spends most of a third of the width
+  permanently on four words next to a 600px column, and the first screenshot
+  of it read as top-heavy before anybody measured anything. Instagram does not
+  do this: its rail rests as glyphs. So `xl` lost its structural meaning
+  entirely — the labelled state is a **hover**, not a window size — and `lg`
+  is now the only breakpoint the layout branches on. Details, including the
+  three things that make opening read as one object rather than two states, in
+  `design-system.md` § Side navigation.
+
+  The known cost is named there too: an iPad in landscape is wide enough for
+  the rail and has no pointer, so it only ever sees glyphs — and this app's own
+  design notes argue at length that these particular glyphs mean nothing on
+  their own. Accessibility labels are unaffected. If it matters, the answer is
+  a pinned-open state rather than a breakpoint.
+
+  Two things found by looking at it, both small and both real. **The app had no
+  background of its own**: `Stack` paints the page colour behind a screen and
+  every screen asks for it again, but the frame _around_ them had none, so on
+  the web the column reserved for the bar showed the document's white and the
+  glass came out as a white shape on a white strip beside a warm page — which
+  is what "the sidebar looks detached" turned out to mean. The colour now sits
+  on the root view, where it covers everything. And **the bottom bar's selected
+  chip is a pill now** rather than radius `2xl`: the bar's own cap is a 34
+  radius, so an 18-radius chip cleared it by ~3px on the corner diagonal
+  against 6px along the flat, reading as both squarer than the bar around it
+  and crowded against its end. `full` makes the clearance an even 6px without
+  touching any padding. Nothing else about the bottom bar changed.
+
+  The load-bearing decision is **where the rail is mounted**: in
+  `app/_layout.tsx`, beside the whole `Stack`, not in `(tabs)/_layout.tsx`
+  where the bottom bar lives. A pushed screen is a `Stack` screen _above_ the
+  tab navigator, so a rail mounted inside the tabs would vanish the moment
+  somebody opened a Life Profile — which is precisely the thing that makes an
+  app feel like a phone app being viewed through a window. It is a plain flex
+  row, so no screen knows the rail exists; the content column simply centres
+  in a narrower space. `useLayout()` (`src/theme/use-layout.ts`) is the single
+  place a width becomes a structural decision, and the five tab screens stop
+  reserving 140–160px of bottom room once nothing is floating there.
+
+  **The same safe-back fix got built twice, and that is worth recording.** A
+  bare `router.back()` dead-ends whenever a screen is the first entry in the
+  history — which on the web is any reload, any deep link, any tap on a
+  notification — and on native it throws `GO_BACK` and takes the navigator with
+  it. PR #48 fixed it on `main` as `src/lib/back.ts` (`safeBack` /
+  `useSafeBack`, plus a `BackButton` that handles it when given no `onPress`).
+  This branch, cut before that landed and never re-fetched, built the identical
+  helper independently. The merge on 2026-08-25 kept `main`'s — it has
+  per-screen fallbacks (`/ai`, `/albums`, `/settings`, `/profile`,
+  `/video/setup`) where the branch's had one blanket `/` — and deleted the
+  duplicate. The cost was ~30 files of conflict for nothing.
+
+  The lesson is the one `CLAUDE.md` § 8.1 already gives: read what teammates
+  landed on `main` **before** writing code, not at merge time. Nothing about
+  the duplication was detectable from the branch.
+
+  **The auth screens needed more than the column, and they are the only ones
+  that did.** The column kept the sign-in form at a readable 600 — nothing
+  stretched — but an auth screen is a full-height column by construction, so at
+  1280 it read as a coral band the width of the window with a 58px mark alone
+  in it, and a form pinned to the top of an empty page. From `lg` up, Welcome
+  and the four password screens are now **two full-height halves of the
+  window**: brand on the left, form on the right, which is the shape every web
+  sign-in has.
+
+  It was a centred 960px card for an hour first, and that is worth keeping
+  written down: a card floating in the middle of a 1920px window is a **dialog**,
+  and signing in is not a dialog interrupting something — it is the page. What
+  survives from that attempt is the rule underneath it: the panes are full-bleed
+  but their contents are not, so each centres a **420** column and a half-window
+  pane never means a 960px-wide form.
+
+  The brand pane reuses Welcome's own mark and copy — no new i18n keys — and
+  carries `CatHappy` from the motion kit, directly above the family faces so the
+  cat reads as being with them. That is a deliberate reading of the kit's rule
+  (`motion/README.md`: one-time emotional moments, never chrome, never daily
+  actions), on the grounds that this pane is the app introducing itself and is
+  neither of those. The header goes, because a full-width bar carrying one back
+  arrow above two full-height panes belongs to neither; back sits absolutely at
+  the form pane's top-left so it cannot pull the form off centre. The footer is
+  **not** pinned — `FormScreen` pins it for the software keyboard, and a
+  physical keyboard covers nothing.
+
+  Below `lg` nothing changes, which matters: a centred, shrunken Welcome card
+  was tried and reverted on 2026-08-21, and this applies only where there is a
+  pointer and 1024px. It is opt-in per screen (`FormScreen variant="auth"`),
+  because the same shell around "New family" or "Change password" would be a
+  different mistake.
+
+  A **right-hand column** (Instagram has one, Threads does not) was considered
+  and **deferred** — it needs a decision about what belongs in it, and moving
+  Home's occasion widget and recommendation shelf out of the feed changes the
+  phone layout too. Tracked as § 1.8 in the sprint.
+
+  Still open: the content column may want to be 640 rather than 600 (to be
+  judged in a browser, not argued), and the three grids whose column count or
+  pixel heights are fixed (`recommendation-grid` 212/101, `photos-row` four
+  across, `album-grid` two). Also unverified, and worth repeating: **nobody
+  has looked at any of this in a browser yet** — typecheck, prettier,
+  `check:i18n` and a web export are clean, and a prerender reports a width of
+  zero, so the export exercises the phone path only. It proves the bundle
+  builds and every module evaluates. It proves nothing about the rail.
+
 - **A pass over the shell, and notifications (2026-08-21).** Four things,
   all of them about the app looking like one app:
   - **Headers are one thing now.** `ScreenTitle` in `header-slots.tsx` is
