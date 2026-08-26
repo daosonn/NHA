@@ -169,7 +169,6 @@
     "you": "YOU",
     "nodeLabel": "{{name}}, {{role}}",
     "pendingRole": "{{role}} · pending",
-    "waitingFor": "Waiting for {{name}}",
     "invitedAs": "Invited as {{role}} · {{sent}}",
     "resend": "Resend",
     "generation": "GEN {{index}}",
@@ -229,6 +228,8 @@
       "theirsToEdit": "{{name}} has their own account, so their name and details are theirs to change.",
       "save": "Save changes",
       "remove": "Remove from the tree",
+      "cancelInvite": "Cancel the invitation",
+      "cancelInviteHint": "{{name}} hasn't joined yet — cancelling frees this spot and its code stops working.",
       "blocked": {
         "hasChildren": "Cannot remove someone who has a branch below them.",
         "notYours": "Only this person can leave the family."
@@ -238,11 +239,24 @@
         "duplicate": "That relationship is already recorded."
       }
     },
-    "waitingForMore": "Waiting for {{name}} and {{count}} other",
-    "waitingForMore_other": "Waiting for {{name}} and {{count}} others",
     "invitedExpires": "{{count}} day left",
     "invitedExpires_other": "{{count}} days left",
     "resendFor": "Give {{name}} another week",
+    "cancelFor": "Cancel the invitation for {{name}}",
+    "invitations": {
+      "title": "Sent invitations",
+      "openWaiting": "Sent invitations — {{count}} waiting",
+      "openWaiting_other": "Sent invitations — {{count}} waiting",
+      "emptyTitle": "No invitations yet",
+      "emptyBody": "Invite someone from the family tree, and what you send will wait here.",
+      "loadFailed": "Could not load the invitations.",
+      "statusAccepted": "Joined",
+      "statusCancelled": "Cancelled",
+      "statusExpired": "Expired",
+      "cancel": "Cancel",
+      "showCode": "Show the code for {{name}}",
+      "expiredCodeHint": "Expired — resend to make this code work again"
+    },
     "kinship": {
       "sister": "Sister",
       "brother": "Brother",
@@ -263,6 +277,7 @@
     },
     "toast": {
       "resent": "{{name}} has another week to accept",
+      "inviteCancelled": "The invitation for {{name}} was cancelled",
       "removed": "Removed from the tree"
     }
   },

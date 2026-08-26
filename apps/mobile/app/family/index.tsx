@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { LockKeyhole, TriangleAlert, UsersRound } from 'lucide-react-native';
+import { LockKeyhole, Send, TriangleAlert, UsersRound } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
@@ -7,7 +7,6 @@ import { Pressable, View } from 'react-native';
 import { FamilyTree } from '../../src/components/family/family-tree';
 import { InviteSheet } from '../../src/components/family/invite-sheet';
 import { MemberSheet } from '../../src/components/family/member-sheet';
-import { PendingBanner } from '../../src/components/family/pending-banner';
 import type { PositionedNode } from '../../src/components/family/tree-layout';
 import { GroupStrip, type FamilyGroupSummary } from '../../src/components/home/group-strip';
 import { AppHeader } from '../../src/components/layout/app-header';
@@ -22,9 +21,9 @@ import { useActiveFamily } from '../../src/features/family/active-family';
 import { treeFromGraph } from '../../src/features/family/tree-from-graph';
 import {
   outstanding,
+  useCancelInvitation,
   useCreateInvitation,
   useFamilyInvitations,
-  useResendInvitation,
 } from '../../src/features/family/use-invitations';
 import { useFamilies } from '../../src/features/family/use-families';
 import { useRemoveMember, useSaveMember } from '../../src/features/family/use-member-mutations';
@@ -68,7 +67,7 @@ export default function FamilyTreeScreen() {
 
   const { data: invites } = useFamilyInvitations(familyId);
   const createInvitation = useCreateInvitation(familyId);
-  const resendInvitation = useResendInvitation(familyId);
+  const cancelInvitation = useCancelInvitation(familyId);
 
   const [inviting, setInviting] = useState(false);
   /** The invitation just created, which is what turns the sheet into its code state. */
@@ -95,8 +94,41 @@ export default function FamilyTreeScreen() {
     [waiting],
   );
 
-  /** Newest first from the server, so the head of the list is the one to name. */
-  const newestInvite = waiting[0] ?? null;
+  /**
+   * The invitation still reserving each spot, cancelable per member.
+   *
+   * Wider than `waiting` on purpose: `EXPIRED` is derived from a row still
+   * stored as PENDING, so it can be cancelled too — and it must be, or a
+   * lapsed invite leaves a ghost placeholder in the tree. An invited PARENT
+   * is the worst case: `hasChildren` blocks plain removal (the viewer hangs
+   * below them), so cancelling the invitation is the only way that spot
+   * comes back out.
+   */
+  const cancellableByMember = useMemo(() => {
+    const byMember = new Map<string, InvitationSummary>();
+    for (const invite of invites ?? []) {
+      // Newest first from the server — the first one seen per spot wins.
+      if (
+        (invite.status === 'PENDING' || invite.status === 'EXPIRED') &&
+        !byMember.has(invite.memberId)
+      ) {
+        byMember.set(invite.memberId, invite);
+      }
+    }
+    return byMember;
+  }, [invites]);
+
+  const managedInvite = managingId === null ? null : (cancellableByMember.get(managingId) ?? null);
+
+  const cancelInvite = (invite: InvitationSummary) => {
+    cancelInvitation.mutate(invite.id, {
+      onSuccess: () => {
+        setManagingId(null);
+        toast.success(t('family.toast.inviteCancelled', { name: invite.name }));
+      },
+      onError: () => toast.failure(t('errors.generic')),
+    });
+  };
 
   const tree = useMemo(
     () =>
@@ -166,7 +198,55 @@ export default function FamilyTreeScreen() {
 
   return (
     <View className="flex-1 bg-page">
-      <AppHeader left={<BackButton />} center={<ScreenTitle title={t('family.title')} />} />
+      <AppHeader
+        left={<BackButton />}
+        center={<ScreenTitle title={t('family.title')} />}
+        right={
+          /* Lời mời đã gửi sống sau nút này (badge = số đang chờ) — banner
+             nổi trên canvas bị bỏ 2026-08-26 vì nó che đúng cái cây đang xem. */
+          <Pressable
+            onPress={() => router.push('/family/invitations')}
+            accessibilityRole="button"
+            accessibilityLabel={
+              waiting.length > 0
+                ? t('family.invitations.openWaiting', { count: waiting.length })
+                : t('family.invitations.title')
+            }
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: radius.full,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Send size={21} color={colors.text.primary} strokeWidth={2} />
+
+            {waiting.length > 0 && (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 6,
+                  right: 4,
+                  minWidth: 16,
+                  height: 16,
+                  paddingHorizontal: 4,
+                  borderRadius: radius.full,
+                  backgroundColor: colors.coral.primary,
+                  borderWidth: 2,
+                  borderColor: colors.background.page,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text variant="badge" weight="bold" color={colors.text.white}>
+                  {waiting.length > 99 ? '99+' : String(waiting.length)}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        }
+      />
 
       <View className="flex-1 gap-lg px-xl pb-xl pt-lg">
         {families !== undefined && families.length > 0 && (
@@ -251,25 +331,6 @@ export default function FamilyTreeScreen() {
                 onManageNode={(node) => setManagingId(node.id)}
                 onAddMember={() => setInviting(true)}
               />
-
-              {/* One banner for all of them: a stack of these would bury the
-                  tree they are drawn over. */}
-              {newestInvite !== null && (
-                <PendingBanner
-                  invite={newestInvite}
-                  otherCount={waiting.length - 1}
-                  // Nothing on screen changes when this succeeds — the
-                  // banner already said the same thing before the tap.
-                  onResend={() =>
-                    resendInvitation.mutate(newestInvite.id, {
-                      onSuccess: () =>
-                        toast.success(t('family.toast.resent', { name: newestInvite.name })),
-                      onError: () => toast.failure(t('errors.generic')),
-                    })
-                  }
-                  resending={resendInvitation.isPending}
-                />
-              )}
             </View>
           </>
         )}
@@ -301,6 +362,11 @@ export default function FamilyTreeScreen() {
           saving={saveMember.isPending}
           removing={removeMember.isPending}
           errorKey={memberErrorKey(saveMember.error ?? removeMember.error)}
+          pendingInvite={managedInvite}
+          onCancelInvite={() => {
+            if (managedInvite !== null) cancelInvite(managedInvite);
+          }}
+          cancelling={cancelInvitation.isPending}
         />
       )}
 

@@ -163,7 +163,6 @@
     "you": "あなた",
     "nodeLabel": "{{name}}、{{role}}",
     "pendingRole": "{{role}}・承認待ち",
-    "waitingFor": "{{name}}さんを待っています",
     "invitedAs": "{{role}}として招待・{{sent}}",
     "resend": "再送信",
     "generation": "第{{index}}世代",
@@ -223,6 +222,8 @@
       "theirsToEdit": "{{name}}さんはご自身のアカウントをお持ちです。名前や情報はご本人だけが変更できます。",
       "save": "変更を保存",
       "remove": "家系図から外す",
+      "cancelInvite": "招待を取り消す",
+      "cancelInviteHint": "{{name}}さんはまだ参加していません。取り消すとこの場所は空きに戻り、コードは使えなくなります。",
       "blocked": {
         "hasChildren": "下に枝がある人は外せません。",
         "notYours": "家族から抜けられるのはご本人だけです。"
@@ -232,9 +233,22 @@
         "duplicate": "その続柄はすでに登録されています。"
       }
     },
-    "waitingForMore_other": "{{name}}さんほか{{count}}人を待っています",
     "invitedExpires_other": "あと{{count}}日",
     "resendFor": "{{name}}さんの期限をもう1週間のばす",
+    "cancelFor": "{{name}}さんへの招待を取り消す",
+    "invitations": {
+      "title": "送った招待",
+      "openWaiting_other": "送った招待（{{count}}件待ち）",
+      "emptyTitle": "まだ招待はありません",
+      "emptyBody": "家系図から家族を招待すると、送った招待がここに並びます。",
+      "loadFailed": "招待を読み込めませんでした。",
+      "statusAccepted": "参加済み",
+      "statusCancelled": "取り消し済み",
+      "statusExpired": "期限切れ",
+      "cancel": "取り消す",
+      "showCode": "{{name}}さんの招待コードを表示",
+      "expiredCodeHint": "期限切れ — 再送するとこのコードがまた使えます"
+    },
     "kinship": {
       "sister": "姉妹",
       "brother": "兄弟",
@@ -255,6 +269,7 @@
     },
     "toast": {
       "resent": "{{name}}さんの期限を1週間のばしました",
+      "inviteCancelled": "{{name}}さんへの招待を取り消しました",
       "removed": "家系図から外しました"
     }
   },

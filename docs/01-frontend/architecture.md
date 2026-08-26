@@ -72,7 +72,9 @@ app/                      expo-router routes — file = route
     ai.tsx                AI suggestions
     profile.tsx           My profile
   create-family.tsx       Create or join — the way out of an empty account
-  family.tsx              Family tree — pushed, not a tab
+  family/index.tsx        Family tree — pushed, not a tab
+  family/invitations.tsx  Sent invitations — resend / cancel, from the tree's ✈
+  family/new.tsx          Start a second family group, from the strip's +
   member/[id].tsx         Life Profile (Timeline / Album / Memo)
   post/[id].tsx           Post detail — comments and reactions
   ai/gifts.tsx            Gift ideas — pushed from the AI tab
@@ -355,8 +357,11 @@ would otherwise sit in the top row while their spouse sits three rows down.
 `pending` nodes are fed from the invitation list (2026-08-19). Creating an
 invitation reserves a real placeholder member, so the caller passes
 `pendingMemberIds` — the member ids of the outstanding invitations — and
-`tree-from-graph.ts` marks those nodes. `components/family/pending-banner.tsx`
-renders over the canvas for the newest one and counts the rest.
+`tree-from-graph.ts` marks those nodes. The banner that used to float over
+the canvas for the newest one was removed 2026-08-26 — it covered the map;
+outstanding invites now live in `app/family/invitations.tsx`, behind the
+paper-plane at the family screen's top right (`design-system.md` § Sent
+invitations).
 
 Outstanding is recomputed on the client as well as read from the server:
 `EXPIRED` is derived from `expiresAt` at read time, so a list fetched before
@@ -770,7 +775,7 @@ Four pieces, matching mockup sections 8a–8d:
 | Piece                              | File                                   |
 | ---------------------------------- | -------------------------------------- |
 | Invite sheet (sender)              | `components/family/invite-sheet.tsx`   |
-| Pending banner over the tree       | `components/family/pending-banner.tsx` |
+| Sent invitations (resend / cancel) | `app/family/invitations.tsx`           |
 | Spot preview inside the invitation | `components/family/invite-preview.tsx` |
 | Invitation page (receiver)         | `app/invite/[code].tsx`                |
 

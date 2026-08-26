@@ -28,6 +28,31 @@ screens.
 
 ## Current Focus
 
+- **The ghost-member bug: an invitation could not be taken back
+  (2026-08-26, `feature/motion-system`).** Sending an invite reserves the
+  spot (placeholder + edge + code, one transaction) and the server has had
+  the undo since 1.4.4 — cancel deletes an untouched placeholder and the
+  node falls back to Empty — but **no screen ever called it**:
+  `useCancelInvitation` sat unused. Worst case: invite a PARENT, close the
+  sheet without keeping the code, and the spot is a permanent ghost — the
+  member sheet's Remove is disabled by its own `hasChildren` rule (the
+  viewer hangs below them), and after 7 days the pending ring quietly
+  disappears, leaving an ordinary-looking placeholder nobody can explain.
+  Fixed in two places: the **member sheet** now swaps Remove for "Cancel the
+  invitation" while a stored-PENDING invitation holds the spot (derived
+  `EXPIRED` counts — the row is still PENDING, so the lapsed ghost is
+  curable too), and outstanding invites moved to a **Sent invitations
+  screen** (`app/family/invitations.tsx`, behind a paper-plane + badge at
+  the family screen's top right, per-row Resend/Cancel, resolved rows kept
+  as dimmed history; tapping a live or lapsed row reveals its code via
+  `InviteCodeCard` — the sender who closed the sheet without copying gets
+  it back). The floating banner it replaces was first given an ✕
+  and then **removed the same day at the owner's call** — a card parked on
+  the canvas covered the very tree being looked at.
+  `components/family/pending-banner.tsx` is deleted. Verified: tsc,
+  prettier, check:i18n (740 keys); the flow itself not yet replayed against
+  a live server.
+
 - **Joining a second family finally has a door (2026-08-26,
   `feature/motion-system`).** The join-by-code screen existed but only an
   account with NO family could reach it (Home's empty state); somebody in

@@ -1,11 +1,11 @@
-import { Lock, Trash2, UserRound } from 'lucide-react-native';
+import { Lock, Trash2, UserRound, UserRoundX } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { edgeBetween, removalBlock } from '../../features/family/member-permissions';
 import { kinshipOptions, type KinshipOption } from '../../features/family/kinship';
-import type { FamilyMemberSummary, FamilyTree, Gender } from '../../lib/api';
+import type { FamilyMemberSummary, FamilyTree, Gender, InvitationSummary } from '../../lib/api';
 import { colors, elevation, radius } from '../../theme';
 import { Avatar } from '../ui/avatar';
 import { Button } from '../ui/button';
@@ -49,6 +49,17 @@ export type MemberSheetProps = {
   removing?: boolean;
   /** Catalogue key for whatever went wrong, shown above the actions. */
   errorKey?: string | null;
+  /**
+   * The invitation still reserving this spot (stored-PENDING — the derived
+   * `EXPIRED` counts, the code can be revived until it is cancelled). When
+   * set, the destructive action is "cancel the invitation" instead of
+   * remove: the server undoes the whole reservation — placeholder, edges,
+   * code — even where plain removal is blocked, e.g. an invited parent whom
+   * `hasChildren` would otherwise pin in the tree forever.
+   */
+  pendingInvite?: InvitationSummary | null;
+  onCancelInvite?: () => void;
+  cancelling?: boolean;
 };
 
 /**
@@ -75,6 +86,9 @@ export function MemberSheet({
   saving = false,
   removing = false,
   errorKey = null,
+  pendingInvite = null,
+  onCancelInvite,
+  cancelling = false,
 }: MemberSheetProps) {
   const { t } = useTranslation();
 
@@ -99,6 +113,9 @@ export function MemberSheet({
           saving={saving}
           removing={removing}
           errorKey={errorKey}
+          pendingInvite={pendingInvite}
+          onCancelInvite={onCancelInvite}
+          cancelling={cancelling}
         />
       )}
     </SheetModal>
@@ -116,6 +133,9 @@ function MemberSheetBody({
   saving,
   removing,
   errorKey,
+  pendingInvite,
+  onCancelInvite,
+  cancelling,
 }: Omit<MemberSheetProps, 'member' | 'saving' | 'removing' | 'errorKey'> & {
   member: FamilyMemberSummary;
   saving: boolean;
@@ -296,33 +316,62 @@ function MemberSheetBody({
           onPress={save}
         />
 
-        <View style={{ gap: 6 }}>
-          <Button
-            label={t('family.member.remove')}
-            variant="destructive"
-            size="large"
-            fullWidth
-            disabled={block !== null}
-            loading={removing}
-            onPress={onRemove}
-            renderIcon={({ size, color }) => <Trash2 size={size} color={color} strokeWidth={2.1} />}
-          />
-
-          {/* React Native has no tooltip, and a disabled button that will not
-              say why is its own small cruelty. The reason goes underneath. */}
-          {block !== null && (
+        {pendingInvite != null ? (
+          /* A spot still held by an invitation is undone by CANCELLING it, not
+             by removing the person: the server unwinds the whole reservation —
+             placeholder, edges, code — even where removal is blocked. Without
+             this, an invited parent was a ghost forever: `hasChildren`
+             disabled Remove, and nothing else offered a way out. */
+          <View style={{ gap: 6 }}>
+            <Button
+              label={t('family.member.cancelInvite')}
+              variant="destructive"
+              size="large"
+              fullWidth
+              loading={cancelling}
+              onPress={onCancelInvite}
+              renderIcon={({ size, color }) => (
+                <UserRoundX size={size} color={color} strokeWidth={2.1} />
+              )}
+            />
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
               <UserRound size={13} color={colors.text.subtle} strokeWidth={2} />
               <Text variant="badge" color={colors.text.subtle} style={{ flex: 1 }}>
-                {t(
-                  block === 'hasChildren'
-                    ? 'family.member.blocked.hasChildren'
-                    : 'family.member.blocked.notYours',
-                )}
+                {t('family.member.cancelInviteHint', { name: member.displayName })}
               </Text>
             </View>
-          )}
-        </View>
+          </View>
+        ) : (
+          <View style={{ gap: 6 }}>
+            <Button
+              label={t('family.member.remove')}
+              variant="destructive"
+              size="large"
+              fullWidth
+              disabled={block !== null}
+              loading={removing}
+              onPress={onRemove}
+              renderIcon={({ size, color }) => (
+                <Trash2 size={size} color={color} strokeWidth={2.1} />
+              )}
+            />
+
+            {/* React Native has no tooltip, and a disabled button that will not
+                say why is its own small cruelty. The reason goes underneath. */}
+            {block !== null && (
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
+                <UserRound size={13} color={colors.text.subtle} strokeWidth={2} />
+                <Text variant="badge" color={colors.text.subtle} style={{ flex: 1 }}>
+                  {t(
+                    block === 'hasChildren'
+                      ? 'family.member.blocked.hasChildren'
+                      : 'family.member.blocked.notYours',
+                  )}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
     </View>
   );

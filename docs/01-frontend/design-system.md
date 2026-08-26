@@ -627,13 +627,34 @@ the tree must not draw a line to a promise that was not made.
 
 Tapping an Empty node opens the invite sheet with that node as the spot.
 
-### Pending banner
+### Sent invitations
 
-While an invite is outstanding, a white pill floats over the top-left of
-the canvas: clock chip, "Waiting for {name}", then
-"Invited as {role} · {sent}" and a Resend action. It is inset from the
-right rather than fixed-width, so it can never slide under the zoom
-controls on a narrow screen.
+Outstanding invites used to be a white pill floating over the top-left of
+the canvas ("Waiting for {name}" + Resend). **Removed 2026-08-26**: the
+tree is a map, and a card parked on it covered the very people being
+looked at — and the banner had no cancel, which is how a reserved spot
+became unremovable (see the ghost-member story in `project-status.md`).
+
+They are a screen now, `/family/invitations`, behind a **paper-plane at
+the family screen's top right** carrying the waiting count as a badge (the
+bell's badge anatomy exactly). Each row keeps the banner's shape — clock
+chip, name, "Invited as {role} · {sent} · {expires}" — plus **Resend and
+Cancel**. A lapsed invitation stays actionable (`EXPIRED` is derived; the
+row is still PENDING underneath): Resend revives the same code, Cancel
+frees the reserved spot. Accepted and cancelled rows stay listed as
+history, dimmed, with a status word instead of actions.
+
+**Tapping the name reveals the code** — the `InviteCodeCard` (grouped
+`K7M2 QRXP`, Copy button), one row open at a time, with the expiry as its
+subtitle (or "resend to make this code work again" on a lapsed one). This
+is how a sender who closed the invite sheet without copying gets the code
+back. The reveal is the name area's own button, not the whole row — a
+row-wide button around Resend and Cancel would be the nested-`<button>`
+trap. A resolved row reveals nothing; its code is dead.
+
+The member sheet is the second door to the same cancel: long-press a
+pending node and the destructive action reads "Cancel the invitation"
+instead of Remove.
 
 ## Logo
 
