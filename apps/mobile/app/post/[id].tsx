@@ -331,6 +331,9 @@ export default function PostDetailScreen() {
                   placeholder={t('post.commentPlaceholder')}
                   maxLength={MAX_COMMENT}
                   multiline
+                  // Composer: 1 dòng lúc nghỉ (~47px, khớp nút Send 44), lớn
+                  // theo nội dung tới 5 dòng (12 + 21×5 + 12) rồi cuộn bên trong.
+                  maxHeight={129}
                 />
               </View>
 

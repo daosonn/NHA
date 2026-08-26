@@ -1,7 +1,7 @@
 import { Eye, EyeOff } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, TextInput, View, type TextInputProps } from 'react-native';
+import { Platform, Pressable, TextInput, View, type TextInputProps } from 'react-native';
 import Animated, {
   interpolateColor,
   useAnimatedStyle,
@@ -46,6 +46,17 @@ export type TextFieldProps = Omit<TextInputProps, 'style'> & {
    * merged Add button. The caller owns its enabled/disabled state.
    */
   trailing?: React.ReactNode;
+  /**
+   * Multiline only: the composer shape rather than the paragraph shape.
+   * The box starts one line tall (not the 104px paragraph box), grows with
+   * the text, and stops at this height — scrolling inside — so a long
+   * comment never walls off the screen. No floating label: once the text
+   * scrolls under the cap it would slide up beneath the label, two texts in
+   * one spot — so `label` becomes the accessibility label only and the
+   * placeholder does the talking. The countdown appears only near the
+   * limit, since a corner "2000" on an empty box is noise.
+   */
+  maxHeight?: number;
 };
 
 /**
@@ -76,6 +87,7 @@ export function TextField({
   uppercaseLabel = false,
   placeholder,
   trailing,
+  maxHeight,
   ...rest
 }: TextFieldProps) {
   const { t } = useTranslation();
@@ -97,6 +109,39 @@ export function TextField({
   /** The floating variant: every field that is not an uppercase section. */
   const floating = !uppercaseLabel;
   const floated = focused || value.length > 0;
+
+  /** Composer shape: grow from one line to `maxHeight`, then scroll inside. */
+  const grow = multiline && maxHeight !== undefined;
+  const [contentHeight, setContentHeight] = useState(0);
+  // The input's own vertical padding (set in its style below) — the growing
+  // height has to include it. `contentSize` reports the text alone on
+  // native but the padded scrollHeight on react-native-web. The composer has
+  // no floating label to leave headroom for, so it pads evenly.
+  const padTop = grow ? 12 : floating ? 26 : 0;
+  const padBottom = 12;
+  const measured = Platform.OS === 'web' ? contentHeight : contentHeight + padTop + padBottom;
+  const growHeight =
+    multiline && maxHeight !== undefined
+      ? Math.min(
+          Math.max(measured, padTop + typography.fontSize.body1.lineHeight + padBottom),
+          maxHeight,
+        )
+      : undefined;
+
+  const inputRef = useRef<TextInput>(null);
+  // Web: `scrollHeight` never reports less than the height already set on
+  // the element, so a deleted line would leave the box tall forever (the
+  // native path is fine — its contentSize measures the text, not the box).
+  // Release the height for one frame and read what the text actually needs.
+  useLayoutEffect(() => {
+    if (!grow || Platform.OS !== 'web') return;
+    const node = inputRef.current as unknown as HTMLTextAreaElement | null;
+    if (node == null) return;
+    const held = node.style.height;
+    node.style.height = '0px';
+    setContentHeight(node.scrollHeight);
+    node.style.height = held;
+  }, [grow, value]);
 
   const float = useSharedValue(floated ? 1 : 0);
   useEffect(() => {
@@ -133,7 +178,8 @@ export function TextField({
       <View
         style={[
           {
-            minHeight: multiline ? 104 : floating ? 56 : 48,
+            // The composer hugs its growing input; the paragraph box keeps 104.
+            minHeight: multiline ? (grow ? undefined : 104) : floating ? 56 : 48,
             borderRadius: radius.lg,
             backgroundColor: colors.background.card,
             paddingHorizontal: 14,
@@ -146,7 +192,7 @@ export function TextField({
           focused && !invalid && { boxShadow: FOCUS_RING },
         ]}
       >
-        {floating && (
+        {floating && !grow && (
           <Animated.Text
             numberOfLines={1}
             // The demo's `pointer-events: none` — the label sits OVER the
@@ -176,6 +222,7 @@ export function TextField({
 
         <TextInput
           {...rest}
+          ref={inputRef}
           // The visible label is a sibling Text, not programmatically attached —
           // without this a screen reader announces only the placeholder.
           accessibilityLabel={rest.accessibilityLabel ?? label}
@@ -186,9 +233,16 @@ export function TextField({
           multiline={multiline}
           maxLength={maxLength}
           secureTextEntry={secure && !revealed}
+          onContentSizeChange={(event) => {
+            // Web measures via the layout effect above instead.
+            if (grow && Platform.OS !== 'web')
+              setContentHeight(event.nativeEvent.contentSize.height);
+            rest.onContentSizeChange?.(event);
+          }}
           // While the label rests inside the box a placeholder would sit
           // underneath it, two texts in one spot — it waits for the float.
-          placeholder={floating && !floated ? undefined : placeholder}
+          // The composer has no floating label, so its placeholder always shows.
+          placeholder={floating && !grow && !floated ? undefined : placeholder}
           placeholderTextColor={colors.text.subtle}
           style={{
             flex: 1,
@@ -201,10 +255,13 @@ export function TextField({
             fontSize: multiline ? typography.fontSize.body1.fontSize : 14,
             lineHeight: multiline ? typography.fontSize.body1.lineHeight : 20,
             color: colors.text.primary,
+            // Composer: one line at rest, growing with the text to the cap —
+            // past it the input scrolls instead of walling off the screen.
+            height: growHeight,
             textAlignVertical: multiline ? 'top' : 'center',
             // Room above the text for the floated label to sit inside the box.
-            paddingTop: floating ? (multiline ? 26 : 15) : 0,
-            paddingBottom: multiline ? 12 : 0,
+            paddingTop: multiline ? padTop : floating ? 15 : 0,
+            paddingBottom: multiline ? padBottom : 0,
             // Web: the browser's own black focus rectangle on the inner
             // <input> — the container already draws the coral focus ring.
             // `solid` matters: the UA ring is `outline-style: auto`, which
@@ -225,18 +282,20 @@ export function TextField({
         {/* The textarea demo counts DOWN, tucked in the bottom corner, and
             turns warning-coloured near the limit — a paragraph writer needs
             "how much is left", not "how much have I written". */}
-        {maxLength !== undefined && multiline && (
-          <Text
-            variant="badge"
-            weight="medium"
-            color={
-              maxLength - value.length <= COUNT_WARN_AT ? colors.coral.hover : colors.text.subtle
-            }
-            style={{ position: 'absolute', right: 14, bottom: 10 }}
-          >
-            {`${maxLength - value.length}`}
-          </Text>
-        )}
+        {maxLength !== undefined &&
+          multiline &&
+          (!grow || maxLength - value.length <= COUNT_WARN_AT) && (
+            <Text
+              variant="badge"
+              weight="medium"
+              color={
+                maxLength - value.length <= COUNT_WARN_AT ? colors.coral.hover : colors.text.subtle
+              }
+              style={{ position: 'absolute', right: 14, bottom: 10 }}
+            >
+              {`${maxLength - value.length}`}
+            </Text>
+          )}
 
         {trailing !== undefined && (
           // Pull toward the demo's tighter inset — the box pads 14, a solid
