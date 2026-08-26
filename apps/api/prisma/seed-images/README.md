@@ -1,6 +1,7 @@
-# Seed images
+# Seed media
 
-Drop a few photos here, then run `pnpm seed` from the repo root.
+Drop a few photos and video clips here, then run `pnpm seed` from the repo
+root. Subfolders are fine — dragging a whole folder in works.
 
 ```
 apps/api/prisma/seed-images/
@@ -9,11 +10,11 @@ apps/api/prisma/seed-images/
   ...
 ```
 
-- Accepted: `.jpg` `.jpeg` `.png` `.webp` `.heic`
-- Read in **filename order**, up to **8** of them — number the files if you
-  care which photo lands on which post
-- Resized to 1600px on the long edge and converted to JPEG on the way in, so
-  straight-off-the-phone photos are fine
+- Photos: `.jpg` `.jpeg` `.png` `.webp` `.heic` — up to **8**
+- Videos: `.mp4` `.mov` `.m4v` — up to **2**
+- Read in **path order** — number the files if you care which one lands where
+- Photos are resized to 1600px and converted to JPEG; videos are converted to
+  MP4. Straight-off-the-phone or straight-off-the-camera files are fine
 
 The images themselves are **gitignored on purpose** — only this README is
 committed. Everyone supplies their own.
@@ -22,7 +23,7 @@ committed. Everyone supplies their own.
 
 `Media` rows live in the shared Neon database; the files they point at live in
 `apps/api/uploads/`, which is local to each machine. The seed writes your
-photos to fixed storage keys (`seed/01.jpg`, `seed/02.jpg`, …), so the rows
+media to fixed storage keys (`seed/01.jpg`, `seed/v01.mp4`, …), so the rows
 everyone shares stay valid on every machine — each person just sees their own
 pictures in those slots.
 

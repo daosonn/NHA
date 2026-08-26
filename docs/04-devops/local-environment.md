@@ -270,20 +270,51 @@ the demo box.
 pnpm seed
 ```
 
-Creates the demo dataset: two accounts (`hanako@example.com`,
-`taro@example.com`, password `password-123`), two families (invite codes
-`YAMADA22`, `SUZUKI22`), members and relationships for the tree, four posts,
-life profiles with bio/birth date, a handful of life events for the timeline,
-and — when photos are available — media attached to the posts plus one album.
+Creates the demo dataset: twelve accounts (§ Accounts below), two families,
+members and relationships for the family tree, posts, life profiles with bio
+and birth date, life events for the timeline, and — when you supply media —
+photos and video clips attached to the posts, plus one album.
 
 **It is idempotent.** Every write is an upsert or guarded by an existence
 check, and it deletes nothing, so re-running adds nothing and breaks nothing.
 That is what makes it safe on the shared Neon database: filling the team's
 demo data is the job it exists for.
 
-### Photos
+### Accounts
 
-Photos are the one part that cannot be shared through the database. `Media`
+Every seeded account uses the same password, **`password-123`**. These exist
+only in development seeds — nothing here may ever reach a real environment.
+
+| Email                       | Name      | Family                              |
+| --------------------------- | --------- | ----------------------------------- |
+| `hanako@example.com`        | 山田 花子 | 山田家 (owner)                      |
+| `taro@example.com`          | 山田 太郎 | 山田家 + 鈴木家 (multi-family case) |
+| `sato@example.com`          | 佐藤 健   | none                                |
+| `suzuki.misaki@example.com` | 鈴木 美咲 | none                                |
+| `takahashi@example.com`     | 高橋 大輔 | none                                |
+| `tanaka@example.com`        | 田中 由紀 | none                                |
+| `ito@example.com`           | 伊藤 翔   | none                                |
+| `watanabe@example.com`      | 渡辺 彩   | none                                |
+| `nakamura@example.com`      | 中村 陸   | none                                |
+| `kobayashi@example.com`     | 小林 花音 | none                                |
+| `kato@example.com`          | 加藤 誠   | none                                |
+| `yoshida@example.com`       | 吉田 結衣 | none                                |
+
+The ten below `taro` are **deliberately blank**: no family, no members, no
+relationships, no posts. That is what makes them useful — they are the only
+way to test what a real new user sees, and the only way to exercise joining
+by invite code with someone who is genuinely a stranger to the tree. Putting
+them in 山田家 would also bury the family-tree demo under ten loose nodes.
+
+Invite codes to join with: **`YAMADA22`** (山田家), **`SUZUKI22`** (鈴木家).
+
+Two accounts signed in at once is the minimum for testing anything shared —
+posting to a family the other can see, wiki edits, notifications. Ten means a
+whole team can each hold their own without stepping on each other.
+
+### Photos and video
+
+Media files are the one part that cannot be shared through the database. `Media`
 rows live in Neon; the files they name live in `apps/api/uploads/`, which is
 local to each machine. A row whose file is missing is a 404 when the app
 streams it.
@@ -291,14 +322,22 @@ streams it.
 So the seed writes the files itself, from photos you supply:
 
 ```
-apps/api/prisma/seed-images/     ← drop .jpg/.png/.webp/.heic here
+apps/api/prisma/seed-images/     ← drop photos and clips here (subfolders fine)
 ```
 
-Read in filename order, up to 8, resized to 1600px on the long edge and
-converted to JPEG. They land on **fixed storage keys** — `seed/01.jpg`,
-`seed/02.jpg`, … — which is what keeps the shared rows valid everywhere: each
-person fills the same slots with their own pictures. Set `SEED_IMAGES_DIR` to
-read from somewhere else.
+Read in path order — subfolders included, so dragging a whole folder in works
+— up to **8 photos** and **2 videos**. Photos are resized to 1600px on the long
+edge and converted to JPEG; videos are converted to MP4 with `+faststart` so
+range requests can seek. Both land on **fixed storage keys** — `seed/01.jpg`,
+`seed/v01.mp4`, … — which is what keeps the shared rows valid everywhere: each
+person fills the same slots with their own media. Set `SEED_IMAGES_DIR` to read
+from somewhere else.
+
+Conversion keeps the video stream untouched and re-encodes only the audio,
+because real footage carries things MP4 cannot: a compact camera writes
+`adpcm_ima_wav` audio, an iPhone adds a spatial-audio track and several
+`mebx` metadata tracks. A clip whose video codec itself cannot go into MP4
+falls back to a real re-encode.
 
 The photos are gitignored on purpose; only
 `apps/api/prisma/seed-images/README.md` is committed. Consequences worth
