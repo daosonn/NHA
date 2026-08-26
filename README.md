@@ -34,24 +34,37 @@ Read in this order:
 
 ## Running the project
 
-Prerequisites: Docker Desktop running. Node/pnpm are auto-downloaded if
-missing (pinned in `package.json` → `devEngines`).
+The database is **Neon Cloud PostgreSQL, shared by the whole team** — one
+database behind every machine. Node/pnpm are auto-downloaded if missing
+(pinned in `package.json` → `devEngines`); Docker is needed only for the
+opt-in local database.
 
-```bash
+First time on a machine (PowerShell, from the repo root):
+
+```powershell
 pnpm install
-pnpm bootstrap   # one-shot: .env files, PostgreSQL, migrations, Prisma client
+Copy-Item apps/api/.env.example apps/api/.env
+# then put the Neon connection string into apps/api/.env → DATABASE_URL
+pnpm --filter api exec prisma migrate deploy   # apply migrations to Neon
+pnpm --filter api exec prisma generate         # generate the Prisma client
+```
 
+Then:
+
+```powershell
 pnpm dev:api           # apps/api
 pnpm dev:mobile        # apps/mobile — Expo dev server, scan QR with Expo Go
 pnpm dev:mobile:web    # apps/mobile in a browser (fast layout iteration)
 pnpm dev:web           # apps/web (Next.js scaffold)
 ```
 
+Want a private database instead of the shared one? That is Workflow B —
+Docker Desktop plus `pnpm bootstrap`. Both workflows, and the rules for
+working against a database your teammates share, are in
+`docs/04-devops/local-environment.md`.
+
 Full command reference: `docs/04-devops/commands.md`.
 Mobile setup on Windows: `docs/04-devops/mobile-development.md`.
-
-`pnpm bootstrap` is safe to re-run anytime. Details:
-`docs/04-devops/local-environment.md`.
 
 ## Contributing
 

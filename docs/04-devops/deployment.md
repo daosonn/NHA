@@ -8,7 +8,10 @@
 - [ ] Hosting for `apps/web` (Next.js) — e.g. Vercel, self-hosted
 - [ ] Hosting for `apps/api` (NestJS) — e.g. Railway, Fly.io, VPS, container platform
 - [ ] Hosting for `apps/ai` (FastAPI, once created)
-- [ ] PostgreSQL hosting — e.g. managed Postgres (Neon, Supabase, RDS) vs self-managed
+- [ ] PostgreSQL hosting for production — **development** already runs on
+      managed Postgres at Neon Cloud (decided 2026-08-26,
+      `local-environment.md`); production may reuse that Neon project, use a
+      separate one, or move elsewhere
 - [ ] Media storage (photos/videos/audio) — this is a long-term family archive
       product, so storage durability and cost at scale matter; also listed as
       an open decision in `docs/00-shared/product-overview.md` § 18

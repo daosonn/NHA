@@ -3,11 +3,14 @@
 //
 // What it does:
 //   1. Creates .env files from .env.example if missing (root + apps/api)
-//   2. Starts local PostgreSQL via docker compose
-//   3. Waits until the database is ready
+//   2. Reads DATABASE_URL from apps/api/.env and decides where the database is
+//   3. Only when that database is local: starts PostgreSQL via docker compose
+//      and waits for it. A remote (Neon) URL skips Docker — nothing to start.
 //   4. Applies Prisma migrations and generates the Prisma client
 //
-// Safe to re-run at any time (idempotent).
+// Safe to re-run at any time (idempotent). Note that against the shared Neon
+// database step 4 applies pending migrations to a database your teammates
+// also use — see docs/04-devops/local-environment.md § Neon rules.
 
 import { copyFileSync, existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -60,45 +63,87 @@ for (const { example, target } of envPairs) {
   }
 }
 
-// --- 2. Start PostgreSQL ----------------------------------------------------
+// --- 2. Where is the database? ----------------------------------------------
 
-step('PostgreSQL (docker compose)');
-if (runQuiet('docker', ['--version']) !== 0) {
-  fail('Docker is not available. Install/start Docker Desktop, then re-run: pnpm bootstrap');
+step('Database target');
+const apiEnv = readFileSync(join(root, 'apps/api/.env'), 'utf8');
+const databaseUrl = /^DATABASE_URL=(.*)$/m
+  .exec(apiEnv)?.[1]
+  ?.trim()
+  .replace(/^["']|["']$/g, '');
+
+if (!databaseUrl) {
+  fail('DATABASE_URL is missing from apps/api/.env. See docs/04-devops/local-environment.md');
 }
-if (run('docker', ['compose', 'up', '-d']) !== 0) {
-  fail('docker compose up failed. Is Docker running?');
+if (
+  databaseUrl.includes('ep-example.region.aws.neon.tech') ||
+  databaseUrl.includes('USER:PASSWORD')
+) {
+  fail(`apps/api/.env still holds the placeholder DATABASE_URL — nothing to connect to.
+
+  Shared Neon Cloud (the team default): paste the connection string from the
+  Neon project into apps/api/.env, then apply migrations without this script:
+      pnpm --filter api exec prisma migrate deploy
+
+  Local Docker Postgres instead: put back the commented localhost line from
+  apps/api/.env.example, then re-run: pnpm bootstrap
+
+  Both workflows: docs/04-devops/local-environment.md`);
 }
 
-// --- 3. Wait for the database -----------------------------------------------
+// Never print the URL itself — it carries the password. The host is what you
+// need to see before migrations run, especially on a shared database.
+let dbHost = '';
+try {
+  dbHost = new URL(databaseUrl).hostname;
+} catch {
+  fail('DATABASE_URL in apps/api/.env is not a valid connection string.');
+}
+const isLocalDatabase = ['localhost', '127.0.0.1', '::1', 'host.docker.internal'].includes(dbHost);
+console.log(`DATABASE_URL host: ${dbHost}`);
 
-step('Waiting for database');
-const rootEnv = readFileSync(join(root, '.env'), 'utf8');
-const dbUser = /^POSTGRES_USER=(.*)$/m.exec(rootEnv)?.[1]?.trim() || 'nha';
-const dbName = /^POSTGRES_DB=(.*)$/m.exec(rootEnv)?.[1]?.trim() || 'nha';
+// --- 3. Local PostgreSQL only: start it and wait ----------------------------
 
-let ready = false;
-for (let attempt = 1; attempt <= 30; attempt++) {
-  if (
-    runQuiet('docker', [
-      'compose',
-      'exec',
-      '-T',
-      'postgres',
-      'pg_isready',
-      '-U',
-      dbUser,
-      '-d',
-      dbName,
-    ]) === 0
-  ) {
-    ready = true;
-    break;
+if (!isLocalDatabase) {
+  console.log('remote database — skipping local Docker Postgres (there is nothing to start)');
+  console.log('migrations below apply to THAT database; on Neon it is shared with the team');
+} else {
+  step('PostgreSQL (docker compose)');
+  if (runQuiet('docker', ['--version']) !== 0) {
+    fail('Docker is not available. Install/start Docker Desktop, then re-run: pnpm bootstrap');
   }
-  await new Promise((resolve) => setTimeout(resolve, 2000));
+  if (run('docker', ['compose', 'up', '-d']) !== 0) {
+    fail('docker compose up failed. Is Docker running?');
+  }
+
+  step('Waiting for database');
+  const rootEnv = readFileSync(join(root, '.env'), 'utf8');
+  const dbUser = /^POSTGRES_USER=(.*)$/m.exec(rootEnv)?.[1]?.trim() || 'nha';
+  const dbName = /^POSTGRES_DB=(.*)$/m.exec(rootEnv)?.[1]?.trim() || 'nha';
+
+  let ready = false;
+  for (let attempt = 1; attempt <= 30; attempt++) {
+    if (
+      runQuiet('docker', [
+        'compose',
+        'exec',
+        '-T',
+        'postgres',
+        'pg_isready',
+        '-U',
+        dbUser,
+        '-d',
+        dbName,
+      ]) === 0
+    ) {
+      ready = true;
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+  if (!ready) fail('Database did not become ready within 60s. Check: docker compose logs postgres');
+  console.log('database is ready');
 }
-if (!ready) fail('Database did not become ready within 60s. Check: docker compose logs postgres');
-console.log('database is ready');
 
 // --- 4. Prisma migrate + generate -------------------------------------------
 
