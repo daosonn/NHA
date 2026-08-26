@@ -28,15 +28,15 @@ on a shared database: `local-environment.md`.
 
 ## Database commands
 
-| Command                                        | What it does                                                      |
-| ---------------------------------------------- | ----------------------------------------------------------------- |
-| `pnpm --filter api exec prisma migrate deploy` | Applies pending migrations to whatever `DATABASE_URL` points at   |
-| `pnpm --filter api exec prisma migrate status` | Says whether that database is up to date. Read-only, always safe  |
-| `pnpm --filter api exec prisma generate`       | Regenerates the client into gitignored `apps/api/src/generated`   |
-| `pnpm --filter api exec prisma migrate dev`    | **Authoring only.** Local Docker or your own Neon branch          |
-| `pnpm studio`                                  | Prisma Studio against `DATABASE_URL` — on shared Neon, real data  |
-| `pnpm seed`                                    | Writes demo data through `DATABASE_URL`. Not on the shared branch |
-| `pnpm db:backup` / `pnpm db:restore`           | Local Docker container only; these never see Neon                 |
+| Command                                        | What it does                                                     |
+| ---------------------------------------------- | ---------------------------------------------------------------- |
+| `pnpm --filter api exec prisma migrate deploy` | Applies pending migrations to whatever `DATABASE_URL` points at  |
+| `pnpm --filter api exec prisma migrate status` | Says whether that database is up to date. Read-only, always safe |
+| `pnpm --filter api exec prisma generate`       | Regenerates the client into gitignored `apps/api/src/generated`  |
+| `pnpm --filter api exec prisma migrate dev`    | **Authoring only.** Local Docker or your own Neon branch         |
+| `pnpm studio`                                  | Prisma Studio against `DATABASE_URL` — on shared Neon, real data |
+| `pnpm seed`                                    | Demo data through `DATABASE_URL`. Idempotent, safe to re-run     |
+| `pnpm db:backup` / `pnpm db:restore`           | Local Docker container only; these never see Neon                |
 
 `prisma migrate deploy` applies migrations and nothing else — it never copies
 data between databases. Never run `prisma migrate reset` against a shared

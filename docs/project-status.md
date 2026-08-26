@@ -28,6 +28,27 @@ screens.
 
 ## Current Focus
 
+- **Backend infrastructure, not screens (2026-08-26).** The database moved out
+  from under everyone in PR #51: development runs on **shared Neon Cloud**, so
+  the team sees one set of data. Two things follow from that, and they are the
+  current line of work:
+
+  - **Demo data.** `pnpm seed` fills the shared database and is safe to
+    re-run. Photos are the exception — they come from
+    `apps/api/prisma/seed-images/` on each machine, because `Media` rows are
+    shared but the files in `apps/api/uploads/` are not.
+  - **Media storage.** Files on local disk cannot work for a shared team
+    database forever. `StorageService` has been decoupled from filesystem
+    paths (branch `refactor/storage-local-path-borrow`), and **Cloudflare R2
+    is proposed** in `deployment.md` — bucket and credentials verified, driver
+    not written.
+
+  Day-to-day rules for a shared database — never `prisma migrate reset` or
+  casual `migrate dev` on it, and `pnpm test:e2e` stays off it — are in
+  `docs/04-devops/local-environment.md` § Neon rules.
+
+  Untouched by all of this: `schema.prisma`, models, business logic, and
+  everything in `apps/mobile`. Frontend work continues independently.
 - **Media storage is the current backend line (2026-08-26).** Frontend layout
   work below is paused — this is infrastructure, and it blocks the team rather
   than any one screen.
