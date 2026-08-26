@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
-import { TriangleAlert, UsersRound } from 'lucide-react-native';
+import { LockKeyhole, TriangleAlert, UsersRound } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { FamilyTree } from '../../src/components/family/family-tree';
 import { InviteSheet } from '../../src/components/family/invite-sheet';
@@ -15,6 +15,7 @@ import { ContentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { SectionHeader } from '../../src/components/ui/section-header';
+import { Text } from '../../src/components/ui/text';
 import { useToast } from '../../src/components/ui/toast';
 import { useSession } from '../../src/features/auth/session';
 import { useActiveFamily } from '../../src/features/family/active-family';
@@ -34,6 +35,7 @@ import {
   type FamilyTree as FamilyTreePayload,
   type InvitationSummary,
 } from '../../src/lib/api';
+import { colors, radius } from '../../src/theme';
 
 /**
  * Every group, not the first three: on this screen the strip is the switch
@@ -181,6 +183,38 @@ export default function FamilyTreeScreen() {
               onAddPress={() => router.push('/family/new')}
             />
           </ContentColumn>
+        )}
+
+        {/* Lối vào nhóm khác bằng mã đọc miệng (mockup 7a). Trước đây chỉ
+            người CHƯA có gia đình mới thấy màn Join (empty state ở Home) —
+            người đang ở gia đình A được đọc mã vào gia đình B không có chỗ
+            nào để gõ. Nút + ở dải trên vẫn là "tạo mới", đúng chủ đích của
+            nó; đây là cánh cửa còn thiếu. */}
+        {families !== undefined && families.length > 0 && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('family.joinBanner.action')}
+            onPress={() => router.push({ pathname: '/create-family', params: { mode: 'join' } })}
+            style={{
+              height: 44,
+              borderRadius: radius.lg,
+              backgroundColor: colors.background.card,
+              // Viền ấm của mockup, inset để không cộng vào chiều cao.
+              boxShadow: 'inset 0 0 0 1.4px #F0DCC5',
+              paddingHorizontal: 14,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 9,
+            }}
+          >
+            <LockKeyhole size={17} color={colors.coral.deep} strokeWidth={2.1} />
+            <Text variant="body2" weight="medium" color={colors.text.muted} style={{ flex: 1 }}>
+              {t('family.joinBanner.question')}
+            </Text>
+            <Text variant="body2" weight="semibold" color={colors.coral.deep}>
+              {t('family.joinBanner.action')}
+            </Text>
+          </Pressable>
         )}
 
         {isError ? (

@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { safeBack } from '../src/lib/back';
 import { Hash, UsersRound } from 'lucide-react-native';
 import { useState } from 'react';
@@ -43,8 +43,11 @@ function errorKey(error: unknown, mode: Mode): string {
 export default function CreateFamilyScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  // The family screen's "Have an invite code?" banner opens straight onto
+  // Join — the person arriving that way already holds a code.
+  const params = useLocalSearchParams<{ mode?: string }>();
 
-  const [mode, setMode] = useState<Mode>('create');
+  const [mode, setMode] = useState<Mode>(params.mode === 'join' ? 'join' : 'create');
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
 

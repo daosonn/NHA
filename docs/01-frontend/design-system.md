@@ -575,6 +575,23 @@ The rules that fixed it generalise:
   is the family tree's mark elsewhere, but beside a row of faces it reads
   as "more people". `Network` says structure.
 
+### Join banner
+
+The way into a group you were handed a code for, on the family screen
+under the group strip (mockup 7a, 2026-08-26). One 44px row: white, radius
+14, a warm inset border (`inset 0 0 0 1.4px #F0DCC5` — not a token, the
+one warm-tan line in the app), `LockKeyhole` 17 in `coral.deep`, muted
+"Have an invite code?" filling the middle, and "Join a group" semibold
+`coral.deep` at the right. The whole row is one button; it opens
+`/create-family` directly on its Join tab (`mode=join`).
+
+It exists because the join screen was reachable only from Home's
+no-family empty state: someone already in family A, read a code for
+family B over the phone, had nowhere to type it — even though the code
+alphabet (no I/O/0/1) was chosen for exactly that phone call. The strip's
+`+` stays "create a new group" on purpose; joining is a different intent
+with its own door.
+
 ## Family tree
 
 - Nodes are 60px avatars with a 3px warm-white ring.

@@ -147,6 +147,10 @@
   },
   "family": {
     "title": "家系図",
+    "joinBanner": {
+      "question": "招待コードをお持ちですか？",
+      "action": "グループに参加"
+    },
     "generations_other": "{{count}}世代",
     "members_other": "{{count}}人",
     "hint": "タップでプロフィール・つまんで拡大、ドラッグで移動",

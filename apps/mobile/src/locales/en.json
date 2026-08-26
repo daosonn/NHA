@@ -151,6 +151,10 @@
   },
   "family": {
     "title": "Family tree",
+    "joinBanner": {
+      "question": "Have an invite code?",
+      "action": "Join a group"
+    },
     "generations_one": "{{count}} generation",
     "generations_other": "{{count}} generations",
     "members_one": "{{count}} member",

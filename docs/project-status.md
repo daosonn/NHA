@@ -28,6 +28,18 @@ screens.
 
 ## Current Focus
 
+- **Joining a second family finally has a door (2026-08-26,
+  `feature/motion-system`).** The join-by-code screen existed but only an
+  account with NO family could reach it (Home's empty state); somebody in
+  family A read a code for family B over the phone had nowhere to type it —
+  the code's own alphabet (no I/O/0/1, chosen to survive being read aloud)
+  says that path was always intended. Per mockup 7a
+  (`docs/01-frontend/mockups/family-tree-screen-7a.html`): the family screen
+  carries a "Have an invite code? · Join a group" banner under the group
+  strip, opening `/create-family` straight on its Join tab (new `mode`
+  param). The strip's + stays "create" on purpose. Verified: tsc, prettier,
+  check:i18n (729 keys); not looked at on a device.
+
 - **Motion-kit polish, three small pieces (2026-08-26,
   `feature/motion-system`).** The video setup screen's 9:16 | 16:9 frame
   control now slides ONE white thumb between its options (`useSlidingThumb`,
