@@ -1,35 +1,27 @@
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
-import { Send } from 'lucide-react-native';
+import { Send, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
-import { AppHeader } from '../../src/components/layout/app-header';
-import { contentColumn } from '../../src/components/layout/content-column';
-import { ScreenTitle } from '../../src/components/layout/header-slots';
-import { AudiencePicker, type AudienceGroup } from '../../src/components/moment/audience-picker';
-import { MediaStrip, type DraftMedia } from '../../src/components/moment/media-strip';
-import { MemberTagPicker } from '../../src/components/moment/member-tag-picker';
-import { Button } from '../../src/components/ui/button';
-import { Text } from '../../src/components/ui/text';
-import { TextField } from '../../src/components/ui/text-field';
-import { useSession } from '../../src/features/auth/session';
-import { useFamilies } from '../../src/features/family/use-families';
-import { useTaggableMembers } from '../../src/features/family/use-taggable-members';
-import { momentErrorKey } from '../../src/features/moment/moment-error';
-import { useCreateMoment } from '../../src/features/moment/use-create-moment';
-import type { FamilySummary } from '../../src/lib/api';
-import { colors, spacing, useLayout } from '../../src/theme';
-
-/**
- * Room the floating bottom bar needs at the end of the scroll.
- *
- * Only while the bar is at the bottom. From 1024px up the same destinations
- * are a rail down the left, which overlaps nothing, so reserving this much
- * there would just be 160px of dead space under the last row.
- */
-const BOTTOM_INSET = 160;
+import { AppHeader } from '../src/components/layout/app-header';
+import { contentColumn } from '../src/components/layout/content-column';
+import { CloseButton, ScreenTitle } from '../src/components/layout/header-slots';
+import { AudiencePicker, type AudienceGroup } from '../src/components/moment/audience-picker';
+import { MediaStrip, type DraftMedia } from '../src/components/moment/media-strip';
+import { MemberTagPicker } from '../src/components/moment/member-tag-picker';
+import { Button } from '../src/components/ui/button';
+import { SheetModal } from '../src/components/ui/sheet-modal';
+import { Text } from '../src/components/ui/text';
+import { TextField } from '../src/components/ui/text-field';
+import { useSession } from '../src/features/auth/session';
+import { useFamilies } from '../src/features/family/use-families';
+import { useTaggableMembers } from '../src/features/family/use-taggable-members';
+import { momentErrorKey } from '../src/features/moment/moment-error';
+import { useCreateMoment } from '../src/features/moment/use-create-moment';
+import { useSafeBack } from '../src/lib/back';
+import type { FamilySummary } from '../src/lib/api';
+import { colors, elevation, radius, spacing } from '../src/theme';
 
 function toAudience(families: FamilySummary[]): AudienceGroup[] {
   return families.map((family) => ({
@@ -69,8 +61,7 @@ function toDraft(asset: ImagePicker.ImagePickerAsset, index: number): DraftMedia
 
 export default function NewMomentScreen() {
   const { t } = useTranslation();
-  const { expanded } = useLayout();
-  const router = useRouter();
+  const close = useSafeBack('/');
 
   const { user } = useSession();
   const { data: families } = useFamilies();
@@ -83,6 +74,7 @@ export default function NewMomentScreen() {
   // destructive direction is the one that needs a deliberate tap.
   const [excludedIds, setExcludedIds] = useState<string[]>([]);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
 
   const audience = families === undefined ? [] : toAudience(families);
   const selected = audience.filter((group) => !excludedIds.includes(group.id));
@@ -134,6 +126,21 @@ export default function NewMomentScreen() {
 
   const ready = caption.trim() !== '' || media.length > 0;
 
+  /**
+   * The ✕. The draft lives only in this screen's state, so closing *is*
+   * deleting it — anything written or attached gets the "keep editing or
+   * discard?" sheet first. An untouched screen just drops back down.
+   */
+  const requestClose = () => {
+    if (ready) setConfirmingDiscard(true);
+    else close();
+  };
+
+  const discard = () => {
+    setConfirmingDiscard(false);
+    close();
+  };
+
   const submit = () => {
     create.mutate(
       {
@@ -148,7 +155,9 @@ export default function NewMomentScreen() {
           setMedia([]);
           setExcludedIds([]);
           setTaggedIds([]);
-          router.replace('/');
+          // Pop, not replace: leaving the same way the ✕ leaves keeps the
+          // one exit motion this screen has — it drops back down.
+          close();
         },
       },
     );
@@ -162,13 +171,22 @@ export default function NewMomentScreen() {
 
   return (
     <View className="flex-1 bg-page">
-      <AppHeader center={<ScreenTitle title={t('moment.title')} />} />
+      {/* An ✕, not a back chevron: the screen rises from the bottom
+          (`modalTransition`, wired in `app/_layout.tsx`) and drops back
+          down, and the ✕ is the only way out — the stack's back gesture is
+          off so nothing can sidestep the discard question. */}
+      <AppHeader
+        left={<CloseButton onPress={requestClose} />}
+        center={<ScreenTitle title={t('moment.title')} />}
+      />
 
       <ScrollView
         contentContainerStyle={{
           ...contentColumn,
           paddingTop: spacing.xl,
-          paddingBottom: expanded ? spacing['4xl'] : BOTTOM_INSET,
+          // A pushed Stack screen sits above the tab bar, so nothing floats
+          // over the end of this scroll and no BOTTOM_INSET is owed.
+          paddingBottom: spacing['4xl'],
           gap: 20,
         }}
         showsVerticalScrollIndicator={false}
@@ -263,6 +281,86 @@ export default function NewMomentScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      {/* "Keep editing or discard?" — confirmed inside one sheet, the same
+          shape as the comment-delete confirm: dismissing one Modal and
+          presenting another on the same tick has overlapped before. The
+          scrim and the neutral button both mean "keep editing". */}
+      <SheetModal
+        visible={confirmingDiscard}
+        onClose={() => setConfirmingDiscard(false)}
+        scrimLabel={t('moment.discard.keep')}
+      >
+        <View
+          style={[
+            {
+              borderTopLeftRadius: radius['7xl'],
+              borderTopRightRadius: radius['7xl'],
+              backgroundColor: colors.background.page,
+              paddingTop: 10,
+              paddingHorizontal: 20,
+              paddingBottom: 26,
+              gap: 14,
+            },
+            elevation.sheet,
+          ]}
+        >
+          <View
+            style={{
+              alignSelf: 'center',
+              width: 44,
+              height: 5,
+              borderRadius: radius.full,
+              backgroundColor: '#E2DCD7',
+            }}
+          />
+
+          <View style={{ alignItems: 'center', gap: 12, paddingTop: 4 }}>
+            <View
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: radius.full,
+                backgroundColor: colors.coral.light,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Trash2 size={24} color={colors.coral.deep} strokeWidth={2} />
+            </View>
+
+            <Text
+              variant="h2"
+              weight="bold"
+              accessibilityRole="header"
+              style={{ letterSpacing: -0.3, textAlign: 'center' }}
+            >
+              {t('moment.discard.title')}
+            </Text>
+
+            <Text variant="body2" color={colors.text.muted} style={{ textAlign: 'center' }}>
+              {t('moment.discard.body')}
+            </Text>
+
+            <View style={{ alignSelf: 'stretch', gap: 8, marginTop: 4 }}>
+              <Button
+                label={t('moment.discard.confirm')}
+                variant="destructiveSolid"
+                size="large"
+                fullWidth
+                onPress={discard}
+              />
+              <Button
+                label={t('moment.discard.keep')}
+                variant="neutral"
+                size="large"
+                fullWidth
+                onPress={() => setConfirmingDiscard(false)}
+              />
+            </View>
+          </View>
+        </View>
+      </SheetModal>
     </View>
   );
 }

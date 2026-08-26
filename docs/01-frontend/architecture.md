@@ -69,9 +69,9 @@ app/                      expo-router routes — file = route
     index.tsx             Home
     omoide.tsx            Omoide — shared album books
     family.tsx            Family tree — a tab since 2026-08-26
-    new.tsx               New moment — route without a bar slot (Home's compose bar)
     ai.tsx                AI suggestions
     profile.tsx           My profile
+  new.tsx                 New moment — rises like a sheet from Home's compose bar
   create-family.tsx       Create or join — the way out of an empty account
   family/invitations.tsx  Sent invitations — resend / cancel, from the tree's ✈
   family/new.tsx          Start a second family group, from the strip's +
@@ -102,8 +102,10 @@ compose + — ratify or revert, see `design-system.md` § Bottom
 navigation). The family tree **is a tab now**: `app/(tabs)/family.tsx`,
 selected state and sliding pill like any other, path still `/family`.
 Posting starts from the compose bar in Home's scrolling intro, under the
-swipe cue (`home/compose-bar.tsx`) → `/new`, which keeps its tab route
-but draws no bar slot. The group strip moved to the family screen with this change;
+swipe cue (`home/compose-bar.tsx`) → `/new` — since 2026-08-26 a **root
+Stack screen presented like a sheet** (`modalTransition`: rises from the
+bottom, drops back on close; back gesture off so leaving goes through its
+✕ and the discard question), no longer a slotless tab. The group strip moved to the family screen with this change;
 its 2026-08-21 redraw story stays in `design-system.md` § Group strip.
 
 **The five destinations are drawn by two components, mounted at two
@@ -752,7 +754,16 @@ is a domain change, not a UI one.
 
 ### New moment
 
-`app/(tabs)/new.tsx`. Three parts in a fixed order: caption, media strip,
+`app/new.tsx`. Presented like a sheet (see the route map): it rises from
+the bottom over whatever tab you were on and drops back down when it
+closes. The header carries an ✕ (`CloseButton`, `header-slots.tsx`) rather
+than a back chevron, and the ✕ is the only exit — the stack's back gesture
+is disabled for this screen. A screen with anything written or attached
+asks **"keep editing or discard?"** in a sheet (the comment-delete confirm
+anatomy) before it will close, because the draft lives only in component
+state and closing is deleting it; an untouched screen just closes.
+
+Three parts in a fixed order: caption, media strip,
 audience. The audience picker is last but must never be pushed off screen —
 it is the only control on the screen with a privacy consequence — so the
 media strip scrolls horizontally instead of wrapping.

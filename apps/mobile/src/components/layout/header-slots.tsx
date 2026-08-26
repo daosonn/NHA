@@ -1,5 +1,5 @@
 import { useRouter, type Href } from 'expo-router';
-import { Bell, ChevronLeft, Settings } from 'lucide-react-native';
+import { Bell, ChevronLeft, Settings, X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
@@ -98,6 +98,31 @@ export function BackButton({ onPress, fallback = '/' }: { onPress?: () => void; 
       className="h-[32px] w-[32px] items-center justify-center"
     >
       <ChevronLeft size={20} color={colors.text.primary} strokeWidth={2} />
+    </Pressable>
+  );
+}
+
+/**
+ * Leading slot on a screen presented like a sheet (the compose screen).
+ *
+ * An ✕ rather than a chevron because the screen rises from the bottom and
+ * drops back down — there is no "back" to point at, only "close". Unlike
+ * `BackButton` there is no default press: the one screen that uses this
+ * has to decide what closing means first (keep the draft or discard it),
+ * so a caller that forgets is a type error, not a silent data loss.
+ */
+export function CloseButton({ onPress }: { onPress: () => void }) {
+  const { t } = useTranslation();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={t('common.close')}
+      hitSlop={8}
+      className="h-[32px] w-[32px] items-center justify-center"
+    >
+      <X size={20} color={colors.text.primary} strokeWidth={2} />
     </Pressable>
   );
 }

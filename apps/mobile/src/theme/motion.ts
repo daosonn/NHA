@@ -106,6 +106,18 @@ export const screenTransition = {
 } as const;
 
 /**
+ * A screen that behaves like a sheet — it rises over the stack and drops
+ * back down on close, instead of sliding in from the right. The compose
+ * screen is the one user: writing a moment is a task you enter and leave,
+ * not a place you go. Same duration as a push, so entering it does not
+ * feel like a different app.
+ */
+export const modalTransition = {
+  animation: 'slide_from_bottom',
+  animationDuration: duration.screen,
+} as const;
+
+/**
  * `.nha-sheet` / `.nha-scrim` — the panel rises from the bottom edge while
  * the scrim fades beside it, 320ms both ways (the spec gives the sheet one
  * transition for both directions). Predefined builders only: web-safe.

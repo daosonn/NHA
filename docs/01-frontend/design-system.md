@@ -209,7 +209,9 @@ Home · Omoide · **+** · AI · Profile.
   label 家系図) · AI · Profile — all sharing the same pill, pop and label
   treatment. Posting moved to a **compose bar on Home**
   (`home/compose-bar.tsx`: pen, "Share today's moment…", a 36px coral
-  disc; one tap opens `/new`, which keeps its route but owns no slot). It
+  disc; one tap opens `/new`, a root Stack screen since 2026-08-26 that
+  rises like a sheet and closes through its ✕ — see `architecture.md`
+  § New moment). It
   started the day pinned above the feed and moved the same day into the
   scrolling intro, **right under the swipe cue**: pinned, it pushed the
   celebration card below the fold and read as chrome; under the cue it
@@ -736,11 +738,11 @@ mark. Holds together down to 16px.
 
 One vocabulary, three homes:
 
-| Layer          | Where                                | What                                                                                              |
-| -------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| Tokens         | `packages/tokens/src/motion.ts`      | Durations (press 120 · select 200 · sheet 320 · screen 420 · enter 520), stagger 55, 3 easings    |
-| Reanimated map | `apps/mobile/src/theme/motion.ts`    | `easing.settle/bounce/snap`, `enter.up/fade(index)`, `exit.fade/down`, `toastIn`, `pop`           |
-| Primitives     | `apps/mobile/src/components/motion/` | `usePressScale()` — press feedback for anything tappable; more only as shipping screens need them |
+| Layer          | Where                                | What                                                                                                                                                                                                             |
+| -------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tokens         | `packages/tokens/src/motion.ts`      | Durations (press 120 · select 200 · sheet 320 · screen 420 · enter 520), stagger 55, 3 easings                                                                                                                   |
+| Reanimated map | `apps/mobile/src/theme/motion.ts`    | `easing.settle/bounce/snap`, `enter.up/fade(index)`, `exit.fade/down`, `toastIn`, `pop`, `screenTransition` / `modalTransition` (stack presets: push from the right / rise from the bottom — the compose screen) |
+| Primitives     | `apps/mobile/src/components/motion/` | `usePressScale()` — press feedback for anything tappable; more only as shipping screens need them                                                                                                                |
 
 Rules, from the handoff:
 

@@ -45,8 +45,21 @@ screens.
   fold when pinned) — and the **group strip left Home** for the family
   tab, where switching lives with the trees. Two recorded costs: posting from another tab is two taps
   now (via Home), and the family SWITCHER is no longer above the feed.
-  `/new` keeps its tab route (no bar slot). Verified: tsc, prettier,
-  check:i18n (771 keys); not looked at on a device.
+  `/new` keeps its path. Verified: tsc, prettier, check:i18n; not looked
+  at on a device.
+
+- **The compose screen presents like a sheet (2026-08-26,
+  `feature/motion-system`).** `/new` moved out of `(tabs)` to a root
+  Stack screen: it rises from the bottom (`modalTransition` in
+  `theme/motion.ts`) and drops back down on close. Its header carries an
+  ✕ (`CloseButton`, new in `header-slots.tsx`) instead of a back chevron;
+  the stack back gesture is off for this screen, so leaving goes through
+  the ✕ — which asks **keep editing or discard?** in a sheet
+  (comment-delete anatomy) whenever a caption or media is on the screen,
+  and just closes when it is untouched. Posting also pops back down now
+  (was `replace('/')`). Verified: tsc, prettier, check:i18n (775 keys);
+  not looked at on a device — the slide-up/down is native-stack motion,
+  so the web preview won't animate the route change.
 
 - **Backend infrastructure, not screens (2026-08-26).** The database moved out
   from under everyone in PR #51: development runs on **shared Neon Cloud**, so

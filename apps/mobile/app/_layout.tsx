@@ -33,7 +33,7 @@ import { createQueryClient } from '../src/lib/query-client';
 import '../src/i18n';
 import { restoreLocale } from '../src/i18n/locale';
 import { colors, useLayout } from '../src/theme';
-import { screenTransition } from '../src/theme/motion';
+import { modalTransition, screenTransition } from '../src/theme/motion';
 
 // Module scope on purpose: this has to be in place before the first request,
 // and a child's effect can fire one before this component's own effects run.
@@ -195,7 +195,17 @@ export default function RootLayout() {
                         contentStyle: { backgroundColor: colors.background.page },
                         ...screenTransition,
                       }}
-                    />
+                    >
+                      {/* The compose screen rises from the bottom and drops
+                          back on close, like the sheets. The back gesture is
+                          off because leaving must go through its ✕ — that is
+                          where "keep editing or discard?" lives, and a swipe
+                          would throw the draft away around it. */}
+                      <Stack.Screen
+                        name="new"
+                        options={{ ...modalTransition, gestureEnabled: false }}
+                      />
+                    </Stack>
                   </AppFrame>
                 </AuthGate>
               </ToastProvider>

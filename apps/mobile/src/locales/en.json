@@ -487,7 +487,13 @@
     "tagHeading": "Who's in this moment?",
     "tagYou": "You",
     "tagMember": "Tag {{name}}",
-    "tagHint": "Tagged people get this moment on their profile."
+    "tagHint": "Tagged people get this moment on their profile.",
+    "discard": {
+      "title": "Discard this moment?",
+      "body": "The caption and photos you added here will be gone.",
+      "confirm": "Discard the moment",
+      "keep": "Keep editing"
+    }
   },
   "ai": {
     "daysAway_zero": "today",

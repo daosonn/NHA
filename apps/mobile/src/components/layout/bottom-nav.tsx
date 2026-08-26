@@ -207,10 +207,8 @@ export function BottomNav({ state, navigation }: BottomTabBarProps) {
 
   // The selected-tab block is ONE pill that slides between slots
   // (`useSlidingThumb` — the segmented-pill mechanic), on the bounce curve.
-  // The compose screen is a route but not a tab — the pill bows out.
   const focusedRoute = state.routes[state.index];
-  const focusedIsTab = focusedRoute !== undefined && TABS[focusedRoute.name] !== undefined;
-  const pill = useSlidingThumb(focusedIsTab ? (focusedRoute?.key ?? null) : null, easing.bounce);
+  const pill = useSlidingThumb(focusedRoute?.key ?? null, easing.bounce);
 
   return (
     <View
@@ -274,8 +272,8 @@ export function BottomNav({ state, navigation }: BottomTabBarProps) {
             }
           };
 
-          // `new` reaches here and draws nothing: the compose screen keeps
-          // its route (Home's compose bar opens it) but owns no slot.
+          // Every screen in this group owns a slot (the compose screen left
+          // the group on 2026-08-26); the guard is for the indexed access.
           const config = TABS[route.name];
           if (config === undefined) return null;
 
