@@ -41,9 +41,16 @@ screens.
   sequential; a partial failure reseeds from the server and asks for Done
   again), Cancel discards. Entries auto-sort by date; new ones render
   dimmed as "Draft · not published yet"; the form takes `1998` or a full
-  date. Spec + two deliberate limits (no photos in the editor — media is
-  fixed at creation; own profile only — the wiki/placeholder question
-  stays open) in `design-system.md` § Timeline editor. Verified: tsc,
+  date, and **photos** (added the same day): the moment composer's
+  `MediaStrip` + picker on unsaved entries, files kept local until Done
+  uploads them via the shared `uploadDrafts` — so cancelling a draft
+  leaves no orphan uploads, and a saved entry's form says photos are
+  fixed instead of drawing a picker that lies. Photos are also DRAWN now
+  (`member/event-photos.tsx`: one wide, several as squares with "+N") — on
+  the editor's cards and on the read timeline, which had said "3 photos"
+  in words since it was wired. Spec + the one remaining
+  limit (own profile only — the wiki/placeholder question stays open) in
+  `design-system.md` § Timeline editor. Verified: tsc,
   prettier, check:i18n (765 keys), and the exact requests Done emits
   replayed against the live API (create year-only and full, patch moving a
   date, list re-orders, delete; throwaway account, rows cleaned up). The

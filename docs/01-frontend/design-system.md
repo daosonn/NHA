@@ -674,15 +674,29 @@ serif year chip (`#FEF3F1`/`coral.deep`), pencil and trash at its top
 right; a new, uncommitted entry rendered dimmed with a gray year chip and
 "Draft · not published yet". The entry form is a sheet: a date field that
 accepts `1998` or `1998-06-12` (year-only lands on Jan 1), title
-(required), story, place.
+(required), story, place, and **photos** via the moment composer's own
+`MediaStrip` + picker (2026-08-26).
 
-Two limits, both deliberate: **no photos in the editor** — media is fixed
-at creation server-side, and the picker/upload flow is its own piece of
-work (the add tile's copy says "Year, title, story" so it does not
-promise what the form lacks); and **own profile only** — the mockup is
-drawn on Dad's page, but offering this on placeholder (wiki) profiles is
-the recorded open question, and the editor is one `memberId` parameter
-away when the team decides.
+Photos follow the staging rule all the way down: picked files stay LOCAL
+in the draft, and `Done` uploads them (`uploadDrafts`, the shared upload)
+just before creating each entry — an abandoned draft leaves no orphan
+uploads. And because media is **fixed at creation** server-side, the
+picker appears only on an entry that is not saved yet; a saved entry's
+form says "photos can't be changed after saving" instead of drawing a
+picker that lies.
+
+**The photos are drawn, not counted** (`member/event-photos.tsx`): one
+photo runs the card's width at 110, several become a row of squares with
+"+N" on the last — the mockup's layout — and the same component now draws
+them on the READ timeline too, which until 2026-08-26 said "3 photos"
+where the photographs belonged. Editor cards draw local files for drafts
+and `thumbnailSource` for saved rows, so an entry looks like the same
+entry with the tools out.
+
+One limit stays: **own profile only** — the mockup is drawn on Dad's
+page, but offering this on placeholder (wiki) profiles is the recorded
+open question, and the editor is one `memberId` parameter away when the
+team decides.
 
 ## Logo
 

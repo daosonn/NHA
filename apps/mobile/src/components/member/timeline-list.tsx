@@ -1,12 +1,14 @@
-import { Images, MapPin, Milestone, TriangleAlert } from 'lucide-react-native';
+import { MapPin, Milestone, TriangleAlert } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, View } from 'react-native';
 
 import { colors, radius } from '../../theme';
 import type { LifeEventDetail } from '../../lib/api';
 import { formatDayMonth } from '../../lib/date';
+import { thumbnailSource } from '../../lib/media-source';
 import { EmptyState } from '../ui/empty-state';
 import { Text } from '../ui/text';
+import { EventPhotos } from './event-photos';
 
 const YEAR_COLUMN = 40;
 const RAIL_COLUMN = 16;
@@ -23,8 +25,6 @@ type RowProps = {
 };
 
 function TimelineRow({ event, showYear, isLatest, isLast }: RowProps) {
-  const { t } = useTranslation();
-
   const day = formatDayMonth(event.eventDate);
   const meta = [event.place, day].filter((part) => part !== null).join(' · ');
 
@@ -86,12 +86,16 @@ function TimelineRow({ event, showYear, isLatest, isLast }: RowProps) {
           </Text>
         )}
 
+        {/* The photos themselves — a count line stood here until the editor
+            made attaching them easy, and a number is not a photograph. */}
         {event.media.length > 0 && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-            <Images size={13} color={colors.text.lightMuted} strokeWidth={2} />
-            <Text variant="caption" color={colors.text.lightMuted}>
-              {t('member.photos', { count: event.media.length })}
-            </Text>
+          <View style={{ marginTop: 4 }}>
+            <EventPhotos
+              photos={event.media.map((item) => ({
+                key: item.id,
+                source: thumbnailSource(item.id, item.mimeType),
+              }))}
+            />
           </View>
         )}
       </View>

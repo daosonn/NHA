@@ -1,12 +1,19 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import type { DraftMedia } from '../../components/moment/media-strip';
 import { lifeEvents } from '../../lib/api';
 import type { CreateLifeEventRequest, UpdateLifeEventRequest } from '../../lib/api';
 import { queryKeys } from '../../lib/query-keys';
+import { uploadDrafts } from '../moment/upload-drafts';
 
 /** Everything one "Done" tap owes the server, in one bag. */
 export type TimelineCommit = {
-  creates: CreateLifeEventRequest[];
+  /**
+   * New entries carry their picked files, still local: nothing is uploaded
+   * until Done, keeping the editor's "only visible to you" promise all the
+   * way down — an abandoned draft leaves no orphan uploads behind.
+   */
+  creates: { body: CreateLifeEventRequest; media: DraftMedia[] }[];
   updates: { id: string; body: UpdateLifeEventRequest }[];
   removes: string[];
 };
@@ -37,7 +44,14 @@ export function useCommitMyTimeline() {
         await lifeEvents.updateMine(update.id, update.body);
       }
       for (const create of commit.creates) {
-        await lifeEvents.createMine(create);
+        // Files first — attachments are fixed at creation, so `mediaIds`
+        // cannot be added to the entry later (`uploadDrafts`, the same
+        // upload every media-carrying feature shares).
+        const mediaIds = await uploadDrafts(create.media);
+        await lifeEvents.createMine({
+          ...create.body,
+          ...(mediaIds.length === 0 ? {} : { mediaIds }),
+        });
       }
     },
     onSettled: () => {

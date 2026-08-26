@@ -1,12 +1,16 @@
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Images, Info, Pencil, Plus, Trash2 } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { AppHeader } from '../../src/components/layout/app-header';
 import { contentColumn } from '../../src/components/layout/content-column';
+import { AnimatedPressable } from '../../src/components/motion/animated-pressable';
 import { ScreenTitle } from '../../src/components/layout/header-slots';
+import { MediaStrip, type DraftMedia } from '../../src/components/moment/media-strip';
 import { Button } from '../../src/components/ui/button';
 import { SheetModal } from '../../src/components/ui/sheet-modal';
 import { Text } from '../../src/components/ui/text';
@@ -15,9 +19,13 @@ import { useToast } from '../../src/components/ui/toast';
 import { useLifeEvents } from '../../src/features/member/use-life-events';
 import { useCommitMyTimeline } from '../../src/features/member/use-life-event-mutations';
 import type { TimelineCommit } from '../../src/features/member/use-life-event-mutations';
+import { EventPhotos } from '../../src/components/member/event-photos';
+import type { PostMediaSummary } from '../../src/lib/api';
 import { safeBack } from '../../src/lib/back';
 import { dayOnly } from '../../src/lib/date';
-import { colors, radius } from '../../src/theme';
+import { thumbnailSource } from '../../src/lib/media-source';
+import { colors, elevation, radius } from '../../src/theme';
+import { enter } from '../../src/theme/motion';
 
 /**
  * Màn 7's edit mode — the mockup `edit-timeline-view-edit.html` (now in
@@ -47,11 +55,35 @@ type DraftEntry = {
   place: string;
   /** Date-only `YYYY-MM-DD`. */
   eventDate: string;
-  /** Display only — media is fixed at creation, this screen never edits it. */
+  /**
+   * A saved entry's photo count, display only — media is fixed at creation,
+   * so an existing entry's photos are never edited here.
+   */
   mediaCount: number;
+  /** A saved entry's media rows, to DRAW its photos (never edited). */
+  serverMedia: PostMediaSummary[];
+  /**
+   * A NEW entry's picked photos, still local files. Uploaded by Done, so an
+   * abandoned draft leaves nothing on the server. Always empty on saved rows.
+   */
+  media: DraftMedia[];
   /** An existing entry with unsaved edits. */
   dirty: boolean;
 };
+
+/** The picker's asset as a draft tile — photos only on the timeline form. */
+function toDraftPhoto(asset: ImagePicker.ImagePickerAsset, index: number): DraftMedia {
+  return {
+    // `assetId` is null on web and `uri` is a blob URL there; the uri still
+    // works as a key because two picks produce two object URLs (new.tsx).
+    id: asset.assetId ?? `${asset.uri}#${index}`,
+    kind: 'photo',
+    tone: 'light',
+    uri: asset.uri,
+    fileName: asset.fileName ?? `timeline-${index}.jpg`,
+    mimeType: asset.mimeType ?? 'image/jpeg',
+  };
+}
 
 /** `1998` or `1998-06-12` — what the form's date field accepts. */
 function parseWhen(raw: string): string | null {
@@ -93,6 +125,8 @@ export default function EditTimelineScreen() {
         place: event.place ?? '',
         eventDate: dayOnly(event.eventDate),
         mediaCount: event.media.length,
+        serverMedia: event.media,
+        media: [],
         dirty: false,
       })),
     );
@@ -103,7 +137,7 @@ export default function EditTimelineScreen() {
 
   const saveEntry = (
     key: string | 'new',
-    fields: Omit<DraftEntry, 'key' | 'id' | 'mediaCount' | 'dirty'>,
+    fields: Omit<DraftEntry, 'key' | 'id' | 'mediaCount' | 'serverMedia' | 'dirty'>,
   ) => {
     setDrafts((current) => {
       const list = current ?? [];
@@ -114,13 +148,26 @@ export default function EditTimelineScreen() {
             ...fields,
             key: `new-${nextLocalKey.current++}`,
             id: null,
-            mediaCount: 0,
+            mediaCount: fields.media.length,
+            serverMedia: [],
             dirty: false,
           },
         ]);
       }
       return inOrder(
-        list.map((entry) => (entry.key === key ? { ...entry, ...fields, dirty: true } : entry)),
+        list.map((entry) =>
+          entry.key === key
+            ? {
+                ...entry,
+                ...fields,
+                dirty: true,
+                // Photos are editable only while the entry is unsaved; a
+                // saved entry keeps its own count — its media never changes.
+                mediaCount: entry.id === null ? fields.media.length : entry.mediaCount,
+                media: entry.id === null ? fields.media : entry.media,
+              }
+            : entry,
+        ),
       );
     });
     setEditingKey(null);
@@ -152,10 +199,13 @@ export default function EditTimelineScreen() {
       creates: entries
         .filter((entry) => entry.id === null)
         .map((entry) => ({
-          title: entry.title,
-          eventDate: entry.eventDate,
-          ...(entry.description === '' ? {} : { description: entry.description }),
-          ...(entry.place === '' ? {} : { place: entry.place }),
+          body: {
+            title: entry.title,
+            eventDate: entry.eventDate,
+            ...(entry.description === '' ? {} : { description: entry.description }),
+            ...(entry.place === '' ? {} : { place: entry.place }),
+          },
+          media: entry.media,
         })),
     };
     commit.mutate(payload, {
@@ -219,7 +269,8 @@ export default function EditTimelineScreen() {
         >
           {/* The mockup's warm one-offs (#FFF6F3, #8A6F68): softer than
               coral.light on purpose — this is a note, not a highlight. */}
-          <View
+          <Animated.View
+            entering={enter.up(0)}
             style={{
               borderRadius: radius.xl,
               backgroundColor: '#FFF6F3',
@@ -234,9 +285,10 @@ export default function EditTimelineScreen() {
             <Text variant="caption" color="#8A6F68" style={{ flex: 1 }}>
               {t('member.editTimeline.banner')}
             </Text>
-          </View>
+          </Animated.View>
 
-          <Pressable
+          <AnimatedPressable
+            entering={enter.up(1)}
             onPress={() => setEditingKey('new')}
             accessibilityRole="button"
             style={{
@@ -274,11 +326,14 @@ export default function EditTimelineScreen() {
                 {t('member.editTimeline.addSub')}
               </Text>
             </View>
-          </Pressable>
+          </AnimatedPressable>
 
           {/* The rail: the same thread the read view draws, so editing reads
               as the same timeline with its tools out. */}
-          <View style={{ position: 'relative', paddingLeft: 32, gap: 16 }}>
+          <Animated.View
+            entering={enter.up(2)}
+            style={{ position: 'relative', paddingLeft: 32, gap: 16 }}
+          >
             <View
               style={{
                 position: 'absolute',
@@ -301,13 +356,14 @@ export default function EditTimelineScreen() {
                 onRemove={() => removeEntry(entry)}
               />
             ))}
-          </View>
+          </Animated.View>
         </ScrollView>
       )}
 
+      {/* NOT remounted per target (a `key` here killed the slide-down exit —
+          the SheetModal must outlive `visible` for `sheet.out` to play);
+          the sheet reseeds its own fields whenever it opens. */}
       <EntrySheet
-        // Remounts per target so the fields reseed (the member sheet's trick).
-        key={editingKey ?? 'closed'}
         visible={editingKey !== null}
         entry={editing}
         onClose={() => setEditingKey(null)}
@@ -411,14 +467,20 @@ function EntryCard({
         </Text>
       )}
 
-      {entry.mediaCount > 0 && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Images size={13} color={colors.text.lightMuted} strokeWidth={2} />
-          <Text variant="caption" color={colors.text.lightMuted}>
-            {t('member.photos', { count: entry.mediaCount })}
-          </Text>
-        </View>
-      )}
+      {/* The photos themselves, same layout as the read view — a saved
+          entry draws its server media, a draft draws the picked files. */}
+      <EventPhotos
+        photos={
+          entry.id === null
+            ? entry.media
+                .filter((item) => item.uri !== undefined)
+                .map((item) => ({ key: item.id, source: { uri: item.uri as string } }))
+            : entry.serverMedia.map((item) => ({
+                key: item.id,
+                source: thumbnailSource(item.id, item.mimeType),
+              }))
+        }
+      />
 
       {isDraft && (
         <Text variant="badge" weight="medium" color={colors.text.lightMuted}>
@@ -444,15 +506,51 @@ function EntrySheet({
     description: string;
     place: string;
     eventDate: string;
+    media: DraftMedia[];
   }) => void;
 }) {
   const { t } = useTranslation();
 
-  const [when, setWhen] = useState(entry === null ? '' : entry.eventDate);
-  const [title, setTitle] = useState(entry?.title ?? '');
-  const [description, setDescription] = useState(entry?.description ?? '');
-  const [place, setPlace] = useState(entry?.place ?? '');
+  const [when, setWhen] = useState('');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [place, setPlace] = useState('');
+  const [media, setMedia] = useState<DraftMedia[]>([]);
+  const [permissionDenied, setPermissionDenied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /** Photos attach only while the entry is unsaved — media is fixed at creation. */
+  const photosEditable = entry === null || entry.id === null;
+
+  // Reseed on every open: the sheet stays mounted between uses (its exit
+  // animation needs that), so mount-time state would be one target stale.
+  useEffect(() => {
+    if (!visible) return;
+    setWhen(entry?.eventDate ?? '');
+    setTitle(entry?.title ?? '');
+    setDescription(entry?.description ?? '');
+    setPlace(entry?.place ?? '');
+    setMedia(entry?.media ?? []);
+    setPermissionDenied(false);
+    setError(null);
+  }, [visible, entry]);
+
+  const pick = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setPermissionDenied(true);
+      return;
+    }
+    setPermissionDenied(false);
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      quality: 0.8,
+    });
+    if (result.canceled) return;
+    setMedia((current) => [...current, ...result.assets.map(toDraftPhoto)]);
+  };
 
   const save = () => {
     const eventDate = parseWhen(when);
@@ -469,6 +567,7 @@ function EntrySheet({
       description: description.trim(),
       place: place.trim(),
       eventDate,
+      media,
     });
   };
 
@@ -477,54 +576,119 @@ function EntrySheet({
       visible={visible}
       onClose={onClose}
       scrimLabel={t('member.editTimeline.closeScrim')}
+      style={{ maxHeight: '92%' }}
     >
-      <View style={{ gap: 12 }}>
-        <Text variant="subtitle" weight="semibold">
-          {t(entry === null ? 'member.editTimeline.addTitle' : 'member.editTimeline.editTitle')}
-        </Text>
-
-        <TextField
-          label={t('member.editTimeline.whenLabel')}
-          value={when}
-          onChangeText={(value) => {
-            setWhen(value);
-            setError(null);
+      {/* The panel chrome is the sheet's own job (`SheetModal` brings none) —
+          same anatomy as the member sheet: rounded top, page background,
+          grab handle, scrolling body. */}
+      <View
+        style={[
+          {
+            flexShrink: 1,
+            borderTopLeftRadius: radius['7xl'],
+            borderTopRightRadius: radius['7xl'],
+            backgroundColor: colors.background.page,
+            paddingTop: 10,
+          },
+          elevation.sheet,
+        ]}
+      >
+        <View
+          style={{
+            alignSelf: 'center',
+            width: 44,
+            height: 5,
+            borderRadius: radius.full,
+            backgroundColor: '#E2DCD7',
           }}
-          placeholder="1998 · 1998-06-12"
-          hint={t('member.editTimeline.whenHint')}
         />
 
-        <TextField
-          label={t('member.editTimeline.titleLabel')}
-          value={title}
-          onChangeText={(value) => {
-            setTitle(value);
-            setError(null);
-          }}
-          maxLength={200}
-        />
-
-        <TextField
-          label={t('member.editTimeline.storyLabel')}
-          value={description}
-          onChangeText={setDescription}
-          multiline
-        />
-
-        <TextField
-          label={t('member.editTimeline.placeLabel')}
-          value={place}
-          onChangeText={setPlace}
-          maxLength={200}
-        />
-
-        {error !== null && (
-          <Text variant="caption" color={colors.themes.destructive.text} accessibilityRole="alert">
-            {t(error)}
+        <ScrollView
+          contentContainerStyle={{ padding: 20, paddingBottom: 34, gap: 12 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text variant="subtitle" weight="semibold">
+            {t(entry === null ? 'member.editTimeline.addTitle' : 'member.editTimeline.editTitle')}
           </Text>
-        )}
 
-        <Button label={t('member.editTimeline.save')} size="large" fullWidth onPress={save} />
+          <TextField
+            label={t('member.editTimeline.whenLabel')}
+            value={when}
+            onChangeText={(value) => {
+              setWhen(value);
+              setError(null);
+            }}
+            placeholder="1998 · 1998-06-12"
+            hint={t('member.editTimeline.whenHint')}
+          />
+
+          <TextField
+            label={t('member.editTimeline.titleLabel')}
+            value={title}
+            onChangeText={(value) => {
+              setTitle(value);
+              setError(null);
+            }}
+            maxLength={200}
+          />
+
+          <TextField
+            label={t('member.editTimeline.storyLabel')}
+            value={description}
+            onChangeText={setDescription}
+            multiline
+          />
+
+          <TextField
+            label={t('member.editTimeline.placeLabel')}
+            value={place}
+            onChangeText={setPlace}
+            maxLength={200}
+          />
+
+          {photosEditable ? (
+            <View style={{ gap: 2 }}>
+              <Text variant="caption" weight="semibold" color={colors.text.secondary}>
+                {t('member.editTimeline.photosLabel')}
+              </Text>
+              <MediaStrip
+                media={media}
+                onAdd={() => void pick()}
+                onRemove={(item) => setMedia((current) => current.filter((m) => m.id !== item.id))}
+              />
+              {permissionDenied && (
+                <Text variant="caption" color={colors.themes.destructive.text}>
+                  {t('moment.permissionDenied')}
+                </Text>
+              )}
+            </View>
+          ) : (
+            /* A saved entry's photos cannot change (media is fixed at
+               creation) — say so instead of drawing a picker that lies. */
+            entry !== null &&
+            entry.mediaCount > 0 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Images size={13} color={colors.text.subtle} strokeWidth={2} />
+                <Text variant="badge" color={colors.text.subtle} style={{ flex: 1 }}>
+                  {t('member.editTimeline.photosFixed', { count: entry.mediaCount })}
+                </Text>
+              </View>
+            )
+          )}
+
+          {error !== null && (
+            <Text
+              variant="caption"
+              color={colors.themes.destructive.text}
+              accessibilityRole="alert"
+            >
+              {t(error)}
+            </Text>
+          )}
+
+          <Button label={t('member.editTimeline.save')} size="large" fullWidth onPress={save} />
+        </ScrollView>
       </View>
     </SheetModal>
   );
