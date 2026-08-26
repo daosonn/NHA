@@ -28,6 +28,26 @@ screens.
 
 ## Current Focus
 
+- **Media storage is the current backend line (2026-08-26).** Frontend layout
+  work below is paused — this is infrastructure, and it blocks the team rather
+  than any one screen.
+
+  `StorageService` no longer hands out absolute filesystem paths.
+  `absolutePathOf()` is gone; callers now ask for bytes (`readAll`), borrow a
+  path for a scope (`withLocalCopy`), or hold a borrow across a pipeline
+  (`newBorrow`, used by the video render). Behaviour is unchanged — the
+  local-disk backend still returns the stored file — but nothing outside
+  `StorageService` assumes a filesystem any more.
+
+  **Next: a Cloudflare R2 driver** behind the same interface, selected by
+  `STORAGE_DRIVER`. R2 is the proposal in `deployment.md`; the bucket and
+  credentials exist and are verified, the driver is not written. Reason for
+  R2 over S3: zero egress, which is the bill that matters for an app whose
+  users reopen the same photos for years.
+
+  Untouched by any of this: `schema.prisma`, models, business logic, and
+  everything in `apps/mobile`.
+
 - **The app stopped simply growing (2026-08-25).** Every screen used to be
   `viewport - two gutters` wide at any size, which is right on a phone and
   wrong from about 600px up: at 1440 a post card was 1400px across and a line
@@ -1018,6 +1038,10 @@ dev` **did not regenerate the client**, and the stale client survived
 - 3-sprint plan documented (`docs/sprints/sprint-01..03.md`)
 
 ## In Progress
+
+- **Object storage for media (2026-08-26)**: step 1 done — `StorageService`
+  decoupled from filesystem paths (see Current Focus). Step 2 is the R2
+  driver. Architecture change, so it merges only after backend-owner review.
 
 - **Social login (Google + Facebook)** (2026-08-17): backend merged to
   `main` in PR #3 — `OAuthAccount` table + OAuth authorization-code

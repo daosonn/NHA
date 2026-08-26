@@ -302,9 +302,7 @@ export class CardService {
     ]);
 
     const storageKey = await this.storage.promote(tmp, 'image/png');
-    const png = await sharp(
-      storageKey ? this.storage.absolutePathOf(storageKey) : tmp,
-    ).toBuffer();
+    const png = await sharp(await this.storage.readAll(storageKey)).toBuffer();
 
     const media = await this.prisma.media.create({
       data: {
