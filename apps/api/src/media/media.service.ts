@@ -1,4 +1,4 @@
-import type { ReadStream } from 'node:fs';
+import type { Readable } from 'node:stream';
 import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -30,10 +30,10 @@ export interface MediaSummary {
 }
 
 export type MediaStreamResult =
-  | { kind: 'full'; stream: ReadStream; mimeType: string; size: number }
+  | { kind: 'full'; stream: Readable; mimeType: string; size: number }
   | {
       kind: 'partial';
-      stream: ReadStream;
+      stream: Readable;
       mimeType: string;
       size: number;
       start: number;
@@ -203,30 +203,31 @@ export class MediaService {
     const poster = this.storage.posterPathFor(media.storageKey);
     if (!existsSync(poster)) {
       mkdirSync(path.dirname(poster), { recursive: true });
-      const source = this.storage.absolutePathOf(media.storageKey);
       // -ss 0.5: khung đúng số 0 của video quay bằng điện thoại thường là
       // một khung xám lúc cảm biến chưa kịp phơi sáng.
-      execFileSync(
-        FFMPEG,
-        [
-          '-hide_banner',
-          '-loglevel',
-          'error',
-          '-y',
-          '-ss',
-          '0.5',
-          '-i',
-          source,
-          '-frames:v',
-          '1',
-          '-vf',
-          "scale='min(1080,iw)':-2",
-          '-q:v',
-          '4',
-          poster,
-        ],
-        { stdio: 'ignore' },
-      );
+      await this.storage.withLocalCopy(media.storageKey, (source) => {
+        execFileSync(
+          FFMPEG,
+          [
+            '-hide_banner',
+            '-loglevel',
+            'error',
+            '-y',
+            '-ss',
+            '0.5',
+            '-i',
+            source,
+            '-frames:v',
+            '1',
+            '-vf',
+            "scale='min(1080,iw)':-2",
+            '-q:v',
+            '4',
+            poster,
+          ],
+          { stdio: 'ignore' },
+        );
+      });
       this.logger.log(`đã trích ảnh xem trước cho video ${mediaId}`);
     }
     return { path: poster };
