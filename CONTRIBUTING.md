@@ -176,6 +176,27 @@ Commit both schema and migration.
 
 Never make shared schema changes only through a database GUI.
 
+The development database is **shared Neon Cloud PostgreSQL**, so a migration is
+not only a code change: running it changes the database your teammates are
+working in right now.
+
+Author the migration against a database of your own — the opt-in local Docker
+Postgres, or your own Neon branch. Once schema and migration are committed and
+the PR is reviewed, apply it to the shared database:
+
+pnpm --filter api exec prisma migrate deploy
+
+Never point these at a shared database:
+
+prisma migrate reset — drops and recreates it;
+prisma migrate dev — the authoring command; on drift it offers to reset;
+pnpm seed and pnpm test:e2e — both write real rows through DATABASE_URL.
+
+Never put a real connection string or password in a commit, a PR description,
+an issue or a log. apps/api/.env is gitignored and stays that way.
+
+Full rules: docs/04-devops/local-environment.md § Neon rules.
+
 9. Before Opening a PR
 
 Verify:
