@@ -50,16 +50,21 @@ screens.
 
 - **The compose screen presents like a sheet (2026-08-26,
   `feature/motion-system`).** `/new` moved out of `(tabs)` to a root
-  Stack screen: it rises from the bottom (`modalTransition` in
-  `theme/motion.ts`) and drops back down on close. Its header carries an
+  Stack screen: it rises from the bottom over a fading scrim and drops
+  back down on close. The motion is the screen's own —
+  `useScreenSheet()`, a new motion primitive
+  (`components/motion/screen-sheet.ts`), with the route a
+  `transparentModal` + `animation: 'none'` — because the first cut used
+  the stack's native `slide_from_bottom` and native-stack animations
+  never run on the web, which is where the team previews: it looked like
+  an instant page swap. Its header carries an
   ✕ (`CloseButton`, new in `header-slots.tsx`) instead of a back chevron;
   the stack back gesture is off for this screen, so leaving goes through
   the ✕ — which asks **keep editing or discard?** in a sheet
   (comment-delete anatomy) whenever a caption or media is on the screen,
   and just closes when it is untouched. Posting also pops back down now
   (was `replace('/')`). Verified: tsc, prettier, check:i18n (775 keys);
-  not looked at on a device — the slide-up/down is native-stack motion,
-  so the web preview won't animate the route change.
+  not looked at on a device.
 
 - **Backend infrastructure, not screens (2026-08-26).** The database moved out
   from under everyone in PR #51: development runs on **shared Neon Cloud**, so

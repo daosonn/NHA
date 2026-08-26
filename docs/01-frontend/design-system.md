@@ -738,11 +738,11 @@ mark. Holds together down to 16px.
 
 One vocabulary, three homes:
 
-| Layer          | Where                                | What                                                                                                                                                                                                             |
-| -------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tokens         | `packages/tokens/src/motion.ts`      | Durations (press 120 · select 200 · sheet 320 · screen 420 · enter 520), stagger 55, 3 easings                                                                                                                   |
-| Reanimated map | `apps/mobile/src/theme/motion.ts`    | `easing.settle/bounce/snap`, `enter.up/fade(index)`, `exit.fade/down`, `toastIn`, `pop`, `screenTransition` / `modalTransition` (stack presets: push from the right / rise from the bottom — the compose screen) |
-| Primitives     | `apps/mobile/src/components/motion/` | `usePressScale()` — press feedback for anything tappable; more only as shipping screens need them                                                                                                                |
+| Layer          | Where                                | What                                                                                                                                                                                                                                       |
+| -------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Tokens         | `packages/tokens/src/motion.ts`      | Durations (press 120 · select 200 · sheet 320 · screen 420 · enter 520), stagger 55, 3 easings                                                                                                                                             |
+| Reanimated map | `apps/mobile/src/theme/motion.ts`    | `easing.settle/bounce/snap`, `enter.up/fade(index)`, `exit.fade/down`, `toastIn`, `pop`, `screenTransition` (the stack's push-from-the-right preset)                                                                                       |
+| Primitives     | `apps/mobile/src/components/motion/` | `usePressScale()` — press feedback for anything tappable; `useScreenSheet()` — a route that rises like a sheet (the compose screen; hand-driven because native-stack animations never run on web); more only as shipping screens need them |
 
 Rules, from the handoff:
 

@@ -3,6 +3,7 @@ import { Send, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { AppHeader } from '../src/components/layout/app-header';
 import { contentColumn } from '../src/components/layout/content-column';
@@ -10,6 +11,7 @@ import { CloseButton, ScreenTitle } from '../src/components/layout/header-slots'
 import { AudiencePicker, type AudienceGroup } from '../src/components/moment/audience-picker';
 import { MediaStrip, type DraftMedia } from '../src/components/moment/media-strip';
 import { MemberTagPicker } from '../src/components/moment/member-tag-picker';
+import { useScreenSheet } from '../src/components/motion/screen-sheet';
 import { Button } from '../src/components/ui/button';
 import { SheetModal } from '../src/components/ui/sheet-modal';
 import { Text } from '../src/components/ui/text';
@@ -62,6 +64,9 @@ function toDraft(asset: ImagePicker.ImagePickerAsset, index: number): DraftMedia
 export default function NewMomentScreen() {
   const { t } = useTranslation();
   const close = useSafeBack('/');
+  // The screen's own rise-and-drop. Every exit goes through `dismiss` so
+  // the drop always plays; `close` only ever runs when it finishes.
+  const { scrimStyle, panelStyle, dismiss } = useScreenSheet(close);
 
   const { user } = useSession();
   const { data: families } = useFamilies();
@@ -133,12 +138,12 @@ export default function NewMomentScreen() {
    */
   const requestClose = () => {
     if (ready) setConfirmingDiscard(true);
-    else close();
+    else dismiss();
   };
 
   const discard = () => {
     setConfirmingDiscard(false);
-    close();
+    dismiss();
   };
 
   const submit = () => {
@@ -155,9 +160,8 @@ export default function NewMomentScreen() {
           setMedia([]);
           setExcludedIds([]);
           setTaggedIds([]);
-          // Pop, not replace: leaving the same way the ✕ leaves keeps the
-          // one exit motion this screen has — it drops back down.
-          close();
+          // The same exit the ✕ takes — the screen drops back down.
+          dismiss();
         },
       },
     );
@@ -170,117 +174,139 @@ export default function NewMomentScreen() {
       : t('moment.postTo', { count: selected.length });
 
   return (
-    <View className="flex-1 bg-page">
-      {/* An ✕, not a back chevron: the screen rises from the bottom
-          (`modalTransition`, wired in `app/_layout.tsx`) and drops back
-          down, and the ✕ is the only way out — the stack's back gesture is
-          off so nothing can sidestep the discard question. */}
-      <AppHeader
-        left={<CloseButton onPress={requestClose} />}
-        center={<ScreenTitle title={t('moment.title')} />}
+    // Transparent at the root — the route is a transparentModal, so what
+    // shows through here during the motion is the tab this screen rose over.
+    <View style={{ flex: 1 }}>
+      {/* Fades in step with the panel. Not pressable: the panel covers the
+          whole screen at rest, so unlike a sheet's scrim there is nothing
+          this could be a close target for. */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: colors.state.scrim,
+          },
+          scrimStyle,
+        ]}
       />
 
-      <ScrollView
-        contentContainerStyle={{
-          ...contentColumn,
-          paddingTop: spacing.xl,
-          // A pushed Stack screen sits above the tab bar, so nothing floats
-          // over the end of this scroll and no BOTTOM_INSET is owed.
-          paddingBottom: spacing['4xl'],
-          gap: 20,
-        }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <TextField
-          label={t('moment.caption')}
-          value={caption}
-          onChangeText={setCaption}
-          placeholder={t('moment.captionPlaceholder')}
-          multiline
+      <Animated.View style={[{ flex: 1, backgroundColor: colors.background.page }, panelStyle]}>
+        {/* An ✕, not a back chevron: the screen rises from the bottom
+            (`useScreenSheet`) and drops back down, and the ✕ is the only way
+            out — the stack's back gesture is off so nothing can sidestep the
+            discard question. */}
+        <AppHeader
+          left={<CloseButton onPress={requestClose} />}
+          center={<ScreenTitle title={t('moment.title')} />}
         />
 
-        <View style={{ gap: 2 }}>
-          <Text variant="body1" weight="semibold">
-            {t('moment.media')}
-          </Text>
-
-          <MediaStrip
-            media={media}
-            onAdd={() => void pick()}
-            onRemove={(item) => setMedia((current) => current.filter((m) => m.id !== item.id))}
+        <ScrollView
+          contentContainerStyle={{
+            ...contentColumn,
+            paddingTop: spacing.xl,
+            // A pushed Stack screen sits above the tab bar, so nothing floats
+            // over the end of this scroll and no BOTTOM_INSET is owed.
+            paddingBottom: spacing['4xl'],
+            gap: 20,
+          }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <TextField
+            label={t('moment.caption')}
+            value={caption}
+            onChangeText={setCaption}
+            placeholder={t('moment.captionPlaceholder')}
+            multiline
           />
 
-          {permissionDenied && (
-            <Text variant="caption" color={colors.themes.destructive.text}>
-              {t('moment.permissionDenied')}
-            </Text>
-          )}
-        </View>
-
-        <View style={{ gap: 8 }}>
           <View style={{ gap: 2 }}>
             <Text variant="body1" weight="semibold">
-              {t('moment.shareWith')}
+              {t('moment.media')}
             </Text>
-            <Text variant="body2" color={colors.text.body}>
-              {t('moment.shareWithHint')}
-            </Text>
+
+            <MediaStrip
+              media={media}
+              onAdd={() => void pick()}
+              onRemove={(item) => setMedia((current) => current.filter((m) => m.id !== item.id))}
+            />
+
+            {permissionDenied && (
+              <Text variant="caption" color={colors.themes.destructive.text}>
+                {t('moment.permissionDenied')}
+              </Text>
+            )}
           </View>
 
-          {audience.length === 0 ? (
-            <Text variant="body2" color={colors.text.subtle}>
-              {t('moment.noFamilies')}
-            </Text>
-          ) : (
-            <AudiencePicker
-              groups={audience}
-              selected={selected.map((group) => group.id)}
-              onToggle={toggle}
-            />
-          )}
-        </View>
+          <View style={{ gap: 8 }}>
+            <View style={{ gap: 2 }}>
+              <Text variant="body1" weight="semibold">
+                {t('moment.shareWith')}
+              </Text>
+              <Text variant="body2" color={colors.text.body}>
+                {t('moment.shareWithHint')}
+              </Text>
+            </View>
 
-        {/* Below the audience, because who can be named depends on who the
+            {audience.length === 0 ? (
+              <Text variant="body2" color={colors.text.subtle}>
+                {t('moment.noFamilies')}
+              </Text>
+            ) : (
+              <AudiencePicker
+                groups={audience}
+                selected={selected.map((group) => group.id)}
+                onToggle={toggle}
+              />
+            )}
+          </View>
+
+          {/* Below the audience, because who can be named depends on who the
             moment is going to. */}
-        <MemberTagPicker members={taggable} selected={tagged} onToggle={toggleTag} />
+          <MemberTagPicker members={taggable} selected={tagged} onToggle={toggleTag} />
 
-        <View style={{ gap: 10 }}>
-          {create.error !== null && (
-            <Text
-              variant="caption"
-              color={colors.themes.destructive.text}
-              accessibilityRole="alert"
-              style={{ textAlign: 'center' }}
-            >
-              {t(momentErrorKey(create.error))}
-            </Text>
-          )}
+          <View style={{ gap: 10 }}>
+            {create.error !== null && (
+              <Text
+                variant="caption"
+                color={colors.themes.destructive.text}
+                accessibilityRole="alert"
+                style={{ textAlign: 'center' }}
+              >
+                {t(momentErrorKey(create.error))}
+              </Text>
+            )}
 
-          <Button
-            label={postLabel}
-            size="large"
-            fullWidth
-            disabled={!ready}
-            loading={create.isPending}
-            onPress={submit}
-            renderIcon={({ size, color }) => <Send size={size} color={color} strokeWidth={2.1} />}
-          />
+            <Button
+              label={postLabel}
+              size="large"
+              fullWidth
+              disabled={!ready}
+              loading={create.isPending}
+              onPress={submit}
+              renderIcon={({ size, color }) => <Send size={size} color={color} strokeWidth={2.1} />}
+            />
 
-          {/* Saying who is excluded is the whole point of the dimmed state —
+            {/* Saying who is excluded is the whole point of the dimmed state —
               a count alone would not tell you *which* family you dropped. */}
-          <Text variant="caption" color={colors.text.subtle} style={{ textAlign: 'center' }}>
-            {selected.length === 0
-              ? t('moment.explainPrivate')
-              : excluded.length === 0
-                ? t('moment.explainEveryone')
-                : t('moment.explainSkipped', {
-                    count: excluded.length,
-                    names: excluded.map((group) => group.name).join(', '),
-                  })}
-          </Text>
-        </View>
-      </ScrollView>
+            <Text variant="caption" color={colors.text.subtle} style={{ textAlign: 'center' }}>
+              {selected.length === 0
+                ? t('moment.explainPrivate')
+                : excluded.length === 0
+                  ? t('moment.explainEveryone')
+                  : t('moment.explainSkipped', {
+                      count: excluded.length,
+                      names: excluded.map((group) => group.name).join(', '),
+                    })}
+            </Text>
+          </View>
+        </ScrollView>
+      </Animated.View>
 
       {/* "Keep editing or discard?" — confirmed inside one sheet, the same
           shape as the comment-delete confirm: dismissing one Modal and

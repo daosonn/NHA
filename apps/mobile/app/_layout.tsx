@@ -33,7 +33,7 @@ import { createQueryClient } from '../src/lib/query-client';
 import '../src/i18n';
 import { restoreLocale } from '../src/i18n/locale';
 import { colors, useLayout } from '../src/theme';
-import { modalTransition, screenTransition } from '../src/theme/motion';
+import { screenTransition } from '../src/theme/motion';
 
 // Module scope on purpose: this has to be in place before the first request,
 // and a child's effect can fire one before this component's own effects run.
@@ -197,13 +197,23 @@ export default function RootLayout() {
                       }}
                     >
                       {/* The compose screen rises from the bottom and drops
-                          back on close, like the sheets. The back gesture is
-                          off because leaving must go through its ✕ — that is
-                          where "keep editing or discard?" lives, and a swipe
-                          would throw the draft away around it. */}
+                          back on close, like the sheets — but the motion is
+                          the screen's own (`useScreenSheet`), because the
+                          stack's native animations do not run on the web. The
+                          route is a transparent modal with no stack animation
+                          so the tab below stays visible behind the scrim and
+                          nothing moves twice. The back gesture is off because
+                          leaving must go through its ✕ — that is where "keep
+                          editing or discard?" lives, and a swipe would throw
+                          the draft away around it. */}
                       <Stack.Screen
                         name="new"
-                        options={{ ...modalTransition, gestureEnabled: false }}
+                        options={{
+                          presentation: 'transparentModal',
+                          animation: 'none',
+                          gestureEnabled: false,
+                          contentStyle: { backgroundColor: 'transparent' },
+                        }}
                       />
                     </Stack>
                   </AppFrame>

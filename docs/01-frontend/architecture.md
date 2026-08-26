@@ -103,9 +103,10 @@ navigation). The family tree **is a tab now**: `app/(tabs)/family.tsx`,
 selected state and sliding pill like any other, path still `/family`.
 Posting starts from the compose bar in Home's scrolling intro, under the
 swipe cue (`home/compose-bar.tsx`) → `/new` — since 2026-08-26 a **root
-Stack screen presented like a sheet** (`modalTransition`: rises from the
-bottom, drops back on close; back gesture off so leaving goes through its
-✕ and the discard question), no longer a slotless tab. The group strip moved to the family screen with this change;
+Stack screen presented like a sheet** (`useScreenSheet`: rises from the
+bottom over a fading scrim, drops back on close; back gesture off so
+leaving goes through its ✕ and the discard question), no longer a
+slotless tab. The group strip moved to the family screen with this change;
 its 2026-08-21 redraw story stays in `design-system.md` § Group strip.
 
 **The five destinations are drawn by two components, mounted at two
@@ -754,9 +755,14 @@ is a domain change, not a UI one.
 
 ### New moment
 
-`app/new.tsx`. Presented like a sheet (see the route map): it rises from
-the bottom over whatever tab you were on and drops back down when it
-closes. The header carries an ✕ (`CloseButton`, `header-slots.tsx`) rather
+`app/new.tsx`. Presented like a sheet: it rises from the bottom over
+whatever tab you were on and drops back down when it closes. The motion
+is the screen's own (`components/motion/screen-sheet.ts` — one shared
+value drives the panel and a fading scrim), not the stack's, because
+native-stack animations do not run on the web at all; the route is a
+`transparentModal` with `animation: 'none'` and a transparent
+`contentStyle` so the tab below stays visible behind the scrim and the
+stack adds no motion of its own (`app/_layout.tsx`). The header carries an ✕ (`CloseButton`, `header-slots.tsx`) rather
 than a back chevron, and the ✕ is the only exit — the stack's back gesture
 is disabled for this screen. A screen with anything written or attached
 asks **"keep editing or discard?"** in a sheet (the comment-delete confirm
