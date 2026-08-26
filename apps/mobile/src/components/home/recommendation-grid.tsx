@@ -3,11 +3,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 
 import type { RecommendationTile } from '../../features/home/use-recommendations';
-import { mediaSource } from '../../lib/media-source';
+import { thumbnailSource } from '../../lib/media-source';
 import { colors, radius, spacing } from '../../theme';
 import { CARD_PRESS_SCALE } from '../../theme/motion';
 import { AnimatedPressable } from '../motion/animated-pressable';
 import { usePressScale } from '../motion/press';
+import { PhotoPlaceholder } from '../ui/photo-placeholder';
 import { Text } from '../ui/text';
 
 const FEATURE_HEIGHT = 212;
@@ -46,8 +47,14 @@ function Tile({ item, height, scrimHeight, onPress, children }: TileProps) {
         press.style,
       ]}
     >
+      {/* Placeholder nằm DƯỚI ảnh: là thứ hiện trong lúc ảnh giải mã, và là
+          thứ còn lại nếu ảnh tải hỏng — trước đây ô "A look back" trắng tinh
+          vì không có gì đỡ phía sau. */}
+      <PhotoPlaceholder style={StyleSheet.absoluteFill} />
       <Image
-        source={mediaSource(item.mediaId)}
+        // Clip không nhét được vào <Image> — xin poster frame của nó thay vì
+        // stream gốc (cùng lý do thẻ bài đăng dùng thumbnailSource).
+        source={thumbnailSource(item.mediaId, item.mimeType)}
         recyclingKey={item.mediaId}
         contentFit="cover"
         transition={160}
