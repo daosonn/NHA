@@ -28,6 +28,27 @@ screens.
 
 ## Current Focus
 
+- **Motion-kit polish, three small pieces (2026-08-26,
+  `feature/motion-system`).** The video setup screen's 9:16 | 16:9 frame
+  control now slides ONE white thumb between its options (`useSlidingThumb`,
+  same journey as every other segmented control) instead of each half
+  painting its own background. The success toast gained `CatPeek` looking
+  over its top edge — a "vừa xong" moment per the kit's cat rule; the failure
+  toast stays plain on purpose. And the **comment composer was rebuilt as a
+  composer**: `TextField` gained a `maxHeight` shape — one line tall at rest
+  (~47px, matching the 44px send button it used to tower over at 104px),
+  growing with the text to five lines, then scrolling inside. No floating
+  label there (scrolled text slides up under where the label sits — it became
+  the accessibility label, the placeholder does the talking) and the
+  countdown shows only near the limit. One web-only trap worth remembering:
+  a textarea's `scrollHeight` never reports less than the height set on it,
+  so shrink-on-delete needs the height released for a frame before measuring
+  — the reason is written next to the code in `ui/text-field.tsx`. Spec in
+  `design-system.md` § Form fields. A `TextField` swap for the video
+  story box was tried and reverted the same day at the owner's call — the
+  bordered box read wrong inside that card. Verified: mobile tsc, prettier,
+  check:i18n; not yet looked at on a device.
+
 - **The app stopped simply growing (2026-08-25).** Every screen used to be
   `viewport - two gutters` wide at any size, which is right on a phone and
   wrong from about 600px up: at 1440 a post card was 1400px across and a line

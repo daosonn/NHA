@@ -432,10 +432,16 @@ in the invite sheet.
 
 ### Form fields
 
-Label 500/12.5 secondary above the control. Input is white, radius 14,
-1.5px `#E7E5E2` border, 15px text. Focus swaps the border to coral brand
-and adds `0 0 0 4px rgba(240,112,95,0.1)`. An optional character counter
-sits right-aligned under the field.
+Input is white, radius 14, 1.5px `#E7E5E2` border, 15px text. Focus swaps
+the border to coral brand and adds `0 0 0 4px rgba(240,112,95,0.1)`.
+
+The label **floats** (`motion/floating-label-input.html` and
+`…-textarea.html`, 2026-08-25): it rests inside the box and rises on focus
+or content, walking muted → coral as it goes. Only the AI screens' tiny
+uppercase section style (`uppercaseLabel`) keeps a static label above.
+Single-line fields with `maxLength` count up (`4/24`) inside the box;
+textareas count **down** in the bottom corner, warning-coloured near the
+limit.
 
 React Native has no synthetic bolding, so every weight is a separate font
 family — `TextInput` must set `fontFamily` explicitly or it falls back to
@@ -443,11 +449,24 @@ the system face.
 
 Optional slots, all on the same component:
 
-| Slot     | Behaviour                                                       |
-| -------- | --------------------------------------------------------------- |
-| Icon     | Leads the field, muted at rest and coral brand on focus         |
-| `secure` | Masks the value and adds an eye toggle at 44px effective target |
-| `error`  | Red border, red message replacing the hint — never both at once |
+| Slot       | Behaviour                                                       |
+| ---------- | --------------------------------------------------------------- |
+| Icon       | Leads the field, muted at rest and coral brand on focus         |
+| `secure`   | Masks the value and adds an eye toggle at 44px effective target |
+| `error`    | Red border, red message replacing the hint — never both at once |
+| `trailing` | A control inside the box after the counter (chip-input's Add)   |
+
+**The composer shape** (`maxHeight`, 2026-08-26) is the same component in a
+different posture, built for the comment box: it starts **one line tall**
+(~47px, matching the 44px send button beside it instead of towering over
+it), grows with the text, and stops at the given height — five lines for
+comments — scrolling inside rather than walling off the screen. Two rules
+fall out of the scrolling: there is **no floating label** (once the text
+scrolls it slides up under where the label sits, two texts in one spot — so
+the label becomes the accessibility label only and the placeholder does the
+talking), and the countdown appears **only near the limit**, because a
+corner "2000" on an empty box is noise. The paragraph shape (bio, captions)
+keeps its fixed 104px box.
 
 ### Checkbox
 
