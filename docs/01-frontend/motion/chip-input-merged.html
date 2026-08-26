@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Chip input, merged + floating label</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;padding:60px;background:#EDEBE7;font-family:'Be Vietnam Pro',sans-serif;display:flex;justify-content:center}
+.wrap{width:340px;display:flex;flex-direction:column;gap:12px}
+@keyframes pop{0%{transform:scale(.72)}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;min-height:34px}
+.chip{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #E7E1DC;border-radius:999px;padding:7px 12px;animation:pop 320ms cubic-bezier(.34,1.56,.64,1) both}
+.chip span.label{font:500 13.5px/1 'Be Vietnam Pro',sans-serif;color:#18181B}
+.chip span.close{font:400 15px/1 'Be Vietnam Pro',sans-serif;color:#A9A29B;cursor:pointer;margin-top:-1px}
+.input-box{position:relative;display:flex;align-items:center;height:56px;border-radius:14px;background:#fff;border:1.5px solid #E7E1DC;transition:border-color 180ms cubic-bezier(.4,0,.2,1),box-shadow 180ms;padding-right:6px}
+.input-box.focus{border-color:#F58B7B;box-shadow:0 0 0 3px rgba(245,139,123,.18)}
+.field{position:relative;flex:1;height:100%;display:flex;align-items:center;padding:0 18px}
+.field label{position:absolute;left:18px;top:50%;font:500 14.5px/1 'Be Vietnam Pro',sans-serif;color:#8A857E;pointer-events:none;transform-origin:left center;transform:translateY(-50%) scale(1);transition:transform 200ms cubic-bezier(.34,1.56,.64,1),top 200ms cubic-bezier(.34,1.56,.64,1),color 200ms cubic-bezier(.4,0,.2,1)}
+.field label.active{top:9px;transform:translateY(0) scale(.72);color:#B8422F}
+.field input{width:100%;border:none;outline:none;font:400 14.5px/1 'Be Vietnam Pro',sans-serif;color:#18181B;background:transparent;margin-top:8px}
+.add-btn{flex:none;display:flex;align-items:center;gap:5px;height:44px;padding:0 18px;border-radius:10px;cursor:pointer;background:#F58B7B;opacity:.4;transition:opacity 180ms,transform 120ms cubic-bezier(.4,0,.2,1),background 180ms}
+.add-btn.enabled{opacity:1}
+.add-btn:active{transform:scale(.96)}
+.add-btn span{color:#fff;white-space:nowrap}
+.add-btn .plus{font:700 15px/1 'Be Vietnam Pro',sans-serif}
+.add-btn .txt{font:600 14px/1 'Be Vietnam Pro',sans-serif}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="chip-row" id="chipRow"></div>
+  <div class="input-box" id="inputBox">
+    <div class="field">
+      <label id="fieldLabel" for="interestInput">Add an interest</label>
+      <input id="interestInput" maxlength="24">
+    </div>
+    <div class="add-btn" id="addBtn">
+      <span class="plus">+</span>
+      <span class="txt">Add</span>
+    </div>
+  </div>
+</div>
+
+<script>
+let items = ['hhhh'];
+const chipRow = document.getElementById('chipRow');
+const input = document.getElementById('interestInput');
+const inputBox = document.getElementById('inputBox');
+const label = document.getElementById('fieldLabel');
+const addBtn = document.getElementById('addBtn');
+
+function renderChips() {
+  chipRow.innerHTML = '';
+  items.forEach((label, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = '<span class="label"></span><span class="close">×</span>';
+    chip.querySelector('.label').textContent = label;
+    chip.querySelector('.close').addEventListener('click', () => { items.splice(i, 1); renderChips(); });
+    chipRow.appendChild(chip);
+  });
+}
+
+function syncLabel() {
+  label.classList.toggle('active', input.value.length > 0 || document.activeElement === input);
+}
+function syncAddBtn() {
+  addBtn.classList.toggle('enabled', input.value.trim().length > 0);
+}
+function addInterest() {
+  const v = input.value.trim();
+  if (!v) return;
+  items.push(v);
+  input.value = '';
+  renderChips();
+  syncLabel();
+  syncAddBtn();
+}
+
+input.addEventListener('input', () => { syncLabel(); syncAddBtn(); });
+input.addEventListener('focus', () => { inputBox.classList.add('focus'); syncLabel(); });
+input.addEventListener('blur', () => { inputBox.classList.remove('focus'); syncLabel(); });
+input.addEventListener('keydown', e => { if (e.key === 'Enter') addInterest(); });
+addBtn.addEventListener('click', addInterest);
+
+renderChips();
+</script>
+</body>
+</html>

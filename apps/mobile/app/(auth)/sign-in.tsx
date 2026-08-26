@@ -49,6 +49,7 @@ export default function SignInScreen() {
 
   return (
     <FormScreen
+      variant="auth"
       onBack={() => safeBack(router, '/welcome')}
       footer={
         <>
@@ -116,7 +117,18 @@ export default function SignInScreen() {
         />
       </View>
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* `wrap`: on a 320px screen the pair is wider than the row, and
+          without it the forgot-link shoves out through the screen edge —
+          wrapped, it simply drops to its own line. */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 8,
+        }}
+      >
         <Checkbox
           checked={stayed}
           onChange={setStayed}

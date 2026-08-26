@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { Trash2, X } from 'lucide-react-native';
 
 import { ApiError } from '../../lib/api';
 import { colors, elevation, radius } from '../../theme';
 import { Button } from '../ui/button';
+import { SheetModal } from '../ui/sheet-modal';
 import { Text } from '../ui/text';
 import { TextField } from '../ui/text-field';
 
@@ -78,14 +79,7 @@ export function AlbumFormSheet({
         : 'errors.generic';
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable
-        onPress={onClose}
-        accessibilityRole="button"
-        accessibilityLabel={t('common.close')}
-        style={{ flex: 1, backgroundColor: colors.state.scrim }}
-      />
-
+    <SheetModal visible={visible} onClose={onClose} scrimLabel={t('common.close')}>
       <View
         style={[
           {
@@ -208,6 +202,6 @@ export function AlbumFormSheet({
           )}
         </ScrollView>
       </View>
-    </Modal>
+    </SheetModal>
   );
 }

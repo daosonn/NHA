@@ -126,6 +126,7 @@ export default function ResetPasswordScreen() {
   if (step === 'password') {
     return (
       <FormScreen
+        variant="auth"
         onBack={() => safeBack(router, '/welcome')}
         footer={
           <>
@@ -189,6 +190,7 @@ export default function ResetPasswordScreen() {
 
   return (
     <FormScreen
+      variant="auth"
       // Back from the code step re-opens the password step, not the email
       // screen — the person may have left to check their inbox.
       onBack={() => setStep('password')}

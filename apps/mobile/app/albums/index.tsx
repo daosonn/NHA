@@ -4,9 +4,11 @@ import { Images, Lock, Plus, TriangleAlert } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { AlbumFormSheet } from '../../src/components/album/album-form-sheet';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { Text } from '../../src/components/ui/text';
@@ -14,8 +16,12 @@ import { useAlbums, useCreateAlbum } from '../../src/features/album/use-albums';
 import type { AlbumSummary } from '../../src/lib/api';
 import { mediaSource } from '../../src/lib/media-source';
 import { colors, radius, spacing } from '../../src/theme';
+import { enter } from '../../src/theme/motion';
 
 const GRID_GAP = 12;
+
+/** How many grid cells join the entrance cascade on first paint (Home's rule). */
+const CASCADE_CELLS = 6;
 
 function AlbumCard({ album, onPress }: { album: AlbumSummary; onPress: () => void }) {
   const { t } = useTranslation();
@@ -142,21 +148,26 @@ export default function AlbumsScreen() {
 
   return (
     <View className="flex-1 bg-page">
-      <AppHeader
-        left={<BackButton />}
-        center={<ScreenTitle title={t('albums.title')} />}
-      />
+      <AppHeader left={<BackButton />} center={<ScreenTitle title={t('albums.title')} />} />
 
       <ScrollView
-        contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40, gap: 14 }}
+        contentContainerStyle={{
+          ...contentColumn,
+          paddingTop: spacing.xl,
+          paddingBottom: 40,
+          gap: 14,
+        }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+        <Animated.View
+          entering={enter.up(0)}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}
+        >
           <Lock size={13} color={colors.text.muted} strokeWidth={2} />
           <Text variant="caption" color={colors.text.muted} style={{ flex: 1 }}>
             {t('albums.private')}
           </Text>
-        </View>
+        </Animated.View>
 
         {albums.isPending ? (
           <View style={{ paddingVertical: 40, alignItems: 'center' }}>
@@ -171,19 +182,26 @@ export default function AlbumsScreen() {
           />
         ) : (
           <View style={{ flexDirection: 'row', gap: GRID_GAP }}>
-            {columns.map((column, index) => (
-              <View key={index} style={{ flex: 1, gap: 16 }}>
-                {column.map((cell) =>
-                  cell.kind === 'new' ? (
-                    <NewAlbumTile key="new" onPress={() => setCreating(true)} />
-                  ) : (
-                    <AlbumCard
-                      key={cell.album.id}
-                      album={cell.album}
-                      onPress={() => open(cell.album.id)}
-                    />
-                  ),
-                )}
+            {columns.map((column, columnIndex) => (
+              <View key={columnIndex} style={{ flex: 1, gap: 16 }}>
+                {column.map((cell, rowIndex) => {
+                  // The cell's position in the original shelf order (cells
+                  // were dealt into columns by index % 2), so the cascade
+                  // sweeps the grid left-to-right rather than down a column.
+                  const cellIndex = rowIndex * 2 + columnIndex;
+                  return (
+                    <Animated.View
+                      key={cell.kind === 'new' ? 'new' : cell.album.id}
+                      entering={enter.up(cellIndex < CASCADE_CELLS ? 1 + cellIndex : 0)}
+                    >
+                      {cell.kind === 'new' ? (
+                        <NewAlbumTile onPress={() => setCreating(true)} />
+                      ) : (
+                        <AlbumCard album={cell.album} onPress={() => open(cell.album.id)} />
+                      )}
+                    </Animated.View>
+                  );
+                })}
               </View>
             ))}
           </View>

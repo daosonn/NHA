@@ -38,7 +38,9 @@ const API_KIND: Record<SpecialDateItem['type'], OccasionKind> = {
   CUSTOM: 'holiday',
 };
 
-export function specialDateIcon(type: SpecialDateItem['type']): (props: IconProps) => React.ReactNode {
+export function specialDateIcon(
+  type: SpecialDateItem['type'],
+): (props: IconProps) => React.ReactNode {
   return ICONS[API_KIND[type]];
 }
 

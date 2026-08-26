@@ -21,7 +21,14 @@ export type SelectRowProps = {
  * title over a grey line, chevron on the right. Everything the mockups
  * call "tap to change" is this row.
  */
-export function SelectRow({ leading, title, subtitle, trailing = 'chevron', onPress, bare = false }: SelectRowProps) {
+export function SelectRow({
+  leading,
+  title,
+  subtitle,
+  trailing = 'chevron',
+  onPress,
+  bare = false,
+}: SelectRowProps) {
   const trailingNode =
     trailing === 'chevron' ? (
       <ChevronRight size={17} color={colors.text.lightMuted} strokeWidth={2.2} />
@@ -45,7 +52,8 @@ export function SelectRow({ leading, title, subtitle, trailing = 'chevron', onPr
           paddingHorizontal: bare ? 0 : 13,
         },
         !bare && {
-          backgroundColor: pressed && onPress ? colors.background.surfaceSoft : colors.background.card,
+          backgroundColor:
+            pressed && onPress ? colors.background.surfaceSoft : colors.background.card,
           borderRadius: radius['2xl'],
           borderWidth: 1,
           borderColor: colors.state.borderDefault,

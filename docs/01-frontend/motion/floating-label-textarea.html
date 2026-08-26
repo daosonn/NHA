@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Floating label textarea</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;padding:60px;background:#EDEBE7;font-family:'Be Vietnam Pro',sans-serif;display:flex;justify-content:center}
+.field{position:relative;width:340px}
+.field textarea{width:100%;box-sizing:border-box;min-height:120px;resize:none;padding:26px 16px 12px;border-radius:16px;border:1.5px solid #E7E1DC;background:#FFFFFF;font:400 15px/1.5 'Be Vietnam Pro',sans-serif;color:#18181B;outline:none;transition:border-color 200ms cubic-bezier(.4,0,.2,1),box-shadow 200ms cubic-bezier(.4,0,.2,1)}
+.field textarea:focus{border-color:#F58B7B;box-shadow:0 0 0 3px rgba(245,139,123,.18)}
+.field label{position:absolute;left:16px;top:22px;font:500 15px/1 'Be Vietnam Pro',sans-serif;color:#8A857E;pointer-events:none;transform-origin:left top;transition:transform 200ms cubic-bezier(.34,1.56,.64,1),color 200ms cubic-bezier(.4,0,.2,1)}
+.field textarea:focus + label,
+.field textarea.has-value + label{
+  transform:translateY(-14px) scale(.72);
+  color:#B8422F;
+}
+.count{position:absolute;right:14px;bottom:10px;font:500 11.5px/1 'Be Vietnam Pro',sans-serif;color:#A9A29B;transition:color 200ms}
+.count.near{color:#D4604A}
+</style>
+</head>
+<body>
+
+<div class="field">
+  <textarea id="msgInput" placeholder=" " maxlength="140"></textarea>
+  <label for="msgInput">Viết lời nhắn cho bà</label>
+  <span class="count" id="msgCount">140</span>
+</div>
+
+<script>
+const ta = document.getElementById('msgInput');
+const count = document.getElementById('msgCount');
+const max = parseInt(ta.getAttribute('maxlength'), 10);
+
+function autoGrow() {
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+function sync() {
+  ta.classList.toggle('has-value', ta.value.length > 0);
+  const left = max - ta.value.length;
+  count.textContent = left;
+  count.classList.toggle('near', left <= 20);
+  autoGrow();
+}
+ta.addEventListener('input', sync);
+sync();
+</script>
+</body>
+</html>

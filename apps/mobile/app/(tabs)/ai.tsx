@@ -4,11 +4,13 @@ import { CalendarHeart, Film, Gift, Mail, TriangleAlert } from 'lucide-react-nat
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { specialDateIcon, specialDateKindKey } from '../../src/components/ai/occasion-kind';
 import { DateTile } from '../../src/components/ai/date-tile';
 import { SelectRow } from '../../src/components/ai/select-row';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { NotificationBell, ScreenTitle } from '../../src/components/layout/header-slots';
 import { Avatar } from '../../src/components/ui/avatar';
 import { Button } from '../../src/components/ui/button';
@@ -21,9 +23,16 @@ import { useOccasionLabel, useSpecialDates } from '../../src/features/ai/use-spe
 import { families, type SpecialDateItem } from '../../src/lib/api';
 import { formatDayMonth } from '../../src/lib/date';
 import { queryKeys } from '../../src/lib/query-keys';
-import { colors, radius, spacing } from '../../src/theme';
+import { colors, radius, spacing, useLayout } from '../../src/theme';
+import { enter } from '../../src/theme/motion';
 
-/** Clears the bottom nav (56pt plus the home indicator). */
+/**
+ * Room the floating bottom bar needs at the end of the scroll.
+ *
+ * Only while the bar is at the bottom. From 1024px up the same destinations
+ * are a rail down the left, which overlaps nothing, so reserving this much
+ * there would just be 140px of dead space under the last row.
+ */
 const BOTTOM_INSET = 140;
 
 /** Icon-tile colours of the MAKE SOMETHING rows — straight from the mockup. */
@@ -72,6 +81,7 @@ function dateKey(item: SpecialDateItem): string {
  */
 export default function AiScreen() {
   const { t } = useTranslation();
+  const { expanded } = useLayout();
   const router = useRouter();
   const { familyId } = useActiveFamily();
   const dates = useSpecialDates(familyId);
@@ -140,14 +150,14 @@ export default function AiScreen() {
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: spacing.xl,
+          ...contentColumn,
           paddingTop: 14,
-          paddingBottom: BOTTOM_INSET,
+          paddingBottom: expanded ? spacing['4xl'] : BOTTOM_INSET,
           gap: 16,
         }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ gap: 6 }}>
+        <Animated.View entering={enter.up(0)} style={{ gap: 6 }}>
           <Text
             serif
             weight="bold"
@@ -162,7 +172,7 @@ export default function AiScreen() {
               {t('ai.hub.datesThisMonth', { count: thisMonth })}
             </Text>
           )}
-        </View>
+        </Animated.View>
 
         {/* Lỗi tải có lối thử lại; MAKE SOMETHING bên dưới vẫn dùng được.
             Chỉ khi KHÔNG còn dữ liệu cũ — refetch nền thất bại trên cache còn
@@ -193,7 +203,8 @@ export default function AiScreen() {
 
         {/* ---------- featured: the next date that needs a decision ---------- */}
         {featured && featuredMember && (
-          <View
+          <Animated.View
+            entering={enter.up(1)}
             style={{
               backgroundColor: colors.coral.light,
               borderRadius: radius['4xl'],
@@ -261,12 +272,12 @@ export default function AiScreen() {
                 )}
               />
             </View>
-          </View>
+          </Animated.View>
         )}
 
         {/* ---------- ALSO THIS SEASON ---------- */}
         {rest.length > 0 && (
-          <View style={{ gap: 10 }}>
+          <Animated.View entering={enter.up(2)} style={{ gap: 10 }}>
             <View
               style={{
                 flexDirection: 'row',
@@ -338,11 +349,11 @@ export default function AiScreen() {
                 </Pressable>
               ))}
             </Card>
-          </View>
+          </Animated.View>
         )}
 
         {/* ---------- MAKE SOMETHING ---------- */}
-        <View style={{ gap: 10 }}>
+        <Animated.View entering={enter.up(3)} style={{ gap: 10 }}>
           <Text
             variant="badge"
             weight="semibold"
@@ -376,7 +387,7 @@ export default function AiScreen() {
             subtitle={t('ai.hub.memoryVideoDesc')}
             onPress={() => router.push('/video/setup')}
           />
-        </View>
+        </Animated.View>
       </ScrollView>
     </View>
   );

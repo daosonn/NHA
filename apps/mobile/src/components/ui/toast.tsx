@@ -1,10 +1,11 @@
 import { Check, TriangleAlert } from 'lucide-react-native';
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, View } from 'react-native';
-import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, elevation, radius, spacing } from '../../theme';
+import { exit, toastIn } from '../../theme/motion';
 import { Text } from './text';
 
 /** Long enough to read a short sentence, short enough not to be in the way. */
@@ -81,8 +82,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           // Keyed on the id so a replacement re-enters rather than swapping
           // its text in place, which reads as a glitch.
           key={toast.id}
-          entering={FadeInDown.duration(180)}
-          exiting={FadeOutDown.duration(140)}
+          entering={toastIn}
+          exiting={exit.down}
           pointerEvents="none"
           style={{
             position: 'absolute',

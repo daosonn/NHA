@@ -103,7 +103,13 @@ Native imports) shared by both clients.
 ## Database
 
 - PostgreSQL
-- Docker Compose for local PostgreSQL
+- **Neon Cloud** (managed PostgreSQL) — the shared development database, and
+  the default for every machine (decided 2026-08-26)
+- Docker Compose for local PostgreSQL — opt-in alternative, a database of
+  your own
+- The two are independent: same schema, different data, no sync. Rules for
+  working against the shared one (never `prisma migrate reset` or casual
+  `prisma migrate dev` there): `docs/04-devops/local-environment.md`
 
 ## AI Service
 

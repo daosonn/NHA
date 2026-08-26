@@ -5,9 +5,19 @@
  * directly, so the React Native mapping (font names, shadows) lives in one
  * place. Token values themselves stay framework-agnostic in the package.
  */
-import { colors, radius, shadow, spacing, typography, MIN_TOUCH_TARGET } from '@nha/tokens';
+import {
+  breakpoints,
+  colors,
+  layout,
+  radius,
+  shadow,
+  spacing,
+  typography,
+  MIN_TOUCH_TARGET,
+} from '@nha/tokens';
 
-export { colors, radius, spacing, typography, MIN_TOUCH_TARGET };
+export { breakpoints, colors, layout, radius, spacing, typography, MIN_TOUCH_TARGET };
+export { useLayout, type Layout, type NavMode } from './use-layout';
 
 /**
  * Font family names as registered with `expo-font`.
@@ -42,3 +52,10 @@ export const elevation = {
 } as const;
 
 export { shadow };
+
+/**
+ * Motion presets (durations, easings, entrance/exit builders) live in
+ * `./motion` — imported directly (`from '../theme/motion'`) rather than
+ * re-exported here, because this file must stay importable from
+ * non-animated contexts without pulling Reanimated in.
+ */

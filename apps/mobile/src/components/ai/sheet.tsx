@@ -1,8 +1,9 @@
 import { X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { colors, radius, spacing } from '../../theme';
+import { SheetModal } from '../ui/sheet-modal';
 import { Text } from '../ui/text';
 
 export type SheetProps = {
@@ -21,12 +22,12 @@ export function Sheet({ visible, onClose, title, subtitle, children }: SheetProp
   const { t } = useTranslation();
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable
-        accessibilityLabel={title}
-        style={{ flex: 1, backgroundColor: colors.state.scrim }}
-        onPress={onClose}
-      />
+    <SheetModal
+      visible={visible}
+      onClose={onClose}
+      scrimLabel={t('common.close')}
+      style={{ maxHeight: '82%' }}
+    >
       <View
         style={{
           backgroundColor: colors.background.card,
@@ -34,7 +35,7 @@ export function Sheet({ visible, onClose, title, subtitle, children }: SheetProp
           borderTopRightRadius: radius['4xl'],
           paddingTop: 8,
           paddingBottom: 30,
-          maxHeight: '82%',
+          flexShrink: 1,
         }}
       >
         {/* grab handle */}
@@ -92,6 +93,6 @@ export function Sheet({ visible, onClose, title, subtitle, children }: SheetProp
           {children}
         </ScrollView>
       </View>
-    </Modal>
+    </SheetModal>
   );
 }

@@ -2,9 +2,14 @@ import { useRouter } from 'expo-router';
 import { Bell, ChevronRight, KeyRound, Mail } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+
+import { AnimatedPressable } from '../src/components/motion/animated-pressable';
+import { usePressScale } from '../src/components/motion/press';
+import { CARD_PRESS_SCALE } from '../src/theme/motion';
 
 import { AppHeader } from '../src/components/layout/app-header';
+import { contentColumn } from '../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../src/components/layout/header-slots';
 import { Avatar } from '../src/components/ui/avatar';
 import { Button } from '../src/components/ui/button';
@@ -38,11 +43,15 @@ function NavRow({
   hint: string;
   onPress: () => void;
 }) {
+  const press = usePressScale({ scale: CARD_PRESS_SCALE });
+
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
       accessibilityRole="button"
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 13 }}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
+      style={[{ flexDirection: 'row', alignItems: 'center', gap: 13 }, press.style]}
     >
       <View
         style={{
@@ -68,7 +77,7 @@ function NavRow({
       </View>
 
       <ChevronRight size={18} color={colors.text.subtle} strokeWidth={2.2} />
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -110,7 +119,7 @@ export default function SettingsScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={{ padding: spacing.xl, gap: 18 }}
+        contentContainerStyle={{ ...contentColumn, paddingVertical: spacing.xl, gap: 18 }}
         showsVerticalScrollIndicator={false}
       >
         <Card padding={18} style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>

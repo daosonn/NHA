@@ -22,7 +22,13 @@ export type AddPillProps = {
  * một lựa chọn của mình (dịp riêng, loại video riêng). Khi đã có giá trị, nó
  * trở thành một pill bình thường kèm nút ✕ để bỏ.
  */
-export function AddPill({ value, onChange, placeholder, selected = false, onSelect }: AddPillProps) {
+export function AddPill({
+  value,
+  onChange,
+  placeholder,
+  selected = false,
+  onSelect,
+}: AddPillProps) {
   const { t } = useTranslation();
   const typeface = useTypeface('semibold');
   const [editing, setEditing] = useState(false);
@@ -60,7 +66,13 @@ export function AddPill({ value, onChange, placeholder, selected = false, onSele
           maxLength={24}
           autoFocus
           returnKeyType="done"
-          style={{ minWidth: 110, padding: 0, ...typeface, fontSize: 13, color: colors.text.primary }}
+          style={{
+            minWidth: 110,
+            padding: 0,
+            ...typeface,
+            fontSize: 13,
+            color: colors.text.primary,
+          }}
         />
         <Pressable
           onPress={commit}
@@ -101,7 +113,11 @@ export function AddPill({ value, onChange, placeholder, selected = false, onSele
           borderColor: colors.state.borderNeutral,
         }}
       >
-        <Text variant="caption" weight="semibold" color={selected ? colors.text.white : colors.text.primary}>
+        <Text
+          variant="caption"
+          weight="semibold"
+          color={selected ? colors.text.white : colors.text.primary}
+        >
           {value}
         </Text>
         <Pressable

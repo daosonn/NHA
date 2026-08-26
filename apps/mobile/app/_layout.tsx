@@ -3,6 +3,7 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -20,6 +21,7 @@ import Lora_700Bold from '@expo-google-fonts/lora/700Bold/Lora_700Bold.ttf';
 // Registers the Tailwind utilities with NativeWind. Must be imported once,
 // at the root.
 import '../global.css';
+import { SideNav } from '../src/components/layout/side-nav';
 import { ToastProvider } from '../src/components/ui/toast';
 import { SessionProvider, useSession } from '../src/features/auth/session';
 import { currentAccessToken, refreshSession } from '../src/features/auth/session-store';
@@ -30,7 +32,8 @@ import { createQueryClient } from '../src/lib/query-client';
 // any screen calls `t()`. `restoreLocale` then swaps in a stored choice.
 import '../src/i18n';
 import { restoreLocale } from '../src/i18n/locale';
-import { colors } from '../src/theme';
+import { colors, useLayout } from '../src/theme';
+import { screenTransition } from '../src/theme/motion';
 
 // Module scope on purpose: this has to be in place before the first request,
 // and a child's effect can fire one before this component's own effects run.
@@ -63,6 +66,44 @@ const queryClient = createQueryClient();
  * first.
  */
 const PUBLIC_GROUPS: readonly string[] = ['(auth)', 'auth', 'invite'];
+
+/**
+ * Puts the side navigation beside the whole navigator, from 1024px up.
+ *
+ * It sits here rather than in `(tabs)/_layout.tsx` — where the bottom bar
+ * lives — because a pushed screen is a `Stack` screen *above* the tabs, so a
+ * navigation mounted inside the tab navigator disappears the moment somebody
+ * opens a Life Profile or a post. On a phone that is correct and expected. In
+ * a browser it is the difference between a web app and a phone app someone is
+ * looking at through a window, so above the `Stack` is the only place it can
+ * be.
+ *
+ * A plain flex row, not an overlay: the rail takes real width and the screen
+ * beside it gets the rest, so no screen has to know the rail exists or reserve
+ * room for it. That is also why nothing here reaches into a screen — the
+ * content column inside each one simply centres in a narrower space.
+ *
+ * Hidden while signed out, on the public invitation page, and while the
+ * keychain read is still in flight — the same three cases the guard above
+ * treats as "not yet somebody's app".
+ */
+function AppFrame({ children }: { children: React.ReactNode }) {
+  const { expanded } = useLayout();
+  const { status } = useSession();
+  const segments = useSegments();
+
+  const group = segments[0];
+  const guarded = group !== undefined && !PUBLIC_GROUPS.includes(group);
+
+  if (!expanded || status !== 'authenticated' || !guarded) return children;
+
+  return (
+    <View style={{ flex: 1, flexDirection: 'row' }}>
+      <SideNav />
+      <View style={{ flex: 1 }}>{children}</View>
+    </View>
+  );
+}
 
 /**
  * Sends a signed-out visitor back to Welcome, from anywhere.
@@ -127,7 +168,13 @@ export default function RootLayout() {
     // this view, and one mounted below a screen only works for that screen.
     // Today it is the family tree's pinch and pan; anything added later gets
     // it for free rather than rediscovering why its gestures do nothing.
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    //
+    // It also carries the page colour, because the very back is the only place
+    // that covers everything. `Stack` paints it behind a screen and every screen
+    // asks for it again, but the frame *around* them had nothing — so on the web
+    // the column reserved for the side bar showed the document's own white, and
+    // the glass bar came out a white shape on a white strip beside a warm page.
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background.page }}>
       <SafeAreaProvider>
         <StatusBar style="dark" />
         <QueryClientProvider client={queryClient}>
@@ -141,12 +188,15 @@ export default function RootLayout() {
                   saving a memo and going back should still say "saved". */}
               <ToastProvider>
                 <AuthGate>
-                  <Stack
-                    screenOptions={{
-                      headerShown: false,
-                      contentStyle: { backgroundColor: colors.background.page },
-                    }}
-                  />
+                  <AppFrame>
+                    <Stack
+                      screenOptions={{
+                        headerShown: false,
+                        contentStyle: { backgroundColor: colors.background.page },
+                        ...screenTransition,
+                      }}
+                    />
+                  </AppFrame>
                 </AuthGate>
               </ToastProvider>
             </ActiveFamilyProvider>

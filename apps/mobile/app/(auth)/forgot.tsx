@@ -29,6 +29,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <FormScreen
+      variant="auth"
       onBack={() => safeBack(router, '/welcome')}
       footer={
         <Button

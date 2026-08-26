@@ -9,6 +9,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, View } from 'react-nat
 
 import { AlbumFormSheet } from '../../src/components/album/album-form-sheet';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { useToast } from '../../src/components/ui/toast';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import type { DraftMedia } from '../../src/components/moment/media-strip';
@@ -233,7 +234,12 @@ export default function AlbumScreen() {
       {header(detail.name)}
 
       <ScrollView
-        contentContainerStyle={{ padding: spacing.xl, paddingBottom: 40, gap: 14 }}
+        contentContainerStyle={{
+          ...contentColumn,
+          paddingTop: spacing.xl,
+          paddingBottom: 40,
+          gap: 14,
+        }}
         showsVerticalScrollIndicator={false}
       >
         {detail.description !== null && detail.description !== '' && (
@@ -273,6 +279,7 @@ export default function AlbumScreen() {
 
         {detail.items.length === 0 ? (
           <EmptyState
+            cat
             renderIcon={(props) => <ImagePlus {...props} strokeWidth={2} />}
             title={t('albums.emptyTitle')}
             description={t('albums.emptyBody')}
@@ -290,81 +297,85 @@ export default function AlbumScreen() {
               // View bọc ngoài để nút ⋯ là ANH EM của ô bấm, không phải con —
               // button lồng button trên web nuốt sự kiện (bẫy GroupStrip cũ).
               <View key={item.mediaId} style={{ width: CELL }}>
-              <Pressable
-                // Bấm = XEM ẢNH (kỳ vọng tự nhiên nhất — trước đây bấm chỉ ra
-                // sheet "đặt bìa/gỡ khỏi album" và không có đường nào xem ảnh);
-                // giữ lâu = thao tác quản lý, cùng ngôn ngữ với memo.
-                onPress={() =>
-                  router.push({
-                    pathname: '/media/[id]',
-                    params: { id: item.mediaId, mime: item.mimeType },
-                  })
-                }
-                onLongPress={() => setActing(item)}
-                accessibilityRole="imagebutton"
-                accessibilityLabel={t('albums.item.open')}
-              >
-                <Image
-                  source={thumbnailSource(item.mediaId, item.mimeType)}
-                  recyclingKey={item.mediaId}
-                  contentFit="cover"
-                  transition={140}
-                  style={{
-                    width: '100%',
-                    aspectRatio: 1,
-                    borderRadius: radius.md,
-                    backgroundColor: colors.background.subtle,
-                  }}
-                />
-
-                {item.mediaId === detail.coverMediaId && (
-                  <View
+                <Pressable
+                  // Bấm = XEM ẢNH (kỳ vọng tự nhiên nhất — trước đây bấm chỉ ra
+                  // sheet "đặt bìa/gỡ khỏi album" và không có đường nào xem ảnh);
+                  // giữ lâu = thao tác quản lý, cùng ngôn ngữ với memo.
+                  onPress={() =>
+                    router.push({
+                      pathname: '/media/[id]',
+                      params: { id: item.mediaId, mime: item.mimeType },
+                    })
+                  }
+                  onLongPress={() => setActing(item)}
+                  accessibilityRole="imagebutton"
+                  accessibilityLabel={t('albums.item.open')}
+                >
+                  <Image
+                    source={thumbnailSource(item.mediaId, item.mimeType)}
+                    recyclingKey={item.mediaId}
+                    contentFit="cover"
+                    transition={140}
                     style={{
-                      position: 'absolute',
-                      left: 6,
-                      top: 6,
-                      width: 20,
-                      height: 20,
-                      borderRadius: radius.full,
-                      backgroundColor: 'rgba(24,24,27,0.62)',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      width: '100%',
+                      aspectRatio: 1,
+                      borderRadius: radius.md,
+                      backgroundColor: colors.background.subtle,
                     }}
-                    pointerEvents="none"
-                  >
-                    <Star
-                      size={11}
-                      color={colors.text.white}
-                      strokeWidth={2.4}
-                      fill={colors.text.white}
-                    />
-                  </View>
-                )}
-              </Pressable>
+                  />
 
-              {/* Nút ⋯ vào sheet quản lý — giữ-lâu vẫn chạy, nhưng trên web
+                  {item.mediaId === detail.coverMediaId && (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        left: 6,
+                        top: 6,
+                        width: 20,
+                        height: 20,
+                        borderRadius: radius.full,
+                        backgroundColor: 'rgba(24,24,27,0.62)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      pointerEvents="none"
+                    >
+                      <Star
+                        size={11}
+                        color={colors.text.white}
+                        strokeWidth={2.4}
+                        fill={colors.text.white}
+                      />
+                    </View>
+                  )}
+                </Pressable>
+
+                {/* Nút ⋯ vào sheet quản lý — giữ-lâu vẫn chạy, nhưng trên web
                   chuột không ai nghĩ tới giữ lâu, nên phải có cửa nhìn thấy được */}
-              <Pressable
-                onPress={() => setActing(item)}
-                accessibilityRole="button"
-                accessibilityLabel={t('albums.item.actions')}
-                hitSlop={6}
-                style={{
-                  position: 'absolute',
-                  right: 6,
-                  top: 6,
-                  width: 22,
-                  height: 22,
-                  borderRadius: radius.full,
-                  backgroundColor: 'rgba(24,24,27,0.62)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text weight="bold" color={colors.text.white} style={{ fontSize: 12, lineHeight: 14 }}>
-                  ⋯
-                </Text>
-              </Pressable>
+                <Pressable
+                  onPress={() => setActing(item)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('albums.item.actions')}
+                  hitSlop={6}
+                  style={{
+                    position: 'absolute',
+                    right: 6,
+                    top: 6,
+                    width: 22,
+                    height: 22,
+                    borderRadius: radius.full,
+                    backgroundColor: 'rgba(24,24,27,0.62)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text
+                    weight="bold"
+                    color={colors.text.white}
+                    style={{ fontSize: 12, lineHeight: 14 }}
+                  >
+                    ⋯
+                  </Text>
+                </Pressable>
               </View>
             ))}
 

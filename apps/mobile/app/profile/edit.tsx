@@ -1,9 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { safeBack } from '../../src/lib/back';
 import { Plus, X } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { FormScreen } from '../../src/components/layout/form-screen';
 import { useToast } from '../../src/components/ui/toast';
@@ -18,7 +19,10 @@ import {
 } from '../../src/features/member/use-profile';
 import { ApiError, type ProfileDetail } from '../../src/lib/api';
 import { dayOnly, formatFullDate } from '../../src/lib/date';
+import { AnimatedPressable } from '../../src/components/motion/animated-pressable';
+import { usePressScale } from '../../src/components/motion/press';
 import { colors, radius } from '../../src/theme';
+import { duration, easing, pop } from '../../src/theme/motion';
 
 const MAX_BIO = 5000;
 const MAX_INTERESTS = 50;
@@ -69,6 +73,56 @@ function toPatchDate(value: string, original: string | null): string | null | un
   return next === before ? undefined : next;
 }
 
+/**
+ * The chip-input demo's own Add button — deliberately NOT the shared
+ * `Button`, whose two invariants ("radius is always full", "disabled is
+ * always the neutral grey") are the opposite of the demo's spec: a rounded
+ * rect that stays coral and dims to 40% until there is something to add.
+ */
+function AddInterestButton({ enabled, onPress }: { enabled: boolean; onPress: () => void }) {
+  const { t } = useTranslation();
+  const press = usePressScale({
+    background: { rest: colors.coral.primary, pressed: colors.coral.dark },
+  });
+
+  const dim = useSharedValue(enabled ? 1 : 0.4);
+  useEffect(() => {
+    dim.value = withTiming(enabled ? 1 : 0.4, { duration: duration.select, easing: easing.snap });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- driven by `enabled`.
+  }, [enabled]);
+  const dimStyle = useAnimatedStyle(() => ({ opacity: dim.value }));
+
+  return (
+    <AnimatedPressable
+      onPress={onPress}
+      disabled={!enabled}
+      accessibilityRole="button"
+      accessibilityLabel={t('profileEdit.addInterest')}
+      accessibilityState={{ disabled: !enabled }}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
+      style={[
+        {
+          height: 44,
+          paddingHorizontal: 18,
+          borderRadius: radius.md,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 5,
+        },
+        press.style,
+        dimStyle,
+      ]}
+    >
+      <Plus size={15} color={colors.text.white} strokeWidth={2.6} />
+      <Text weight="semibold" color={colors.text.white} style={{ fontSize: 14, lineHeight: 17 }}>
+        {t('profileEdit.addInterest')}
+      </Text>
+    </AnimatedPressable>
+  );
+}
+
 function InterestChips({
   interests,
   onRemove,
@@ -83,8 +137,11 @@ function InterestChips({
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
       {interests.map((interest) => (
-        <View
+        // A chip pops as it arrives (chip-input demo) — keyed on the word, so
+        // only a genuinely new one springs, not the row re-rendering.
+        <Animated.View
           key={interest}
+          entering={pop}
           style={{
             flexDirection: 'row',
             alignItems: 'center',
@@ -116,7 +173,7 @@ function InterestChips({
           >
             <X size={11} color={colors.text.muted} strokeWidth={2.6} />
           </Pressable>
-        </View>
+        </Animated.View>
       ))}
     </View>
   );
@@ -352,28 +409,20 @@ function ProfileEditForm({
           }
         />
 
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
-          <View style={{ flex: 1 }}>
-            <TextField
-              label={t('profileEdit.addInterestLabel')}
-              value={draftInterest}
-              onChangeText={setDraftInterest}
-              placeholder={t('profileEdit.addInterestPlaceholder')}
-              maxLength={100}
-              onSubmitEditing={addInterest}
-              returnKeyType="done"
-            />
-          </View>
-
-          <Button
-            label={t('profileEdit.addInterest')}
-            variant="secondary"
-            size="medium"
-            disabled={draftInterest.trim() === ''}
-            onPress={addInterest}
-            renderIcon={({ size, color }) => <Plus size={size} color={color} strokeWidth={2.1} />}
-          />
-        </View>
+        {/* The chip-input demo's merged box: the Add button lives INSIDE the
+            field, so the pair can never fall out of alignment again. */}
+        <TextField
+          label={t('profileEdit.addInterestLabel')}
+          value={draftInterest}
+          onChangeText={setDraftInterest}
+          placeholder={t('profileEdit.addInterestPlaceholder')}
+          maxLength={100}
+          onSubmitEditing={addInterest}
+          returnKeyType="done"
+          trailing={
+            <AddInterestButton enabled={draftInterest.trim() !== ''} onPress={addInterest} />
+          }
+        />
       </View>
 
       <TextField

@@ -2,8 +2,10 @@ import { useRouter } from 'expo-router';
 import { ChevronRight, Images, TriangleAlert } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, SectionList, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { AppHeader } from '../../src/components/layout/app-header';
+import { contentColumnBleed } from '../../src/components/layout/content-column';
 import { NotificationBell, ScreenTitle } from '../../src/components/layout/header-slots';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { IconBadge } from '../../src/components/ui/icon-badge';
@@ -12,10 +14,20 @@ import { GRID_GAP, PhotoRow } from '../../src/components/omoide/photo-row';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { useFamilyPhotos, type PhotoTile } from '../../src/features/omoide/use-family-photos';
 import { formatFullDate } from '../../src/lib/date';
-import { colors, radius, spacing } from '../../src/theme';
+import { colors, radius, spacing, useLayout } from '../../src/theme';
+import { enter } from '../../src/theme/motion';
 
-/** Room for the bottom nav plus the home indicator. */
+/**
+ * Room the floating bottom bar needs at the end of the scroll.
+ *
+ * Only while the bar is at the bottom. From 1024px up the same destinations
+ * are a rail down the left, which overlaps nothing, so reserving this much
+ * there would just be 140px of dead space under the last row.
+ */
 const BOTTOM_INSET = 140;
+
+/** How many photo rows join the entrance cascade on first paint (Home's rule). */
+const CASCADE_ROWS = 5;
 
 /**
  * The family's shared pictures, newest day first.
@@ -32,6 +44,7 @@ const BOTTOM_INSET = 140;
  */
 export default function OmoideScreen() {
   const { t } = useTranslation();
+  const { expanded } = useLayout();
   const router = useRouter();
   const { familyId } = useActiveFamily();
 
@@ -74,6 +87,7 @@ export default function OmoideScreen() {
     if (days.length === 0) {
       return (
         <EmptyState
+          cat
           renderIcon={({ size, color }) => <Images size={size} color={color} strokeWidth={2} />}
           title={t('omoide.emptyTitle')}
           description={t('omoide.emptyBody')}
@@ -81,21 +95,34 @@ export default function OmoideScreen() {
       );
     }
 
+    // Vị trí toàn cục của từng hàng, vì SectionList chỉ đưa index trong section —
+    // cascade phải đếm tiếp qua ranh giới ngày. Header chiếm bậc 0.
+    let rowOffset = 1;
+    const sections = days.map((day) => {
+      const section = { ...day, data: day.rows, offset: rowOffset };
+      rowOffset += day.rows.length;
+      return section;
+    });
+
     return (
       <SectionList
-        sections={days.map((day) => ({ ...day, data: day.rows }))}
+        sections={sections}
         keyExtractor={(row, index) => `${row[0]?.id ?? 'row'}-${index}`}
         // The date heading stays put while its own photos scroll under it,
         // so you always know what you are looking at.
         stickySectionHeadersEnabled
-        contentContainerStyle={{ paddingBottom: BOTTOM_INSET }}
+        contentContainerStyle={{
+          ...contentColumnBleed,
+          paddingBottom: expanded ? spacing['4xl'] : BOTTOM_INSET,
+        }}
         showsVerticalScrollIndicator={false}
         onEndReachedThreshold={0.5}
         onEndReached={() => {
           if (feed.hasNextPage && !feed.isFetchingNextPage) void feed.fetchNextPage();
         }}
         ListHeaderComponent={
-          <View
+          <Animated.View
+            entering={enter.up(0)}
             style={{ paddingHorizontal: spacing.xl, paddingTop: 14, paddingBottom: 4, gap: 10 }}
           >
             <Text variant="body2" color={colors.text.muted}>
@@ -139,7 +166,7 @@ export default function OmoideScreen() {
 
               <ChevronRight size={17} color={colors.text.lightMuted} strokeWidth={2.2} />
             </Pressable>
-          </View>
+          </Animated.View>
         }
         renderSectionHeader={({ section }) => (
           <View
@@ -171,11 +198,20 @@ export default function OmoideScreen() {
             </Text>
           </View>
         )}
-        renderItem={({ item }) => (
-          <View style={{ paddingHorizontal: spacing.md, paddingBottom: GRID_GAP }}>
-            <PhotoRow tiles={item} onPress={openMoment} />
-          </View>
-        )}
+        renderItem={({ item, index, section }) => {
+          // Hàng ngoài đợt cascade đầu (và hàng mount sau do cuộn) hiện lên
+          // ngay — chờ hết delay giữa chừng cuộn đọc thành lag, không phải
+          // choreography. Cùng lý do với feed trên Home.
+          const cascadeIndex = section.offset + index;
+          return (
+            <Animated.View
+              entering={enter.up(cascadeIndex < CASCADE_ROWS ? cascadeIndex : 0)}
+              style={{ paddingHorizontal: spacing.md, paddingBottom: GRID_GAP }}
+            >
+              <PhotoRow tiles={item} onPress={openMoment} />
+            </Animated.View>
+          );
+        }}
         ListFooterComponent={
           feed.isFetchingNextPage ? (
             <ActivityIndicator color={colors.coral.primary} style={{ paddingVertical: 16 }} />

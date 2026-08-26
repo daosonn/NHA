@@ -11,6 +11,7 @@ import { GroupStrip, type FamilyGroupSummary } from '../../src/components/home/g
 import { SwipeCue } from '../../src/components/home/moment-peek';
 import { RecommendationGrid } from '../../src/components/home/recommendation-grid';
 import { AppHeader } from '../../src/components/layout/app-header';
+import { ContentColumn, contentColumn } from '../../src/components/layout/content-column';
 import { BrandWordmark, NotificationBell } from '../../src/components/layout/header-slots';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { SectionHeader } from '../../src/components/ui/section-header';
@@ -24,20 +25,24 @@ import { useAlbums } from '../../src/features/album/use-albums';
 import { useSpecialDates } from '../../src/features/ai/use-special-dates';
 import { useRecommendations } from '../../src/features/home/use-recommendations';
 import type { FamilySummary, PostDetail } from '../../src/lib/api';
-import { colors, spacing } from '../../src/theme';
+import { colors, spacing, useLayout } from '../../src/theme';
+import { enter } from '../../src/theme/motion';
 
-/** Room for the bottom nav plus the home indicator. */
+/** How many feed cards join the intro's entrance cascade on first paint. */
+const CASCADE_CARDS = 4;
+
+/**
+ * Room the floating bottom bar needs at the end of the scroll.
+ *
+ * Only while the bar is at the bottom. From 1024px up the same destinations
+ * are a rail down the left, which overlaps nothing, so reserving this much
+ * there would just be 160px of dead space under the last row.
+ */
 const BOTTOM_INSET = 160;
 
 /** How many faces the strip draws before it collapses the rest into "+N". */
 const VISIBLE_GROUPS = 3;
 
-/**
- * Một thẻ trên dòng thời gian, có trái tim bấm được.
- *
- * Là component riêng vì mỗi bài cần một `useSetReaction` của chính nó — hook
- * không gọi được trong `renderItem` của FlatList.
- */
 function FeedCard({
   post,
   ...rest
@@ -56,6 +61,7 @@ function toStripGroups(families: FamilySummary[]): FamilyGroupSummary[] {
 
 export default function HomeScreen() {
   const { t } = useTranslation();
+  const { expanded } = useLayout();
   const router = useRouter();
   const { familyId } = useActiveFamily();
 
@@ -128,7 +134,9 @@ export default function HomeScreen() {
           filled any in has nothing coming up — and an empty celebration
           card would be a strange thing to look at. */}
       {nextOccasion !== undefined && (
-        <EventWidget occasion={nextOccasion} moreCount={(occasions?.items.length ?? 1) - 1} />
+        <Animated.View entering={enter.up(0)}>
+          <EventWidget occasion={nextOccasion} moreCount={(occasions?.items.length ?? 1) - 1} />
+        </Animated.View>
       )}
 
       {/* Derived on the client from this family's own posts and albums —
@@ -140,7 +148,7 @@ export default function HomeScreen() {
           empty "look what turned up" is worse than no shelf, and a shelf of
           bundled stock photographs would be a claim about their life. */}
       {suggestions.length > 0 && (
-        <>
+        <Animated.View entering={enter.up(1)} style={{ gap: 14 }}>
           <SectionHeader title={t('home.recommendations')} />
 
           <RecommendationGrid
@@ -151,16 +159,23 @@ export default function HomeScreen() {
                 : router.push({ pathname: '/post/[id]', params: { id: tile.target.id } })
             }
           />
-        </>
+        </Animated.View>
       )}
 
-      {/* Fades on the first flick — it has been followed by then. */}
-      <SwipeCue scrollY={scrollY} />
+      {/* Fades on the first flick — it has been followed by then. Entrance is
+          fade-only: the cue's own opacity is scroll-driven, and a rising cue
+          would point the wrong way. */}
+      <Animated.View entering={enter.fade(2)}>
+        <SwipeCue scrollY={scrollY} />
+      </Animated.View>
     </View>
   );
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.page }}>
+      {/* Kept at every width. The rail beside it rests as glyphs only, so this
+          is the one place the app says its whole name — and without it the
+          header row on a wide window is a bell and 1500px of nothing. */}
       <AppHeader left={<BrandWordmark />} right={<NotificationBell />} paddingRight={spacing.lg} />
 
       {/* Pinned, not scrolled with the feed. It is the only way into the
@@ -168,7 +183,7 @@ export default function HomeScreen() {
           flick. The + starts another group; somebody with no family at all
           lands on `/create-family` from the empty state below. */}
       {families !== undefined && families.length > 0 && (
-        <View style={{ paddingHorizontal: spacing.xl, paddingTop: 4, paddingBottom: 10 }}>
+        <ContentColumn style={{ paddingTop: 4, paddingBottom: 10 }}>
           <GroupStrip
             groups={toStripGroups(families)}
             remainingCount={Math.max(0, families.length - VISIBLE_GROUPS)}
@@ -176,7 +191,7 @@ export default function HomeScreen() {
             onAddPress={() => router.push('/family/new')}
             scrollY={scrollY}
           />
-        </View>
+        </ContentColumn>
       )}
 
       {renderBody()}
@@ -207,6 +222,7 @@ export default function HomeScreen() {
     if (families.length === 0) {
       return (
         <EmptyState
+          cat
           renderIcon={({ size, color }) => <HousePlus size={size} color={color} strokeWidth={2} />}
           title={t('home.noFamilyTitle')}
           description={t('home.noFamilyBody')}
@@ -224,8 +240,8 @@ export default function HomeScreen() {
         onScroll={onScroll}
         scrollEventThrottle={16}
         contentContainerStyle={{
-          paddingHorizontal: spacing.xl,
-          paddingBottom: BOTTOM_INSET,
+          ...contentColumn,
+          paddingBottom: expanded ? spacing['4xl'] : BOTTOM_INSET,
           gap: 12,
         }}
         showsVerticalScrollIndicator={false}
@@ -237,6 +253,7 @@ export default function HomeScreen() {
         ListEmptyComponent={
           feed.isPending ? null : (
             <EmptyState
+              cat
               renderIcon={({ size, color }) => (
                 <HousePlus size={size} color={color} strokeWidth={2} />
               )}
@@ -250,17 +267,23 @@ export default function HomeScreen() {
             <ActivityIndicator color={colors.coral.primary} style={{ paddingVertical: 16 }} />
           ) : null
         }
-        renderItem={({ item }: { item: PostDetail }) => (
-          <FeedCard
-            post={item}
-            audienceLabel={audienceLabel(item)}
-            onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
-            onAuthorPress={openAuthor(item)}
-            onMediaPress={(m) =>
-              router.push({ pathname: '/media/[id]', params: { id: m.id, mime: m.mimeType } })
-            }
-            authorAvatarId={memberFor(item.authorUserId)?.avatarKey}
-          />
+        renderItem={({ item, index }: { item: PostDetail; index: number }) => (
+          // The first screenful continues the intro's cascade (indices 3, 4,
+          // …); cards mounted later by scrolling rise immediately — a card
+          // that waits out a stagger delay mid-scroll reads as lag, not as
+          // choreography.
+          <Animated.View entering={enter.up(index < CASCADE_CARDS ? 3 + index : 0)}>
+            <FeedCard
+              post={item}
+              audienceLabel={audienceLabel(item)}
+              onPress={() => router.push({ pathname: '/post/[id]', params: { id: item.id } })}
+              onAuthorPress={openAuthor(item)}
+              onMediaPress={(m) =>
+                router.push({ pathname: '/media/[id]', params: { id: m.id, mime: m.mimeType } })
+              }
+              authorAvatarId={memberFor(item.authorUserId)?.avatarKey}
+            />
+          </Animated.View>
         )}
       />
     );

@@ -7,13 +7,40 @@ Run everything from the **repo root** unless stated otherwise.
 
 ## First time on a machine
 
-```bash
+The database is shared Neon Cloud PostgreSQL. PowerShell, from the repo root:
+
+```powershell
 pnpm install
-pnpm bootstrap          # .env files, PostgreSQL, migrations, Prisma client
-pnpm build:tokens       # compile @nha/tokens (apps import the build output)
+Copy-Item apps/api/.env.example apps/api/.env
+# put the Neon connection string into apps/api/.env → DATABASE_URL first
+pnpm --filter api exec prisma migrate deploy   # apply migrations to Neon
+pnpm --filter api exec prisma generate         # Prisma client (gitignored)
+pnpm --filter api exec prisma migrate status   # "Database schema is up to date!"
+pnpm build:tokens                              # compile @nha/tokens (apps import the build output)
 ```
 
-`pnpm bootstrap` needs Docker Desktop running. Safe to re-run anytime.
+`pnpm bootstrap` belongs to the **opt-in local Docker database** (Workflow B),
+where it does env files, `docker compose up`, migrations and the Prisma client
+in one shot and needs Docker Desktop running. It is safe to re-run anytime,
+and it skips Docker when `DATABASE_URL` is not a local host — but on the
+shared Neon setup you do not need it. Both workflows and the rules for working
+on a shared database: `local-environment.md`.
+
+## Database commands
+
+| Command                                        | What it does                                                      |
+| ---------------------------------------------- | ----------------------------------------------------------------- |
+| `pnpm --filter api exec prisma migrate deploy` | Applies pending migrations to whatever `DATABASE_URL` points at   |
+| `pnpm --filter api exec prisma migrate status` | Says whether that database is up to date. Read-only, always safe  |
+| `pnpm --filter api exec prisma generate`       | Regenerates the client into gitignored `apps/api/src/generated`   |
+| `pnpm --filter api exec prisma migrate dev`    | **Authoring only.** Local Docker or your own Neon branch          |
+| `pnpm studio`                                  | Prisma Studio against `DATABASE_URL` — on shared Neon, real data  |
+| `pnpm seed`                                    | Writes demo data through `DATABASE_URL`. Not on the shared branch |
+| `pnpm db:backup` / `pnpm db:restore`           | Local Docker container only; these never see Neon                 |
+
+`prisma migrate deploy` applies migrations and nothing else — it never copies
+data between databases. Never run `prisma migrate reset` against a shared
+database. Full rules: `local-environment.md` § Neon rules.
 
 ## Running things
 
@@ -131,17 +158,18 @@ Caveats:
 
 ## Troubleshooting
 
-| Symptom                                                                               | Fix                                                                                                                                                                                                                                                                                  |
-| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Stale bundle, weird resolution errors                                                 | `cd apps/mobile && pnpm start --clear`                                                                                                                                                                                                                                               |
-| Blank white page on web, console shows a `TypeError` inside the bundle                | The page is served but the JS crashed. Find the module: open the bundle URL from `index.html`, look at the reported line, then read the file path Metro records at the end of that module. A duplicated package across the monorepo is the usual cause — see `mobile-development.md` |
-| `Unable to resolve module <pkg>` after installing something                           | Install it with `pnpm exec expo install <pkg>` from `apps/mobile`, not plain `pnpm add` — Expo picks the SDK-compatible version                                                                                                                                                      |
-| Port 8081 already in use                                                              | `pnpm dev:mobile --port 8082`, or kill the listener: `Get-NetTCPConnection -LocalPort 8081 -State Listen \| Stop-Process -Id { $_.OwningProcess } -Force` in PowerShell                                                                                                              |
-| Web tab only: `blocked by CORS policy`, and the app says "could not reach the server" | The API's allowlist does not include the dev origin. It is `http://localhost:8081` and `:19006` outside production; override with `CORS_ORIGINS` in `apps/api/.env`. A phone is unaffected — a native fetch sends no `Origin`                                                        |
-| QR scans but never loads                                                              | Windows Firewall — allow `node.exe` on Private networks. See `mobile-development.md`                                                                                                                                                                                                 |
-| Phone and PC on different networks                                                    | `pnpm dev:mobile --tunnel`                                                                                                                                                                                                                                                           |
-| Dependency versions look wrong                                                        | `cd apps/mobile && pnpm doctor`                                                                                                                                                                                                                                                      |
-| Anything unexplained after changing deps                                              | `rm -rf node_modules apps/*/node_modules packages/*/node_modules && pnpm install`                                                                                                                                                                                                    |
+| Symptom                                                                                                      | Fix                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Stale bundle, weird resolution errors                                                                        | `cd apps/mobile && pnpm start --clear`                                                                                                                                                                                                                                                                 |
+| Runtime `Cannot read properties of undefined` on a token group (`motion.duration`, `layout.contentMaxWidth`) | `pnpm build:tokens`, then restart with `--clear`. `packages/tokens/dist` is gitignored, so a pull or merge that adds a token module leaves `dist` a build behind: `src/index.ts` exports the new group, `dist/index.js` does not, and it arrives as `undefined` at runtime rather than as a type error |
+| Blank white page on web, console shows a `TypeError` inside the bundle                                       | The page is served but the JS crashed. Find the module: open the bundle URL from `index.html`, look at the reported line, then read the file path Metro records at the end of that module. A duplicated package across the monorepo is the usual cause — see `mobile-development.md`                   |
+| `Unable to resolve module <pkg>` after installing something                                                  | Install it with `pnpm exec expo install <pkg>` from `apps/mobile`, not plain `pnpm add` — Expo picks the SDK-compatible version                                                                                                                                                                        |
+| Port 8081 already in use                                                                                     | `pnpm dev:mobile --port 8082`, or kill the listener: `Get-NetTCPConnection -LocalPort 8081 -State Listen \| Stop-Process -Id { $_.OwningProcess } -Force` in PowerShell                                                                                                                                |
+| Web tab only: `blocked by CORS policy`, and the app says "could not reach the server"                        | The API's allowlist does not include the dev origin. It is `http://localhost:8081` and `:19006` outside production; override with `CORS_ORIGINS` in `apps/api/.env`. A phone is unaffected — a native fetch sends no `Origin`                                                                          |
+| QR scans but never loads                                                                                     | Windows Firewall — allow `node.exe` on Private networks. See `mobile-development.md`                                                                                                                                                                                                                   |
+| Phone and PC on different networks                                                                           | `pnpm dev:mobile --tunnel`                                                                                                                                                                                                                                                                             |
+| Dependency versions look wrong                                                                               | `cd apps/mobile && pnpm doctor`                                                                                                                                                                                                                                                                        |
+| Anything unexplained after changing deps                                                                     | `rm -rf node_modules apps/*/node_modules packages/*/node_modules && pnpm install`                                                                                                                                                                                                                      |
 
 ## Adding a dependency to the mobile app
 

@@ -135,10 +135,16 @@ export type MessageRequest = {
 // ---------------------------------------------------------------- video (màn 27-33)
 
 export type VideoMood = 'warm' | 'nostalgic' | 'playful' | 'quiet';
-export type VideoStyleId = 'album' | 'cinema' | 'film' | 'letter' | 'seasonal' | 'polaroid' | 'none';
+export type VideoStyleId =
+  'album' | 'cinema' | 'film' | 'letter' | 'seasonal' | 'polaroid' | 'none';
 export type VideoTargetSec = 30 | 60 | 90 | 120 | 180;
 
-export type StoryboardScene = { media_id: string; duration_s: number; caption: string; reason: string };
+export type StoryboardScene = {
+  media_id: string;
+  duration_s: number;
+  caption: string;
+  reason: string;
+};
 
 export type StoryboardResponse = {
   title: string;
@@ -207,7 +213,17 @@ export type VideoJob = {
   error: string | null;
   created_at: string;
   has_file: boolean;
-  plan: (VideoPlan & { scenes: { mediaId: string; kind: 'image' | 'video'; durationS: number; caption: string; reason?: string }[] }) | null;
+  plan:
+    | (VideoPlan & {
+        scenes: {
+          mediaId: string;
+          kind: 'image' | 'video';
+          durationS: number;
+          caption: string;
+          reason?: string;
+        }[];
+      })
+    | null;
   options: {
     targetSec: number;
     mood: string;

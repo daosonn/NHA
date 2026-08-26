@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { AppHeader } from '../../src/components/layout/app-header';
+import { ContentColumn, contentColumn } from '../../src/components/layout/content-column';
 import { useToast } from '../../src/components/ui/toast';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { MemoActionsSheet } from '../../src/components/member/memo-actions-sheet';
@@ -113,7 +114,7 @@ export default function MemoScreen() {
         <>
           <ScrollView
             contentContainerStyle={{
-              paddingHorizontal: spacing.xl,
+              ...contentColumn,
               paddingTop: 18,
               paddingBottom: BOTTOM_INSET,
               gap: 14,
@@ -188,25 +189,34 @@ export default function MemoScreen() {
           {/* Only the edit action is drawn. The mockup's bare image and link
               icons have nothing behind them, and a dead control costs more
               trust than a visibly missing one. */}
-          <View style={{ position: 'absolute', right: spacing.xl, bottom: 34 }}>
-            <Pressable
-              onPress={openEditor}
-              accessibilityRole="button"
-              accessibilityLabel={t('member.memoDetail.edit')}
-              style={[
-                {
-                  width: 46,
-                  height: 46,
-                  borderRadius: radius.full,
-                  backgroundColor: colors.coral.primary,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                },
-                elevation.floating,
-              ]}
-            >
-              <Pencil size={21} color={colors.text.white} strokeWidth={2.1} />
-            </Pressable>
+          {/* Pinned to the column's right edge rather than the window's: at
+              1440 those are 400px apart and only one of them is anywhere near
+              the memo. The strip carrying it now spans the width, so it is
+              `box-none` — otherwise it would swallow the scroll. */}
+          <View
+            style={{ position: 'absolute', left: 0, right: 0, bottom: 34 }}
+            pointerEvents="box-none"
+          >
+            <ContentColumn style={{ alignItems: 'flex-end' }} pointerEvents="box-none">
+              <Pressable
+                onPress={openEditor}
+                accessibilityRole="button"
+                accessibilityLabel={t('member.memoDetail.edit')}
+                style={[
+                  {
+                    width: 46,
+                    height: 46,
+                    borderRadius: radius.full,
+                    backgroundColor: colors.coral.primary,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  },
+                  elevation.floating,
+                ]}
+              >
+                <Pencil size={21} color={colors.text.white} strokeWidth={2.1} />
+              </Pressable>
+            </ContentColumn>
           </View>
 
           <MemoActionsSheet
