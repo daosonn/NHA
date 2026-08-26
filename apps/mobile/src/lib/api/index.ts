@@ -18,6 +18,7 @@ export {
   lifeEvents,
   media,
   memos,
+  myFeed,
   notifications,
   posts,
   profiles,

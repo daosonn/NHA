@@ -323,6 +323,13 @@ export const media = {
   posterUrl: (mediaId: string) => `${apiBaseUrl()}/media/${mediaId}/poster`,
 };
 
+/**
+ * `GET /me/feed` — dòng thời gian Home: bài đã chia sẻ tới BẤT KỲ nhà nào mình
+ * thuộc về, gộp một dòng, mới nhất trước. Cùng shape với feed theo nhà.
+ */
+export const myFeed = (params: FeedQuery = {}) =>
+  apiRequest<FamilyFeed>(`/me/feed${query(params)}`);
+
 export const comments = {
   /** Oldest first — see `CommentList`. Same `limit`/`cursor` as the feed. */
   list: (postId: string, params: FeedQuery = {}) =>

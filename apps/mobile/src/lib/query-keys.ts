@@ -11,6 +11,12 @@ export const queryKeys = {
   family: (familyId: string) => ['families', familyId] as const,
   familyTree: (familyId: string) => ['families', familyId, 'tree'] as const,
   familyFeed: (familyId: string) => ['families', familyId, 'posts'] as const,
+  /**
+   * Dòng thời gian Home: bài từ MỌI nhà mình thuộc về (`GET /me/feed`). Nằm
+   * dưới `me` vì không thuộc riêng nhà nào — đổi nhà đang chọn không làm nó
+   * stale; đăng bài / bấm tim thì use-post & use-create-moment chạm cả khoá này.
+   */
+  myFeed: () => ['me', 'feed'] as const,
   familyInvitations: (familyId: string) => ['families', familyId, 'invitations'] as const,
   /**
    * A preview read by code, not by family: the reader is usually not in that
