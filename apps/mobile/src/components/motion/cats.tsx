@@ -325,10 +325,20 @@ export function CatSleeping({ size = 112 }: CatProps) {
           z
         </AnimatedSvgText>
         <Path d="M14 52 q-4-24 22-24 q30 0 32 16 q2 8-8 8 z" fill={CORAL} />
+        {/* Đuôi vẽ lại so với kit (2026-08-27): bản gốc (M60 52 q16-2 12-14)
+            vung quá mép thân nên trông như rời khỏi mông. Giờ: khúc cuộn
+            nhỏ giữ nguyên ở mông, rồi đuôi vòng xuống chạy dài là là nền
+            dọc dưới bụng, ngọn dừng ngay dưới cằm — dáng mèo thật quấn
+            đuôi quanh chân khi ngủ. */}
+        {/* Đuôi vẽ lại so với kit (2026-08-27), theo mẫu Đạt chọn: MỘT
+            đường cong duy nhất, không cuộn vòng (bản trước loop ở mông
+            trông như nút thắt). Gốc ló từ lưng, đổ xuống quanh mông rồi
+            nằm vắt dọc mép bụng, ngọn tròn hơi hếch lên chạm dưới cằm —
+            dáng đuôi quấn quanh chân của mèo nằm cuộn. */}
         <Path
-          d="M60 52 q16-2 12-14"
+          d="M64.5 37 C68.5 40 69.5 46 65.5 50 C62.7 52.8 45 54.5 34 51.5"
           stroke={CREAM}
-          strokeWidth={4}
+          strokeWidth={5}
           strokeLinecap="round"
           fill="none"
         />
