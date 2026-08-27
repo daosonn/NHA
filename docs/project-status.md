@@ -1248,6 +1248,25 @@ dev` **did not regenerate the client**, and the stale client survived
   `/invite/:code`. Both new surfaces use the 600px content column, so the
   phone layout is untouched and the web one does not stretch.
 
+  **Follow-up 2026-08-27 (`feature/invite-method-choice`, Đạt)** — two fixes
+  on top of the merged UI:
+
+  - The invite sheet's optional-email field silently chose the delivery
+    (filled = notification, blank = hand-over code); it is now an explicit
+    two-tab choice — "by email" / "with a code" (SegmentedTabs, same pattern
+    as create-vs-join) with a one-line hint saying who each is for. The sent
+    state follows the server's answer (`inviteeUserId`): email invites
+    confirm the address instead of showing a code that nobody can be handed.
+  - **A typed invitation code now works.** The Join tab was the app's only
+    box that takes a typed code, and it only asked `POST /families/join`
+    (`Family.inviteCode`) — a per-spot invitation code typed there was a flat
+    404, which broke the hand-over path end to end (the share message sends a
+    bare code, not a link). The tab now tries `GET /invitations/:code`
+    (public) first and routes a hit to `/invite/[code]`; only a miss falls
+    through to the family-code join. Deterministic order also settles the
+    astronomically unlikely code that lives in both tables. Verified: mobile
+    tsc, check:i18n (795 keys, en+ja), prettier; not looked at on a device.
+
 - **Object storage for media (2026-08-26)**: step 1 done — `StorageService`
   decoupled from filesystem paths (see Current Focus). Step 2 is the R2
   driver. Architecture change, so it merges only after backend-owner review.

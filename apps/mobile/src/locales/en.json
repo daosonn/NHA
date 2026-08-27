@@ -286,7 +286,7 @@
   "invite": {
     "sheet": {
       "title": "Invite a family member",
-      "subtitle": "They get a code that lands them in the spot you choose",
+      "subtitle": "A spot is saved for them the moment you send it",
       "closeScrim": "Close the invite sheet",
       "nameLabel": "Name to remember them by",
       "namePlaceholder": "Their name",
@@ -311,12 +311,17 @@
       "errors": {
         "noAnchor": "You are not in this tree yet, so there is nothing to relate the new person to.",
         "forbidden": "Only a member of this family can invite someone to it.",
-        "emailUnknown": "Nobody uses that email yet. Ask them to sign up first, or leave it blank and share the code.",
+        "emailUnknown": "Nobody uses that email yet. Ask them to sign up first, or switch to a code invite.",
         "emailAlreadyMember": "They are already in this family."
       },
-      "emailLabel": "Their email (optional)",
+      "emailLabel": "Their account email",
       "emailPlaceholder": "name@example.com",
-      "emailHelp": "They get the invitation in the app. Leave it blank and you get a code to pass on instead — the only way to invite someone without an account yet."
+      "methodTitle": "How the invitation reaches them",
+      "methodEmail": "By email",
+      "methodCode": "With a code",
+      "methodEmailHint": "For someone who already has an account — the invitation lands in their notifications.",
+      "methodCodeHint": "For someone without an account yet — you get a code to pass on yourself.",
+      "sentEmailSubtitle": "The invitation is waiting in their notifications."
     },
     "preview": {
       "yourSpot": "YOUR SPOT"
@@ -799,12 +804,12 @@
     "namePlaceholder": "Mom's side",
     "createSubmit": "Create family",
     "joinHeading": "Join with a code",
-    "joinBody": "The eight characters someone in the family sent you.",
+    "joinBody": "The eight characters someone in the family sent you — a family code or an invitation code, either works.",
     "codeLabel": "Invite code",
     "codePlaceholder": "ABCD2345",
     "joinSubmit": "Join family",
     "errors": {
-      "codeNotFound": "No family matches that code.",
+      "codeNotFound": "Nothing matches that code. Check it with whoever sent it.",
       "alreadyMember": "You are already in that family."
     }
   },

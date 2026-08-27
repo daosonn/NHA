@@ -11,7 +11,7 @@ import { SegmentedTabs } from '../src/components/ui/segmented-tabs';
 import { Text } from '../src/components/ui/text';
 import { TextField } from '../src/components/ui/text-field';
 import { useCreateFamily, useJoinFamily } from '../src/features/family/use-family-mutations';
-import { ApiError } from '../src/lib/api';
+import { ApiError, invitations } from '../src/lib/api';
 import { colors } from '../src/theme';
 
 type Mode = 'create' | 'join';
@@ -50,6 +50,9 @@ export default function CreateFamilyScreen() {
   const [mode, setMode] = useState<Mode>(params.mode === 'join' ? 'join' : 'create');
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
+  // The invitation lookup below is a plain request, not a mutation, so the
+  // button's spinner needs its own flag for that leg of the trip.
+  const [checkingInvite, setCheckingInvite] = useState(false);
 
   const create = useCreateFamily();
   const join = useJoinFamily();
@@ -61,10 +64,38 @@ export default function CreateFamilyScreen() {
     try {
       if (mode === 'create') {
         await create.mutateAsync({ name: name.trim() });
-      } else {
-        await join.mutateAsync({ inviteCode: code.trim().toUpperCase() });
+        // Back to Home, which now has a family to show.
+        safeBack(router, '/');
+        return;
       }
-      // Back to Home, which now has a family to show.
+
+      // A typed code can be either kind — the person who received it cannot
+      // tell a per-spot invitation code from `Family.inviteCode`, and this
+      // box is the only place in the app that takes a typed code. Ask about
+      // the invitation first (`GET /invitations/:code` is public); only a
+      // miss falls through to the family-code join. The order also settles
+      // the one-in-a-trillion string that lives in both tables.
+      const entered = code.trim().toUpperCase();
+      setCheckingInvite(true);
+      let isInvitation = false;
+      try {
+        await invitations.preview(entered);
+        isInvitation = true;
+      } catch {
+        // Not a live invitation (or unreachable) — the join below gives the
+        // honest answer either way: it fails the same way for the same cause.
+      } finally {
+        setCheckingInvite(false);
+      }
+
+      if (isInvitation) {
+        // The invitation page says who invited them, as what, and where they
+        // land — everything this bare code box cannot — and owns the accept.
+        router.push({ pathname: '/invite/[code]', params: { code: entered } });
+        return;
+      }
+
+      await join.mutateAsync({ inviteCode: entered });
       safeBack(router, '/');
     } catch {
       // Rendered from `active.error` below; nothing to do here.
@@ -93,7 +124,7 @@ export default function CreateFamilyScreen() {
             size="large"
             fullWidth
             disabled={!ready}
-            loading={active.isPending}
+            loading={active.isPending || checkingInvite}
             onPress={() => void submit()}
           />
         </>

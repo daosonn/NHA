@@ -278,7 +278,7 @@
   "invite": {
     "sheet": {
       "title": "家族を招待する",
-      "subtitle": "選んだ場所にそのまま入れるコードを渡します",
+      "subtitle": "送った時点でその人の場所を確保します",
       "closeScrim": "招待画面を閉じる",
       "nameLabel": "呼び名",
       "namePlaceholder": "お名前",
@@ -303,12 +303,17 @@
       "errors": {
         "noAnchor": "あなたがまだこの家系図にいないため、続柄をたどる相手がいません。",
         "forbidden": "この家族のメンバーだけが招待できます。",
-        "emailUnknown": "そのメールアドレスのアカウントはまだありません。先に登録してもらうか、空欄のまま招待コードを渡してください。",
+        "emailUnknown": "そのメールアドレスのアカウントはまだありません。先に登録してもらうか、招待コードに切り替えてください。",
         "emailAlreadyMember": "その方はすでにこの家族にいます。"
       },
-      "emailLabel": "メールアドレス（任意）",
+      "emailLabel": "相手のアカウントのメールアドレス",
       "emailPlaceholder": "name@example.com",
-      "emailHelp": "アプリに招待が届きます。空欄のままなら、代わりに渡せる招待コードが表示されます。まだ登録していない人を招くにはこちらを。"
+      "methodTitle": "招待の届け方",
+      "methodEmail": "メールアドレスで",
+      "methodCode": "招待コードで",
+      "methodEmailHint": "すでにアカウントがある人向け。招待は相手の通知に届きます。",
+      "methodCodeHint": "まだアカウントがない人向け。自分で渡せる招待コードが表示されます。",
+      "sentEmailSubtitle": "招待は相手の通知に届いています。"
     },
     "preview": {
       "yourSpot": "あなたの場所"
@@ -767,12 +772,12 @@
     "namePlaceholder": "母方の家族",
     "createSubmit": "家族を作成",
     "joinHeading": "コードで参加",
-    "joinBody": "家族の誰かから届いた 8 文字のコードです。",
+    "joinBody": "家族の誰かから届いた 8 文字のコードです。家族コードでも招待コードでも使えます。",
     "codeLabel": "招待コード",
     "codePlaceholder": "ABCD2345",
     "joinSubmit": "家族に参加",
     "errors": {
-      "codeNotFound": "そのコードの家族が見つかりません。",
+      "codeNotFound": "そのコードに一致するものが見つかりません。送ってくれた人に確認してください。",
       "alreadyMember": "すでにその家族に参加しています。"
     }
   },
