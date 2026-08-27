@@ -40,16 +40,15 @@ const DESTINATIONS: readonly {
 const ITEM = 48;
 const ICON = 22;
 /**
- * The accented glyph's disc.
+ * The accented glyph, drawn larger than the rest.
  *
- * Drawn BEHIND the icon box and larger than it, rather than as a tint on the
- * box itself: at 22 the disc was the same size as the glyph it held, so it
- * read as a coral smudge rather than a mark — and it sat visibly smaller
- * than the selected row's own pill, which made it look like a mistake. At 36
- * against a 22 glyph the proportion matches the pill, and because it is
- * absolutely positioned it costs the row no width, so nothing shifts.
+ * Two attempts at a coral disc were read as a smudge rather than a mark
+ * (owner's calls, 2026-08-26 and 27) — a filled shape among five line
+ * drawings keeps looking like a button that wandered in. Size and colour say
+ * "this one matters" without introducing a different kind of object, and
+ * with nothing positioned there is no paint-order trap on web either.
  */
-const ACCENT_DISC = 36;
+const ACCENT_ICON = 28;
 /** Side padding of the panel. Everything inside is measured from it. */
 const PAD = 14;
 /**
@@ -150,35 +149,11 @@ function Row({
           // navigations start disagreeing about what matters.
         }}
       >
-        {accent && (
-          <View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              top: (ICON - ACCENT_DISC) / 2,
-              left: (ICON - ACCENT_DISC) / 2,
-              width: ACCENT_DISC,
-              height: ACCENT_DISC,
-              borderRadius: radius.full,
-              backgroundColor: selected === true ? colors.coral.hover : colors.coral.primary,
-              // Web paints POSITIONED elements above static siblings whatever
-              // the DOM order, so without this the disc covered the glyph and
-              // the rail showed a bare coral blob. Native honours order, which
-              // is why the phone bar looked right and only desktop broke.
-              zIndex: 0,
-            }}
-          />
-        )}
-
-        {/* Positioned too, or its z-index means nothing — and react-native-svg
-            renders a real <svg> that will not carry one on its own. */}
-        <View style={{ position: 'relative', zIndex: 1 }}>
-          <Icon
-            size={ICON}
-            color={accent ? colors.text.white : tint}
-            strokeWidth={accent ? 2.2 : strokeWidth}
-          />
-        </View>
+        <Icon
+          size={accent ? ACCENT_ICON : ICON}
+          color={accent ? colors.coral.brand : tint}
+          strokeWidth={accent ? 2.4 : strokeWidth}
+        />
       </View>
 
       {/* `flexShrink: 0` so the word keeps its natural width and overflows to
@@ -329,7 +304,13 @@ export function SideNav() {
             StyleSheet.absoluteFill,
             {
               backgroundColor: colors.background.card,
-              borderRadius: radius.full,
+              // RADIUS, never `full`. A radius is clamped to half the box,
+              // and this box changes width: closed it is 76 so `full` lands
+              // on 38 and agrees with the container by luck, but a hover
+              // opens it to 240 and `full` becomes 120 while the container
+              // still clips at 38 — which drew a great arc straight across
+              // the open rail. Reported 2026-08-27.
+              borderRadius: RADIUS,
               borderWidth: 1,
               borderColor: colors.state.borderNeutral,
             },

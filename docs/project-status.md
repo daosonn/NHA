@@ -1226,6 +1226,20 @@ dev` **did not regenerate the client**, and the stale client survived
 
 ## In Progress
 
+- **One name per person (2026-08-27)**: renaming your account now writes
+  through to every `FamilyMember.displayName` that account holds, in the same
+  transaction. The two columns had been drifting since join time — Settings
+  read `User.name` while the tree, the feed and every tag read the member
+  row's copy, and four people were showing two names each by the time it was
+  noticed. Written through rather than resolved at ~50 read sites because the
+  rule already existed here: for a **linked** member the account wins, which
+  is how avatars already behaved. A placeholder's `displayName` is untouched
+  — it is the only name that person has. Existing drift was realigned with
+  `pnpm --filter api names:sync` (dry-run first; it prints every old → new
+  before applying). Direction confirmed from the data, not assumed: all four
+  accounts had been renamed **after** joining, so the account name was the
+  newer choice in every case.
+
 - **Invite by email (2026-08-26)**: `POST /families/:id/invitations` now takes
   an `email` and raises a `FAMILY_INVITE` notification for that account;
   `GET /me/invitations` is what it links to. Delivery is **in-app only** — an
