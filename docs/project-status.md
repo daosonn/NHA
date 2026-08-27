@@ -1267,6 +1267,33 @@ dev` **did not regenerate the client**, and the stale client survived
     astronomically unlikely code that lives in both tables. Verified: mobile
     tsc, check:i18n (795 keys, en+ja), prettier; not looked at on a device.
 
+- **The tree canvas is navigable on the web (2026-08-27,
+  `feature/tree-pan-zoom`)**: pan + pinch always existed (gesture-handler +
+  Reanimated, since the canvas shipped), but only for fingers — in the
+  browser, where the team previews, a mouse could drag and nothing could
+  zoom except the +/- buttons. The canvas now listens to the wheel on web:
+  scroll pans, ctrl+wheel (which is also how browsers report a trackpad
+  pinch) zooms, with `preventDefault` keeping the browser from zooming the
+  page instead. Same shared values as the gestures and buttons, same clamped
+  bounds; the React `zoom` mirror syncs on a 120ms trailing edge so wheel
+  ticks never re-render mid-zoom. Native untouched. And the drag itself grew
+  physics (same day): past-the-edge drags move at a third of finger speed
+  instead of stopping dead — the hard clamp also made a tree that fits the
+  screen ignore dragging entirely, which read as "pan is broken" — and
+  release is a `withDecay` fling that spends the finger's velocity and
+  rubber-bands back inside bounds; a pinch that ends out of bounds eases
+  back instead of snapping. Then the whole interaction was rebuilt to Đạt's
+  HTML prototype (`apps/mobile/src/Family Tree Canvas.dc.html` — the spec
+  for feel and numbers): the canvas is now a world plane translated then
+  scaled about its top-LEFT corner, which is what makes **focal-point zoom**
+  solvable — pinch zooms about the fingers, the wheel zooms at the cursor,
+  double-tap toggles fit ↔ 1.7× about the tap, the ± buttons ease toward
+  the canvas centre in 0.35 steps, and the range widened to 0.35–2.4×. The
+  pinch itself is elastic past both ends of that range. Content smaller
+  than the viewport now centres instead of pinning to an edge, and the
+  canvas hint carries a live zoom percentage. Verified: mobile tsc,
+  prettier; not tried on a device or real browser yet.
+
 - **One create form, one join form (2026-08-27, `feature/invite-method-choice`)**:
   `create-family.tsx` (the create/join tab combo) put a second create-family
   form in the app next to `family/new.tsx` — two doors marked "create"

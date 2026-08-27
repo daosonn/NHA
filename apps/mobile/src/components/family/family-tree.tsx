@@ -1,8 +1,20 @@
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
+import {
+  Platform,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+  type LayoutChangeEvent,
+} from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withDecay,
+  withTiming,
+} from 'react-native-reanimated';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 import { colors, radius } from '../../theme';
@@ -12,9 +24,17 @@ import { layoutTree, type FamilyTreeData, type PositionedNode } from './tree-lay
 import { TreeNode } from './tree-node';
 import { TreeThreads } from './tree-threads';
 
-const ZOOM_MIN = 0.6;
-const ZOOM_MAX = 1.6;
-const ZOOM_STEP = 0.2;
+// Ranges and feel are the prototype's numbers, not invented here:
+// `src/Family Tree Canvas.dc.html` is the spec for this interaction
+// (Đạt, 2026-08-27) — wide zoom range, ±0.35 buttons, focal-point zoom,
+// double-tap toggle, elastic everything.
+const ZOOM_MIN = 0.35;
+const ZOOM_MAX = 2.4;
+const ZOOM_STEP = 0.35;
+
+/** Double-tap toggles between fit (1) and this — below the threshold zooms in. */
+const DOUBLE_TAP_SCALE = 1.7;
+const DOUBLE_TAP_THRESHOLD = 1.1;
 
 /**
  * How far a finger must travel before it counts as a drag.
@@ -28,6 +48,18 @@ const PAN_SLOP = 8;
 
 /** Eases the buttons and the recenter, so nothing teleports. */
 const SETTLE_MS = 180;
+
+/** How much one wheel tick zooms — the prototype's tuning. */
+const WHEEL_ZOOM_SENSITIVITY = 0.0016;
+
+/** Trailing sync of `scale` into React state, for the buttons' disabled ends. */
+const WHEEL_SETTLE_MS = 120;
+
+/** Past-the-edge drags move at this fraction of finger speed (iOS-style). */
+const RESISTANCE = 0.45;
+
+/** Pinching past the scale range keeps moving too, at half speed. */
+const SCALE_RESISTANCE = 0.5;
 
 /** Soft white bloom behind the tree, so the tint does not read as flat. */
 function CanvasGlow({ width, height }: { width: number; height: number }) {
@@ -110,11 +142,24 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
   const window = useWindowDimensions();
   const [measured, setMeasured] = useState<{ width: number; height: number } | null>(null);
 
+  /**
+   * The world model, straight from the prototype: the canvas content is a
+   * plane placed at `(tx, ty)` and scaled about the TOP-LEFT corner, so a
+   * screen point is always `tx + world · scale`. That one invariant is what
+   * makes focal-point zoom a two-line calculation — keep the world point
+   * under the fingers, solve for the new `tx` — where the old
+   * top-centre-origin model needed none because it could only zoom to one
+   * place.
+   */
   const scale = useSharedValue(1);
+  const tx = useSharedValue(0);
+  const ty = useSharedValue(0);
+
   /** Scale when the current pinch began; a pinch reports a factor, not a size. */
   const pinchStart = useSharedValue(1);
-  const panX = useSharedValue(0);
-  const panY = useSharedValue(0);
+  /** The world point under the fingers when the pinch began — the anchor. */
+  const pinchWorldX = useSharedValue(0);
+  const pinchWorldY = useSharedValue(0);
   const panStartX = useSharedValue(0);
   const panStartY = useSharedValue(0);
 
@@ -153,71 +198,215 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
    */
   const contentHeight = Math.max(layout.height, height);
 
-  const clamp = (value: number, limit: number) => {
+  /**
+   * Where `tx`/`ty` may rest at a given scale — the prototype's `getBounds`.
+   * Content larger than the viewport pans between "far edge flush" and
+   * "near edge flush"; content that fits sits centred and does not pan.
+   */
+  const boundsFor = (at: number) => {
     'worklet';
-    if (limit <= 0) return 0;
-    return Math.min(limit, Math.max(-limit, value));
+    const cw = width * at;
+    const ch = contentHeight * at;
+    const minX = cw <= width ? (width - cw) / 2 : width - cw;
+    const maxX = cw <= width ? (width - cw) / 2 : 0;
+    const minY = ch <= height ? (height - ch) / 2 : height - ch;
+    const maxY = ch <= height ? (height - ch) / 2 : 0;
+    return { minX, maxX, minY, maxY };
   };
 
-  const limitX = (at: number) => {
+  /**
+   * Past-the-edge motion continues at a fraction of finger speed instead of
+   * stopping dead — a hard clamp made the surface feel rigid, and on a tree
+   * small enough to fit the screen it made dragging do nothing at all, which
+   * read as "pan is broken" (Đạt, 2026-08-27). Release springs it back.
+   */
+  const elastic = (value: number, min: number, max: number, resist: number) => {
     'worklet';
-    return Math.max(0, (width * at - width) / 2);
+    if (value < min) return min - (min - value) * resist;
+    if (value > max) return max + (value - max) * resist;
+    return value;
   };
 
-  const limitY = (at: number) => {
+  const within = (value: number, min: number, max: number) => {
     'worklet';
-    return Math.max(0, contentHeight * at - height);
+    return Math.min(max, Math.max(min, value));
   };
 
-  const settle = (nextScale: number) => {
-    const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, nextScale));
+  /**
+   * Animate to a scale while keeping the world point under `(focalX, focalY)`
+   * exactly there — the zoom buttons aim at the canvas centre, a double tap
+   * at the tap. The prototype's `animateTo`.
+   */
+  const zoomTo = (nextScale: number, focalX: number, focalY: number) => {
+    const next = within(nextScale, ZOOM_MIN, ZOOM_MAX);
+    const worldX = (focalX - tx.value) / scale.value;
+    const worldY = (focalY - ty.value) / scale.value;
+    const bounds = boundsFor(next);
     scale.value = withTiming(next, { duration: SETTLE_MS });
-    // Zooming out can leave the canvas outside its new, smaller bounds.
-    panX.value = withTiming(clamp(panX.value, limitX(next)), { duration: SETTLE_MS });
-    panY.value = withTiming(clamp(panY.value, limitY(next)), { duration: SETTLE_MS });
+    tx.value = withTiming(within(focalX - worldX * next, bounds.minX, bounds.maxX), {
+      duration: SETTLE_MS,
+    });
+    ty.value = withTiming(within(focalY - worldY * next, bounds.minY, bounds.maxY), {
+      duration: SETTLE_MS,
+    });
     setZoom(next);
   };
 
   const recenter = () => {
     scale.value = withTiming(1, { duration: SETTLE_MS });
-    panX.value = withTiming(0, { duration: SETTLE_MS });
-    panY.value = withTiming(0, { duration: SETTLE_MS });
+    tx.value = withTiming(0, { duration: SETTLE_MS });
+    ty.value = withTiming(0, { duration: SETTLE_MS });
     setZoom(1);
   };
 
   const pinch = Gesture.Pinch()
-    .onStart(() => {
+    .onStart((event) => {
       pinchStart.value = scale.value;
+      // The world point between the fingers — the pinch zooms about THIS,
+      // not about some fixed corner: the face being squinted at stays put.
+      pinchWorldX.value = (event.focalX - tx.value) / scale.value;
+      pinchWorldY.value = (event.focalY - ty.value) / scale.value;
     })
     .onUpdate((event) => {
-      scale.value = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, pinchStart.value * event.scale));
+      const next = elastic(pinchStart.value * event.scale, ZOOM_MIN, ZOOM_MAX, SCALE_RESISTANCE);
+      scale.value = next;
+      // Following the CURRENT focal keeps the anchor under the fingers and
+      // lets a drifting pinch pan at the same time, like the prototype.
+      tx.value = event.focalX - pinchWorldX.value * next;
+      ty.value = event.focalY - pinchWorldY.value * next;
     })
     .onEnd(() => {
-      panX.value = clamp(panX.value, limitX(scale.value));
-      panY.value = clamp(panY.value, limitY(scale.value));
+      // Eased, not snapped: fingers just left the glass mid-motion, possibly
+      // in the elastic zone on either axis or on the scale itself.
+      const next = within(scale.value, ZOOM_MIN, ZOOM_MAX);
+      const bounds = boundsFor(next);
+      scale.value = withTiming(next, { duration: SETTLE_MS });
+      tx.value = withTiming(within(tx.value, bounds.minX, bounds.maxX), { duration: SETTLE_MS });
+      ty.value = withTiming(within(ty.value, bounds.minY, bounds.maxY), { duration: SETTLE_MS });
+      runOnJS(setZoom)(next);
     });
 
   const pan = Gesture.Pan()
     .minDistance(PAN_SLOP)
     .onStart(() => {
-      panStartX.value = panX.value;
-      panStartY.value = panY.value;
+      panStartX.value = tx.value;
+      panStartY.value = ty.value;
     })
     .onUpdate((event) => {
-      panX.value = clamp(panStartX.value + event.translationX, limitX(scale.value));
-      panY.value = clamp(panStartY.value + event.translationY, limitY(scale.value));
+      const bounds = boundsFor(scale.value);
+      tx.value = elastic(
+        panStartX.value + event.translationX,
+        bounds.minX,
+        bounds.maxX,
+        RESISTANCE,
+      );
+      ty.value = elastic(
+        panStartY.value + event.translationY,
+        bounds.minY,
+        bounds.maxY,
+        RESISTANCE,
+      );
+    })
+    .onEnd((event) => {
+      // The fling: keep the finger's velocity and let friction spend it,
+      // bouncing back inside the bounds if the drag ended in the rubber zone.
+      const bounds = boundsFor(scale.value);
+      tx.value = withDecay({
+        velocity: event.velocityX,
+        clamp: [bounds.minX, bounds.maxX],
+        rubberBandEffect: true,
+      });
+      ty.value = withDecay({
+        velocity: event.velocityY,
+        clamp: [bounds.minY, bounds.maxY],
+        rubberBandEffect: true,
+      });
+    });
+
+  /** Double-tap: quick look at a face, second double-tap steps back out. */
+  const doubleTap = Gesture.Tap()
+    .numberOfTaps(2)
+    .onEnd((event, success) => {
+      if (!success) return;
+      const target = scale.value < DOUBLE_TAP_THRESHOLD ? DOUBLE_TAP_SCALE : 1;
+      const worldX = (event.x - tx.value) / scale.value;
+      const worldY = (event.y - ty.value) / scale.value;
+      const bounds = boundsFor(target);
+      scale.value = withTiming(target, { duration: SETTLE_MS });
+      tx.value = withTiming(within(event.x - worldX * target, bounds.minX, bounds.maxX), {
+        duration: SETTLE_MS,
+      });
+      ty.value = withTiming(within(event.y - worldY * target, bounds.minY, bounds.maxY), {
+        duration: SETTLE_MS,
+      });
+      runOnJS(setZoom)(target);
     });
 
   // Simultaneous, not exclusive: a pinch almost always drifts, and a canvas
-  // that refuses to move while two fingers are down feels stuck.
-  const gesture = Gesture.Simultaneous(pinch, pan);
+  // that refuses to move while two fingers are down feels stuck. The double
+  // tap coexists too — pan's minDistance keeps it from ever being one.
+  const gesture = Gesture.Simultaneous(pinch, pan, doubleTap);
+
+  const containerRef = useRef<View>(null);
+  const wheelSettle = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /**
+   * The web leg of the same gestures. The team previews in a browser, where a
+   * mouse can drag (gesture-handler covers that) but cannot pinch — so until
+   * this, the only zoom on web was the +/- buttons. Per the prototype, the
+   * wheel ZOOMS, at the cursor: the world point under the pointer stays under
+   * it, which is what every map does. A trackpad pinch arrives as a wheel
+   * event too, so it gets the same treatment for free. `preventDefault`
+   * matters: without it ctrl+wheel zooms the whole page instead of the tree.
+   * Native never attaches any of this.
+   */
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    // On react-native-web a View's ref is the underlying DOM element.
+    const node = containerRef.current as unknown as HTMLElement | null;
+    if (node === null || typeof node.addEventListener !== 'function') return;
+
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+
+      const rect = node.getBoundingClientRect();
+      const focalX = event.clientX - rect.left;
+      const focalY = event.clientY - rect.top;
+
+      const next = Math.min(
+        ZOOM_MAX,
+        Math.max(ZOOM_MIN, scale.value * Math.exp(-event.deltaY * WHEEL_ZOOM_SENSITIVITY)),
+      );
+      const worldX = (focalX - tx.value) / scale.value;
+      const worldY = (focalY - ty.value) / scale.value;
+      const bounds = boundsFor(next);
+      scale.value = next;
+      tx.value = within(focalX - worldX * next, bounds.minX, bounds.maxX);
+      ty.value = within(focalY - worldY * next, bounds.minY, bounds.maxY);
+
+      // Trailing, not per-tick: mirroring into React on every wheel event
+      // would re-render mid-zoom — the exact thing the shared values avoid.
+      if (wheelSettle.current !== null) clearTimeout(wheelSettle.current);
+      wheelSettle.current = setTimeout(() => setZoom(scale.value), WHEEL_SETTLE_MS);
+    };
+
+    // `passive: false` is what allows the preventDefault above.
+    node.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      node.removeEventListener('wheel', onWheel);
+      if (wheelSettle.current !== null) clearTimeout(wheelSettle.current);
+    };
+    // The clamp limits close over the measured sizes — rebind when they move.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [width, height, contentHeight]);
 
   const canvasStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: panX.value }, { translateY: panY.value }, { scale: scale.value }],
+    transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: scale.value }],
   }));
 
   return (
     <View
+      ref={containerRef}
       onLayout={onLayout}
       className="flex-1 overflow-hidden border bg-coral-light"
       style={{ borderRadius: radius['6xl'], borderColor: 'rgba(245,139,123,0.22)' }}
@@ -225,33 +414,65 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
       {width > 0 && height > 0 && <CanvasGlow width={width} height={height} />}
 
       <GestureDetector gesture={gesture}>
-        <Animated.View
-          className="flex-1"
-          // Scaled from the top centre so zooming keeps the eldest generation
-          // in view rather than drifting off the top of the canvas.
-          style={[{ transformOrigin: 'top center' }, canvasStyle]}
+        {/* Gestures land on THIS view — viewport-sized and never transformed,
+            like the prototype's listeners on the viewport element. Attached
+            to the world instead, the hit area shrinks and drifts with every
+            zoom, and a drag that starts where the world no longer is hits
+            nothing. The web styles stop the browser from claiming the
+            pointer for scrolling or text selection before the pan sees it. */}
+        <View
+          collapsable={false}
+          style={[
+            { flex: 1 },
+            Platform.OS === 'web' &&
+              ({ touchAction: 'none', userSelect: 'none', cursor: 'grab' } as object),
+          ]}
         >
-          <TreeThreads data={data} layout={layout} width={width} height={contentHeight} />
+          <Animated.View
+            // Top-LEFT origin, not top-centre: the world model above solves
+            // `screen = tx + world · scale`, and that equation only holds
+            // when scaling is anchored at the same corner the translation
+            // measures from. Sized to the content, positioned by transform.
+            style={[
+              {
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                width,
+                height: contentHeight,
+                transformOrigin: 'top left',
+              },
+              canvasStyle,
+            ]}
+          >
+            <TreeThreads data={data} layout={layout} width={width} height={contentHeight} />
 
-          {layout.rows.map((row) => (
-            <GenerationLabel key={row.id} label={row.label} y={row.y} />
-          ))}
+            {layout.rows.map((row) => (
+              <GenerationLabel key={row.id} label={row.label} y={row.y} />
+            ))}
 
-          {[...layout.nodes.values()].map((node) => (
-            <TreeNode key={node.id} node={node} onPress={onSelectNode} onLongPress={onManageNode} />
-          ))}
-        </Animated.View>
+            {[...layout.nodes.values()].map((node) => (
+              <TreeNode
+                key={node.id}
+                node={node}
+                onPress={onSelectNode}
+                onLongPress={onManageNode}
+              />
+            ))}
+          </Animated.View>
+        </View>
       </GestureDetector>
 
       <ZoomControls
-        onZoomIn={() => settle(zoom + ZOOM_STEP)}
-        onZoomOut={() => settle(zoom - ZOOM_STEP)}
+        onZoomIn={() => zoomTo(zoom + ZOOM_STEP, width / 2, height / 2)}
+        onZoomOut={() => zoomTo(zoom - ZOOM_STEP, width / 2, height / 2)}
         onRecenter={recenter}
         canZoomIn={zoom < ZOOM_MAX}
         canZoomOut={zoom > ZOOM_MIN}
       />
 
-      <CanvasHint>{t('family.hint')}</CanvasHint>
+      {/* The prototype's readout: the current zoom beside the how-to. */}
+      <CanvasHint>{`${t('family.hint')} · ${Math.round(zoom * 100)}%`}</CanvasHint>
       <AddMemberButton onPress={onAddMember} />
     </View>
   );
