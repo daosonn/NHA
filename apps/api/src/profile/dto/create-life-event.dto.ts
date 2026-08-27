@@ -3,6 +3,7 @@ import {
   ArrayMaxSize,
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -72,4 +73,19 @@ export class CreateLifeEventDto {
   @ArrayMaxSize(20)
   @IsUUID(undefined, { each: true })
   mediaIds?: string[];
+
+  @ApiPropertyOptional({
+    default: true,
+    description:
+      'Also announce the milestone in the family feed as an EVENT post. ' +
+      'Defaults to true — a life event is usually news. Send false for the ' +
+      'ones that are not: a death, a separation, anything being recorded ' +
+      'rather than shared. The post carries the title, date, place and ' +
+      'description, but NOT the media: a Media row may have only one parent ' +
+      '(the CHECK constraint in the schema), and the timeline is where those ' +
+      'photos belong.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  shareToFeed?: boolean;
 }

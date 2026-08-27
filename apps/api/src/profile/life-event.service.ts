@@ -7,7 +7,7 @@ import { normalizeText, parseIsoDate, requireTrimmed } from '../common/input';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { assertTaggedMembers, ownFamilyIds } from '../family/member-tags';
 import { Prisma } from '../generated/prisma/client';
-import { EditEntityType } from '../generated/prisma/enums';
+import { EditEntityType, PostType } from '../generated/prisma/enums';
 import {
   assertAttachableMedia,
   attachMediaInTx,
@@ -63,12 +63,12 @@ export class LifeEventService {
     dto: CreateLifeEventDto,
   ): Promise<LifeEventDetail> {
     const profile = await this.profileService.ensureGlobalProfile(userId);
-    return this.createEvent(
-      profile.id,
-      userId,
-      dto,
-      await ownFamilyIds(this.prisma, userId),
-    );
+    const families = await ownFamilyIds(this.prisma, userId);
+    // Your own milestone reaches every family you belong to (owner's call,
+    // 2026-08-27). A profile is one person across all of them, so there is no
+    // narrower answer that is not a guess — and the switch is there for the
+    // milestones that should not travel.
+    return this.createEvent(profile.id, userId, dto, families, families);
   }
 
   async updateOwn(
@@ -122,8 +122,9 @@ export class LifeEventService {
       { forEdit: true },
     );
     // Tags stay inside the family being edited, so every viewer of that
-    // family can resolve them — the same principle as post tags.
-    return this.createEvent(profile.id, userId, dto, [familyId]);
+    // family can resolve them — the same principle as post tags. The post
+    // goes to that one family for the same reason.
+    return this.createEvent(profile.id, userId, dto, [familyId], [familyId]);
   }
 
   async updateForMember(
@@ -172,6 +173,7 @@ export class LifeEventService {
     editorUserId: string,
     dto: CreateLifeEventDto,
     allowedTagFamilyIds: string[],
+    postFamilyIds: string[],
   ): Promise<LifeEventDetail> {
     const title = requireTrimmed(dto.title, 'A life event needs a title');
     const eventDate = parseIsoDate(dto.eventDate, 'eventDate');
@@ -204,6 +206,32 @@ export class LifeEventService {
       await attachMediaInTx(tx, editorUserId, mediaIds, {
         lifeEventId: created.id,
       });
+
+      // A milestone is news, so it is announced in the feed as well as
+      // recorded on the timeline — one act, one transaction: a post without
+      // its event, or an event whose promised post never appeared, are both
+      // worse than neither.
+      //
+      // The photos stay with the event. A Media row may have exactly one
+      // parent (the CHECK in the migration), so they cannot hang off both,
+      // and the timeline is where they were put.
+      if (dto.shareToFeed !== false && postFamilyIds.length > 0) {
+        await tx.post.create({
+          data: {
+            authorUserId: editorUserId,
+            type: PostType.EVENT,
+            eventTitle: title,
+            eventDate,
+            place: normalizeText(dto.place),
+            content: normalizeText(dto.description),
+            families: {
+              create: postFamilyIds.map((familyId) => ({ familyId })),
+            },
+          },
+          select: { id: true },
+        });
+      }
+
       return tx.lifeEvent.findUniqueOrThrow({
         where: { id: created.id },
         include: eventInclude,
