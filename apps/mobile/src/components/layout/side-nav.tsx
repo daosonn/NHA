@@ -13,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useSoftRefresh } from '../../features/ui/soft-refresh';
 import { colors, elevation, layout, radius, spacing } from '../../theme';
 import { BrandMark } from '../ui/brand-mark';
 import { Text } from '../ui/text';
@@ -221,6 +222,7 @@ export function SideNav() {
   const { t } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
+  const { refresh } = useSoftRefresh();
   const insets = useSafeAreaInsets();
 
   /** 0 closed, 1 open. */
@@ -321,7 +323,17 @@ export function SideNav() {
             so the name is already said once on the screen that has room for
             it; opening the bar is not the moment to say it twice. */}
         <View style={{ paddingLeft: 11 }}>
-          <BrandMark size={26} />
+          <Pressable
+            onPress={() => {
+              router.navigate('/');
+              refresh();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t('nav.home')}
+            hitSlop={6}
+          >
+            <BrandMark size={26} />
+          </Pressable>
         </View>
 
         {/* Still no raised disc — compose moved to Home's bar (owner's call,

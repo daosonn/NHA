@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { useUnreadCount } from '../../features/notification/use-notifications';
+import { useSoftRefresh } from '../../features/ui/soft-refresh';
 import { useSafeBack } from '../../lib/back';
 
 import { colors, radius } from '../../theme';
@@ -28,8 +29,24 @@ const MARK = 22;
  * Lora is allowed here. It is the brand, not a control.
  */
 export function BrandWordmark() {
+  const { t } = useTranslation();
+  const { refresh, refreshing } = useSoftRefresh();
+
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+    <Pressable
+      onPress={refresh}
+      accessibilityRole="button"
+      accessibilityLabel={t('nav.refresh')}
+      // Dimmed while the fetch is in flight. A tap that changes nothing on
+      // screen — which is most of them, because usually there is nothing new
+      // — reads as a dead control otherwise.
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 9,
+        opacity: refreshing ? 0.45 : 1,
+      }}
+    >
       <BrandMark size={MARK} />
 
       <Text
@@ -40,7 +57,7 @@ export function BrandWordmark() {
       >
         NHA
       </Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -57,12 +74,30 @@ export function BrandWordmark() {
  * called "Summer at my grandmother's house" must not push them off the edge.
  */
 export function ScreenTitle({ title }: { title: string }) {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const { refresh, refreshing } = useSoftRefresh();
+
   return (
     <View
       style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}
       accessibilityRole="header"
     >
-      <BrandMark size={MARK} />
+      {/* Only the mark is pressable, never the title with it: the header
+          already holds a back button and an action, and on web a nested
+          `accessibilityRole="button"` becomes a <button> inside a <button>. */}
+      <Pressable
+        onPress={() => {
+          router.navigate('/');
+          refresh();
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={t('nav.home')}
+        hitSlop={6}
+        style={{ opacity: refreshing ? 0.45 : 1 }}
+      >
+        <BrandMark size={MARK} />
+      </Pressable>
 
       <Text
         variant="subtitle"

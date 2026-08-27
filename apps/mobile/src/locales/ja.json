@@ -31,7 +31,9 @@
       "family": "家系図",
       "ai": "AI",
       "profile": "マイページ"
-    }
+    },
+    "refresh": "最新の状態にする",
+    "home": "ホーム"
   },
   "auth": {
     "modeLabel": "ログインまたは新規登録",
