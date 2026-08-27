@@ -273,7 +273,8 @@
       "resent": "{{name}}さんの期限を1週間のばしました",
       "inviteCancelled": "{{name}}さんへの招待を取り消しました",
       "removed": "家系図から外しました"
-    }
+    },
+    "noFamilyBody": "家系図は家族から始まります。家族をつくるか、届いたコードで参加しましょう。"
   },
   "invite": {
     "sheet": {
@@ -835,7 +836,8 @@
     "emptyTitle": "まだ写真がありません",
     "emptyBody": "家族が写真や動画を共有すると、ここに集まります。",
     "yourAlbums": "あなたのアルバム",
-    "yourAlbumsHint": "あなただけ・家族には共有されません"
+    "yourAlbumsHint": "あなただけ・家族には共有されません",
+    "noFamilyBody": "家族が共有した写真や動画はここに集まります。まずは家族をつくるか、参加しましょう。"
   },
   "profileEdit": {
     "title": "プロフィールを編集",

@@ -316,6 +316,19 @@ export default function FamilyTreeScreen() {
             actionLabel={t('home.retry')}
             onActionPress={() => void refetch()}
           />
+        ) : families !== undefined && families.length === 0 ? (
+          /* No family at all — `tree === null` used to swallow this into a
+             blank canvas. Same cat and same door as Home's no-family state. */
+          <EmptyState
+            cat
+            renderIcon={({ size, color }) => (
+              <UsersRound size={size} color={color} strokeWidth={2} />
+            )}
+            title={t('home.noFamilyTitle')}
+            description={t('family.noFamilyBody')}
+            actionLabel={t('home.startFamily')}
+            onActionPress={() => router.push('/create-family')}
+          />
         ) : isPending || tree === null ? null : tree.memberCount === 0 ? (
           <EmptyState
             cat

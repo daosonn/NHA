@@ -281,7 +281,8 @@
       "resent": "{{name}} has another week to accept",
       "inviteCancelled": "The invitation for {{name}} was cancelled",
       "removed": "Removed from the tree"
-    }
+    },
+    "noFamilyBody": "The tree starts with a family. Create one, or join with a code someone sent you."
   },
   "invite": {
     "sheet": {
@@ -869,7 +870,8 @@
     "emptyTitle": "No photos yet",
     "emptyBody": "Everything the family shares with a photo or a video shows up here.",
     "yourAlbums": "Your albums",
-    "yourAlbumsHint": "Private to you — not shared with the family"
+    "yourAlbumsHint": "Private to you — not shared with the family",
+    "noFamilyBody": "Every photo and video your family shares gathers here - once there is a family to share with."
   },
   "profileEdit": {
     "title": "Edit profile",

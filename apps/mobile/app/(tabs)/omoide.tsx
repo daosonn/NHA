@@ -12,6 +12,7 @@ import { IconBadge } from '../../src/components/ui/icon-badge';
 import { Text } from '../../src/components/ui/text';
 import { GRID_GAP, PhotoRow } from '../../src/components/omoide/photo-row';
 import { useActiveFamily } from '../../src/features/family/active-family';
+import { useFamilies } from '../../src/features/family/use-families';
 import { useFamilyPhotos, type PhotoTile } from '../../src/features/omoide/use-family-photos';
 import { formatFullDate } from '../../src/lib/date';
 import { colors, radius, spacing, useLayout } from '../../src/theme';
@@ -47,6 +48,9 @@ export default function OmoideScreen() {
   const { expanded } = useLayout();
   const router = useRouter();
   const { familyId } = useActiveFamily();
+  // `familyId` is null both while families load and for an account with none
+  // — only the second deserves an empty state, so the list itself is needed.
+  const { data: families } = useFamilies();
 
   const { days, total, contributors, isPending, isError, refetch, ...feed } =
     useFamilyPhotos(familyId);
@@ -78,6 +82,22 @@ export default function OmoideScreen() {
           title={t('omoide.loadFailed')}
           actionLabel={t('home.retry')}
           onActionPress={() => void refetch()}
+        />
+      );
+    }
+
+    // No family at all used to fall through to the `null` below — a bare
+    // page with nothing but a header. Same cat and same door as Home's
+    // no-family state: this account's next step is one screen, everywhere.
+    if (families !== undefined && families.length === 0) {
+      return (
+        <EmptyState
+          cat
+          renderIcon={({ size, color }) => <Images size={size} color={color} strokeWidth={2} />}
+          title={t('home.noFamilyTitle')}
+          description={t('omoide.noFamilyBody')}
+          actionLabel={t('home.startFamily')}
+          onActionPress={() => router.push('/create-family')}
         />
       );
     }

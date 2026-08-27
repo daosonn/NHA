@@ -1267,6 +1267,16 @@ dev` **did not regenerate the client**, and the stale client survived
     astronomically unlikely code that lives in both tables. Verified: mobile
     tsc, check:i18n (795 keys, en+ja), prettier; not looked at on a device.
 
+- **No-family tabs got the sleeping cat (2026-08-27, same branch)**: Omoide
+  and Family rendered a bare header for an account with no family — the
+  `familyId === null` case fell into `return null`, which only makes sense
+  for the loading tick. Both now distinguish "still loading" from "no family
+  at all" (via `useFamilies`) and show the sleeping-cat empty state with
+  Home's title and `/create-family` door, each with a body written for its
+  own tab (`omoide.noFamilyBody` / `family.noFamilyBody`), so the next step
+  is the same one screen everywhere. Verified: tsc, check:i18n (797 keys),
+  prettier; not on a device.
+
 - **Object storage for media (2026-08-26)**: step 1 done — `StorageService`
   decoupled from filesystem paths (see Current Focus). Step 2 is the R2
   driver. Architecture change, so it merges only after backend-owner review.
