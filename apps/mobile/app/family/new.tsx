@@ -12,6 +12,7 @@ import { BrandMark } from '../../src/components/ui/brand-mark';
 import { Button } from '../../src/components/ui/button';
 import { Text } from '../../src/components/ui/text';
 import { TextField } from '../../src/components/ui/text-field';
+import { TextLink } from '../../src/components/ui/text-link';
 import { useSession } from '../../src/features/auth/session';
 import { useCreateFamily } from '../../src/features/family/use-family-mutations';
 import { ApiError, type FamilyDetail } from '../../src/lib/api';
@@ -63,12 +64,11 @@ function GroupMark() {
 }
 
 /**
- * Start a second family group, from the + on the family strip.
- *
- * Separate from `app/create-family.tsx`, which is the way out of an account
- * with no family at all and therefore offers joining as well. By the time
- * somebody taps the +, they already have a group and are deliberately making
- * another one.
+ * THE create-family form — the only one (Đạt, 2026-08-27; the old
+ * `create-family.tsx` create/join combo duplicated this form, so it became
+ * `join-family.tsx` and creation converged here). Reached from the + on the
+ * family strip and from every no-family empty state; the link under the form
+ * hands people holding a code to `join-family` instead.
  *
  * Two states, because the invite code cannot exist before the group does:
  * the server mints `Family.inviteCode` inside `POST /families`. The mockup
@@ -266,6 +266,16 @@ export default function NewFamilyScreen() {
             </Text>
           </View>
         </View>
+      </View>
+
+      {/* The other direction of the same decision: somebody sent here by a
+          no-family empty state may be holding a code, not founding anything. */}
+      <View style={{ alignItems: 'center' }}>
+        <TextLink
+          label={t('family.new.joinLink')}
+          variant="caption"
+          onPress={() => router.replace('/join-family')}
+        />
       </View>
     </FormScreen>
   );

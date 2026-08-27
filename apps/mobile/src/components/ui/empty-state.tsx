@@ -21,6 +21,13 @@ export type EmptyStateProps = {
   /** Drawn only alongside `onActionPress` — see below. */
   actionLabel?: string;
   onActionPress?: () => void;
+  /**
+   * A second, quieter way out (ghost button under the first) — for the
+   * empty states that are really a fork: "create a family" or "join one".
+   * Same label-and-handler rule as the primary action.
+   */
+  secondaryActionLabel?: string;
+  onSecondaryActionPress?: () => void;
 };
 
 /**
@@ -43,6 +50,8 @@ export function EmptyState({
   description,
   actionLabel,
   onActionPress,
+  secondaryActionLabel,
+  onSecondaryActionPress,
 }: EmptyStateProps) {
   return (
     <View style={{ alignItems: 'center', gap: 10, paddingVertical: 36, paddingHorizontal: 24 }}>
@@ -82,6 +91,16 @@ export function EmptyState({
           size="small"
           align="center"
           onPress={onActionPress}
+        />
+      )}
+
+      {secondaryActionLabel !== undefined && onSecondaryActionPress !== undefined && (
+        <Button
+          label={secondaryActionLabel}
+          variant="ghost"
+          size="small"
+          align="center"
+          onPress={onSecondaryActionPress}
         />
       )}
     </View>

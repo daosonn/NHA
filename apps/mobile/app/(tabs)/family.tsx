@@ -284,7 +284,7 @@ export default function FamilyTreeScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('family.joinBanner.action')}
-            onPress={() => router.push({ pathname: '/create-family', params: { mode: 'join' } })}
+            onPress={() => router.push('/join-family')}
             style={{
               height: 44,
               borderRadius: radius.lg,
@@ -327,7 +327,9 @@ export default function FamilyTreeScreen() {
             title={t('home.noFamilyTitle')}
             description={t('family.noFamilyBody')}
             actionLabel={t('home.startFamily')}
-            onActionPress={() => router.push('/create-family')}
+            onActionPress={() => router.push('/family/new')}
+            secondaryActionLabel={t('joinFamily.heading')}
+            onSecondaryActionPress={() => router.push('/join-family')}
           />
         ) : isPending || tree === null ? null : tree.memberCount === 0 ? (
           <EmptyState

@@ -97,7 +97,9 @@ export default function OmoideScreen() {
           title={t('home.noFamilyTitle')}
           description={t('omoide.noFamilyBody')}
           actionLabel={t('home.startFamily')}
-          onActionPress={() => router.push('/create-family')}
+          onActionPress={() => router.push('/family/new')}
+          secondaryActionLabel={t('joinFamily.heading')}
+          onSecondaryActionPress={() => router.push('/join-family')}
         />
       );
     }

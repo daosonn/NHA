@@ -221,7 +221,9 @@ export default function HomeScreen() {
           title={t('home.noFamilyTitle')}
           description={t('home.noFamilyBody')}
           actionLabel={t('home.startFamily')}
-          onActionPress={() => router.push('/create-family')}
+          onActionPress={() => router.push('/family/new')}
+          secondaryActionLabel={t('joinFamily.heading')}
+          onSecondaryActionPress={() => router.push('/join-family')}
         />
       );
     }

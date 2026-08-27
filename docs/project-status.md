@@ -1267,6 +1267,20 @@ dev` **did not regenerate the client**, and the stale client survived
     astronomically unlikely code that lives in both tables. Verified: mobile
     tsc, check:i18n (795 keys, en+ja), prettier; not looked at on a device.
 
+- **One create form, one join form (2026-08-27, `feature/invite-method-choice`)**:
+  `create-family.tsx` (the create/join tab combo) put a second create-family
+  form in the app next to `family/new.tsx` — two doors marked "create"
+  leading to different rooms. It is now `join-family.tsx`, join-only (keeps
+  the typed-code dual lookup); creation converged on `family/new`, which
+  every no-family empty state now opens, and the two forms cross-link
+  (`family.new.joinLink` / `joinFamily.createLink`) so a person who guessed
+  wrong is one tap from the other. The fork is also visible from outside:
+  `EmptyState` grew an optional secondary (ghost) action, and every
+  no-family empty state now shows BOTH buttons — "Start a family" and "Join
+  with a code" — instead of landing everyone on create. i18n group
+  `createFamily.*` renamed `joinFamily.*` (check-i18n DYNAMIC updated).
+  Verified: tsc, check:i18n (791 keys), prettier; not on a device.
+
 - **No-family tabs got the sleeping cat (2026-08-27, same branch)**: Omoide
   and Family rendered a bare header for an account with no family — the
   `familyId === null` case fell into `return null`, which only makes sense

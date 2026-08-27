@@ -209,7 +209,8 @@
       "codeLabel": "Family code",
       "codeMeta": "Made for this group · does not expire",
       "codeHint": "Anyone with this code joins the group. You can add spots to the tree afterwards.",
-      "done": "Done"
+      "done": "Done",
+      "joinLink": "Have a code someone sent you? Join their family"
     },
     "nodeHint": "Press and hold to change their place in the tree.",
     "member": {
@@ -795,25 +796,6 @@
     "offline": "Could not reach the server. Check your connection and try again.",
     "generic": "Something went wrong. Please try again."
   },
-  "createFamily": {
-    "title": "Your family",
-    "createTab": "Create",
-    "joinTab": "Join",
-    "createHeading": "Start a family space",
-    "createBody": "Only the people you invite can see anything you put here.",
-    "nameLabel": "Family name",
-    "namePlaceholder": "Mom's side",
-    "createSubmit": "Create family",
-    "joinHeading": "Join with a code",
-    "joinBody": "The eight characters someone in the family sent you — a family code or an invitation code, either works.",
-    "codeLabel": "Invite code",
-    "codePlaceholder": "ABCD2345",
-    "joinSubmit": "Join family",
-    "errors": {
-      "codeNotFound": "Nothing matches that code. Check it with whoever sent it.",
-      "alreadyMember": "You are already in that family."
-    }
-  },
   "post": {
     "title": "Moment",
     "openLabel": "Open {{name}}'s moment",
@@ -1106,6 +1088,18 @@
       "care": "It has been a while since you heard from {{name}}",
       "aiSuggestion": "A new suggestion is waiting for you",
       "videoDone": "Your video “{{title}}” is ready"
+    }
+  },
+  "joinFamily": {
+    "heading": "Join with a code",
+    "body": "The eight characters someone in the family sent you — a family code or an invitation code, either works.",
+    "codeLabel": "Invite code",
+    "codePlaceholder": "ABCD2345",
+    "submit": "Join family",
+    "createLink": "Starting a new family instead?",
+    "errors": {
+      "codeNotFound": "Nothing matches that code. Check it with whoever sent it.",
+      "alreadyMember": "You are already in that family."
     }
   }
 }

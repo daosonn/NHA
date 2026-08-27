@@ -203,7 +203,8 @@
       "codeLabel": "家族コード",
       "codeMeta": "このグループ専用・期限なし",
       "codeHint": "このコードを持っている人は誰でも参加できます。家系図の枠はあとから追加できます。",
-      "done": "完了"
+      "done": "完了",
+      "joinLink": "届いたコードをお持ちですか？家族に参加する"
     },
     "nodeHint": "長押しすると家系図での位置を変更できます。",
     "member": {
@@ -763,25 +764,6 @@
     "offline": "サーバーに接続できませんでした。通信環境を確認してもう一度お試しください。",
     "generic": "問題が発生しました。もう一度お試しください。"
   },
-  "createFamily": {
-    "title": "家族",
-    "createTab": "作成",
-    "joinTab": "参加",
-    "createHeading": "家族のスペースを作る",
-    "createBody": "招待した人だけが、ここに残したものを見られます。",
-    "nameLabel": "家族の名前",
-    "namePlaceholder": "母方の家族",
-    "createSubmit": "家族を作成",
-    "joinHeading": "コードで参加",
-    "joinBody": "家族の誰かから届いた 8 文字のコードです。家族コードでも招待コードでも使えます。",
-    "codeLabel": "招待コード",
-    "codePlaceholder": "ABCD2345",
-    "joinSubmit": "家族に参加",
-    "errors": {
-      "codeNotFound": "そのコードに一致するものが見つかりません。送ってくれた人に確認してください。",
-      "alreadyMember": "すでにその家族に参加しています。"
-    }
-  },
   "post": {
     "title": "思い出",
     "openLabel": "{{name}}さんの投稿を開く",
@@ -1068,6 +1050,18 @@
       "care": "{{name}}さんとしばらく連絡をとっていません",
       "aiSuggestion": "新しい提案が届いています",
       "videoDone": "動画「{{title}}」ができあがりました"
+    }
+  },
+  "joinFamily": {
+    "heading": "コードで参加",
+    "body": "家族の誰かから届いた 8 文字のコードです。家族コードでも招待コードでも使えます。",
+    "codeLabel": "招待コード",
+    "codePlaceholder": "ABCD2345",
+    "submit": "家族に参加",
+    "createLink": "新しい家族を作りたい方はこちら",
+    "errors": {
+      "codeNotFound": "そのコードに一致するものが見つかりません。送ってくれた人に確認してください。",
+      "alreadyMember": "すでにその家族に参加しています。"
     }
   }
 }
