@@ -28,7 +28,12 @@ export function useScreenSheet(onDismissed: () => void) {
     progress.value = withTiming(1, { duration: duration.sheet, easing: easing.settle });
   }, [progress]);
 
-  const dismiss = () => {
+  /**
+   * Hạ màn xuống rồi mới rời đi. `then` cho phép một lối ra KHÁC mặc định —
+   * composer đăng xong thì về Home thay vì rơi lại màn thiệp/video bên dưới
+   * (Sơn chốt 27/08); ✕ hủy vẫn dùng lối mặc định.
+   */
+  const dismiss = (then: () => void = onDismissed) => {
     progress.value = withTiming(
       0,
       { duration: duration.sheet, easing: easing.settle },
@@ -36,7 +41,7 @@ export function useScreenSheet(onDismissed: () => void) {
         'worklet';
         // Only a completed run leaves the screen — a second dismiss() while
         // one is playing cancels the first, whose callback still fires.
-        if (finished === true) runOnJS(onDismissed)();
+        if (finished === true) runOnJS(then)();
       },
     );
   };

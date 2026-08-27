@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Play, Send, Trash2, X } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -24,7 +24,7 @@ import { useFamilies } from '../src/features/family/use-families';
 import { useTaggableMembers } from '../src/features/family/use-taggable-members';
 import { momentErrorKey } from '../src/features/moment/moment-error';
 import { useCreateMoment } from '../src/features/moment/use-create-moment';
-import { useSafeBack } from '../src/lib/back';
+import { collapseTo, useSafeBack } from '../src/lib/back';
 import type { FamilySummary } from '../src/lib/api';
 import { thumbnailSource } from '../src/lib/media-source';
 import { colors, elevation, radius, spacing } from '../src/theme';
@@ -67,6 +67,7 @@ function toDraft(asset: ImagePicker.ImagePickerAsset, index: number): DraftMedia
 
 export default function NewMomentScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const close = useSafeBack('/');
   // The screen's own rise-and-drop. Every exit goes through `dismiss` so
   // the drop always plays; `close` only ever runs when it finishes.
@@ -200,8 +201,11 @@ export default function NewMomentScreen() {
           // Nói ra là đã đăng — về Home im lặng thì người dùng không chắc
           // bài đã đi hay chưa.
           toast.success(t('moment.posted'));
-          // The same exit the ✕ takes — the screen drops back down.
-          dismiss();
+          // Đăng xong là về HOME (Sơn chốt 27/08): mở từ màn thiệp/video thì
+          // rơi lại màn đó là vô nghĩa — việc đã xong, bài nằm ở Home. Gỡ
+          // cả chồng bên dưới (collapseTo) chứ không pop một nấc; ✕ hủy vẫn
+          // đi lối mặc định về màn cũ để còn sửa tiếp.
+          dismiss(() => collapseTo(router, '/'));
         },
       },
     );
