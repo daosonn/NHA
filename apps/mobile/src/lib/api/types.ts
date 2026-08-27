@@ -128,6 +128,8 @@ export type FamilySummary = {
   name: string;
   inviteCode: string;
   createdAt: IsoDateTime;
+  /** Ai lập ra nhà — chỉ người đó thấy nút xóa gia đình. */
+  createdById: string;
   memberCount: number;
   /** Ảnh đại diện gia đình (id Media) — hiện trong dải chuyển gia đình */
   coverMediaId: string | null;
@@ -332,6 +334,9 @@ export type PostDetail = {
    * here, so it must never be cached under a key shared between accounts.
    */
   myReaction: ReactionType | null;
+  /** Server đã trả sẵn từ đầu (= isAuthor) — client chỉ việc tin, đừng tự suy từ userId. */
+  canEdit: boolean;
+  canDelete: boolean;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
 };
@@ -372,11 +377,11 @@ export type CreatePostRequest = {
 /**
  * `PATCH /api/posts/:postId`.
  *
- * Attachments are fixed at creation: a `mediaIds` key here is silently
- * stripped by the server's whitelist pipe rather than rejected, so it is
- * left out of the type entirely.
+ * Mọi khóa đều tùy chọn (server là `PartialType`): thiếu khóa = giữ nguyên.
+ * `type` và `mediaIds` không đổi được sau khi đăng — server omit cả hai
+ * (`UpdatePostDto`), nên type này cũng vậy. Lưu ý hai MẢNG là thay cả tập.
  */
-export type UpdatePostRequest = Omit<CreatePostRequest, 'mediaIds'>;
+export type UpdatePostRequest = Partial<Omit<CreatePostRequest, 'mediaIds' | 'type'>>;
 
 // --------------------------------------------------------------- media
 
@@ -481,6 +486,11 @@ export type ProfileDetail = {
  * the whole `interests` array because it replaces rather than merges.
  */
 export type UpdateProfileRequest = {
+  /**
+   * Đổi tên hiển thị: hồ sơ của mình → `User.name`; placeholder →
+   * `FamilyMember.displayName`. Không xóa trắng được — server 400.
+   */
+  name?: string;
   /**
    * A `Media` id **this account uploaded** via `POST /media`; `null` clears
    * it. The server refuses somebody else's upload.

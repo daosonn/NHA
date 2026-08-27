@@ -17,6 +17,12 @@ export type CreateMomentInput = {
    * feed and nobody's page. The server refuses an id outside `familyIds`.
    */
   taggedMemberIds: string[];
+  /**
+   * Media ĐÃ nằm trên server (thiệp/video AI vừa render, uploader là chính
+   * người này, chưa gắn vào bài nào) — đi thẳng vào `mediaIds`, không upload
+   * lại. Đứng TRƯỚC ảnh chọn từ máy trong thứ tự hiển thị.
+   */
+  attachedMediaIds?: string[];
 };
 
 /**
@@ -33,8 +39,9 @@ export function useCreateMoment() {
       media,
       familyIds,
       taggedMemberIds,
+      attachedMediaIds = [],
     }: CreateMomentInput): Promise<PostDetail> => {
-      const mediaIds = await uploadDrafts(media);
+      const mediaIds = [...attachedMediaIds, ...(await uploadDrafts(media))];
 
       return posts.create({
         type: 'POST',

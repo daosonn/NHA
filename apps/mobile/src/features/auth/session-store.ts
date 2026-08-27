@@ -147,6 +147,22 @@ export async function saveSession(
   ]);
 }
 
+/**
+ * Vá bản user đang cất — cho khi hồ sơ đổi tên. `user.name` chỉ được ghi lúc
+ * đăng nhập, nên không vá thì header/màn cài đặt hiện tên CŨ cho tới lần
+ * đăng nhập sau. Không đụng tokens.
+ */
+export async function updateStoredUser(patch: Partial<AuthenticatedUser>): Promise<void> {
+  if (current === null) return;
+
+  current = { ...current, user: { ...current.user, ...patch } };
+  publish();
+
+  if (persistent) {
+    await storage.set(USER_KEY, JSON.stringify(current.user));
+  }
+}
+
 export async function clearSession(): Promise<void> {
   current = null;
   persistent = true;

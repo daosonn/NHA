@@ -273,6 +273,18 @@
       "resent": "{{name}}さんの期限を1週間のばしました",
       "inviteCancelled": "{{name}}さんへの招待を取り消しました",
       "removed": "家系図から外しました"
+    },
+    "delete": {
+      "action": "「{{name}}」を削除",
+      "title": "「{{name}}」を削除しますか？",
+      "body_other": "家系図・メンバー{{count}}人・招待が消えます。投稿は投稿した人のものとして残ります。",
+      "confirm": "削除する",
+      "cancel": "やめておく",
+      "toast": "家族を削除しました",
+      "errors": {
+        "forbidden": "作成した本人だけが削除できます。",
+        "hasMembers": "ほかのメンバーがまだいます。先に退出してもらってください。"
+      }
     }
   },
   "invite": {
@@ -361,6 +373,7 @@
     "album": "アルバム",
     "memo": "メモ",
     "editSelf": "プロフィールを編集",
+    "viewPhoto": "{{name}}さんの写真を見る",
     "noBio": "まだ何も書かれていません。写真の鉛筆から書き始められます。",
     "timelineEmpty": "まだ出来事がありません",
     "timelineEmptyBody": "誕生、引っ越し、結婚 — 人生の節目になった日を。",
@@ -424,17 +437,14 @@
     "memoFailed": "メモを読み込めませんでした。",
     "timelineFailed": "年表を読み込めませんでした。",
     "moments": {
-      "heading": "一緒の思い出",
-      "counts_other": "写真{{photos}}枚・{{count}}件の思い出",
-      "empty": "まだ思い出がありません",
+      "heading": "フォトライブラリ",
+      "counts_other": "写真{{count}}枚",
+      "empty": "まだ写真がありません",
       "emptyBody": "{{name}}さんがタグ付けされた思い出が投稿されると、ここに表示されます。",
-      "failed": "思い出を読み込めませんでした",
-      "video": "動画",
-      "openMoment_other": "この思い出を開く・{{count}}件",
-      "headingOwn": "あなたの思い出",
+      "failed": "写真を読み込めませんでした",
+      "headingOwn": "マイライブラリ",
       "emptyBodyOwn": "思い出を投稿するか、誰かにタグ付けされると、ここに表示されます。",
-      "milestone": "節目",
-      "openMilestone_other": "年表を開く・節目の写真{{count}}枚"
+      "openPhoto": "写真を大きく表示"
     },
     "facts": {
       "born": "{{date}}生まれ",
@@ -453,6 +463,9 @@
     "shareWithHint": "はじめはすべての家族が選ばれています。タップして外すと、その家族には表示されません。",
     "audienceOption": "{{name}}、{{count}}人",
     "postPrivately": "自分だけに投稿",
+    "posting": "投稿中…",
+    "posted": "投稿しました",
+    "postingVideoHint": "動画をアップロード中です。少し時間がかかることがあります。",
     "postTo_other": "{{count}}つの家族に投稿",
     "explainPrivate": "家族が選ばれていません。この思い出はあなただけのものになります。",
     "explainEveryone": "同じ家族にいる人みんなに表示されます。",
@@ -584,10 +597,8 @@
       "editMessage": "編集",
       "dear": "{{name}}へ",
       "emptyMessage": "ここにメッセージが表示されます。",
-      "save": "カードを保存",
       "rendering": "カードを作成中…",
       "share": "家族と共有",
-      "shared": "共有しました",
       "shareCaption": "{{name}}へのカード",
       "template": {
         "t01": "すずらん",
@@ -608,14 +619,11 @@
       },
       "message": "メッセージ",
       "fits": "ぴったり",
-      "savedCard": "保存しました",
       "error": "カードを作成できませんでした。",
-      "shareError": "カードを共有できませんでした。",
       "tooLong_other": "このデザインの上限を{{count}}文字超えています。",
       "saveToPhotos": "写真に保存",
       "savedToPhotos": "写真に保存しました",
       "saveFailed": "カードを保存できませんでした。もう一度お試しください。",
-      "viewPost": "投稿を見る",
       "emptyHint": "カードを保存するにはメッセージを入力してください。"
     },
     "hub": {
@@ -804,6 +812,32 @@
       "cancel": "やめる",
       "done": "コメントを削除しました",
       "failed": "削除できませんでした。もう一度お試しください。"
+    },
+    "openTagged": "{{name}}さんのプロフィールを開く",
+    "actions": {
+      "menu": "その他の操作",
+      "closeScrim": "閉じる",
+      "edit": "投稿を編集",
+      "delete": "投稿を削除",
+      "cancel": "キャンセル",
+      "meta_other": "写真・動画 {{count}}件"
+    },
+    "deleteConfirm": {
+      "title": "この投稿を削除しますか？",
+      "body_other": "写真{{count}}枚、コメント、リアクションも一緒に消えます。元に戻せません。",
+      "confirm": "削除する",
+      "cancel": "やめておく",
+      "toast": "投稿を削除しました"
+    },
+    "edit": {
+      "title": "投稿を編集",
+      "placeLabel": "場所",
+      "eventTitleLabel": "イベント名",
+      "eventDateLabel": "日付",
+      "dateError": "YYYY-MM-DD の形式で入力してください",
+      "placePlaceholder": "例：ダナン",
+      "mediaFixed_other": "写真{{count}}枚は投稿時のまま — 添付は作成時に決まります。",
+      "saved": "投稿を更新しました"
     }
   },
   "omoide": {
@@ -820,7 +854,8 @@
     "save": "保存",
     "loadFailed": "プロフィールを読み込めませんでした。",
     "nameLabel": "名前",
-    "nameFromAccount": "アカウントの名前です。アカウント設定から変更できます。",
+    "namePlaceholder": "家族に見せる名前",
+    "nameRequired": "名前を入力してください",
     "bioLabel": "あなたの物語",
     "bioPlaceholder": "育った場所、してきたこと、どんな人か…",
     "interestsLabel": "あなたの好きなもの",
@@ -933,8 +968,7 @@
     "savedToPhotos": "保存しました",
     "edit": "編集",
     "shareToFamily": "家族と共有",
-    "sharedToFamily": "共有しました",
-    "shareHint": "家族みんなのタイムラインに表示されます。",
+    "shareHint": "投稿画面が開きます。内容を確認してから投稿できます。",
     "yourVideos": "あなたのビデオ",
     "aboutPick": "相手を選ぶ",
     "aboutHint": "この人のビデオになります",
@@ -958,6 +992,7 @@
     "storyboardError": "構成を作れませんでした。もう一度お試しください。",
     "filterEveryone": "みんな",
     "filterMine": "自分",
+    "filterRecipient": "{{name}}の写真",
     "addTile": "追加",
     "preview": "試聴",
     "ownSong": "自分の曲を使う",

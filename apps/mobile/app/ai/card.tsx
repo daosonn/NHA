@@ -18,11 +18,12 @@ import { TextField } from '../../src/components/ui/text-field';
 import { useToast } from '../../src/components/ui/toast';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { useSession } from '../../src/features/auth/session';
-import { ai, apiAccessToken, media, posts } from '../../src/lib/api';
+import { ai, apiAccessToken, media } from '../../src/lib/api';
 import type { MessageVariant } from '../../src/lib/api';
+import { collapseTo } from '../../src/lib/back';
 import { downloadAuthenticated } from '../../src/lib/download';
 import { mediaSource } from '../../src/lib/media-source';
-import { colors, radius, spacing } from '../../src/theme';
+import { colors, radius } from '../../src/theme';
 
 /**
  * Màn 26 (11g) — "Make a card": chọn độ dài lời nhắn (Short/Standard/Heartfelt),
@@ -108,6 +109,7 @@ export default function CardScreen() {
     variants?: string;
     message?: string;
     toName?: string;
+    memberId?: string;
     occasion?: string;
   }>();
 
@@ -132,7 +134,6 @@ export default function CardScreen() {
       '',
   );
   const [mediaId, setMediaId] = useState<string | null>(null);
-  const [sharedPostId, setSharedPostId] = useState<string | null>(null);
   const [savedToDevice, setSavedToDevice] = useState(false);
   // PNG tải hỏng ≠ PNG không tồn tại: giữ mediaId (nút chia sẻ/lưu còn sống),
   // chỉ quay hình về preview sống.
@@ -154,7 +155,7 @@ export default function CardScreen() {
   /** Mọi chỉnh sửa (chữ, mẫu, độ dài) làm bản render cũ — và cả lỗi cũ — hết hiệu lực. */
   const discardRender = () => {
     setMediaId(null);
-    setSharedPostId(null);
+    setSavedToDevice(false);
     setImageFailed(false);
     render.reset();
   };
@@ -176,23 +177,28 @@ export default function CardScreen() {
     },
   });
 
-  const share = useMutation({
-    mutationFn: () =>
-      posts.create({
-        type: 'POST',
-        content: t('ai.card.shareCaption', { name: toName }),
-        familyIds: familyId ? [familyId] : [],
-        mediaIds: mediaId ? [mediaId] : [],
-      }),
-    onSuccess: (p) => setSharedPostId(p.id),
-  });
+  /**
+   * Bảo đảm có bản PNG thật trên server — render nếu chưa có. Cả Lưu lẫn
+   * Share đều cần bước này, nên nó là một hàm chứ không phải một nút.
+   */
+  const ensureRendered = async (): Promise<string | null> => {
+    if (mediaId) return mediaId;
+    try {
+      const r = await render.mutateAsync();
+      return r.media_id;
+    } catch {
+      // render.isError đã bật — InlineError bên dưới nói và cho thử lại
+      return null;
+    }
+  };
 
   // Lưu PNG về máy — cùng pattern với `app/video/[id].tsx` (web: blob + bearer,
   // native: import động expo-media-library vì nó không có module web).
+  // Nhận id tường minh thay vì đọc state: ngay sau render xong state chưa kịp
+  // cập nhật trong cùng tick.
   const saveToDevice = useMutation({
-    mutationFn: async () => {
-      if (!mediaId) return;
-      const url = media.streamUrl(mediaId);
+    mutationFn: async (id: string) => {
+      const url = media.streamUrl(id);
       if (Platform.OS === 'web') {
         await downloadAuthenticated(url, 'nha-card.png', apiAccessToken());
         return;
@@ -203,15 +209,44 @@ export default function CardScreen() {
       ]);
       const { granted } = await MediaLibrary.requestPermissionsAsync();
       if (!granted) throw new Error('permission');
-      const target = `${FileSystem.cacheDirectory}nha-card-${mediaId}.png`;
+      const target = `${FileSystem.cacheDirectory}nha-card-${id}.png`;
       const dl = await FileSystem.downloadAsync(url, target, {
         headers: { authorization: `Bearer ${apiAccessToken() ?? ''}` },
       });
       await MediaLibrary.saveToLibraryAsync(dl.uri);
     },
-    onSuccess: () => setSavedToDevice(true),
+    onSuccess: () => {
+      setSavedToDevice(true);
+      // Popup thay vì mọc thêm nút trạng thái (Sơn chốt 26/08)
+      toast.success(t('ai.card.savedToPhotos'));
+    },
     onError: () => toast.failure(t('ai.card.saveFailed')),
   });
+
+  /** Lưu = render (nếu cần) + tải về máy, MỘT nút một mạch. */
+  const saveCard = async () => {
+    const id = await ensureRendered();
+    if (id) saveToDevice.mutate(id);
+  };
+
+  /**
+   * Share KHÔNG đăng bài nữa — đưa thiệp qua màn soạn bài để người dùng
+   * DUYỆT: ảnh là thiệp vừa render, tag sẵn người nhận, caption gợi ý sẵn;
+   * thêm sửa xóa gì rồi tự bấm đăng (Sơn chốt 26/08).
+   */
+  const shareToComposer = async () => {
+    const id = await ensureRendered();
+    if (!id) return;
+    router.push({
+      pathname: '/new',
+      params: {
+        attachMediaId: id,
+        attachMime: 'image/png',
+        tagMemberId: params.memberId ?? '',
+        caption: t('ai.card.shareCaption', { name: toName }),
+      },
+    });
+  };
 
   const active = TEMPLATES.find((x) => x.id === template)!;
   // Vượt khuôn mẫu đang chọn bao nhiêu ký tự (>0 là quá dài).
@@ -220,7 +255,16 @@ export default function CardScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton fallback="/ai" />}
+        left={
+          // Thiệp ĐÃ lưu thì "quay lại" nghĩa là xong việc — về thẳng hub AI,
+          // không bắt người dùng lùi qua màn lời chúc nữa. Chưa lưu thì back
+          // thường (còn quay về sửa lời chúc được).
+          mediaId ? (
+            <BackButton onPress={() => collapseTo(router, '/ai')} />
+          ) : (
+            <BackButton fallback="/ai" />
+          )
+        }
         center={<ScreenTitle title={t('ai.card.title')} />}
       />
 
@@ -462,37 +506,39 @@ export default function CardScreen() {
           renderIcon={({ size, color }) => <PenLine size={size} color={color} strokeWidth={2.1} />}
         />
 
-        {/* Save the card + nút share tròn (11g) */}
+        {/* HAI việc, HAI nút, không mọc thêm nút trạng thái nào (Sơn chốt
+            26/08): Lưu = render + tải PNG về máy, báo bằng toast; nút tròn =
+            đưa thiệp qua màn soạn bài để DUYỆT rồi mới đăng. */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <View style={{ flex: 1 }}>
             <Button
               label={
                 render.isPending
                   ? t('ai.card.rendering')
-                  : mediaId
-                    ? t('ai.card.savedCard')
-                    : t('ai.card.save')
+                  : savedToDevice
+                    ? t('ai.card.savedToPhotos')
+                    : t('ai.card.saveToPhotos')
               }
               variant="primary"
               size="large"
               fullWidth
-              loading={render.isPending}
-              // vẫn bấm được khi đã lưu — bấm lại là render lại, không phải nút chết
-              disabled={!familyId || message.trim().length === 0 || overBy > 0}
-              onPress={() => render.mutate()}
-              renderIcon={
-                mediaId
-                  ? ({ size, color }) => <Check size={size} color={color} strokeWidth={2.6} />
-                  : undefined
+              loading={render.isPending || saveToDevice.isPending}
+              disabled={!familyId || message.trim().length === 0 || overBy > 0 || savedToDevice}
+              onPress={() => void saveCard()}
+              renderIcon={({ size, color }) =>
+                savedToDevice ? (
+                  <Check size={size} color={color} strokeWidth={2.6} />
+                ) : (
+                  <Download size={size} color={color} strokeWidth={2.1} />
+                )
               }
             />
           </View>
           <Pressable
-            onPress={() => mediaId && !sharedPostId && !share.isPending && share.mutate()}
+            onPress={() => void shareToComposer()}
             accessibilityRole="button"
-            accessibilityLabel={sharedPostId ? t('ai.card.shared') : t('ai.card.share')}
-            accessibilityState={{ busy: share.isPending }}
-            disabled={!mediaId || !!sharedPostId || share.isPending}
+            accessibilityLabel={t('ai.card.share')}
+            disabled={!familyId || message.trim().length === 0 || overBy > 0}
             style={({ pressed }) => ({
               width: 52,
               height: 52,
@@ -500,25 +546,18 @@ export default function CardScreen() {
               alignItems: 'center',
               justifyContent: 'center',
               borderWidth: 1,
-              borderColor: mediaId ? colors.state.borderNeutral : colors.state.disabledBorder,
+              borderColor: colors.state.borderNeutral,
               backgroundColor: pressed ? colors.background.subtle : colors.background.card,
             })}
           >
-            {sharedPostId ? (
-              // xanh "đã xong" — coral để dành cho hành động chính
-              <Check size={20} color={colors.themes.hobbies.text} strokeWidth={2.4} />
-            ) : share.isPending ? (
+            {render.isPending ? (
               <ActivityIndicator
                 size="small"
                 color={colors.coral.brand}
                 style={{ width: 16, height: 16 }}
               />
             ) : (
-              <Share2
-                size={20}
-                color={mediaId ? colors.text.primary : colors.state.disabledText}
-                strokeWidth={2.1}
-              />
+              <Share2 size={20} color={colors.text.primary} strokeWidth={2.1} />
             )}
           </Pressable>
         </View>
@@ -528,43 +567,16 @@ export default function CardScreen() {
           <InlineError message={t('ai.card.error')} onRetry={() => render.mutate()} />
         )}
 
-        {share.isError && mediaId !== null && sharedPostId === null && (
-          <InlineError message={t('ai.card.shareError')} onRetry={() => share.mutate()} />
-        )}
-
-        {/* PNG đã có thật thì mới lưu về máy được */}
+        {/* Lối ra tử tế sau khi lưu: một bấm về hub, khỏi lùi qua từng màn */}
         {mediaId && (
           <Button
-            label={savedToDevice ? t('ai.card.savedToPhotos') : t('ai.card.saveToPhotos')}
-            variant="neutral"
+            label={t('common.done')}
+            variant="ghost"
             size="large"
             fullWidth
-            loading={saveToDevice.isPending}
-            disabled={savedToDevice}
-            onPress={() => saveToDevice.mutate()}
-            renderIcon={({ size, color }) =>
-              savedToDevice ? (
-                <Check size={size} color={color} strokeWidth={2.6} />
-              ) : (
-                <Download size={size} color={color} strokeWidth={2.1} />
-              )
-            }
+            align="center"
+            onPress={() => collapseTo(router, '/ai')}
           />
-        )}
-
-        {sharedPostId && (
-          <View style={{ alignItems: 'center', gap: 2 }}>
-            <Text variant="caption" color={colors.text.secondary} style={{ textAlign: 'center' }}>
-              {t('ai.card.shared')}
-            </Text>
-            <Button
-              label={t('ai.card.viewPost')}
-              variant="ghost"
-              size="small"
-              align="center"
-              onPress={() => router.push(`/post/${sharedPostId}`)}
-            />
-          </View>
         )}
       </ScrollView>
     </View>

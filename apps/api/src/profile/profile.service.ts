@@ -118,7 +118,9 @@ export class ProfileService {
         member.user?.name ?? member.displayName,
         // A linked person has one avatar, wherever they appear — the
         // account's; the member row's copy only matters for placeholders.
-        member.avatarKey ?? member.user?.avatarKey ?? null,
+        // (Thứ tự từng bị viết ngược với chính câu trên — member copy thắng —
+        // làm hero hồ sơ và cây/feed hiện hai mặt khác nhau. Tài khoản thắng.)
+        member.user?.avatarKey ?? member.avatarKey ?? null,
       );
     }
     const profile = await this.ensurePlaceholderProfile(member.id);
@@ -248,7 +250,30 @@ export class ProfileService {
     // "not yours": no existence oracle, same as attach-media.
     const nextAvatar = await this.resolveNextAvatar(profile, editorUserId, dto);
 
+    // Tên cũng sống ngoài LifeProfile như avatar (User.name / FamilyMember
+    // .displayName) và sửa ở đây vì cùng một lý do: profile là chỗ duy nhất
+    // app sửa "một con người", và cổng wiki phía trên đúng là quyền cần có
+    // (profile liên kết → chỉ chủ; placeholder → cả nhà). Không cho xóa
+    // trắng: người thì phải có tên.
+    const nextName = dto.name === undefined ? undefined : dto.name.trim();
+    if (nextName === '') {
+      throw new BadRequestException('name cannot be empty');
+    }
+
     await this.prisma.$transaction(async (tx) => {
+      if (nextName !== undefined) {
+        if (profile.userId) {
+          await tx.user.update({
+            where: { id: profile.userId },
+            data: { name: nextName },
+          });
+        } else if (profile.memberId) {
+          await tx.familyMember.update({
+            where: { id: profile.memberId },
+            data: { displayName: nextName },
+          });
+        }
+      }
       if (dto.avatarMediaId !== undefined) {
         if (profile.userId) {
           await tx.user.update({
@@ -297,6 +322,7 @@ export class ProfileService {
             occupation: updated.occupation,
             deathDate: updated.deathDate?.toISOString() ?? null,
             avatarMediaId: nextAvatar,
+            ...(nextName !== undefined && { displayName: nextName }),
           },
         },
       });

@@ -190,6 +190,10 @@ export const families = {
   join: (body: JoinFamilyRequest) =>
     apiRequest<JoinFamilyResult>('/families/join', { method: 'POST', body }),
 
+  /** Chỉ người tạo, và chỉ khi không còn tài khoản nào khác trong nhà (403/409). */
+  remove: (familyId: string) =>
+    apiRequest<SuccessResult>(`/families/${familyId}`, { method: 'DELETE' }),
+
   addMember: (familyId: string, body: AddMemberRequest) =>
     apiRequest<FamilyMemberSummary>(`/families/${familyId}/members`, { method: 'POST', body }),
 
@@ -448,6 +452,13 @@ export const video = {
 
   share: (jobId: string, body: { caption?: string } = {}) =>
     apiRequest<{ post_id: string }>(`/video-jobs/${jobId}/share`, { method: 'POST', body }),
+
+  /**
+   * Xuất video đã render thành một Media row độc lập (bản sao) — luồng share
+   * mới: composer đính media này, người dùng duyệt rồi mới đăng.
+   */
+  exportMedia: (jobId: string) =>
+    apiRequest<{ media_id: string }>(`/video-jobs/${jobId}/export-media`, { method: 'POST' }),
 
   /** Authenticated + Range-capable — hand to the video player with the bearer header. */
   fileUrl: (jobId: string) => `${apiBaseUrl()}/video-jobs/${jobId}/file`,

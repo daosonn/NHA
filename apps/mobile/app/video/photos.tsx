@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -15,36 +16,76 @@ import { Button } from '../../src/components/ui/button';
 import { Text } from '../../src/components/ui/text';
 import { useToast } from '../../src/components/ui/toast';
 import { useSession } from '../../src/features/auth/session';
+import { useActiveFamily } from '../../src/features/family/active-family';
+import { useMemberForUser } from '../../src/features/family/use-member-for-user';
 import { useVideoDraft } from '../../src/features/video/draft';
-import { useVideoPhotos } from '../../src/features/video/use-video-photos';
-import { media } from '../../src/lib/api';
+import { useVideoPhotos, type VideoPhotoTile } from '../../src/features/video/use-video-photos';
+import { gallery, media } from '../../src/lib/api';
 import { thumbnailSource } from '../../src/lib/media-source';
+import { queryKeys } from '../../src/lib/query-keys';
 import { colors, radius, spacing } from '../../src/theme';
 
 /**
  * Màn 28 (11m) — "Sources by family group, numbered order, add more".
  * SỐ trên ảnh là THỨ TỰ xuất hiện trong video; tap lại để bỏ. "Choose for me"
- * lấy 8 ảnh mới nhất trong bộ lọc hiện tại; ô "+ Add" upload từ máy.
+ * là bộ tuyển có nguyên tắc (xem chooseForMe); ô "+ Add" upload từ máy.
  */
 
-type Filter = 'all' | 'mine' | string; // string = familyId
+type Filter = 'all' | 'mine' | 'recipient' | string; // string = familyId (UUID, không đụng 'recipient')
+
+/**
+ * Số cảnh theo thời lượng đã chọn — mỗi cảnh ~5-6 giây cộng mở/kết.
+ * Bản cũ lấy cứng 8 bất kể video 30 giây hay 3 phút.
+ */
+const SCENE_TARGET: Record<number, number> = { 30: 6, 60: 8, 90: 10, 120: 12, 180: 16 };
+
+/** Một BÀI đăng = một khoảnh khắc: gom ảnh cùng bài để không lấy 2 khung cùng cảnh. */
+type MomentGroup = {
+  key: string;
+  tiles: VideoPhotoTile[];
+  /** 3 = ảnh chung hai người · 2 = của người nhận · 1 = của mình · 0 = cả nhà. */
+  tier: number;
+  /** Tim + bình luận — "tấm cả nhà thích" thắng khi cùng tier. */
+  popularity: number;
+  at: number;
+};
 
 export default function VideoPhotosScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const toast = useToast();
   const { user } = useSession();
+  const { familyId } = useActiveFamily();
   const { draft, update } = useVideoDraft();
 
   const { tiles, familyList, isLoading } = useVideoPhotos();
   const [filter, setFilter] = useState<Filter>('all');
   const [uploading, setUploading] = useState(false);
+  // Người TẶNG (chính mình) trong nhà đang mở — để nhận ra "ảnh chung hai người".
+  const giverMemberId = useMemberForUser(user?.id ?? null)?.id ?? null;
+  // Mỗi lần bấm "nhờ chọn" xoay sang một lượt khác trong cùng nguyên tắc.
+  const [shuffleNonce, setShuffleNonce] = useState(0);
+
+  // "Ảnh của <người nhận>" — hỏi server chứ không tự lọc client, vì gallery
+  // của một người gồm cả bài họ ĐĂNG lẫn bài họ ĐƯỢC TAG, tính đúng danh tính
+  // xuyên nhiều nhà (client chỉ thấy tag của nhà đang mở). Trả về Media id
+  // nên giao thẳng với lưới tile bằng Set.
+  const recipientGallery = useQuery({
+    queryKey: queryKeys.memberGallery(familyId ?? 'none', draft.memberId ?? 'none'),
+    queryFn: () => gallery.forMember(familyId as string, draft.memberId as string),
+    enabled: familyId !== null && draft.memberId !== null,
+  });
+  const recipientIds = useMemo(
+    () => new Set((recipientGallery.data ?? []).map((item) => item.id)),
+    [recipientGallery.data],
+  );
 
   const visible = useMemo(() => {
     if (filter === 'all') return tiles;
     if (filter === 'mine') return tiles.filter((p) => p.authorUserId === user?.id);
+    if (filter === 'recipient') return tiles.filter((p) => recipientIds.has(p.id));
     return tiles.filter((p) => p.familyId === filter);
-  }, [tiles, filter, user?.id]);
+  }, [tiles, filter, user?.id, recipientIds]);
 
   const clipTotal = useMemo(
     () => tiles.filter((p) => p.mimeType.startsWith('video/')).length,
@@ -68,7 +109,110 @@ export default function VideoPhotosScreen() {
         : [...draft.mediaIds, id],
     );
 
-  const chooseForMe = () => select(visible.slice(0, 8).map((p) => p.id));
+  /**
+   * "Nhờ chọn" — bộ tuyển có nguyên tắc thay cho `slice(0, 8)` cũ (Sơn chốt 26/08):
+   *
+   * 1. SỐ CẢNH theo thời lượng đã chọn (30s→6 … 3min→16), không cứng 8.
+   * 2. ƯU TIÊN NGƯỜI: ảnh chung của người nhận VÀ mình > ảnh của người nhận >
+   *    ảnh của mình > ảnh cả nhà; cùng hạng thì bài nhiều tim/bình luận thắng.
+   * 3. TRẢI THEO THỜI GIAN: chia dòng thời gian thành N khoang, mỗi khoang lấy
+   *    một khoảnh khắc — video chạy từ kỷ niệm cũ đến mới, không dồn một buổi.
+   * 4. MỖI BÀI MỘT KHUNG (ảnh cùng bài là cùng cảnh) và CLIP chiếm ~3/4 số
+   *    cảnh khi có đủ (nhóm điểm cao nhận clip trước).
+   * 5. Kết quả xếp xuôi dòng thời gian; bấm lại là một lượt khác cùng nguyên tắc.
+   *
+   * Thuần client trên dữ liệu đã tải sẵn — không chờ thêm request nào.
+   */
+  const chooseForMe = () => {
+    const count = SCENE_TARGET[draft.targetSec] ?? 8;
+    const giverUserId = user?.id ?? null;
+
+    const groups = new Map<string, MomentGroup>();
+    for (const p of visible) {
+      const recipientRelated =
+        draft.memberId !== null &&
+        (recipientIds.has(p.id) || p.taggedMemberIds.includes(draft.memberId));
+      const giverRelated =
+        (giverMemberId !== null && p.taggedMemberIds.includes(giverMemberId)) ||
+        (giverUserId !== null && p.authorUserId === giverUserId);
+      const tier = recipientRelated && giverRelated ? 3 : recipientRelated ? 2 : giverRelated ? 1 : 0;
+
+      const key = p.postId || p.id;
+      const existing = groups.get(key);
+      if (existing === undefined) {
+        groups.set(key, {
+          key,
+          tiles: [p],
+          tier,
+          popularity: p.popularity,
+          at: Date.parse(p.createdAt) || 0,
+        });
+      } else {
+        existing.tiles.push(p);
+        if (tier > existing.tier) existing.tier = tier;
+      }
+    }
+
+    const list = [...groups.values()].sort((a, b) => a.at - b.at);
+    if (list.length === 0) return;
+
+    const byScore = (a: MomentGroup, b: MomentGroup) =>
+      b.tier - a.tier || b.popularity - a.popularity || b.at - a.at;
+
+    // Khoang thời gian đều nhau trên quãng từ khoảnh khắc cũ nhất tới mới nhất
+    const lo = list[0]!.at;
+    const span = Math.max(1, list[list.length - 1]!.at - lo);
+    const buckets: MomentGroup[][] = Array.from({ length: count }, () => []);
+    for (const g of list) {
+      const idx = Math.min(count - 1, Math.floor(((g.at - lo) / span) * count));
+      buckets[idx]!.push(g);
+    }
+
+    const picked: MomentGroup[] = [];
+    const taken = new Set<string>();
+    buckets.forEach((bucket, i) => {
+      if (bucket.length === 0) return;
+      bucket.sort(byScore);
+      // nonce xoay trong top-3 của khoang: bấm lại đổi lượt nhưng không rơi
+      // xuống những tấm kém hẳn
+      const top = bucket.slice(0, Math.min(3, bucket.length));
+      const g = top[(shuffleNonce + i) % top.length]!;
+      picked.push(g);
+      taken.add(g.key);
+    });
+
+    // Khoang rỗng (giai đoạn không có ảnh) → bù bằng nhóm tốt nhất còn lại
+    if (picked.length < count) {
+      const rest = list.filter((g) => !taken.has(g.key)).sort(byScore);
+      for (const g of rest) {
+        if (picked.length >= count) break;
+        picked.push(g);
+      }
+    }
+
+    // Trong mỗi khoảnh khắc lấy MỘT file: clip trước cho tới ~3/4 số cảnh
+    // (Sơn muốn video nhiều chuyển động), nhóm điểm cao được nhận clip trước.
+    const clipQuota = Math.ceil(picked.length * 0.75);
+    let clipCountPicked = 0;
+    const chosenTile = new Map<string, VideoPhotoTile>();
+    for (const g of [...picked].sort(byScore)) {
+      const clip = g.tiles.find((p) => p.mimeType.startsWith('video/'));
+      const photo = g.tiles.find((p) => !p.mimeType.startsWith('video/'));
+      const tile = clipCountPicked < clipQuota ? (clip ?? photo) : (photo ?? clip);
+      if (tile === undefined) continue;
+      if (tile.mimeType.startsWith('video/')) clipCountPicked += 1;
+      chosenTile.set(g.key, tile);
+    }
+
+    // Thứ tự chọn = thứ tự xuất hiện trong video → chuyện kể xuôi dòng
+    const ids = [...picked]
+      .sort((a, b) => a.at - b.at)
+      .map((g) => chosenTile.get(g.key)?.id)
+      .filter((x): x is string => x !== undefined);
+
+    setShuffleNonce((n) => n + 1);
+    select(ids);
+  };
 
   /**
    * "+ Add" — chọn từ máy, upload, tự tick vào cuối thứ tự.
@@ -132,10 +276,24 @@ export default function VideoPhotosScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ gap: 8 }}
         >
+          {/* Thứ tự Sơn chốt 26/08: mọi người → người sẽ nhận → của mình → từng nhà */}
           <Pill
             label={t('video.filterEveryone')}
             selected={filter === 'all'}
             onPress={() => setFilter('all')}
+          />
+          {/* video làm VỀ một người thì phải lọc được ảnh của đúng người đó */}
+          {draft.memberId !== null && draft.memberName.length > 0 && (
+            <Pill
+              label={t('video.filterRecipient', { name: draft.memberName })}
+              selected={filter === 'recipient'}
+              onPress={() => setFilter('recipient')}
+            />
+          )}
+          <Pill
+            label={t('video.filterMine')}
+            selected={filter === 'mine'}
+            onPress={() => setFilter('mine')}
           />
           {familyList.length > 1 &&
             familyList.map((f) => (
@@ -146,11 +304,6 @@ export default function VideoPhotosScreen() {
                 onPress={() => setFilter(f.id)}
               />
             ))}
-          <Pill
-            label={t('video.filterMine')}
-            selected={filter === 'mine'}
-            onPress={() => setFilter('mine')}
-          />
         </ScrollView>
 
         {/* "46 photos and 3 clips shared with you" + Choose for me */}
@@ -185,7 +338,7 @@ export default function VideoPhotosScreen() {
           </Pressable>
         </View>
 
-        {isLoading && (
+        {(isLoading || (filter === 'recipient' && recipientGallery.isLoading)) && (
           <View style={{ alignItems: 'center', paddingVertical: 16 }}>
             <ActivityIndicator color={colors.coral.primary} />
           </View>

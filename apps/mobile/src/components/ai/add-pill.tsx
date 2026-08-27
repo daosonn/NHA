@@ -94,18 +94,16 @@ export function AddPill({
   }
 
   if (value.length > 0) {
+    // Nút ✕ là ANH EM của phần nhãn, không nằm trong nó: Pressable lồng
+    // Pressable render thành <button> trong <button> trên web — React gào lỗi
+    // và nuốt luôn press, chip kẹt cứng không bỏ cũng không chọn lại được
+    // (đúng bài học button-in-button của album).
     return (
-      <Pressable
-        onPress={onSelect}
-        accessibilityRole="button"
-        accessibilityState={{ selected }}
+      <View
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 7,
           height: 34,
-          paddingLeft: 14,
-          paddingRight: 8,
           borderRadius: radius.full,
           // Chọn = coral, giống mọi lựa chọn đã chốt khác trong app (không dùng đen)
           backgroundColor: selected ? colors.coral.primary : colors.background.card,
@@ -113,13 +111,20 @@ export function AddPill({
           borderColor: colors.state.borderNeutral,
         }}
       >
-        <Text
-          variant="caption"
-          weight="semibold"
-          color={selected ? colors.text.white : colors.text.primary}
+        <Pressable
+          onPress={onSelect}
+          accessibilityRole="button"
+          accessibilityState={{ selected }}
+          style={{ height: '100%', justifyContent: 'center', paddingLeft: 14, paddingRight: 7 }}
         >
-          {value}
-        </Text>
+          <Text
+            variant="caption"
+            weight="semibold"
+            color={selected ? colors.text.white : colors.text.primary}
+          >
+            {value}
+          </Text>
+        </Pressable>
         <Pressable
           onPress={() => {
             onChange('');
@@ -128,10 +133,11 @@ export function AddPill({
           accessibilityRole="button"
           accessibilityLabel={t('common.close')}
           hitSlop={6}
+          style={{ height: '100%', justifyContent: 'center', paddingRight: 8 }}
         >
           <X size={13} color={selected ? colors.text.white : colors.text.muted} strokeWidth={2.4} />
         </Pressable>
-      </Pressable>
+      </View>
     );
   }
 

@@ -8,7 +8,7 @@ import type { MemberProfile } from '../../features/member/member-profile';
 import { useLifeEvents } from '../../features/member/use-life-events';
 import { useMemberGallery } from '../../features/member/use-member-gallery';
 import { useDeleteMemo, useMemberMemos, useMyMemos } from '../../features/member/use-memos';
-import { families, type MemoDetail } from '../../lib/api';
+import { families, type GalleryMediaItem, type MemoDetail } from '../../lib/api';
 import { queryKeys } from '../../lib/query-keys';
 import { colors } from '../../theme';
 import { enter, swapIn } from '../../theme/motion';
@@ -40,10 +40,14 @@ export type ProfileBodyProps = {
   onEditTimeline?: () => void;
   onChangeAvatar?: () => void;
   uploadingAvatar?: boolean;
+  /** Xem tấm chân dung toàn màn hình (chỉ đưa khi có ảnh thật để xem). */
+  onViewAvatar?: () => void;
   onAddMemo?: () => void;
   onOpenMemo?: (memo: MemoDetail) => void;
   onEditMemo?: (memo: MemoDetail) => void;
   onOpenMoment?: (postId: string) => void;
+  /** Mở một tấm ảnh lẻ của tab Album trong trình xem toàn màn hình. */
+  onOpenPhoto?: (item: GalleryMediaItem) => void;
 };
 
 /**
@@ -68,10 +72,12 @@ export function ProfileBody({
   onEditTimeline,
   onChangeAvatar,
   uploadingAvatar,
+  onViewAvatar,
   onAddMemo,
   onOpenMemo,
   onEditMemo,
   onOpenMoment,
+  onOpenPhoto,
 }: ProfileBodyProps) {
   const { t } = useTranslation();
 
@@ -121,6 +127,7 @@ export function ProfileBody({
           onEdit={onEdit}
           onChangeAvatar={onChangeAvatar}
           uploadingAvatar={uploadingAvatar}
+          onViewAvatar={onViewAvatar}
         />
       </Animated.View>
 
@@ -187,11 +194,9 @@ export function ProfileBody({
             loading={gallery.isPending && (ownProfile || memberId !== null)}
             failed={gallery.isError}
             onRetry={() => void gallery.refetch()}
+            onOpenPhoto={onOpenPhoto}
+            // Chạm = xem ảnh; giữ = mở bài đăng gốc (nếu ảnh thuộc một bài)
             onOpenMoment={onOpenMoment}
-            // A milestone's photographs are not a post and have nowhere of
-            // their own to open, but they are not a dead end either — the
-            // Timeline is where that milestone is written down.
-            onOpenTimeline={() => setTab('timeline')}
           />
         </Animated.View>
       )}

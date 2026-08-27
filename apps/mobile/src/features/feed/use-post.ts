@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { posts, reactions } from '../../lib/api';
-import type { PostDetail, ReactionType } from '../../lib/api';
+import type { PostDetail, ReactionType, UpdatePostRequest } from '../../lib/api';
 import { queryKeys } from '../../lib/query-keys';
 
 /** One post. 404 here also means "not yours to see" — the server never sends 403. */
@@ -83,13 +83,68 @@ export function useSetReaction(postId: string) {
   });
 }
 
+/**
+ * Sửa một bài của chính mình. Server chỉ cho tác giả (403), và hai mảng
+ * `familyIds`/`taggedMemberIds` là THAY CẢ TẬP — form phải gửi đủ, gửi thiếu
+ * là lặng lẽ rụng tag/bớt nhà.
+ */
+export function useUpdatePost(postId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: UpdatePostRequest) => posts.update(postId, body),
+    onSuccess: (detail) => {
+      const previous = queryClient.getQueryData<PostDetail>(queryKeys.post(postId));
+      queryClient.setQueryData(queryKeys.post(postId), detail);
+      patchFeeds(queryClient, postId, () => detail);
+
+      // Đối tượng chia sẻ có thể đã đổi: làm mới feed + cây family (album/
+      // gallery của thành viên dẫn xuất từ tag) của HỢP hai tập nhà — nhà bị
+      // rút khỏi bài cũng phải thấy bài biến mất.
+      const touched = new Set([...(previous?.familyIds ?? []), ...detail.familyIds]);
+      for (const familyId of touched) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.familyFeed(familyId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.family(familyId) });
+      }
+      void queryClient.invalidateQueries({ queryKey: queryKeys.myFeed() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.myGallery() });
+    },
+  });
+}
+
+/**
+ * Xóa một bài — nhận NGUYÊN PostDetail (không chỉ id) để onSuccess còn biết
+ * bài từng ở những nhà nào mà dọn cache. DELETE mang theo cả file media, nên
+ * bước xác nhận nằm ở UI (sheet), không ở đây.
+ */
+export function useDeletePost() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (post: PostDetail) => posts.remove(post.id),
+    onSuccess: (_result, post) => {
+      // Gỡ theo tiền tố: kéo theo cả ['posts', id, 'comments'].
+      queryClient.removeQueries({ queryKey: queryKeys.post(post.id) });
+      // Gỡ NGAY khỏi mọi trang feed trong cache — đợi refetch thì bài chết
+      // vẫn nằm đó và bấm vào là 404.
+      removeFromFeeds(queryClient, post.id);
+      for (const familyId of post.familyIds) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.familyFeed(familyId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.family(familyId) });
+      }
+      void queryClient.invalidateQueries({ queryKey: queryKeys.myFeed() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.myGallery() });
+    },
+  });
+}
+
 type FeedPage = { items: PostDetail[]; nextCursor: string | null };
 type FeedData = { pages: FeedPage[]; pageParams: unknown[] };
 
 /**
  * Mọi khoá feed đang có trong cache: feed theo nhà `['families', id, 'posts']`
  * (+ biến thể video-picker) và dòng chung của Home `['me', 'feed']`. Cùng một
- * bài có thể nằm ở nhiều feed — trái tim phải chạm đủ.
+ * bài có thể nằm ở nhiều feed — trái tim/sửa/xoá phải chạm đủ.
  */
 function isFeedKey(queryKey: readonly unknown[]): boolean {
   return (
@@ -129,4 +184,22 @@ function patchFeeds(
   }
 
   return snapshots;
+}
+
+/** Như patchFeeds nhưng loại bài ra khỏi từng trang thay vì thay nội dung. */
+function removeFromFeeds(queryClient: ReturnType<typeof useQueryClient>, postId: string): void {
+  const entries = queryClient.getQueriesData<FeedData>({
+    predicate: ({ queryKey }) => isFeedKey(queryKey),
+  });
+
+  for (const [queryKey, data] of entries) {
+    if (!data?.pages?.some((page) => page.items.some((p) => p.id === postId))) continue;
+    queryClient.setQueryData<FeedData>(queryKey, {
+      ...data,
+      pages: data.pages.map((page) => ({
+        ...page,
+        items: page.items.filter((p) => p.id !== postId),
+      })),
+    });
+  }
 }

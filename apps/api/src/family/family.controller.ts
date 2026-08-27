@@ -111,6 +111,19 @@ export class FamilyController {
   }
 
   @HttpCode(HttpStatus.OK)
+  @Delete(':familyId')
+  @ApiOperation({
+    summary:
+      'Delete a family you created (only while no other account is a member). Posts stay with their authors.',
+  })
+  remove(
+    @CurrentUser() user: AuthUser,
+    @Param('familyId', ParseUUIDPipe) familyId: string,
+  ): Promise<{ success: boolean }> {
+    return this.familyService.remove(user.userId, familyId);
+  }
+
+  @HttpCode(HttpStatus.OK)
   @Delete(':familyId/members/:memberId')
   @ApiOperation({ summary: 'Remove a member / leave the family (WBS 1.3.6)' })
   removeMember(

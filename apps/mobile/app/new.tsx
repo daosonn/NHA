@@ -1,8 +1,10 @@
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { Send, Trash2 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import { Play, Send, Trash2, X } from 'lucide-react-native';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { AppHeader } from '../src/components/layout/app-header';
@@ -16,6 +18,7 @@ import { Button } from '../src/components/ui/button';
 import { SheetModal } from '../src/components/ui/sheet-modal';
 import { Text } from '../src/components/ui/text';
 import { TextField } from '../src/components/ui/text-field';
+import { useToast } from '../src/components/ui/toast';
 import { useSession } from '../src/features/auth/session';
 import { useFamilies } from '../src/features/family/use-families';
 import { useTaggableMembers } from '../src/features/family/use-taggable-members';
@@ -23,6 +26,7 @@ import { momentErrorKey } from '../src/features/moment/moment-error';
 import { useCreateMoment } from '../src/features/moment/use-create-moment';
 import { useSafeBack } from '../src/lib/back';
 import type { FamilySummary } from '../src/lib/api';
+import { thumbnailSource } from '../src/lib/media-source';
 import { colors, elevation, radius, spacing } from '../src/theme';
 
 function toAudience(families: FamilySummary[]): AudienceGroup[] {
@@ -67,6 +71,15 @@ export default function NewMomentScreen() {
   // The screen's own rise-and-drop. Every exit goes through `dismiss` so
   // the drop always plays; `close` only ever runs when it finishes.
   const { scrimStyle, panelStyle, dismiss } = useScreenSheet(close);
+  const toast = useToast();
+  // Thiệp/video AI vừa tạo được đưa sang đây để DUYỆT trước khi đăng (Sơn
+  // chốt 26/08): media đã nằm trên server nên chỉ mang id + mime.
+  const params = useLocalSearchParams<{
+    attachMediaId?: string;
+    attachMime?: string;
+    tagMemberId?: string;
+    caption?: string;
+  }>();
 
   const { user } = useSession();
   const { data: families } = useFamilies();
@@ -80,6 +93,23 @@ export default function NewMomentScreen() {
   const [excludedIds, setExcludedIds] = useState<string[]>([]);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
+  const [attached, setAttached] = useState<{ id: string; mime: string } | null>(null);
+
+  // Áp prefill bằng effect + đánh dấu đã dùng: params có thể đến sau lần
+  // render đầu, và cùng một màn không được đổ lại hàng cũ.
+  const consumed = useRef<string | null>(null);
+  useEffect(() => {
+    const id = params.attachMediaId;
+    if (!id || consumed.current === id) return;
+    consumed.current = id;
+    setAttached({ id, mime: params.attachMime ?? 'image/png' });
+    if (params.caption) setCaption(params.caption);
+    if (params.tagMemberId) {
+      const tagId = params.tagMemberId;
+      setTaggedIds((current) => (current.includes(tagId) ? current : [...current, tagId]));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.attachMediaId]);
 
   const audience = families === undefined ? [] : toAudience(families);
   const selected = audience.filter((group) => !excludedIds.includes(group.id));
@@ -129,7 +159,12 @@ export default function NewMomentScreen() {
     setMedia((current) => [...current, ...result.assets.map(toDraft)]);
   };
 
-  const ready = caption.trim() !== '' || media.length > 0;
+  const ready = caption.trim() !== '' || media.length > 0 || attached !== null;
+
+  /** Đang có video phải TẢI LÊN — bước chậm nhất, nói trước để đỡ sốt ruột. */
+  const uploadingVideo =
+    create.isPending &&
+    (media.some((m) => m.kind === 'video') || (attached?.mime.startsWith('video/') ?? false));
 
   /**
    * The ✕. The draft lives only in this screen's state, so closing *is*
@@ -153,6 +188,7 @@ export default function NewMomentScreen() {
         media,
         familyIds: selected.map((group) => group.id),
         taggedMemberIds: tagged,
+        attachedMediaIds: attached === null ? [] : [attached.id],
       },
       {
         onSuccess: () => {
@@ -160,6 +196,10 @@ export default function NewMomentScreen() {
           setMedia([]);
           setExcludedIds([]);
           setTaggedIds([]);
+          setAttached(null);
+          // Nói ra là đã đăng — về Home im lặng thì người dùng không chắc
+          // bài đã đi hay chưa.
+          toast.success(t('moment.posted'));
           // The same exit the ✕ takes — the screen drops back down.
           dismiss();
         },
@@ -230,6 +270,61 @@ export default function NewMomentScreen() {
               {t('moment.media')}
             </Text>
 
+            {/* Thiệp/video vừa tạo bên AI — bỏ được như mọi ảnh khác (✕ là nút
+                ANH EM đè góc, không lồng Pressable) */}
+            {attached !== null && (
+              <View style={{ width: 96, height: 96, marginTop: 8 }}>
+                <Image
+                  source={thumbnailSource(attached.id, attached.mime)}
+                  style={{ width: '100%', height: '100%', borderRadius: radius.xl }}
+                  contentFit="cover"
+                />
+                {attached.mime.startsWith('video/') && (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    pointerEvents="none"
+                  >
+                    <View
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: radius.full,
+                        backgroundColor: 'rgba(0,0,0,0.45)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Play size={14} color={colors.text.white} fill={colors.text.white} />
+                    </View>
+                  </View>
+                )}
+                <Pressable
+                  onPress={() => setAttached(null)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('common.close')}
+                  hitSlop={8}
+                  style={{
+                    position: 'absolute',
+                    right: -6,
+                    top: -6,
+                    width: 22,
+                    height: 22,
+                    borderRadius: radius.full,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: colors.text.primary,
+                  }}
+                >
+                  <X size={12} color={colors.text.white} strokeWidth={2.6} />
+                </Pressable>
+              </View>
+            )}
+
             <MediaStrip
               media={media}
               onAdd={() => void pick()}
@@ -283,7 +378,7 @@ export default function NewMomentScreen() {
             )}
 
             <Button
-              label={postLabel}
+              label={create.isPending ? t('moment.posting') : postLabel}
               size="large"
               fullWidth
               disabled={!ready}
@@ -291,6 +386,12 @@ export default function NewMomentScreen() {
               onPress={submit}
               renderIcon={({ size, color }) => <Send size={size} color={color} strokeWidth={2.1} />}
             />
+
+            {uploadingVideo && (
+              <Text variant="caption" color={colors.text.subtle} style={{ textAlign: 'center' }}>
+                {t('moment.postingVideoHint')}
+              </Text>
+            )}
 
             {/* Saying who is excluded is the whole point of the dimmed state —
               a count alone would not tell you *which* family you dropped. */}

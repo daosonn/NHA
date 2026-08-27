@@ -14,7 +14,8 @@ export const queryKeys = {
   /**
    * Dòng thời gian Home: bài từ MỌI nhà mình thuộc về (`GET /me/feed`). Nằm
    * dưới `me` vì không thuộc riêng nhà nào — đổi nhà đang chọn không làm nó
-   * stale; đăng bài / bấm tim thì use-post & use-create-moment chạm cả khoá này.
+   * stale; đăng/sửa/xoá bài, bấm tim thì use-post (patchFeeds/removeFromFeeds)
+   * & use-create-moment chạm cả khoá này.
    */
   myFeed: () => ['me', 'feed'] as const,
   familyInvitations: (familyId: string) => ['families', familyId, 'invitations'] as const,

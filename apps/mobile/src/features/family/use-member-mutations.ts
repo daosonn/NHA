@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { families } from '../../lib/api';
-import type { Gender, RelationshipType } from '../../lib/api';
+import type { FamilySummary, Gender, RelationshipType } from '../../lib/api';
 import { queryKeys } from '../../lib/query-keys';
 
 /** Everything that can change about a person's place in the tree, in one save. */
@@ -100,6 +100,31 @@ export function useRemoveMember(familyId: string | null) {
     onSettled: () => {
       if (familyId === null) return;
       void queryClient.invalidateQueries({ queryKey: queryKeys.family(familyId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.families() });
+    },
+  });
+}
+
+/**
+ * Xóa cả một gia đình (tạo nhầm).
+ *
+ * Rút nhà khỏi danh sách trong cache NGAY (setQueryData) chứ không chỉ
+ * invalidate: ActiveFamily tính nhà đang chọn từ danh sách này, nên phải đổi
+ * trong cùng một nhịp render — đợi refetch thì có một khoảnh khắc nhà đã xóa
+ * vẫn là "nhà đang chọn", cây của nó tải lại, server 403 và người dùng thấy
+ * màn lỗi (đã dính 26/08). Cũng vì thế KHÔNG removeQueries cây của nhà đó:
+ * gỡ cache khi observer còn mounted là ép nó refetch đúng cái 403 ấy; cache
+ * cũ nằm im rồi tự gc, vô hại.
+ */
+export function useDeleteFamily() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (familyId: string) => families.remove(familyId),
+    onSuccess: (_result, familyId) => {
+      queryClient.setQueryData<FamilySummary[]>(queryKeys.families(), (current) =>
+        current?.filter((family) => family.id !== familyId),
+      );
       void queryClient.invalidateQueries({ queryKey: queryKeys.families() });
     },
   });

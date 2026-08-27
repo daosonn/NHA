@@ -281,6 +281,19 @@
       "resent": "{{name}} has another week to accept",
       "inviteCancelled": "The invitation for {{name}} was cancelled",
       "removed": "Removed from the tree"
+    },
+    "delete": {
+      "action": "Delete the family {{name}}",
+      "title": "Delete {{name}}?",
+      "body_one": "Its tree, {{count}} member and any invitations are removed. Moments stay with the people who posted them.",
+      "body_other": "Its tree, {{count}} members and any invitations are removed. Moments stay with the people who posted them.",
+      "confirm": "Delete the family",
+      "cancel": "Keep it",
+      "toast": "Family deleted",
+      "errors": {
+        "forbidden": "Only the person who created the family can delete it.",
+        "hasMembers": "Other members still belong to this family. They need to leave first."
+      }
     }
   },
   "invite": {
@@ -371,6 +384,7 @@
     "album": "Album",
     "memo": "Memo",
     "editSelf": "Edit your profile",
+    "viewPhoto": "View {{name}}'s photo",
     "noBio": "Nothing written here yet. The pencil on your photo starts it.",
     "timelineEmpty": "No milestones yet",
     "timelineEmptyBody": "Births, moves, weddings — the moments that mark a life.",
@@ -439,20 +453,15 @@
     "memoFailed": "Those notes could not be loaded.",
     "timelineFailed": "That timeline could not be loaded.",
     "moments": {
-      "heading": "Moments together",
-      "counts": "{{photos}} photos · {{count}} moment",
-      "counts_other": "{{photos}} photos · {{count}} moments",
-      "empty": "No moments yet",
+      "heading": "Photo library",
+      "counts": "{{count}} photo",
+      "counts_other": "{{count}} photos",
+      "empty": "No photos yet",
       "emptyBody": "Photos appear here when somebody posts a moment and tags {{name}} in it.",
-      "failed": "Could not load the moments",
-      "video": "Video",
-      "openMoment": "Open this moment, {{count}} item",
-      "openMoment_other": "Open this moment, {{count}} items",
-      "headingOwn": "Your moments",
+      "failed": "Could not load the photos",
+      "headingOwn": "My library",
       "emptyBodyOwn": "Photos appear here when you post a moment, or when somebody tags you in theirs.",
-      "milestone": "Milestone",
-      "openMilestone": "Open the timeline, {{count}} photo from a milestone",
-      "openMilestone_other": "Open the timeline, {{count}} photos from a milestone"
+      "openPhoto": "View this photo full screen"
     },
     "facts": {
       "born": "Born {{date}}",
@@ -471,6 +480,9 @@
     "shareWithHint": "Every family is lit by default. Tap one to dim it — dimmed families will not see this moment.",
     "audienceOption": "{{name}}, {{count}} members",
     "postPrivately": "Post privately",
+    "posting": "Posting…",
+    "posted": "Shared with the family",
+    "postingVideoHint": "Uploading the video — this can take a moment.",
     "postTo_one": "Post to {{count}} family",
     "postTo_other": "Post to {{count}} families",
     "explainPrivate": "No family selected — this moment stays private to you.",
@@ -607,10 +619,8 @@
       "editMessage": "Edit",
       "dear": "Dear {{name}}",
       "emptyMessage": "Your message will appear here.",
-      "save": "Save the card",
       "rendering": "Making the card…",
       "share": "Share with the family",
-      "shared": "Shared",
       "shareCaption": "A card for {{name}}",
       "template": {
         "t01": "Lily of the valley",
@@ -631,15 +641,12 @@
       },
       "message": "Message",
       "fits": "fits",
-      "savedCard": "Saved",
       "error": "Could not make the card.",
-      "shareError": "Could not share the card.",
       "tooLong_one": "{{count}} character over the limit for this design.",
       "tooLong_other": "{{count}} characters over the limit for this design.",
       "saveToPhotos": "Save to photos",
       "savedToPhotos": "Saved to photos",
       "saveFailed": "Could not save the card — try again.",
-      "viewPost": "View the post",
       "emptyHint": "Write a message to save the card."
     },
     "hub": {
@@ -835,6 +842,35 @@
       "cancel": "Keep it",
       "done": "Comment deleted",
       "failed": "Could not delete that. Try again."
+    },
+    "openTagged": "Open {{name}}'s profile",
+    "actions": {
+      "menu": "More actions",
+      "closeScrim": "Close",
+      "edit": "Edit this moment",
+      "delete": "Delete this moment",
+      "cancel": "Cancel",
+      "meta_one": "{{count}} photo or clip attached",
+      "meta_other": "{{count}} photos or clips attached"
+    },
+    "deleteConfirm": {
+      "title": "Delete this moment?",
+      "body_one": "Its {{count}} photo, the comments and the reactions go with it. This cannot be undone.",
+      "body_other": "Its {{count}} photos, the comments and the reactions go with it. This cannot be undone.",
+      "confirm": "Delete it",
+      "cancel": "Keep it",
+      "toast": "Moment deleted"
+    },
+    "edit": {
+      "title": "Edit this moment",
+      "placeLabel": "Place",
+      "eventTitleLabel": "Event title",
+      "eventDateLabel": "Event date",
+      "dateError": "Use the YYYY-MM-DD format",
+      "placePlaceholder": "e.g. Da Nang",
+      "mediaFixed_one": "The {{count}} photo stays as posted — attachments are fixed when a moment is created.",
+      "mediaFixed_other": "The {{count}} photos stay as posted — attachments are fixed when a moment is created.",
+      "saved": "Moment updated"
     }
   },
   "omoide": {
@@ -851,7 +887,8 @@
     "save": "Save",
     "loadFailed": "That profile could not be loaded.",
     "nameLabel": "Name",
-    "nameFromAccount": "This is your account name. Change it in your account settings.",
+    "namePlaceholder": "Your name, as your family sees it",
+    "nameRequired": "A name is needed",
     "bioLabel": "Your story",
     "bioPlaceholder": "Where you grew up, what you have done, what you are like…",
     "interestsLabel": "Your interests",
@@ -965,8 +1002,7 @@
     "savedToPhotos": "Saved",
     "edit": "Edit",
     "shareToFamily": "Share with the family",
-    "sharedToFamily": "Shared",
-    "shareHint": "Everyone sees it on the family timeline.",
+    "shareHint": "Opens a post for you to review before it goes out.",
     "yourVideos": "Your videos",
     "aboutPick": "Choose a person",
     "aboutHint": "the video is about them",
@@ -990,6 +1026,7 @@
     "storyboardError": "Could not build the story — try again.",
     "filterEveryone": "Everyone",
     "filterMine": "Mine",
+    "filterRecipient": "Of {{name}}",
     "addTile": "Add",
     "preview": "Preview",
     "ownSong": "Use your own song",

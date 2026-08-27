@@ -16,6 +16,10 @@ export type VideoPhotoTile = {
   authorUserId: string;
   familyId: string;
   createdAt: string;
+  /** Ai được tag trong bài gốc — "nhờ chọn" ưu tiên ảnh chung hai người. */
+  taggedMemberIds: string[];
+  /** Tim + bình luận của bài gốc — tín hiệu "tấm này cả nhà thích". */
+  popularity: number;
 };
 
 /**
@@ -65,6 +69,8 @@ export function useVideoPhotos(): {
         authorUserId: user?.id ?? '',
         familyId: '',
         createdAt: u.createdAt,
+        taggedMemberIds: [],
+        popularity: 0,
       });
     }
 
@@ -81,6 +87,8 @@ export function useVideoPhotos(): {
             authorUserId: post.authorUserId,
             familyId,
             createdAt: post.createdAt,
+            taggedMemberIds: post.taggedMemberIds,
+            popularity: post.reactionCount + post.commentCount,
           });
         }
       }

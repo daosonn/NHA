@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { safeBack } from '../../src/lib/back';
+import { collapseTo, safeBack } from '../../src/lib/back';
 import { Check, Clapperboard, Download, Maximize2, Pencil, Play, Users } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +16,7 @@ import { Button } from '../../src/components/ui/button';
 import { Card } from '../../src/components/ui/card';
 import { Text } from '../../src/components/ui/text';
 import { RenderProgress, STAGE_QUEUED } from '../../src/components/video/render-progress';
-import { useMyVideos, useShareVideo, useVideoJob } from '../../src/features/video/use-video';
+import { useExportVideoMedia, useMyVideos, useVideoJob } from '../../src/features/video/use-video';
 import { apiAccessToken, video } from '../../src/lib/api';
 import { downloadAuthenticated, objectUrlFor } from '../../src/lib/download';
 import { colors, radius, spacing } from '../../src/theme';
@@ -34,7 +34,7 @@ export default function VideoJobScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const job = useVideoJob(id ?? null);
   const myVideos = useMyVideos();
-  const share = useShareVideo();
+  const exportMedia = useExportVideoMedia();
   const [savedToDevice, setSavedToDevice] = useState(false);
 
   const data = job.data;
@@ -130,7 +130,16 @@ export default function VideoJobScreen() {
   return (
     <View className="flex-1 bg-page">
       <AppHeader
-        left={<BackButton fallback="/ai" />}
+        left={
+          // Video đã xong (hoặc hỏng hẳn) thì wizard bên dưới chỉ còn là rác:
+          // back = về thẳng hub AI, không đi ngược qua story→setup. Còn đang
+          // render thì back giữ nghĩa "rời màn này một bước" như cũ.
+          data?.status === 'DONE' || data?.status === 'FAILED' ? (
+            <BackButton onPress={() => collapseTo(router, '/ai')} />
+          ) : (
+            <BackButton fallback="/ai" />
+          )
+        }
         center={
           <ScreenTitle
             title={data?.status === 'DONE' ? t('video.title') : t('video.makingTitle')}
@@ -173,7 +182,7 @@ export default function VideoJobScreen() {
             <Button
               label={t('common.back')}
               variant="secondary"
-              onPress={() => safeBack(router, '/ai')}
+              onPress={() => collapseTo(router, '/ai')}
             />
           </Card>
         )}
@@ -344,7 +353,9 @@ export default function VideoJobScreen() {
               </Text>
             )}
 
-            {/* "Share with the family — Everyone sees it on the timeline" */}
+            {/* Share KHÔNG tự đăng nữa (Sơn chốt 26/08): xuất video thành media
+                rồi mở màn soạn bài — tag sẵn người được tặng, caption gợi ý sẵn,
+                người dùng DUYỆT rồi mới bấm đăng. */}
             <SelectRow
               leading={
                 <View
@@ -357,22 +368,43 @@ export default function VideoJobScreen() {
                     backgroundColor: colors.coral.soft,
                   }}
                 >
-                  {share.isSuccess ? (
-                    <Check size={17} color={colors.coral.hover} strokeWidth={2.4} />
+                  {exportMedia.isPending ? (
+                    <ActivityIndicator size="small" color={colors.coral.hover} />
                   ) : (
                     <Users size={17} color={colors.coral.hover} strokeWidth={2.1} />
                   )}
                 </View>
               }
-              title={share.isSuccess ? t('video.sharedToFamily') : t('video.shareToFamily')}
+              title={t('video.shareToFamily')}
               subtitle={t('video.shareHint')}
-              trailing={share.isSuccess ? 'none' : share.isPending ? 'none' : 'chevron'}
+              trailing={exportMedia.isPending ? 'none' : 'chevron'}
               onPress={
-                share.isSuccess || share.isPending
+                exportMedia.isPending
                   ? undefined
-                  : () => share.mutate({ jobId: data.id })
+                  : () =>
+                      exportMedia.mutate(data.id, {
+                        onSuccess: (r) =>
+                          router.push({
+                            pathname: '/new',
+                            params: {
+                              attachMediaId: r.media_id,
+                              attachMime: 'video/mp4',
+                              tagMemberId: data.about_member_id ?? '',
+                              caption: data.title ?? '',
+                            },
+                          }),
+                      })
               }
             />
+            {exportMedia.isError && (
+              <Text
+                variant="badge"
+                color={colors.themes.destructive.text}
+                style={{ textAlign: 'center' }}
+              >
+                {t('errors.generic')}
+              </Text>
+            )}
 
             {/* "Your videos" — thumbnail ngang (11l) */}
             {(myVideos.data?.length ?? 0) > 1 && (
@@ -396,8 +428,10 @@ export default function VideoJobScreen() {
                     <Pressable
                       key={v.id}
                       onPress={() =>
+                        // replace, không push: lượn qua lại giữa các video cũ
+                        // không được chất thêm tầng nào lên stack
                         v.id !== data.id &&
-                        router.push({ pathname: '/video/[id]', params: { id: v.id } })
+                        router.replace({ pathname: '/video/[id]', params: { id: v.id } })
                       }
                       accessibilityRole="button"
                       style={{ width: 148, gap: 5 }}
@@ -446,6 +480,16 @@ export default function VideoJobScreen() {
                 </ScrollView>
               </View>
             )}
+
+            {/* Lối ra tử tế: xong việc là một bấm về hub AI */}
+            <Button
+              label={t('common.done')}
+              variant="ghost"
+              size="large"
+              fullWidth
+              align="center"
+              onPress={() => collapseTo(router, '/ai')}
+            />
           </>
         )}
       </ScrollView>

@@ -213,6 +213,8 @@ export type VideoJob = {
   error: string | null;
   created_at: string;
   has_file: boolean;
+  /** Video làm VỀ ai — composer dùng để tag sẵn khi share. */
+  about_member_id: string | null;
   plan:
     | (VideoPlan & {
         scenes: {

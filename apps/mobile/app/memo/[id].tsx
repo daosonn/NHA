@@ -57,11 +57,13 @@ export default function MemoScreen() {
     if (memo === undefined) return;
 
     setActionsOpen(false);
-    // Leave first, delete second: the list this note came from is behind us,
-    // and the screen would otherwise flash its "gone" state on the way out.
-    safeBack(router, '/');
+    // Xóa XONG mới rời màn: rời trước làm màn unmount và React Query BỎ QUA
+    // callback của mutate() — toast "đã xóa" câm lặng (cùng bug với xóa post).
     deleteMemo.mutate(memo, {
-      onSuccess: () => toast.success(t('member.memoDelete.toast')),
+      onSuccess: () => {
+        toast.success(t('member.memoDelete.toast'));
+        safeBack(router, '/');
+      },
       onError: () => toast.failure(t('errors.generic')),
     });
   };

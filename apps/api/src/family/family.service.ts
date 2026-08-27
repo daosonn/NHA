@@ -32,6 +32,8 @@ export interface FamilySummary {
   name: string;
   inviteCode: string;
   createdAt: Date;
+  /** Ai lập ra nhà này — chỉ người đó xóa được (xem `remove`). */
+  createdById: string;
   memberCount: number;
   /** Ảnh đại diện gia đình (id Media) — mặt cả nhà trong dải chuyển gia đình */
   coverMediaId: string | null;
@@ -95,7 +97,17 @@ type MemberRow = FamilyMemberSummary & {
  * member profile route. The value is a Media id; GET /media/:id serves it.
  */
 function toMemberSummary({ user, ...member }: MemberRow): FamilyMemberSummary {
-  return { ...member, avatarKey: member.avatarKey ?? user?.avatarKey ?? null };
+  // Người ĐÃ liên kết tài khoản: avatar của TÀI KHOẢN thắng — nút đổi ảnh
+  // (PATCH /me/profile) chỉ ghi User.avatarKey, nên để bản sao trên member
+  // row thắng là mặt cũ ở cây/feed không bao giờ đổi theo (đã dính 26/08:
+  // hero hồ sơ một mặt, mọi nơi khác một mặt). Placeholder thì member row
+  // là tất cả những gì có.
+  return {
+    ...member,
+    avatarKey: member.userId
+      ? (user?.avatarKey ?? member.avatarKey ?? null)
+      : (member.avatarKey ?? null),
+  };
 }
 
 // No 0/O/1/I — invite codes are meant to be read aloud or retyped.
@@ -144,6 +156,7 @@ export class FamilyService {
         name: true,
         inviteCode: true,
         createdAt: true,
+        createdById: true,
         coverMediaId: true,
         _count: { select: { members: true } },
       },
@@ -152,6 +165,49 @@ export class FamilyService {
       ...family,
       memberCount: _count.members,
     }));
+  }
+
+  /**
+   * Xóa cả gia đình — cho trường hợp tạo nhầm (26/08 Sơn có 15 nhà rác).
+   *
+   * Hai cổng gác: chỉ NGƯỜI TẠO, và chỉ khi không còn tài khoản nào khác đang
+   * là thành viên (placeholder thì không sao) — một nhà mà người khác đã vào
+   * là không gian chung, không phải của riêng ai để xóa; họ phải rời trước.
+   *
+   * Bài đăng KHÔNG mất: bài thuộc tác giả, chỉ mối "đã chia sẻ tới nhà này"
+   * (PostFamily) rơi theo cascade — bài chỉ chia sẻ mỗi nhà này thành riêng
+   * tư của tác giả. Media của mốc đời placeholder trong nhà thì dọn file như
+   * `removeMember`, vì storageKey chỉ sống trên Media row sắp mất.
+   */
+  async remove(userId: string, familyId: string): Promise<{ success: boolean }> {
+    await this.requireMembership(familyId, userId);
+    const family = await this.prisma.family.findUnique({
+      where: { id: familyId },
+      select: { createdById: true },
+    });
+    if (!family) {
+      throw new NotFoundException('Family not found');
+    }
+    if (family.createdById !== userId) {
+      throw new ForbiddenException(
+        'Only the person who created the family can delete it',
+      );
+    }
+    const others = await this.prisma.familyMember.count({
+      where: { familyId, NOT: [{ userId: null }, { userId }] },
+    });
+    if (others > 0) {
+      throw new ConflictException(
+        'Other members still belong to this family — they need to leave first',
+      );
+    }
+    const media = await this.prisma.media.findMany({
+      where: { lifeEvent: { profile: { member: { familyId } } } },
+      select: { storageKey: true },
+    });
+    await this.prisma.family.delete({ where: { id: familyId } });
+    await this.storage.removeAllBestEffort(media.map((m) => m.storageKey));
+    return { success: true };
   }
 
   async getFamily(userId: string, familyId: string): Promise<FamilyDetail> {

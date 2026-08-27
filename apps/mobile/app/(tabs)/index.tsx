@@ -18,7 +18,7 @@ import { SectionHeader } from '../../src/components/ui/section-header';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { useFamilies } from '../../src/features/family/use-families';
 import { takePendingInvite } from '../../src/features/family/pending-invite';
-import { useMemberLookup } from '../../src/features/family/use-member-for-user';
+import { useMemberByIdLookup, useMemberLookup } from '../../src/features/family/use-member-for-user';
 import { useMyFeed } from '../../src/features/feed/use-my-feed';
 import { useSetReaction } from '../../src/features/feed/use-post';
 import { useAlbums } from '../../src/features/album/use-albums';
@@ -84,9 +84,10 @@ export default function HomeScreen() {
 
   const { data: families, isPending, isError, refetch } = useFamilies();
   // Feed là của CHUNG mọi nhà mình thuộc về (Sơn chốt 26/08) — nhà đang chọn
-  // chỉ còn điều khiển cây, dịp sắp tới, tra tên tác giả; không lọc feed nữa.
+  // chỉ còn điều khiển cây, dịp sắp tới, tra tên tác giả/tag; không lọc feed nữa.
   const feed = useMyFeed();
   const memberFor = useMemberLookup();
+  const memberById = useMemberByIdLookup();
   const { data: occasions } = useSpecialDates(familyId);
 
   // Soonest first from the server, so the head of the list is the next one.
@@ -281,6 +282,17 @@ export default function HomeScreen() {
                 router.push({ pathname: '/media/[id]', params: { id: m.id, mime: m.mimeType } })
               }
               authorAvatarId={memberFor(item.authorUserId)?.avatarKey}
+              // Tag → tên qua cây của nhà đang mở; tag của nhà khác tra không ra
+              // thì lược (màn chi tiết bài tra đủ mọi nhà và hiện trọn).
+              taggedMembers={item.taggedMemberIds
+                .map((tagId) => {
+                  const member = memberById(tagId);
+                  return member === null ? null : { id: member.id, label: member.displayName };
+                })
+                .filter((m): m is { id: string; label: string } => m !== null)}
+              onTagPress={(memberId) =>
+                router.push({ pathname: '/member/[id]', params: { id: memberId } })
+              }
             />
           </Animated.View>
         )}

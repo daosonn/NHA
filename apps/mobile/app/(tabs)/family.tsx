@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
-import { LockKeyhole, Send, TriangleAlert, UsersRound } from 'lucide-react-native';
+import { LockKeyhole, Send, Trash2, TriangleAlert, UsersRound } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { DeleteFamilySheet } from '../../src/components/family/delete-family-sheet';
 import { FamilyTree } from '../../src/components/family/family-tree';
 import { InviteSheet } from '../../src/components/family/invite-sheet';
 import { MemberSheet } from '../../src/components/family/member-sheet';
@@ -26,7 +27,11 @@ import {
   useFamilyInvitations,
 } from '../../src/features/family/use-invitations';
 import { useFamilies } from '../../src/features/family/use-families';
-import { useRemoveMember, useSaveMember } from '../../src/features/family/use-member-mutations';
+import {
+  useDeleteFamily,
+  useRemoveMember,
+  useSaveMember,
+} from '../../src/features/family/use-member-mutations';
 import { useFamilyTree } from '../../src/features/family/use-family-tree';
 import {
   ApiError,
@@ -77,10 +82,30 @@ export default function FamilyTreeScreen() {
   const [created, setCreated] = useState<InvitationSummary | null>(null);
   /** Which node is being managed, by id — the payload is the source of truth. */
   const [managingId, setManagingId] = useState<string | null>(null);
+  /** Nhà đang được hỏi "xóa nhé?" — `null` là sheet đóng. */
+  const [deletingFamily, setDeletingFamily] = useState<FamilySummary | null>(null);
+  const deleteFamily = useDeleteFamily();
 
   // The invite sheet names the family whose code it is handing out, so the
   // sender can see which door they are opening.
   const activeFamily = families?.find((family) => family.id === familyId);
+  // Nút xóa chỉ vẽ cho người đã lập ra nhà — server cũng chặn lần nữa (403),
+  // và còn từ chối nếu người khác vẫn ở trong (409).
+  const canDeleteActive = activeFamily !== undefined && activeFamily.createdById === user?.id;
+
+  const confirmDeleteFamily = (target: FamilySummary) => {
+    deleteFamily.mutate(target.id, {
+      onSuccess: () => {
+        setDeletingFamily(null);
+        // Nhảy sang nhà kế bên NGAY và ghi nhớ lựa chọn — không để nhà vừa
+        // xóa đứng làm "nhà đang chọn" rồi tải cây của nó ra màn lỗi.
+        const next = (families ?? []).find((family) => family.id !== target.id);
+        if (next !== undefined) setFamilyId(next.id);
+        else router.replace('/');
+        toast.success(t('family.delete.toast'));
+      },
+    });
+  };
 
   /**
    * The spots being held for people who have been invited.
@@ -205,49 +230,72 @@ export default function FamilyTreeScreen() {
       <AppHeader
         center={<ScreenTitle title={t('family.title')} />}
         right={
-          /* Lời mời đã gửi sống sau nút này (badge = số đang chờ) — banner
-             nổi trên canvas bị bỏ 2026-08-26 vì nó che đúng cái cây đang xem. */
-          <Pressable
-            onPress={() => router.push('/family/invitations')}
-            accessibilityRole="button"
-            accessibilityLabel={
-              waiting.length > 0
-                ? t('family.invitations.openWaiting', { count: waiting.length })
-                : t('family.invitations.title')
-            }
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: radius.full,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Send size={21} color={colors.text.primary} strokeWidth={2} />
-
-            {waiting.length > 0 && (
-              <View
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {/* Xóa nhà tạo nhầm — chỉ người lập ra nhà thấy nút này. */}
+            {canDeleteActive && activeFamily !== undefined && (
+              <Pressable
+                onPress={() => {
+                  deleteFamily.reset();
+                  setDeletingFamily(activeFamily);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t('family.delete.action', { name: activeFamily.name })}
                 style={{
-                  position: 'absolute',
-                  top: 6,
-                  right: 4,
-                  minWidth: 16,
-                  height: 16,
-                  paddingHorizontal: 4,
+                  width: 40,
+                  height: 40,
                   borderRadius: radius.full,
-                  backgroundColor: colors.coral.primary,
-                  borderWidth: 2,
-                  borderColor: colors.background.page,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Text variant="badge" weight="bold" color={colors.text.white}>
-                  {waiting.length > 99 ? '99+' : String(waiting.length)}
-                </Text>
-              </View>
+                <Trash2 size={19} color={colors.text.secondary} strokeWidth={2.1} />
+              </Pressable>
             )}
-          </Pressable>
+
+            {/* Lời mời đã gửi sống sau nút này (badge = số đang chờ) — banner
+                nổi trên canvas bị bỏ 2026-08-26 vì nó che đúng cái cây đang xem. */}
+            <Pressable
+              onPress={() => router.push('/family/invitations')}
+              accessibilityRole="button"
+              accessibilityLabel={
+                waiting.length > 0
+                  ? t('family.invitations.openWaiting', { count: waiting.length })
+                  : t('family.invitations.title')
+              }
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: radius.full,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Send size={21} color={colors.text.primary} strokeWidth={2} />
+
+              {waiting.length > 0 && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 6,
+                    right: 4,
+                    minWidth: 16,
+                    height: 16,
+                    paddingHorizontal: 4,
+                    borderRadius: radius.full,
+                    backgroundColor: colors.coral.primary,
+                    borderWidth: 2,
+                    borderColor: colors.background.page,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text variant="badge" weight="bold" color={colors.text.white}>
+                    {waiting.length > 99 ? '99+' : String(waiting.length)}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
         }
       />
 
@@ -384,8 +432,26 @@ export default function FamilyTreeScreen() {
         submitting={createInvitation.isPending}
         errorKey={inviteErrorKey(createInvitation.error, viewerMemberId)}
       />
+
+      <DeleteFamilySheet
+        family={deletingFamily}
+        onClose={() => setDeletingFamily(null)}
+        onConfirm={confirmDeleteFamily}
+        deleting={deleteFamily.isPending}
+        errorKey={deleteFamilyErrorKey(deleteFamily.error)}
+      />
     </View>
   );
+}
+
+/** Vì sao không xóa được nhà — hai lý do server nói rõ, còn lại chung chung. */
+function deleteFamilyErrorKey(error: unknown): string | null {
+  if (error === null || error === undefined) return null;
+  if (!(error instanceof ApiError)) return 'errors.generic';
+  if (error.isOffline) return 'errors.offline';
+  if (error.status === 403) return 'family.delete.errors.forbidden';
+  if (error.status === 409) return 'family.delete.errors.hasMembers';
+  return 'errors.generic';
 }
 
 /**

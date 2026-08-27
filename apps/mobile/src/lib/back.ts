@@ -25,3 +25,14 @@ export function useSafeBack(fallback: Href = '/'): () => void {
   const router = useRouter();
   return () => safeBack(router, fallback);
 }
+
+/**
+ * Thoát HẲN một wizard về màn gốc của nó — khác safeBack ở chỗ không lùi từng
+ * bước: xong thiệp/video rồi thì "quay lại" nghĩa là về hub, không phải đi
+ * ngược qua từng màn đã chọn. dismissTo pop cho tới khi gặp href trong
+ * history; vào thẳng bằng deep link / reload (không có gì để pop) thì replace.
+ */
+export function collapseTo(router: Router, href: Href): void {
+  if (router.canDismiss()) router.dismissTo(href);
+  else router.replace(href);
+}
