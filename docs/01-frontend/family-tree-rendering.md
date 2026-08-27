@@ -114,9 +114,18 @@ date keep arrival order, after everyone dated.
 The arrangement rules live in their own module, **`tree-blocks.ts`**, one
 exported function per rule so a new rule is a new function in the
 pipeline, not a bigger loop: `buildBlocks` (welding), `assignOwners`
-(hanging: parentage, then sibling adoption), `orderChildren` (age).
-`tree-layout.ts` keeps only pixels: extents, placement, normalising, the
-unplaced strip, and the SVG path helpers.
+(hanging: parentage, then sibling adoption), `orderChildren` (age),
+`interleaveAdopted` (balance). `tree-layout.ts` keeps only pixels:
+extents, placement, normalising, the unplaced strip, and the SVG path
+helpers.
+
+**Balance** (2026-08-27, "vẽ kiểu xen kẽ và căn giữa"): sibling-adopted
+blocks have no thread, and piled to one side they dragged the parents'
+centring away from the children the threads DO reach — grandparents sat
+askew of the parents below. Adopted blocks now alternate left and right
+around the thread-connected core, and the parents centre over the CORE
+(clamped inside the subtree's reserved box), so the grandparents stand
+straight above the parents and the descent drops vertically.
 
 **A partner is auto-joined to their spouse's children** (2026-08-27, "no
 'their children' vs 'our children'"): a child with ONE known parent whose

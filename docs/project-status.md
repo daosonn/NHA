@@ -1339,8 +1339,13 @@ dev` **did not regenerate the client**, and the stale client survived
   child; **a partner is auto-joined to their spouse's children** in the
   drawing — no "their" vs "our" children, DB edges untouched; and the
   arrangement rules moved to **`tree-blocks.ts`** (welding / hanging /
-  ordering, one function per rule) so the next rule is a slot-in, with
-  `tree-layout.ts` keeping only pixels.
+  ordering / balance, one function per rule) so the next rule is a slot-in,
+  with `tree-layout.ts` keeping only pixels. The balance rule
+  (`interleaveAdopted`, same day): sibling-adopted blocks alternate left
+  and right around the thread-connected core and parents centre over the
+  CORE — grandparents were sitting askew of the parents when adopted
+  siblings piled up on one side. Browser-verified on the seed family:
+  adopted left, couple centre, pending right, descent vertical.
 
 - **One create form, one join form (2026-08-27, `feature/invite-method-choice`)**:
   `create-family.tsx` (the create/join tab combo) put a second create-family

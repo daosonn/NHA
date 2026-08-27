@@ -18,6 +18,8 @@ export type Block = {
   row: number;
   children: Block[];
   owner: Block | null;
+  /** How this block came to hang where it does — see `assignOwners`. */
+  ownedVia: 'parent' | 'sibling' | null;
   /**
    * The member whose relationships anchored this block to its owner — the
    * born-into-the-family one, not the partner who married in. Ordering
@@ -66,6 +68,7 @@ export function buildBlocks(data: FamilyTreeData): {
         row,
         children: [],
         owner: null,
+        ownedVia: null,
         anchorId: member.id,
         firstX: 0,
         lastX: 0,
@@ -114,6 +117,7 @@ export function assignOwners(
     if (parent === undefined || parent.row >= block.row || parent === block) continue;
     parent.children.push(block);
     block.owner = parent;
+    block.ownedVia = 'parent';
     block.anchorId = anchorId;
   }
 
@@ -142,6 +146,7 @@ export function assignOwners(
         const at = anchor.owner.children.indexOf(anchor);
         anchor.owner.children.splice(at + 1, 0, block);
         block.owner = anchor.owner;
+        block.ownedVia = 'sibling';
         block.anchorId = id;
         adopted = true;
         break;
@@ -177,5 +182,30 @@ export function orderChildren(data: FamilyTreeData, blocks: Block[]): void {
       );
       return byAge;
     });
+  }
+}
+
+/**
+ * The BALANCE rule (Đạt, 2026-08-27: "vẽ kiểu xen kẽ và căn giữa").
+ *
+ * Sibling-adopted blocks have no thread of their own, and piled to one side
+ * they drag the parents' centring away from the children the threads DO
+ * reach — grandparents ended up askew of the parents below them. They now
+ * alternate LEFT and RIGHT around the thread-connected core (oldest goes
+ * left, per the ordering rule), so the core — and the parents centred over
+ * it in `tree-layout.ts` — stays in the middle of the spread.
+ */
+export function interleaveAdopted(blocks: Block[]): void {
+  for (const block of blocks) {
+    const core = block.children.filter((child) => child.ownedVia === 'parent');
+    const adopted = block.children.filter((child) => child.ownedVia !== 'parent');
+    if (core.length === 0 || adopted.length < 1) continue;
+
+    const left: Block[] = [];
+    const right: Block[] = [];
+    adopted.forEach((child, index) => {
+      (index % 2 === 0 ? left : right).push(child);
+    });
+    block.children = [...left, ...core, ...right];
   }
 }

@@ -11,7 +11,13 @@
  * weight once trees are deep and irregular enough to be hand-placed badly.
  */
 
-import { assignOwners, buildBlocks, orderChildren, type Block } from './tree-blocks';
+import {
+  assignOwners,
+  buildBlocks,
+  interleaveAdopted,
+  orderChildren,
+  type Block,
+} from './tree-blocks';
 
 export type NodeState = 'active' | 'pending' | 'empty';
 
@@ -115,10 +121,11 @@ export function layoutTree(data: FamilyTreeData, viewportWidth: number): TreeLay
   const nodes = new Map<string, PositionedNode>();
   const rows: PositionedRow[] = [];
 
-  // ---- arrangement: welding, hanging, ordering — see tree-blocks.ts ----
+  // ---- arrangement: weld, hang, order, balance — see tree-blocks.ts ----
   const { blocks, blockOf } = buildBlocks(data);
   assignOwners(data, blocks, blockOf);
   orderChildren(data, blocks);
+  interleaveAdopted(blocks);
 
   // ---- widths, bottom-up: a subtree reserves its bounding box ----------
   const extents = new Map<Block, number>();
@@ -138,17 +145,24 @@ export function layoutTree(data: FamilyTreeData, viewportWidth: number): TreeLay
   // ---- placement, top-down ----------------------------------------------
   const place = (block: Block, left: number): void => {
     if (block.children.length > 0) {
-      // Children first, side by side; parents then centre over their spread.
+      // Children first, side by side; parents then centre over the
+      // thread-connected CORE (the interleave rule keeps it in the middle),
+      // so the descent drops straight down. Adopted-only children fall back
+      // to the whole spread — there is no thread to line up with.
       let cursor = left;
       for (const child of block.children) {
         place(child, cursor);
         cursor += extentOf(child) + BLOCK_PITCH;
       }
-      const first = block.children[0];
-      const last = block.children[block.children.length - 1];
+      const core = block.children.filter((child) => child.ownedVia === 'parent');
+      const span = core.length > 0 ? core : block.children;
+      const first = span[0];
+      const last = span[span.length - 1];
       const mid = (first.firstX + last.lastX) / 2;
       const own = (block.ids.length - 1) * COUPLE_PITCH;
-      block.firstX = mid - own / 2;
+      // Clamped inside the subtree's reserved box: an off-centre core must
+      // not push the parents into the neighbouring branch's space.
+      block.firstX = Math.min(left + extentOf(block) - own, Math.max(left, mid - own / 2));
     } else {
       block.firstX = left;
     }
