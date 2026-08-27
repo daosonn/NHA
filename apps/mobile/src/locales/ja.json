@@ -302,8 +302,13 @@
       "sentSubtitle": "1週間だけ空けておきます。下のコードを送ってください。",
       "errors": {
         "noAnchor": "あなたがまだこの家系図にいないため、続柄をたどる相手がいません。",
-        "forbidden": "この家族のメンバーだけが招待できます。"
-      }
+        "forbidden": "この家族のメンバーだけが招待できます。",
+        "emailUnknown": "そのメールアドレスのアカウントはまだありません。先に登録してもらうか、空欄のまま招待コードを渡してください。",
+        "emailAlreadyMember": "その方はすでにこの家族にいます。"
+      },
+      "emailLabel": "メールアドレス（任意）",
+      "emailPlaceholder": "name@example.com",
+      "emailHelp": "アプリに招待が届きます。空欄のままなら、代わりに渡せる招待コードが表示されます。まだ登録していない人を招くにはこちらを。"
     },
     "preview": {
       "yourSpot": "あなたの場所"
@@ -326,6 +331,18 @@
       "errors": {
         "alreadyMember": "すでにこの家族に参加しています。"
       }
+    },
+    "mine": {
+      "title": "あなたへの招待",
+      "from": "{{name}}さんから招待が届いています",
+      "open": "{{name}}さんからの招待を開く",
+      "expiresIn_other": "あと{{count}}日で期限切れ",
+      "emptyTitle": "届いている招待はありません",
+      "emptyBody": "家族から招待されると、ここに表示されます。",
+      "bannerTitle_other": "招待が届いています",
+      "bannerOne": "{{name}}さんが待っています",
+      "bannerMany": "{{count}}つの家族が待っています",
+      "bannerAction_other": "招待を見る"
     }
   },
   "member": {

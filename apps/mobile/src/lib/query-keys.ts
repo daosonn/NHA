@@ -24,6 +24,7 @@ export const queryKeys = {
    * `families` — nothing would ever invalidate it.
    */
   invitation: (code: string) => ['invitations', code] as const,
+  myInvitations: () => ['invitations', 'mine'] as const,
   post: (postId: string) => ['posts', postId] as const,
   postComments: (postId: string) => ['posts', postId, 'comments'] as const,
   /**
