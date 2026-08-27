@@ -39,6 +39,17 @@ const DESTINATIONS: readonly {
 
 const ITEM = 48;
 const ICON = 22;
+/**
+ * The accented glyph's disc.
+ *
+ * Drawn BEHIND the icon box and larger than it, rather than as a tint on the
+ * box itself: at 22 the disc was the same size as the glyph it held, so it
+ * read as a coral smudge rather than a mark — and it sat visibly smaller
+ * than the selected row's own pill, which made it look like a mistake. At 36
+ * against a 22 glyph the proportion matches the pill, and because it is
+ * absolutely positioned it costs the row no width, so nothing shifts.
+ */
+const ACCENT_DISC = 36;
 /** Side padding of the panel. Everything inside is measured from it. */
 const PAD = 14;
 /**
@@ -137,18 +148,27 @@ function Row({
           // The rail is the same five destinations as the bar, so the tree is
           // marked the same way here — one list, one emphasis, or the two
           // navigations start disagreeing about what matters.
-          borderRadius: accent ? radius.full : undefined,
-          backgroundColor: accent
-            ? selected === true
-              ? colors.coral.hover
-              : colors.coral.primary
-            : undefined,
         }}
       >
+        {accent && (
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: (ICON - ACCENT_DISC) / 2,
+              left: (ICON - ACCENT_DISC) / 2,
+              width: ACCENT_DISC,
+              height: ACCENT_DISC,
+              borderRadius: radius.full,
+              backgroundColor: selected === true ? colors.coral.hover : colors.coral.primary,
+            }}
+          />
+        )}
+
         <Icon
-          size={accent ? ICON - 6 : ICON}
+          size={ICON}
           color={accent ? colors.text.white : tint}
-          strokeWidth={accent ? 2.3 : strokeWidth}
+          strokeWidth={accent ? 2.2 : strokeWidth}
         />
       </View>
 

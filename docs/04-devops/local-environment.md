@@ -264,6 +264,64 @@ and before `prisma migrate reset`. Production backups (managed PITR) are a
 deployment decision for later — this covers the local Docker database and
 the demo box.
 
+## Media storage: local disk or Cloudflare R2
+
+`Media` rows are shared through Neon; the files behind them were not. Each
+machine kept its own `apps/api/uploads/`, so a photo uploaded on one laptop
+was a broken tile — or a wall of 500s in the console — on every other. R2 is
+the fix: one bucket everybody reads and writes.
+
+`STORAGE_DRIVER` picks the backend. Unset or `local` keeps the old
+disk-backed behaviour, which still works offline and is what the e2e suite
+runs against.
+
+```env
+STORAGE_DRIVER="r2"
+R2_ACCOUNT_ID="…"          # the hex before .r2.cloudflarestorage.com
+R2_ACCESS_KEY_ID="…"       # R2 → Manage R2 API Tokens
+R2_SECRET_ACCESS_KEY="…"   # shown once, at creation
+R2_BUCKET="nha-media-dev"
+```
+
+The API refuses to start on `r2` with any of those missing, rather than
+falling back quietly to local — a silent fallback is how half a team ends up
+writing to disk while believing it is writing to the bucket.
+
+### Switching an existing machine over
+
+**Uploading the files first is not optional.** Every `Media` row already in
+Neon names a key that has to exist in the bucket; flip the driver without
+moving them and every existing photo becomes a 404.
+
+```powershell
+git pull
+pnpm install                                  # @aws-sdk/client-s3 is new
+pnpm --filter api r2:migrate -- --dry-run     # what would go up
+pnpm --filter api r2:migrate                  # send it
+# then set STORAGE_DRIVER="r2" in apps/api/.env and restart the API
+```
+
+The migration walks the `Media` table, uploads every row whose file is here
+and not yet in the bucket, and skips the rest. It never deletes anything, so
+re-running is safe.
+
+It finishes by listing rows it could not help with — those files are on
+somebody else's disk. **Everyone runs it once**, and the gap closes as each
+person contributes what they hold. Until then, media nobody has migrated is
+still missing, which the app now reports honestly as a 404 rather than a 500.
+
+### What changes once it is on
+
+- Uploads go straight to the bucket; `apps/api/uploads/` stops growing except
+  for temp files and video scratch.
+- ffmpeg and sharp still need real files, so `newBorrow()` downloads to
+  `uploads/tmp` and deletes on `dispose()`. That is why the borrow exists.
+- Video posters stay local — they are derived and regenerate on demand.
+- The bucket is **private**. Nothing is served straight from R2 yet: bytes
+  still pass through NestJS, which is what enforces `canView`. Presigned URLs
+  are the next step and would take the API out of the delivery path
+  (`deployment.md`).
+
 ## Seeding demo data
 
 ```powershell

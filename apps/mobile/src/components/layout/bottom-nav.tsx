@@ -144,10 +144,12 @@ function Slot({
   // On the accented slot the disc carries the colour, so the glyph inside it
   // is white at both states and only the fill deepens on selection.
   const iconTint = accent ? colors.text.white : tint;
-  // +12, not +16: the slot is 52 tall and the disc shares it with a 3px
-  // gap and the label. At 38 the stack came to 53 and the bar clips —
-  // BlurView carries overflow: hidden to keep its own radius.
-  const discSize = m.icon + 12;
+  // 36 against a 22 glyph, the same proportion the rail's disc uses — a disc
+  // barely wider than the glyph reads as a smudge. It cannot grow past this:
+  // the slot is 52 tall and the disc shares it with a 3px gap and the label,
+  // so 38 would total 53 and the bar clips (BlurView carries overflow:
+  // hidden to keep its own radius).
+  const discSize = m.icon + 14;
 
   const press = usePressScale();
   // The icon pops on arrival only — the slot being left just fades.
