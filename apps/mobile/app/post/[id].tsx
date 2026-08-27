@@ -6,6 +6,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'rea
 import Animated from 'react-native-reanimated';
 
 import { CommentActionsSheet } from '../../src/components/feed/comment-actions-sheet';
+import { PostActionsSheet } from '../../src/components/feed/post-actions-sheet';
 import { PostCard } from '../../src/components/feed/post-card';
 import { LikeButton } from '../../src/components/feed/like-button';
 import { AppHeader } from '../../src/components/layout/app-header';
@@ -17,18 +18,20 @@ import { Divider } from '../../src/components/ui/divider';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { Text } from '../../src/components/ui/text';
 import { TextField } from '../../src/components/ui/text-field';
-import { useMemberForUser } from '../../src/features/family/use-member-for-user';
 import { useToast } from '../../src/components/ui/toast';
 import { useSession } from '../../src/features/auth/session';
+import { useMemberForUser } from '../../src/features/family/use-member-for-user';
+import { useTaggableMembers } from '../../src/features/family/use-taggable-members';
 import {
   useAddComment,
   useComments,
   useDeleteComment,
   useUpdateComment,
 } from '../../src/features/feed/use-comments';
-import { usePost, useSetReaction } from '../../src/features/feed/use-post';
+import { useDeletePost, usePost, useSetReaction } from '../../src/features/feed/use-post';
+import { safeBack } from '../../src/lib/back';
 import { formatFullDate } from '../../src/lib/date';
-import type { CommentSummary } from '../../src/lib/api';
+import type { CommentSummary, PostDetail } from '../../src/lib/api';
 import { colors, spacing } from '../../src/theme';
 import { enter, exit } from '../../src/theme/motion';
 
@@ -140,6 +143,7 @@ export default function PostDetailScreen() {
   const updateComment = useUpdateComment(postId ?? '');
   const deleteComment = useDeleteComment(postId ?? '');
   const setReaction = useSetReaction(postId ?? '');
+  const deletePost = useDeletePost();
 
   /** Which comment the ⋯ sheet is open for. */
   const [acting, setActing] = useState<CommentSummary | null>(null);
@@ -154,6 +158,33 @@ export default function PostDetailScreen() {
   const author = useMemberForUser(post?.authorUserId ?? null);
   const authorMemberId = author?.id ?? null;
   const [draft, setDraft] = useState('');
+  /** Bài đang mở sheet Sửa/Xóa (khác `acting` của bình luận). */
+  const [postActing, setPostActing] = useState<PostDetail | null>(null);
+
+  // Tag → tên: tra qua MỌI nhà bài này chạm tới, không chỉ nhà đang mở —
+  // một bài chia sẻ hai nhà có thể tag người của nhà kia. Tag không tra ra
+  // được (người đã rời nhà) thì lược đi chứ không vẽ chip trống.
+  const reachable = useTaggableMembers(post?.familyIds ?? [], user?.id ?? null);
+  const taggedMembers = (post?.taggedMemberIds ?? [])
+    .map((tagId) => {
+      const member = reachable.find((m) => m.id === tagId);
+      return member === undefined ? null : { id: member.id, label: member.displayName };
+    })
+    .filter((m): m is { id: string; label: string } => m !== null);
+
+  const confirmDelete = (target: PostDetail) => {
+    setPostActing(null);
+    // Xóa XONG mới rời màn. Chiều ngược lại (rời trước, xóa sau) làm màn này
+    // unmount giữa chừng — React Query BỎ QUA callback của mutate() khi
+    // component đã unmount, nên toast "đã xóa" không bao giờ hiện (đã dính).
+    deletePost.mutate(target, {
+      onSuccess: () => {
+        toast.success(t('post.deleteConfirm.toast'));
+        safeBack(router, '/');
+      },
+      onError: () => toast.failure(t('errors.generic')),
+    });
+  };
 
   const openAuthor =
     authorMemberId === null
@@ -209,7 +240,23 @@ export default function PostDetailScreen() {
 
   return (
     <View className="flex-1 bg-page">
-      <AppHeader left={<BackButton />} center={<ScreenTitle title={t('post.title')} />} />
+      <AppHeader
+        left={<BackButton />}
+        center={<ScreenTitle title={t('post.title')} />}
+        right={
+          post !== undefined && (post.canEdit || post.canDelete) ? (
+            <Pressable
+              onPress={() => setPostActing(post)}
+              accessibilityRole="button"
+              accessibilityLabel={t('post.actions.menu')}
+              hitSlop={10}
+            >
+              <Ellipsis size={20} color={colors.text.secondary} strokeWidth={2.2} />
+            </Pressable>
+          ) : undefined
+        }
+        paddingRight={spacing.xl}
+      />
 
       {isError ? (
         <EmptyState
@@ -246,6 +293,10 @@ export default function PostDetailScreen() {
                   router.push({ pathname: '/media/[id]', params: { id: m.id, mime: m.mimeType } })
                 }
                 authorAvatarId={author?.avatarKey}
+                taggedMembers={taggedMembers}
+                onTagPress={(memberId) =>
+                  router.push({ pathname: '/member/[id]', params: { id: memberId } })
+                }
                 showStats={false}
               />
             </Animated.View>
@@ -359,6 +410,16 @@ export default function PostDetailScreen() {
           />
         </KeyboardAvoidingView>
       )}
+
+      <PostActionsSheet
+        post={postActing}
+        onClose={() => setPostActing(null)}
+        onEdit={(target) => {
+          setPostActing(null);
+          router.push({ pathname: '/post/edit', params: { id: target.id } });
+        }}
+        onDelete={confirmDelete}
+      />
     </View>
   );
 }

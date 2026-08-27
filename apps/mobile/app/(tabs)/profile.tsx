@@ -107,6 +107,9 @@ export default function ProfileScreen() {
     fallbackName: user?.name,
   });
 
+  // Bắt ra hằng để narrowing sống sót vào closure bên dưới.
+  const avatarMediaId = profile.avatarMediaId;
+
   return (
     <View className="flex-1 bg-page">
       <AppHeader
@@ -143,6 +146,12 @@ export default function ProfileScreen() {
           onEditTimeline={() => router.push('/profile/edit-timeline')}
           onChangeAvatar={() => void pickAvatar()}
           uploadingAvatar={updateAvatar.isPending}
+          // Không có ảnh thật thì vòng tròn chữ cái đứng yên — không có gì để xem
+          onViewAvatar={
+            avatarMediaId === null
+              ? undefined
+              : () => router.push({ pathname: '/media/[id]', params: { id: avatarMediaId } })
+          }
           onAddMemo={() =>
             familyId === null || memberId === null
               ? undefined
@@ -151,6 +160,9 @@ export default function ProfileScreen() {
           onOpenMemo={(memo) => router.push({ pathname: '/memo/[id]', params: { id: memo.id } })}
           onEditMemo={(memo) => router.push({ pathname: '/memo/edit', params: { id: memo.id } })}
           onOpenMoment={(postId) => router.push({ pathname: '/post/[id]', params: { id: postId } })}
+          onOpenPhoto={(item) =>
+            router.push({ pathname: '/media/[id]', params: { id: item.id, mime: item.mimeType } })
+          }
         />
       </ScrollView>
     </View>

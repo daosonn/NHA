@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
-import { Heart, MessageCircle, Play } from 'lucide-react-native';
+import { Heart, MessageCircle, Play, UserRound } from 'lucide-react-native';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -20,11 +21,20 @@ import { Text } from '../ui/text';
  */
 const HEART: ReactionType = 'LOVE';
 
-/** One photo fills the card; two share the width. Mockup 2a. */
-const SINGLE_MEDIA_HEIGHT = 200;
+/** Two photos share the width at a fixed height. Mockup 2a. */
 const PAIR_MEDIA_HEIGHT = 104;
 /** Beyond this the card would push the next post off the screen entirely. */
 const MAX_TILES = 2;
+
+/**
+ * Ảnh ĐƠN vẽ theo đúng tỷ lệ của nó (khai qua onLoad), thay vì khung cứng
+ * 200px cover — khung cứng từng cắt thiệp dọc 1080×1440 còn mỗi dải giữa.
+ * Kẹp trong [0.72, 1.9]: thiệp 3:4 (0.75) lọt nguyên vẹn, ảnh 16:9 cũng vậy;
+ * chỉ ảnh dọc quá dài (9:16) mới bị xén nhẹ để một bài không nuốt cả màn.
+ */
+const DEFAULT_SINGLE_RATIO = 3 / 2;
+const MIN_SINGLE_RATIO = 0.72;
+const MAX_SINGLE_RATIO = 1.9;
 
 export type PostCardProps = {
   post: PostDetail;
@@ -46,6 +56,14 @@ export type PostCardProps = {
    * holding a family tree to look one up.
    */
   authorAvatarId?: string | null;
+  /**
+   * Ai được tag trong bài, đã được MÀN HÌNH đổi từ memberId ra tên (cùng lý
+   * do với `authorAvatarId`: thẻ không ôm cây gia đình). Tag không đổi ra
+   * được tên (người của nhà khác) thì màn hình lược đi — không đưa xuống.
+   */
+  taggedMembers?: { id: string; label: string }[];
+  /** Chạm một chip tag — mở hồ sơ người đó. */
+  onTagPress?: (memberId: string) => void;
   /**
    * The heart and comment counters along the bottom. On by default, because
    * in a feed they are the only sign a moment has been read at all — off on
@@ -76,9 +94,15 @@ export function PostCard({
   onMediaPress,
   onToggleLike,
   authorAvatarId,
+  taggedMembers,
+  onTagPress,
   showStats = true,
 }: PostCardProps) {
   const { t } = useTranslation();
+
+  // Tỷ lệ thật của ảnh đơn, học được khi ảnh tải xong — theo id vì FlatList
+  // tái dùng card cho bài khác.
+  const [singleRatio, setSingleRatio] = useState<Record<string, number>>({});
 
   const posted = formatFullDate(post.createdAt.slice(0, 10));
   const isPrivate = post.familyIds.length === 0;
@@ -206,11 +230,35 @@ export function PostCard({
                       source={thumbnailSource(item.id, item.mimeType)}
                       style={{
                         width: '100%',
-                        height: isPair ? PAIR_MEDIA_HEIGHT : SINGLE_MEDIA_HEIGHT,
+                        ...(isPair
+                          ? { height: PAIR_MEDIA_HEIGHT }
+                          : {
+                              aspectRatio: Math.min(
+                                MAX_SINGLE_RATIO,
+                                Math.max(
+                                  MIN_SINGLE_RATIO,
+                                  singleRatio[item.id] ?? DEFAULT_SINGLE_RATIO,
+                                ),
+                              ),
+                            }),
                         borderRadius: isPair ? radius.lg : radius.xl,
                         backgroundColor: colors.background.subtle,
                       }}
                       contentFit="cover"
+                      onLoad={
+                        isPair
+                          ? undefined
+                          : (e) => {
+                              const { width, height } = e.source;
+                              if (width > 0 && height > 0) {
+                                setSingleRatio((current) =>
+                                  current[item.id] !== undefined
+                                    ? current
+                                    : { ...current, [item.id]: width / height },
+                                );
+                              }
+                            }
+                      }
                       // A moment is worth a beat of blur rather than a blank rectangle.
                       transition={160}
                       recyclingKey={item.id}
@@ -249,6 +297,37 @@ export function PostCard({
             </View>
           )}
         </Pressable>
+      )}
+
+      {/* Ai có mặt trong khoảnh khắc này — tag vốn được ghi từ lúc đăng nhưng
+          chưa từng được VẼ ra ở đâu. Chip là ANH EM của khối thân bài, không
+          lồng vào trong (bài học button-in-button); chạm chip mở hồ sơ. */}
+      {taggedMembers !== undefined && taggedMembers.length > 0 && (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          {taggedMembers.map((member) => (
+            <Pressable
+              key={member.id}
+              onPress={() => onTagPress?.(member.id)}
+              disabled={onTagPress === undefined}
+              accessibilityRole={onTagPress === undefined ? undefined : 'button'}
+              accessibilityLabel={t('post.openTagged', { name: member.label })}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                height: 24,
+                paddingHorizontal: 9,
+                borderRadius: radius.full,
+                backgroundColor: colors.background.muted,
+              }}
+            >
+              <UserRound size={11} color={colors.text.secondary} strokeWidth={2.2} />
+              <Text variant="badge" weight="semibold" color={colors.text.secondary}>
+                {member.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
       )}
 
       {/* Trái tim là NÚT ngay trên thẻ: thả tim là việc một nhịp, bắt mở bài

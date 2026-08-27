@@ -44,6 +44,9 @@ export default function MemberScreen() {
     familyName: families?.find((family) => family.id === familyId)?.name ?? null,
   });
 
+  // Bắt ra hằng để narrowing sống sót vào closure bên dưới.
+  const avatarMediaId = profile.avatarMediaId;
+
   return (
     <View className="flex-1 bg-page">
       <AppHeader
@@ -77,6 +80,14 @@ export default function MemberScreen() {
           onOpenMemo={(memo) => router.push({ pathname: '/memo/[id]', params: { id: memo.id } })}
           onEditMemo={(memo) => router.push({ pathname: '/memo/edit', params: { id: memo.id } })}
           onOpenMoment={(postId) => router.push({ pathname: '/post/[id]', params: { id: postId } })}
+          onViewAvatar={
+            avatarMediaId === null
+              ? undefined
+              : () => router.push({ pathname: '/media/[id]', params: { id: avatarMediaId } })
+          }
+          onOpenPhoto={(item) =>
+            router.push({ pathname: '/media/[id]', params: { id: item.id, mime: item.mimeType } })
+          }
         />
       </ScrollView>
     </View>

@@ -153,6 +153,9 @@ export default function MessageScreen() {
       params: {
         variants: JSON.stringify(variants.map((v) => ({ length: v.length, text: v.text }))),
         toName: target?.displayName ?? '',
+        // memberId đi kèm để nút share bên màn thiệp còn gắn tag đúng người
+        // nhận khi đưa thiệp qua composer.
+        memberId: target?.id ?? '',
         occasion: occasion?.label ?? '',
       },
     });

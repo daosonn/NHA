@@ -1,4 +1,5 @@
 import { Check, UserRoundPlus } from 'lucide-react-native';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
@@ -29,9 +30,32 @@ export type MemberTagPickerProps = {
  *
  * Empty is a fine answer. A moment with nobody named still reaches the family
  * feed; it just does not land in anybody's Album.
+ *
+ * Người đã gán thẻ GHIM LÊN ĐẦU dải (Sơn chốt 26/08): gia đình đông thì chip
+ * đang chọn dễ trôi ra ngoài màn — người soạn phải kéo mới biết mình đã tag ai.
+ * Phần chưa chọn giữ nguyên thứ tự gốc. Bấm chọn thêm → chip nhảy lên đầu và
+ * dải tự cuộn về đầu để thấy ngay; bỏ chọn thì chip về lại chỗ cũ.
  */
 export function MemberTagPicker({ members, selected, onToggle }: MemberTagPickerProps) {
   const { t } = useTranslation();
+  const scroll = useRef<ScrollView>(null);
+  const prevCount = useRef(selected.length);
+
+  const ordered = useMemo(() => {
+    if (selected.length === 0) return members;
+    const picked = members.filter((m) => selected.includes(m.id));
+    const rest = members.filter((m) => !selected.includes(m.id));
+    return [...picked, ...rest];
+  }, [members, selected]);
+
+  // Vừa chọn THÊM một người → đưa dải về đầu để chip mới ghim lọt vào tầm nhìn.
+  // Bỏ chọn thì không cuộn: người dùng đang nhìn chỗ họ vừa bấm.
+  useEffect(() => {
+    if (selected.length > prevCount.current) {
+      scroll.current?.scrollTo({ x: 0, animated: true });
+    }
+    prevCount.current = selected.length;
+  }, [selected.length]);
 
   if (members.length === 0) return null;
 
@@ -45,11 +69,12 @@ export function MemberTagPicker({ members, selected, onToggle }: MemberTagPicker
       </View>
 
       <ScrollView
+        ref={scroll}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ gap: 7, paddingRight: spacing.xl }}
       >
-        {members.map((member) => {
+        {ordered.map((member) => {
           const active = selected.includes(member.id);
 
           return (

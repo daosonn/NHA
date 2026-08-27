@@ -26,6 +26,8 @@ export type ProfileHeroProps = {
    */
   onChangeAvatar?: () => void;
   uploadingAvatar?: boolean;
+  /** Mở trình xem ảnh toàn màn — cho khi tấm chân dung đáng được nhìn to. */
+  onViewAvatar?: () => void;
 };
 
 /**
@@ -49,6 +51,7 @@ export function ProfileHero({
   onEdit,
   onChangeAvatar,
   uploadingAvatar = false,
+  onViewAvatar,
 }: ProfileHeroProps) {
   const { t } = useTranslation();
 
@@ -64,13 +67,23 @@ export function ProfileHero({
           one control whose target is unambiguous, and tapping your own
           picture to change it is what everybody already tries. */}
       <View>
-        <Avatar
-          size={AVATAR}
-          name={profile.displayName}
-          mediaId={profile.avatarMediaId}
-          tone={profile.tone}
-          ring={RING}
-        />
+        {/* Chạm mặt = XEM to; huy hiệu máy ảnh (đứng SAU trong cây, đè lên góc)
+            vẫn thắng cú chạm ở góc đó = ĐỔI ảnh. Hai việc, hai nút anh em —
+            không lồng Pressable vào nhau (bài học button-in-button). */}
+        <Pressable
+          onPress={onViewAvatar}
+          disabled={onViewAvatar === undefined}
+          accessibilityRole="button"
+          accessibilityLabel={t('member.viewPhoto', { name: profile.displayName })}
+        >
+          <Avatar
+            size={AVATAR}
+            name={profile.displayName}
+            mediaId={profile.avatarMediaId}
+            tone={profile.tone}
+            ring={RING}
+          />
+        </Pressable>
 
         {canChangeFace && (
           <Pressable

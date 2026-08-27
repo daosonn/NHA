@@ -42,3 +42,19 @@ export function useMemberLookup(): (userId: string | null) => FamilyMemberSummar
     return tree.members.find((member) => member.userId === userId) ?? null;
   };
 }
+
+/**
+ * Như useMemberLookup nhưng tra theo MEMBER id — cho tag trên bài đăng
+ * (`taggedMemberIds` là member id, không phải user id). Cùng cây đã cache,
+ * cùng quy ước: `null` là câu trả lời bình thường (tag của nhà khác) — caller
+ * lược đi thay vì đoán tên.
+ */
+export function useMemberByIdLookup(): (memberId: string) => FamilyMemberSummary | null {
+  const { familyId } = useActiveFamily();
+  const { data: tree } = useFamilyTree(familyId);
+
+  return (memberId) => {
+    if (tree === undefined) return null;
+    return tree.members.find((member) => member.id === memberId) ?? null;
+  };
+}

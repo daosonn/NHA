@@ -71,6 +71,16 @@ export default function VideoSetupScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.memberId]);
 
+  // Người hiển thị mặc định (members[0]) phải được GHI vào draft chứ không chỉ
+  // vẽ lên màn — màn chọn ảnh đọc draft.memberId để mở bộ lọc "ảnh của người
+  // này", để null thì bộ lọc biến mất dù setup đang chỉ rõ một người.
+  useEffect(() => {
+    if (draft.memberId === null && !params.memberId && target !== null) {
+      update({ memberId: target.id, memberName: target.displayName });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target?.id]);
+
   const storyboard = useStoryboard(familyId);
   const quick = useCreateAndRender(familyId);
 

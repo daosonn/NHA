@@ -168,4 +168,16 @@ export class VideoController {
   ): Promise<{ post_id: string }> {
     return this.videoService.share(user.userId, jobId, dto.caption);
   }
+
+  @Post('video-jobs/:jobId/export-media')
+  @ApiOperation({
+    summary:
+      'Materialize the rendered mp4 as a standalone Media row (a copy) so the composer can attach it — the user reviews the post before it is created',
+  })
+  exportMedia(
+    @CurrentUser() user: AuthUser,
+    @Param('jobId', ParseUUIDPipe) jobId: string,
+  ): Promise<{ media_id: string }> {
+    return this.videoService.exportMedia(user.userId, jobId);
+  }
 }

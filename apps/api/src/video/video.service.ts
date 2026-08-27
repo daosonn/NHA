@@ -98,6 +98,8 @@ export interface VideoJobView {
   error: string | null;
   created_at: string;
   has_file: boolean;
+  /** Video làm VỀ ai — composer dùng để tag sẵn người đó khi share. */
+  about_member_id: string | null;
   plan: PlanJson | null;
   options: OptionsJson | null;
 }
@@ -422,6 +424,47 @@ export class VideoService {
       select: { id: true },
     });
     return { post_id: post.id };
+  }
+
+  /**
+   * Xuất video DONE thành MỘT Media row độc lập (bản sao vật lý, cùng lý do
+   * với share ở trên) — cho luồng mới 26/08: mobile mang media này qua màn
+   * soạn bài để người dùng DUYỆT rồi tự đăng, thay vì server tự tạo post.
+   * Media chưa gắn bài nào và uploader là chính người gọi, nên POST /posts
+   * nhận nó như một upload thường.
+   */
+  async exportMedia(
+    userId: string,
+    jobId: string,
+  ): Promise<{ media_id: string }> {
+    const job = await this.ownJob(userId, jobId);
+    if (job.status !== 'DONE' || !job.resultStorageKey) {
+      throw new BadRequestException('Video chưa render xong');
+    }
+
+    // Cùng cách với share(): storage giờ chỉ CHO MƯỢN đường dẫn local trong
+    // một callback (refactor 26/08 của team), không còn absolutePathOf.
+    const tmpCopy = path.join(
+      this.storage.tempDir,
+      `export_${jobId}_${Date.now()}.mp4`,
+    );
+    await this.storage.withLocalCopy(job.resultStorageKey, (sourceAbs) => {
+      fs.mkdirSync(path.dirname(tmpCopy), { recursive: true });
+      fs.copyFileSync(sourceAbs, tmpCopy);
+    });
+    const storageKey = await this.storage.promote(tmpCopy, 'video/mp4');
+    const size = await this.storage.sizeOf(storageKey);
+
+    const media = await this.prisma.media.create({
+      data: {
+        uploaderUserId: userId,
+        storageKey,
+        mimeType: 'video/mp4',
+        sizeBytes: size,
+      },
+      select: { id: true },
+    });
+    return { media_id: media.id };
   }
 
   // ---------------- worker ----------------
@@ -889,6 +932,7 @@ export class VideoService {
     error: string | null;
     createdAt: Date;
     resultStorageKey: string | null;
+    aboutMemberId: string | null;
     plan: unknown;
     options: unknown;
   }): VideoJobView {
@@ -903,6 +947,7 @@ export class VideoService {
       error: job.error,
       created_at: job.createdAt.toISOString(),
       has_file: !!job.resultStorageKey,
+      about_member_id: job.aboutMemberId,
       plan: (job.plan as PlanJson) ?? null,
       options: (job.options as OptionsJson) ?? null,
     };

@@ -12,6 +12,19 @@ import { IsDateOnly } from '../../common/is-date-only';
 /** Omitted fields stay unchanged; `null` clears a date, `''` clears the bio. */
 export class UpdateProfileDto {
   @ApiPropertyOptional({
+    maxLength: 100,
+    description:
+      'Display name. On your own profile this renames the account ' +
+      '(User.name); on a placeholder it renames that family-local member ' +
+      '(FamilyMember.displayName). Cannot be cleared — a person always has ' +
+      'a name.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  name?: string;
+
+  @ApiPropertyOptional({
     nullable: true,
     description:
       'Avatar: the id of an image the CALLER uploaded via POST /media ' +

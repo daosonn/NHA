@@ -8,6 +8,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 
 import { FormScreen } from '../../src/components/layout/form-screen';
 import { useToast } from '../../src/components/ui/toast';
+import { updateStoredUser } from '../../src/features/auth/session-store';
 import { Button } from '../../src/components/ui/button';
 import { Text } from '../../src/components/ui/text';
 import { TextField } from '../../src/components/ui/text-field';
@@ -192,9 +193,9 @@ function InterestChips({
  * you that way. That is also why the screen speaks in the second person and
  * why there is no death-date field — see below.
  *
- * It does not edit your name. `displayName` comes back from the server but is
- * not part of `UpdateProfileDto`: it is `User.name`, which has no endpoint
- * yet.
+ * Tên sửa được từ 26/08: `UpdateProfileDto.name` ghi `User.name` (hồ sơ của
+ * chính mình) — lưu xong phải vá cả session-store, vì `user.name` chỉ được
+ * ghi lúc đăng nhập.
  */
 export default function ProfileEditScreen() {
   const { t } = useTranslation();
@@ -253,6 +254,12 @@ export default function ProfileEditScreen() {
       onSave={(input) => {
         mutation.mutate(input, {
           onSuccess: () => {
+            // Tên trong session chỉ được ghi lúc đăng nhập — đổi tên xong
+            // phải vá tay, không thì header/cài đặt hiện tên cũ tới lần
+            // đăng nhập sau.
+            if (ownProfile && input.name !== undefined) {
+              void updateStoredUser({ name: input.name });
+            }
             safeBack(router, '/profile');
             toast.success(t('profileEdit.toast.saved'));
           },
@@ -270,6 +277,7 @@ export default function ProfileEditScreen() {
  * it. See the form below for why the field is gone.
  */
 type SaveInput = {
+  name?: string;
   bio?: string;
   interests?: string[];
   birthDate?: string | null;
@@ -295,6 +303,7 @@ function ProfileEditForm({
 }) {
   const { t } = useTranslation();
 
+  const [name, setName] = useState(detail.displayName);
   const [bio, setBio] = useState(detail.bio ?? '');
   // `dayOnly`, not the raw value: the column is a DATE but it crosses the
   // wire as a full timestamp — `1964-03-14T00:00:00.000Z`. Seeding the field
@@ -318,7 +327,7 @@ function ProfileEditForm({
     recordedDeath !== null &&
     recordedDeath < birthDate.trim();
 
-  const canSave = birthProblem === null && !ordered;
+  const canSave = birthProblem === null && !ordered && name.trim() !== '';
 
   const addInterest = () => {
     const next = draftInterest.trim();
@@ -332,6 +341,7 @@ function ProfileEditForm({
     if (!canSave) return;
 
     onSave({
+      name: name.trim() === detail.displayName ? undefined : name.trim(),
       // '' clears the bio on the server, so an emptied field must still be sent.
       bio: bio === (detail.bio ?? '') ? undefined : bio,
       interests: sameInterests(interests, detail.interests) ? undefined : interests,
@@ -375,17 +385,14 @@ function ProfileEditForm({
         </>
       }
     >
-      <View style={{ gap: 6 }}>
-        <Text variant="caption" weight="semibold" color={colors.text.secondary}>
-          {t('profileEdit.nameLabel')}
-        </Text>
-        <Text variant="body1" weight="medium">
-          {detail.displayName}
-        </Text>
-        <Text variant="badge" color={colors.text.subtle}>
-          {t('profileEdit.nameFromAccount')}
-        </Text>
-      </View>
+      <TextField
+        label={t('profileEdit.nameLabel')}
+        value={name}
+        onChangeText={setName}
+        placeholder={t('profileEdit.namePlaceholder')}
+        maxLength={100}
+        error={name.trim() === '' ? t('profileEdit.nameRequired') : undefined}
+      />
 
       <TextField
         label={t('profileEdit.bioLabel')}

@@ -61,3 +61,13 @@ export function useShareVideo() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.families() }),
   });
 }
+
+/**
+ * Luồng share mới (26/08): xuất video thành Media rồi mang qua composer để
+ * người dùng DUYỆT bài trước khi đăng — thay cho useShareVideo tự tạo post.
+ */
+export function useExportVideoMedia() {
+  return useMutation({
+    mutationFn: (jobId: string) => video.exportMedia(jobId),
+  });
+}

@@ -48,6 +48,11 @@ Rules:
    hurts may become "I hope your back troubles you less", never a recital of her medical details.
 3. Respect the giver→recipient relationship and the requested tone.
 4. Return exactly 3 variants: short (1-2 sentences), standard (3-4), heartfelt (5-7).
+   HARD CHARACTER CAPS — count every character including spaces and punctuation, in EVERY locale
+   (Japanese kana/kanji each count as one): `short` ≤ 120, `standard` ≤ 200, `heartfelt` ≤ 240.
+   These exist because the messages are printed onto greeting-card artwork whose text zones fit
+   at most ~240 characters — an over-long variant cannot be used at all. When a cap and a
+   sentence-count conflict, the cap wins: write fewer, tighter sentences.
 5. List in `memories_used` the ids you actually leaned on — `memo_…` from the notes or `sig_…`
    from the profile. Copy them verbatim; empty list if the message is generic.
 6. Write in the requested locale (en/ja/vi), natural and warm — not translated-sounding.
