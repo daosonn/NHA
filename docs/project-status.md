@@ -1226,6 +1226,19 @@ dev` **did not regenerate the client**, and the stale client survived
 
 ## In Progress
 
+- **Invite by email (2026-08-26)**: `POST /families/:id/invitations` now takes
+  an `email` and raises a `FAMILY_INVITE` notification for that account;
+  `GET /me/invitations` is what it links to. Delivery is **in-app only** — an
+  unregistered address is rejected, because there is nowhere for the invite to
+  arrive. Named codes stop being bearer tokens: only the invitee can accept.
+  Migration `20260826081911_invitation_invitee_user` (nullable column, index,
+  FK — additive) **is already applied to shared Neon**, so the column is there
+  for everyone. **After pulling, run `pnpm --filter api exec prisma generate`**
+  or the stale client throws `Unknown field` at runtime — the trap documented
+  in `local-environment.md`. Existing invitations keep `inviteeUserId` null,
+  which is exactly "a code handed over by hand", so nothing old changes
+  behaviour. Contract in `api-contract.md` → Invitations.
+
 - **Object storage for media (2026-08-26)**: step 1 done — `StorageService`
   decoupled from filesystem paths (see Current Focus). Step 2 is the R2
   driver. Architecture change, so it merges only after backend-owner review.

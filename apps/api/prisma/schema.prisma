@@ -129,6 +129,7 @@ model User {
   notifications       Notification[]
   videoJobs           VideoJob[]
   sentInvitations     Invitation[]         @relation("InvitationInviter")
+  receivedInvitations Invitation[]         @relation("InvitationInvitee")
   plans               Plan[]
   planShares          PlanShare[]
 }
@@ -267,6 +268,7 @@ model Invitation {
   familyId         String
   memberId         String // the reserved spot — a placeholder FamilyMember
   inviterId        String
+  inviteeUserId    String? // set when invited by email; null = code shared by hand
   code             String            @unique
   name             String // what the inviter calls the invitee
   relationshipType RelationshipType
@@ -279,8 +281,10 @@ model Invitation {
   family  Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
   member  FamilyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
   inviter User         @relation("InvitationInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+  invitee User?        @relation("InvitationInvitee", fields: [inviteeUserId], references: [id], onDelete: SetNull)
 
   @@index([familyId, status])
+  @@index([inviteeUserId, status])
 }
 
 // ─── Content ────────────────────────────────────────────────────────────────
