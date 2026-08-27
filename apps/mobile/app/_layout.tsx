@@ -110,7 +110,7 @@ function AppFrame({ children }: { children: React.ReactNode }) {
  *
  * `(tabs)/_layout.tsx` and `(auth)/_layout.tsx` each guard their own group,
  * which left every route that belongs to neither — `settings`, `member`,
- * `memo`, `post`, `profile`, `family`, `ai`, `create-family` — unguarded.
+ * `memo`, `post`, `profile`, `family`, `ai`, `join-family` — unguarded.
  * Signing out from Settings is what exposed it: the session went empty, the
  * screen stayed put, and it simply redrew itself with "not signed in" where
  * the name had been.

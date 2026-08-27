@@ -1248,6 +1248,49 @@ dev` **did not regenerate the client**, and the stale client survived
   `/invite/:code`. Both new surfaces use the 600px content column, so the
   phone layout is untouched and the web one does not stretch.
 
+  **Follow-up 2026-08-27 (`feature/invite-method-choice`, Đạt)** — two fixes
+  on top of the merged UI:
+
+  - The invite sheet's optional-email field silently chose the delivery
+    (filled = notification, blank = hand-over code); it is now an explicit
+    two-tab choice — "by email" / "with a code" (SegmentedTabs, same pattern
+    as create-vs-join) with a one-line hint saying who each is for. The sent
+    state follows the server's answer (`inviteeUserId`): email invites
+    confirm the address instead of showing a code that nobody can be handed.
+  - **A typed invitation code now works.** The Join tab was the app's only
+    box that takes a typed code, and it only asked `POST /families/join`
+    (`Family.inviteCode`) — a per-spot invitation code typed there was a flat
+    404, which broke the hand-over path end to end (the share message sends a
+    bare code, not a link). The tab now tries `GET /invitations/:code`
+    (public) first and routes a hit to `/invite/[code]`; only a miss falls
+    through to the family-code join. Deterministic order also settles the
+    astronomically unlikely code that lives in both tables. Verified: mobile
+    tsc, check:i18n (795 keys, en+ja), prettier; not looked at on a device.
+
+- **One create form, one join form (2026-08-27, `feature/invite-method-choice`)**:
+  `create-family.tsx` (the create/join tab combo) put a second create-family
+  form in the app next to `family/new.tsx` — two doors marked "create"
+  leading to different rooms. It is now `join-family.tsx`, join-only (keeps
+  the typed-code dual lookup); creation converged on `family/new`, which
+  every no-family empty state now opens, and the two forms cross-link
+  (`family.new.joinLink` / `joinFamily.createLink`) so a person who guessed
+  wrong is one tap from the other. The fork is also visible from outside:
+  `EmptyState` grew an optional secondary (ghost) action, and every
+  no-family empty state now shows BOTH buttons — "Start a family" and "Join
+  with a code" — instead of landing everyone on create. i18n group
+  `createFamily.*` renamed `joinFamily.*` (check-i18n DYNAMIC updated).
+  Verified: tsc, check:i18n (791 keys), prettier; not on a device.
+
+- **No-family tabs got the sleeping cat (2026-08-27, same branch)**: Omoide
+  and Family rendered a bare header for an account with no family — the
+  `familyId === null` case fell into `return null`, which only makes sense
+  for the loading tick. Both now distinguish "still loading" from "no family
+  at all" (via `useFamilies`) and show the sleeping-cat empty state with
+  Home's title and `/create-family` door, each with a body written for its
+  own tab (`omoide.noFamilyBody` / `family.noFamilyBody`), so the next step
+  is the same one screen everywhere. Verified: tsc, check:i18n (797 keys),
+  prettier; not on a device.
+
 - **Object storage for media**: step 1 (2026-08-26) decoupled
   `StorageService` from filesystem paths; **step 2 landed 2026-08-27** — an
   R2 driver behind `STORAGE_DRIVER`, verified against the real bucket across

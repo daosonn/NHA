@@ -37,7 +37,8 @@ const DYNAMIC = [
   'date.months.',
   'errors.',
   'auth.errors.',
-  'createFamily.errors.',
+  // app/join-family.tsx maps an API status to one of these.
+  'joinFamily.errors.',
   // src/features/family/relationship-label.ts picks one of these by edge type.
   'family.relation.',
   // src/features/moment/moment-error.ts maps an upload status to one of these.

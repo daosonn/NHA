@@ -99,6 +99,10 @@ export function FormScreen({
           contentContainerStyle={{
             flexGrow: 1,
             ...contentColumn,
+            // Không có khoảng này, nội dung form bắt đầu 0px dưới header —
+            // "New family group" là màn bị réo tên (Đạt, 2026-08-27), nhưng
+            // cả 9 form đều dính như nhau nên chữa ở khung chung.
+            paddingTop: spacing.xl,
             paddingBottom: spacing.xl,
             gap: 22,
           }}

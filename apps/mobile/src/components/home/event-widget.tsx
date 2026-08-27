@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import Svg, { Polygon } from 'react-native-svg';
 
 import { useOccasionLabel } from '../../features/ai/use-special-dates';
+import { useMemberByIdLookup } from '../../features/family/use-member-for-user';
 import { occasionBackdrop } from '../../fixtures/home';
 import type { SpecialDateItem } from '../../lib/api';
 import { formatFullDate } from '../../lib/date';
@@ -114,6 +115,13 @@ export function EventWidget({ occasion, moreCount = 0 }: EventWidgetProps) {
   // the occasion pickers read the same sentences. A second wording here would
   // have drifted from theirs the first time either was touched.
   const occasionLabel = useOccasionLabel();
+  // Ảnh người có sinh nhật: SpecialDateItem chỉ mang memberId + tên, nên phải
+  // tra ảnh từ cây gia đình (cùng cách feed tra tác giả). Không tra ra thì
+  // BirthdayCard tự lùi về chữ cái đầu — trước đây luôn là chữ cái vì widget
+  // không hề tra (Sơn 27/08).
+  const memberById = useMemberByIdLookup();
+  const birthdayMemberId = occasion.members[0]?.memberId ?? null;
+  const birthdayAvatar = birthdayMemberId === null ? null : (memberById(birthdayMemberId)?.avatarKey ?? null);
 
   const countdown = countdownLabel(occasion.daysUntil);
   const when = formatFullDate(occasion.nextOccurrence);
@@ -127,6 +135,7 @@ export function EventWidget({ occasion, moreCount = 0 }: EventWidgetProps) {
         subtitle={when !== null ? `${when} · ${countdownText}` : countdownText}
         more={moreCount > 0 ? t('home.occasion.more', { count: moreCount }) : null}
         avatarName={occasion.members[0]?.displayName}
+        avatarMediaId={birthdayAvatar}
       />
     );
   }

@@ -209,7 +209,8 @@
       "codeLabel": "Family code",
       "codeMeta": "Made for this group · does not expire",
       "codeHint": "Anyone with this code joins the group. You can add spots to the tree afterwards.",
-      "done": "Done"
+      "done": "Done",
+      "joinLink": "Have a code someone sent you? Join their family"
     },
     "nodeHint": "Press and hold to change their place in the tree.",
     "member": {
@@ -294,12 +295,13 @@
         "forbidden": "Only the person who created the family can delete it.",
         "hasMembers": "Other members still belong to this family. They need to leave first."
       }
-    }
+    },
+    "noFamilyBody": "The tree starts with a family. Create one, or join with a code someone sent you."
   },
   "invite": {
     "sheet": {
       "title": "Invite a family member",
-      "subtitle": "They get a code that lands them in the spot you choose",
+      "subtitle": "A spot is saved for them the moment you send it",
       "closeScrim": "Close the invite sheet",
       "nameLabel": "Name to remember them by",
       "namePlaceholder": "Their name",
@@ -324,12 +326,17 @@
       "errors": {
         "noAnchor": "You are not in this tree yet, so there is nothing to relate the new person to.",
         "forbidden": "Only a member of this family can invite someone to it.",
-        "emailUnknown": "Nobody uses that email yet. Ask them to sign up first, or leave it blank and share the code.",
+        "emailUnknown": "Nobody uses that email yet. Ask them to sign up first, or switch to a code invite.",
         "emailAlreadyMember": "They are already in this family."
       },
-      "emailLabel": "Their email (optional)",
+      "emailLabel": "Their account email",
       "emailPlaceholder": "name@example.com",
-      "emailHelp": "They get the invitation in the app. Leave it blank and you get a code to pass on instead — the only way to invite someone without an account yet."
+      "methodTitle": "How the invitation reaches them",
+      "methodEmail": "By email",
+      "methodCode": "With a code",
+      "methodEmailHint": "For someone who already has an account — the invitation lands in their notifications.",
+      "methodCodeHint": "For someone without an account yet — you get a code to pass on yourself.",
+      "sentEmailSubtitle": "The invitation is waiting in their notifications."
     },
     "preview": {
       "yourSpot": "YOUR SPOT"
@@ -345,7 +352,7 @@
       "join": "Join the family",
       "notNow": "Not now",
       "finePrint": "No account yet? You will set one up in one step. Code {{code}}.",
-      "joinSignedOut": "Create an account and join",
+      "joinSignedOut": "Create an account",
       "dead": "This invitation is no longer open",
       "deadBody": "It may have been withdrawn, already used, or run out of time. Ask whoever sent it for a new code.",
       "finePrintExpiry": "Code {{code}} · {{count}} day left to accept",
@@ -796,25 +803,6 @@
     "offline": "Could not reach the server. Check your connection and try again.",
     "generic": "Something went wrong. Please try again."
   },
-  "createFamily": {
-    "title": "Your family",
-    "createTab": "Create",
-    "joinTab": "Join",
-    "createHeading": "Start a family space",
-    "createBody": "Only the people you invite can see anything you put here.",
-    "nameLabel": "Family name",
-    "namePlaceholder": "Mom's side",
-    "createSubmit": "Create family",
-    "joinHeading": "Join with a code",
-    "joinBody": "The eight characters someone in the family sent you.",
-    "codeLabel": "Invite code",
-    "codePlaceholder": "ABCD2345",
-    "joinSubmit": "Join family",
-    "errors": {
-      "codeNotFound": "No family matches that code.",
-      "alreadyMember": "You are already in that family."
-    }
-  },
   "post": {
     "title": "Moment",
     "openLabel": "Open {{name}}'s moment",
@@ -903,7 +891,8 @@
     "emptyTitle": "No photos yet",
     "emptyBody": "Everything the family shares with a photo or a video shows up here.",
     "yourAlbums": "Your albums",
-    "yourAlbumsHint": "Private to you — not shared with the family"
+    "yourAlbumsHint": "Private to you — not shared with the family",
+    "noFamilyBody": "Every photo and video your family shares gathers here - once there is a family to share with."
   },
   "profileEdit": {
     "title": "Edit profile",
@@ -1141,6 +1130,18 @@
       "care": "It has been a while since you heard from {{name}}",
       "aiSuggestion": "A new suggestion is waiting for you",
       "videoDone": "Your video “{{title}}” is ready"
+    }
+  },
+  "joinFamily": {
+    "heading": "Join with a code",
+    "body": "The eight characters someone in the family sent you — a family code or an invitation code, either works.",
+    "codeLabel": "Invite code",
+    "codePlaceholder": "ABCD2345",
+    "submit": "Join family",
+    "createLink": "Starting a new family instead?",
+    "errors": {
+      "codeNotFound": "Nothing matches that code. Check it with whoever sent it.",
+      "alreadyMember": "You are already in that family."
     }
   }
 }

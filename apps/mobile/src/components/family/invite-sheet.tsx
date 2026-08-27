@@ -1,4 +1,4 @@
-import { Check, Share2, UserRoundPlus, X } from 'lucide-react-native';
+import { Check, MailCheck, Share2, UserRoundPlus, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Share, View } from 'react-native';
@@ -8,6 +8,7 @@ import type { InvitationSummary } from '../../lib/api';
 import { daysUntil } from '../../lib/date';
 import { colors, elevation, radius } from '../../theme';
 import { Button } from '../ui/button';
+import { SegmentedTabs } from '../ui/segmented-tabs';
 import { SelectField } from '../ui/select-field';
 import { SheetModal } from '../ui/sheet-modal';
 import { Text } from '../ui/text';
@@ -132,13 +133,31 @@ export type InviteSheetProps = {
 };
 
 /**
+ * How the invitation travels — the sender picks, explicitly.
+ *
+ * It used to be one optional email field whose emptiness silently chose the
+ * delivery: filled meant a notification, blank meant a code. Nobody reads a
+ * hint under an optional field, so senders discovered which one they had
+ * picked only at the second screen. Two named tabs put the choice — and who
+ * each one is for — in front of the decision instead of behind it.
+ */
+type InviteMethod = 'email' | 'code';
+
+/** Enough to stop typos, not a validator — the server has the real answer
+ *  (404 for an address with no account behind it). */
+function looksLikeEmail(value: string): boolean {
+  return /^\S+@\S+\.\S+$/.test(value);
+}
+
+/**
  * Inviting one person to one place in the tree.
  *
- * Two states in one sheet, because they are one act: fill in who is coming
- * and as what, then hand over the code that arrives back. The code is per
- * invitation, not `Family.inviteCode` — that distinction is what lets the
- * copy promise the invitee lands on the reserved spot, which a family-wide
- * code could never do.
+ * Two states in one sheet, because they are one act: fill in who is coming,
+ * as what, and how the invitation reaches them — then either confirm the
+ * notification went out (email) or hand over the code that arrives back
+ * (code). The code is per invitation, not `Family.inviteCode` — that
+ * distinction is what lets the copy promise the invitee lands on the
+ * reserved spot, which a family-wide code could never do.
  *
  * A plain `Modal` rather than `@gorhom/bottom-sheet`: this is a form, not a
  * gesture surface. The tree's pinch/pan is where that library earns its place.
@@ -155,12 +174,23 @@ export function InviteSheet({
 }: InviteSheetProps) {
   const { t } = useTranslation();
 
+  const [method, setMethod] = useState<InviteMethod>('email');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [kinship, setKinship] = useState<string>(kinshipOptions[0]?.value ?? 'sister');
 
   const chosen = kinshipOptions.find((option) => option.value === kinship);
   const expiresIn = created === null ? null : daysUntil(created.expiresAt);
+
+  // What the second screen confirms is decided by the server's answer, not
+  // by which tab was open: an addressed invitation has an invitee, a
+  // hand-over one does not.
+  const sentByEmail = created !== null && created.inviteeUserId !== null;
+
+  const ready =
+    name.trim() !== '' &&
+    chosen !== undefined &&
+    (method === 'code' || looksLikeEmail(email.trim()));
 
   const share = (code: string, invitee: string) => {
     void Share.share({
@@ -221,6 +251,26 @@ export function InviteSheet({
                 onClose={close}
               />
 
+              <View style={{ gap: 8 }}>
+                <SegmentedTabs
+                  options={[
+                    { value: 'email', label: t('invite.sheet.methodEmail') },
+                    { value: 'code', label: t('invite.sheet.methodCode') },
+                  ]}
+                  value={method}
+                  onChange={setMethod}
+                  accessibilityLabel={t('invite.sheet.methodTitle')}
+                />
+                {/* Who each door is for, said before the choice is made —
+                    this line replaced the hint under the old optional email
+                    field, which explained the same thing after the fact. */}
+                <Text variant="badge" color={colors.text.subtle}>
+                  {method === 'email'
+                    ? t('invite.sheet.methodEmailHint')
+                    : t('invite.sheet.methodCodeHint')}
+                </Text>
+              </View>
+
               <SpotCard name={name.trim()} option={chosen} />
 
               <TextField
@@ -231,22 +281,19 @@ export function InviteSheet({
                 maxLength={50}
               />
 
-              {/* Optional on purpose. Filled in, the invitation is delivered
-                  to that account as a notification; left blank, it comes back
-                  as a code to hand over — which is the only way to invite
-                  somebody who has not signed up yet. */}
-              <TextField
-                label={t('invite.sheet.emailLabel')}
-                value={email}
-                onChangeText={setEmail}
-                placeholder={t('invite.sheet.emailPlaceholder')}
-                hint={t('invite.sheet.emailHelp')}
-                error={emailErrorKey === null ? undefined : t(emailErrorKey)}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                maxLength={254}
-              />
+              {method === 'email' && (
+                <TextField
+                  label={t('invite.sheet.emailLabel')}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder={t('invite.sheet.emailPlaceholder')}
+                  error={emailErrorKey === null ? undefined : t(emailErrorKey)}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  maxLength={254}
+                />
+              )}
 
               <SelectField
                 label={t('invite.sheet.relationship')}
@@ -273,11 +320,17 @@ export function InviteSheet({
                 label={t('invite.sheet.send')}
                 size="large"
                 fullWidth
-                disabled={name.trim() === '' || chosen === undefined}
+                disabled={!ready}
                 loading={submitting}
                 onPress={() => {
                   if (onSubmit === undefined || chosen === undefined) return;
-                  onSubmit({ name: name.trim(), option: chosen, email: email.trim() });
+                  onSubmit({
+                    name: name.trim(),
+                    option: chosen,
+                    // The code tab sends no address even if one was typed on
+                    // the other tab — what is submitted is what is on screen.
+                    email: method === 'email' ? email.trim() : '',
+                  });
                 }}
                 renderIcon={({ size, color }) => (
                   <UserRoundPlus size={size} color={color} strokeWidth={2.1} />
@@ -288,56 +341,101 @@ export function InviteSheet({
             <>
               <SheetHeader
                 title={t('invite.sheet.sentTitle', { name: created.name })}
-                subtitle={t('invite.sheet.sentSubtitle')}
+                subtitle={
+                  sentByEmail ? t('invite.sheet.sentEmailSubtitle') : t('invite.sheet.sentSubtitle')
+                }
                 onClose={close}
               />
 
-              <View style={{ gap: 10 }}>
-                <Text variant="caption" weight="semibold" color={colors.text.secondary}>
-                  {t('invite.sheet.codeHeading')}
-                </Text>
-
-                {/* The deadline is the one thing about a code that changes
-                    on its own, so it is named rather than left to be
-                    discovered when it stops working. `daysUntil` returns
-                    null for a date already gone, which cannot happen on a
-                    just-created invitation but is not worth asserting. */}
-                <InviteCodeCard
-                  code={created.code}
-                  subtitle={
-                    expiresIn === null
-                      ? t('invite.sheet.codeMetaPlain', { family: familyName })
-                      : t('invite.sheet.codeMeta', { family: familyName, count: expiresIn })
-                  }
-                />
-
-                {/* True now, and it was not before: a per-invitation code
-                    carries the reserved spot, so the person who types it
-                    lands where the inviter put them rather than arriving
-                    unattached. The old family-wide code could not. */}
-                <Text variant="badge" color={colors.text.subtle}>
-                  {t('invite.sheet.codeHint', { name: created.name, family: familyName })}
-                </Text>
-              </View>
-
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <Pressable
-                  onPress={() => share(created.code, created.name)}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('invite.sheet.share')}
+              {sentByEmail ? (
+                /* Addressed invitation: nothing to hand over — the code
+                   underneath only answers to that account. What the sender
+                   needs back is the address they typed, because a typo here
+                   is invisible everywhere else. */
+                <View
                   style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: radius.full,
-                    backgroundColor: colors.background.card,
-                    borderWidth: 1.5,
-                    borderColor: colors.state.disabledBorder,
+                    borderRadius: radius.xl,
+                    backgroundColor: colors.coral.light,
+                    padding: 14,
+                    flexDirection: 'row',
                     alignItems: 'center',
-                    justifyContent: 'center',
+                    gap: 12,
                   }}
                 >
-                  <Share2 size={21} color={colors.text.secondary} strokeWidth={2} />
-                </Pressable>
+                  <View
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: radius.full,
+                      backgroundColor: 'rgba(255,255,255,0.6)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <MailCheck size={19} color={colors.coral.dark} strokeWidth={2} />
+                  </View>
+
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text variant="body2" weight="semibold" numberOfLines={1}>
+                      {email.trim()}
+                    </Text>
+                    <Text variant="badge" color={colors.text.subtle}>
+                      {expiresIn === null
+                        ? t('invite.sheet.codeMetaPlain', { family: familyName })
+                        : t('invite.sheet.codeMeta', { family: familyName, count: expiresIn })}
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={{ gap: 10 }}>
+                  <Text variant="caption" weight="semibold" color={colors.text.secondary}>
+                    {t('invite.sheet.codeHeading')}
+                  </Text>
+
+                  {/* The deadline is the one thing about a code that changes
+                      on its own, so it is named rather than left to be
+                      discovered when it stops working. `daysUntil` returns
+                      null for a date already gone, which cannot happen on a
+                      just-created invitation but is not worth asserting. */}
+                  <InviteCodeCard
+                    code={created.code}
+                    subtitle={
+                      expiresIn === null
+                        ? t('invite.sheet.codeMetaPlain', { family: familyName })
+                        : t('invite.sheet.codeMeta', { family: familyName, count: expiresIn })
+                    }
+                  />
+
+                  {/* True now, and it was not before: a per-invitation code
+                      carries the reserved spot, so the person who types it
+                      lands where the inviter put them rather than arriving
+                      unattached. The old family-wide code could not. */}
+                  <Text variant="badge" color={colors.text.subtle}>
+                    {t('invite.sheet.codeHint', { name: created.name, family: familyName })}
+                  </Text>
+                </View>
+              )}
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                {!sentByEmail && (
+                  <Pressable
+                    onPress={() => share(created.code, created.name)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('invite.sheet.share')}
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: radius.full,
+                      backgroundColor: colors.background.card,
+                      borderWidth: 1.5,
+                      borderColor: colors.state.disabledBorder,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Share2 size={21} color={colors.text.secondary} strokeWidth={2} />
+                  </Pressable>
+                )}
 
                 <View style={{ flex: 1 }}>
                   <Button

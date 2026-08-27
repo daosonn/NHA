@@ -19,7 +19,10 @@ import { SectionHeader } from '../../src/components/ui/section-header';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { useFamilies } from '../../src/features/family/use-families';
 import { takePendingInvite } from '../../src/features/family/pending-invite';
-import { useMemberByIdLookup, useMemberLookup } from '../../src/features/family/use-member-for-user';
+import {
+  useMemberByIdLookup,
+  useMemberLookup,
+} from '../../src/features/family/use-member-for-user';
 import { useMyFeed } from '../../src/features/feed/use-my-feed';
 import { useSetReaction } from '../../src/features/feed/use-post';
 import { useAlbums } from '../../src/features/album/use-albums';
@@ -222,7 +225,9 @@ export default function HomeScreen() {
           title={t('home.noFamilyTitle')}
           description={t('home.noFamilyBody')}
           actionLabel={t('home.startFamily')}
-          onActionPress={() => router.push('/create-family')}
+          onActionPress={() => router.push('/family/new')}
+          secondaryActionLabel={t('joinFamily.heading')}
+          onSecondaryActionPress={() => router.push('/join-family')}
         />
       );
     }
