@@ -31,8 +31,9 @@ export function PendingInvitesBanner() {
 
   const first = data?.[0];
 
+  // paddingTop: thiếu nó card dính sát mép dưới header (Đạt, 2026-08-27).
   return (
-    <ContentColumn style={{ paddingBottom: 10 }}>
+    <ContentColumn style={{ paddingTop: 12, paddingBottom: 10 }}>
       <Pressable
         onPress={() => router.push('/family/my-invitations')}
         accessibilityRole="button"
