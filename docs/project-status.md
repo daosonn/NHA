@@ -1226,6 +1226,16 @@ dev` **did not regenerate the client**, and the stale client survived
 
 ## In Progress
 
+- **A milestone announces itself (2026-08-27)**: adding a life event also
+  posts it as an EVENT, in the same transaction. Two owner's calls, since
+  neither followed from the code: one added from your own timeline reaches
+  **every family you are in** (`me/life-events` has no family in its path,
+  and a profile is one person across all of them), while one added from a
+  member's page goes to that family only. The switch defaults **on** but
+  exists — a death or a separation is recorded, not announced — and is
+  offered only when adding, because editing a saved entry writes no post.
+  The photos stay on the timeline: a Media row may have exactly one parent.
+
 - **One name per person (2026-08-27)**: renaming your account now writes
   through to every `FamilyMember.displayName` that account holds, in the same
   transaction. The two columns had been drifting since join time — Settings
