@@ -831,6 +831,7 @@
       "failed": "削除できませんでした。もう一度お試しください。"
     },
     "openTagged": "{{name}}さんのプロフィールを開く",
+    "mediaUnavailable": "この端末にはありません",
     "actions": {
       "menu": "その他の操作",
       "closeScrim": "閉じる",
@@ -1010,6 +1011,7 @@
     "filterEveryone": "みんな",
     "filterMine": "自分",
     "filterRecipient": "{{name}}の写真",
+    "unavailableCount_other": "別の端末にある{{count}}件はここでは使えません",
     "addTile": "追加",
     "preview": "試聴",
     "ownSong": "自分の曲を使う",

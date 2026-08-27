@@ -317,6 +317,12 @@ export type PostMediaSummary = {
   id: string;
   mimeType: string;
   sizeBytes: number;
+  /**
+   * `false` = row có nhưng FILE không nằm trên máy chủ đang phục vụ (DB Neon
+   * dùng chung, file ở máy người khác) — không chọn vào video, không vẽ ảnh
+   * vỡ. Tuỳ chọn vì chỉ route bài đăng tính cờ này; nơi khác coi như có.
+   */
+  available?: boolean;
 };
 
 /** `PostService.PostDetail`. `authorAvatarKey` = ảnh của người đăng (id Media). */

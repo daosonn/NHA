@@ -58,7 +58,7 @@ export default function VideoPhotosScreen() {
   const { familyId } = useActiveFamily();
   const { draft, update } = useVideoDraft();
 
-  const { tiles, familyList, isLoading } = useVideoPhotos();
+  const { tiles, familyList, isLoading, unavailableCount } = useVideoPhotos();
   const [filter, setFilter] = useState<Filter>('all');
   const [uploading, setUploading] = useState(false);
   // Người TẶNG (chính mình) trong nhà đang mở — để nhận ra "ảnh chung hai người".
@@ -317,6 +317,9 @@ export default function VideoPhotosScreen() {
         >
           <Text variant="caption" color={colors.text.body} style={{ flex: 1 }}>
             {t('video.photosShared', { photos: tiles.length - clipTotal, clips: clipTotal })}
+            {/* Nói ra số ảnh bị loại vì file nằm ở máy khác — không thì người
+                dùng thấy lưới thiếu và nghĩ app mất ảnh. */}
+            {unavailableCount > 0 ? ' · ' + t('video.unavailableCount', { count: unavailableCount }) : ''}
           </Text>
           <Pressable
             onPress={chooseForMe}

@@ -39,6 +39,12 @@ export function useVideoPhotos(): {
   tiles: VideoPhotoTile[];
   familyList: FamilySummary[];
   isLoading: boolean;
+  /**
+   * Số ảnh/clip có trong feed nhưng KHÔNG có file trên máy chủ này (DB Neon
+   * chung, file nằm máy người khác) — bị loại khỏi lưới, vì chọn vào là
+   * render chết. Màn hình nói con số này ra để người dùng không tưởng thiếu ảnh.
+   */
+  unavailableCount: number;
 } {
   const list = useFamilies();
   const familyList = useMemo(() => list.data ?? [], [list.data]);
@@ -53,9 +59,10 @@ export function useVideoPhotos(): {
     })),
   });
 
-  const tiles = useMemo(() => {
+  const { tiles, unavailableCount } = useMemo(() => {
     const seen = new Set<string>();
     const all: VideoPhotoTile[] = [];
+    let unavailable = 0;
 
     // upload mới nhất đứng trước — vừa chọn là thấy ngay đầu lưới.
     // File tự upload luôn là "của mình", nên bộ lọc Mine phải giữ chúng lại.
@@ -80,6 +87,12 @@ export function useVideoPhotos(): {
         for (const m of post.media) {
           if (seen.has(m.id)) continue; // bài đăng chung nhiều family — không nhân đôi ô
           seen.add(m.id);
+          // Không có file ở máy chủ này thì không được lên lưới: ffmpeg sẽ
+          // chết đúng tấm đó (đã dính 27/08 với thiệp render ở máy khác).
+          if (m.available === false) {
+            unavailable += 1;
+            continue;
+          }
           all.push({
             id: m.id,
             mimeType: m.mimeType,
@@ -93,8 +106,8 @@ export function useVideoPhotos(): {
         }
       }
     });
-    return all;
+    return { tiles: all, unavailableCount: unavailable };
   }, [feeds, familyList, draft.uploadedTiles, user?.id]);
 
-  return { tiles, familyList, isLoading: feeds.some((f) => f.isLoading) };
+  return { tiles, familyList, isLoading: feeds.some((f) => f.isLoading), unavailableCount };
 }

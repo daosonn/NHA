@@ -501,9 +501,29 @@ export class VideoService {
       select: { id: true, storageKey: true, mimeType: true },
     });
     const byId = new Map(mediaRows.map((m) => [m.id, m] as const));
-    for (const s of plan.scenes)
-      if (!byId.has(s.mediaId))
-        throw new Error(`Media ${s.mediaId} không còn tồn tại`);
+
+    // Lưới an toàn cuối cùng trước ffmpeg: cảnh nào mất row HOẶC mất file
+    // (Neon chung, file nằm máy khác; ảnh bị xoá giữa lúc tạo job và render)
+    // thì bỏ cảnh đó, phim ngắn đi một nhịp còn hơn chết với một cục stderr.
+    // Chỉ khi không còn cảnh nào mới fail — bằng câu người đọc hiểu được.
+    const usable: typeof plan.scenes = [];
+    const dropped: string[] = [];
+    for (const s of plan.scenes) {
+      const row = byId.get(s.mediaId);
+      if (row && (await this.storage.exists(row.storageKey))) usable.push(s);
+      else dropped.push(row?.storageKey ?? s.mediaId);
+    }
+    if (usable.length === 0) {
+      throw new Error(
+        'Không có ảnh/clip nào của video này còn file trên máy chủ. Hãy chọn lại ảnh — ảnh bạn tự tải lên từ máy này luôn dùng được.',
+      );
+    }
+    if (dropped.length > 0) {
+      this.logger.warn(
+        `job ${jobId}: bỏ ${dropped.length} cảnh không có file (${dropped.join(', ')})`,
+      );
+      plan.scenes = usable;
+    }
 
     const musicId = options.musicId;
     const bpm = isLibraryTrack(musicId) ? trackBpm(musicId) : null;
@@ -834,7 +854,13 @@ export class VideoService {
         where: { id: musicId.slice('media:'.length) },
         select: { storageKey: true },
       });
-      return row ? await media.path(row.storageKey) : null;
+      // Nhạc riêng mà file không có trên máy này → dựng phim không nhạc còn
+      // hơn fail cả video vì một track.
+      if (!row || !(await this.storage.exists(row.storageKey))) {
+        this.logger.warn(`nhạc ${musicId} không có file trên máy chủ — bỏ nhạc`);
+        return null;
+      }
+      return await media.path(row.storageKey);
     }
     return null;
   }
@@ -865,6 +891,7 @@ export class VideoService {
       select: {
         id: true,
         mimeType: true,
+        storageKey: true,
         createdAt: true,
         post: { select: { content: true } },
       },
@@ -875,8 +902,30 @@ export class VideoService {
       throw new ForbiddenException(
         `Không truy cập được media: ${missing.join(', ')}`,
       );
+
+    // Row có mà FILE không (Neon chung, file trên máy người khác) → bỏ qua
+    // ngay từ đây thay vì để ffmpeg chết giữa render. Chỉ khi không còn tấm
+    // nào mới từ chối — và nói rõ vì sao.
+    const present = new Set<string>();
+    await Promise.all(
+      rows.map(async (r) => {
+        if (await this.storage.exists(r.storageKey)) present.add(r.id);
+      }),
+    );
+    const usable = mediaIds.filter((id) => present.has(id));
+    if (usable.length < mediaIds.length) {
+      this.logger.warn(
+        `bỏ ${mediaIds.length - usable.length}/${mediaIds.length} media không có file trên máy chủ này`,
+      );
+    }
+    if (usable.length === 0) {
+      throw new BadRequestException(
+        'Không tấm nào trong số đã chọn có file trên máy chủ này — hãy chọn ảnh khác (ảnh do chính bạn tải lên từ máy này luôn dùng được).',
+      );
+    }
+
     // giữ đúng THỨ TỰ user chọn (màn 28 — "Numbers are the order they will appear")
-    return mediaIds.map((id) => {
+    return usable.map((id) => {
       const r = byId.get(id)!;
       return {
         id: r.id,
