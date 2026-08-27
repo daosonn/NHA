@@ -1291,9 +1291,17 @@ dev` **did not regenerate the client**, and the stale client survived
   is the same one screen everywhere. Verified: tsc, check:i18n (797 keys),
   prettier; not on a device.
 
-- **Object storage for media (2026-08-26)**: step 1 done — `StorageService`
-  decoupled from filesystem paths (see Current Focus). Step 2 is the R2
-  driver. Architecture change, so it merges only after backend-owner review.
+- **Object storage for media**: step 1 (2026-08-26) decoupled
+  `StorageService` from filesystem paths; **step 2 landed 2026-08-27** — an
+  R2 driver behind `STORAGE_DRIVER`, verified against the real bucket across
+  upload, head, ranged read, borrow-to-temp and delete. Local disk stays the
+  default and the offline path.
+  **Switching a machine over is not just a flag**: every `Media` row already
+  in Neon names a key that must exist in the bucket, so run
+  `pnpm --filter api r2:migrate` first. Each person uploads what their own
+  disk holds; the set is complete once everyone has. Steps and caveats in
+  `local-environment.md` § Media storage. Still to come: presigned URLs, which
+  would take the API out of the delivery path.
 
 - **Social login (Google + Facebook)** (2026-08-17): backend merged to
   `main` in PR #3 — `OAuthAccount` table + OAuth authorization-code

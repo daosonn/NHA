@@ -844,7 +844,8 @@
       "placePlaceholder": "例：ダナン",
       "mediaFixed_other": "写真{{count}}枚は投稿時のまま — 添付は作成時に決まります。",
       "saved": "投稿を更新しました"
-    }
+    },
+    "mediaCount_other": "{{count}}枚"
   },
   "omoide": {
     "summary": "{{people}}人が投稿した写真 {{photos}}枚",

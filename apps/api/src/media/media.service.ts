@@ -264,6 +264,15 @@ export class MediaService {
     if (!media || !(await this.canView(userId, media))) {
       throw new NotFoundException('Media not found');
     }
+    // The row is shared through the database; the file is not (it sits in
+    // UPLOAD_DIR on whichever machine took the upload). A file that is simply
+    // somewhere else is **not found here** — sizeOf would raise a 500, and a
+    // wall of those is what a teammate's avatar looked like in the console.
+    // Posts already handle this through the `available` flag; avatars and
+    // direct media links come through here with no such guard.
+    if (!(await this.storage.exists(media.storageKey))) {
+      throw new NotFoundException('Media not found');
+    }
     const size = await this.storage.sizeOf(media.storageKey);
     const range = parseByteRange(rangeHeader, size);
     if (range === 'unsatisfiable') {
