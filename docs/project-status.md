@@ -1226,6 +1226,17 @@ dev` **did not regenerate the client**, and the stale client survived
 
 ## In Progress
 
+- **Refresh without reloading (2026-08-27)**: the app had no refresh gesture
+  at all — no pull-to-refresh anywhere, so a browser reload was the only way
+  to see new data, and it threw away the bundle, the session read and the
+  reader's place. Tapping the logo, or the tab you are already on, now
+  refetches in place and returns to the top. `invalidateQueries()` with no
+  filter is the whole mechanism: React Query refetches what is mounted and
+  marks the rest stale, so the screen in front of you updates now and the
+  others when next opened. The feed is trimmed to its first page before the
+  refetch — refetching an infinite list whole would re-request every page
+  already scrolled through. `features/ui/soft-refresh.ts`.
+
 - **A milestone announces itself (2026-08-27)**: adding a life event also
   posts it as an EVENT, in the same transaction. Two owner's calls, since
   neither followed from the code: one added from your own timeline reaches

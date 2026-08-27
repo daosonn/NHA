@@ -32,7 +32,9 @@
       "family": "Family",
       "ai": "AI",
       "profile": "Profile"
-    }
+    },
+    "refresh": "Refresh",
+    "home": "Home"
   },
   "auth": {
     "modeLabel": "Sign in or create an account",

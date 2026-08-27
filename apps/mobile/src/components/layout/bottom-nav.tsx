@@ -9,6 +9,7 @@ import { useWindowDimensions, View, type LayoutChangeEvent } from 'react-native'
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useSoftRefresh } from '../../features/ui/soft-refresh';
 import { colors, elevation, radius } from '../../theme';
 import { easing } from '../../theme/motion';
 import { AnimatedPressable } from '../motion/animated-pressable';
@@ -227,6 +228,7 @@ function Slot({
  */
 export function BottomNav({ state, navigation }: BottomTabBarProps) {
   const { t } = useTranslation();
+  const { refresh } = useSoftRefresh();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
@@ -294,9 +296,15 @@ export function BottomNav({ state, navigation }: BottomTabBarProps) {
               target: route.key,
               canPreventDefault: true,
             });
-            if (!focused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
+            if (event.defaultPrevented) return;
+            if (focused) {
+              // The gesture every social app has: the tab you are already on
+              // fetches again and returns to the top. Without it there is no
+              // way to see new posts short of reloading the browser.
+              refresh();
+              return;
             }
+            navigation.navigate(route.name);
           };
 
           // Every screen in this group owns a slot (the compose screen left
