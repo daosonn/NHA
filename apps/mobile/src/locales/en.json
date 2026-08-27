@@ -892,7 +892,9 @@
       "mediaFixed_one": "The {{count}} photo stays as posted — attachments are fixed when a moment is created.",
       "mediaFixed_other": "The {{count}} photos stay as posted — attachments are fixed when a moment is created.",
       "saved": "Moment updated"
-    }
+    },
+    "mediaCount": "{{count}} photo",
+    "mediaCount_other": "{{count}} photos"
   },
   "omoide": {
     "summary": "{{photos}} photos by {{people}} people",

@@ -1,5 +1,4 @@
-import { Image } from 'expo-image';
-import { Heart, ImageOff, MessageCircle, Play, UserRound } from 'lucide-react-native';
+import { Heart, MessageCircle, UserRound } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
@@ -7,34 +6,19 @@ import Animated from 'react-native-reanimated';
 
 import type { PostDetail, ReactionType } from '../../lib/api';
 import { formatFullDate } from '../../lib/date';
-import { thumbnailSource } from '../../lib/media-source';
-import { colors, elevation, radius, spacing } from '../../theme';
+import { colors, elevation, radius } from '../../theme';
 import { CARD_PRESS_SCALE } from '../../theme/motion';
 import { usePop } from '../motion/pop';
 import { usePressScale } from '../motion/press';
 import { Avatar } from '../ui/avatar';
 import { Text } from '../ui/text';
+import { PostMedia } from './post-media';
 
 /**
  * Trái tim gửi đúng một loại trong năm loại của server — cùng lựa chọn với
  * `LikeButton` ở trang bài đăng, để hai chỗ không lệch nhau.
  */
 const HEART: ReactionType = 'LOVE';
-
-/** Two photos share the width at a fixed height. Mockup 2a. */
-const PAIR_MEDIA_HEIGHT = 104;
-/** Beyond this the card would push the next post off the screen entirely. */
-const MAX_TILES = 2;
-
-/**
- * Ảnh ĐƠN vẽ theo đúng tỷ lệ của nó (khai qua onLoad), thay vì khung cứng
- * 200px cover — khung cứng từng cắt thiệp dọc 1080×1440 còn mỗi dải giữa.
- * Kẹp trong [0.72, 1.9]: thiệp 3:4 (0.75) lọt nguyên vẹn, ảnh 16:9 cũng vậy;
- * chỉ ảnh dọc quá dài (9:16) mới bị xén nhẹ để một bài không nuốt cả màn.
- */
-const DEFAULT_SINGLE_RATIO = 3 / 2;
-const MIN_SINGLE_RATIO = 0.72;
-const MAX_SINGLE_RATIO = 1.9;
 
 export type PostCardProps = {
   post: PostDetail;
@@ -106,10 +90,7 @@ export function PostCard({
 
   const posted = formatFullDate(post.createdAt.slice(0, 10));
   const isPrivate = post.familyIds.length === 0;
-  const tiles = post.media.slice(0, MAX_TILES);
-  const isPair = tiles.length > 1;
-  const hasBody =
-    (post.content !== null && post.content !== '') || tiles.length > 0 || post.eventTitle !== null;
+  const hasText = (post.content !== null && post.content !== '') || post.eventTitle !== null;
 
   // The whole card dips while the "open this moment" surfaces are held —
   // the body and the comment count, which share one destination. The author
@@ -131,62 +112,89 @@ export function PostCard({
         press.style,
       ]}
     >
-      <Pressable
-        onPress={onAuthorPress}
-        disabled={onAuthorPress === undefined}
-        accessibilityRole={onAuthorPress === undefined ? undefined : 'button'}
-        accessibilityLabel={t('post.openProfile', { name: post.authorName })}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
-      >
-        {/* The post carries its author's face; the screen may also have
-            looked one up in the family it is drawing. Either answers the
-            same question, so whichever the caller has is used. */}
-        <Avatar size={40} name={post.authorName} mediaId={authorAvatarId ?? post.authorAvatarKey} />
+      {/* Two press targets, side by side and never nested (react-native-web
+          turns `accessibilityRole="button"` into a real <button>, and HTML
+          forbids one inside another).
 
-        <View style={{ flex: 1, gap: 1 }}>
-          <Text variant="body1" weight="semibold" numberOfLines={1}>
-            {post.authorName}
-          </Text>
+          The author block is sized to its content rather than stretched:
+          it used to carry `flex: 1`, so the whole width of the header —
+          including the empty half beyond the date — opened the profile. On
+          a card whose body opens the moment, that made the top third of it
+          go somewhere else for no visible reason. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <Pressable
+          onPress={onAuthorPress}
+          disabled={onAuthorPress === undefined}
+          accessibilityRole={onAuthorPress === undefined ? undefined : 'button'}
+          accessibilityLabel={t('post.openProfile', { name: post.authorName })}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 }}
+        >
+          {/* The post carries its author's face; the screen may also have
+              looked one up in the family it is drawing. Either answers the
+              same question, so whichever the caller has is used. */}
+          <Avatar
+            size={40}
+            name={post.authorName}
+            mediaId={authorAvatarId ?? post.authorAvatarKey}
+          />
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            {posted !== null && (
-              <Text variant="caption" weight="medium" color={colors.text.lightMuted}>
-                {posted}
-              </Text>
-            )}
+          <View style={{ flexShrink: 1, gap: 1 }}>
+            <Text variant="body1" weight="semibold" numberOfLines={1}>
+              {post.authorName}
+            </Text>
 
-            {(isPrivate || audienceLabel !== undefined) && (
-              <>
-                <Text variant="caption" color={colors.state.borderDefault}>
-                  ·
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              {posted !== null && (
+                <Text variant="caption" weight="medium" color={colors.text.lightMuted}>
+                  {posted}
                 </Text>
+              )}
 
-                <View
-                  style={{
-                    height: 18,
-                    paddingHorizontal: 8,
-                    borderRadius: radius.full,
-                    justifyContent: 'center',
-                    backgroundColor: isPrivate ? colors.background.muted : colors.coral.soft,
-                  }}
-                >
-                  <Text
-                    variant="badge"
-                    weight="semibold"
-                    color={isPrivate ? colors.text.secondary : colors.coral.deep}
-                    numberOfLines={1}
-                    style={{ letterSpacing: 0.2 }}
-                  >
-                    {isPrivate ? t('post.private') : audienceLabel}
+              {(isPrivate || audienceLabel !== undefined) && (
+                <>
+                  <Text variant="caption" color={colors.state.borderDefault}>
+                    ·
                   </Text>
-                </View>
-              </>
-            )}
-          </View>
-        </View>
-      </Pressable>
 
-      {hasBody && (
+                  <View
+                    style={{
+                      height: 18,
+                      paddingHorizontal: 8,
+                      borderRadius: radius.full,
+                      justifyContent: 'center',
+                      backgroundColor: isPrivate ? colors.background.muted : colors.coral.soft,
+                    }}
+                  >
+                    <Text
+                      variant="badge"
+                      weight="semibold"
+                      color={isPrivate ? colors.text.secondary : colors.coral.deep}
+                      numberOfLines={1}
+                      style={{ letterSpacing: 0.2 }}
+                    >
+                      {isPrivate ? t('post.private') : audienceLabel}
+                    </Text>
+                  </View>
+                </>
+              )}
+            </View>
+          </View>
+        </Pressable>
+
+        {/* The rest of the row belongs to the moment, like the body does.
+            Blank space that does nothing is worse than either destination. */}
+        <Pressable
+          onPress={onPress}
+          disabled={onPress === undefined}
+          accessibilityRole={onPress === undefined ? undefined : 'button'}
+          accessibilityLabel={t('post.openLabel', { name: post.authorName })}
+          onPressIn={press.onPressIn}
+          onPressOut={press.onPressOut}
+          style={{ flex: 1, alignSelf: 'stretch', minWidth: 24 }}
+        />
+      </View>
+
+      {hasText && (
         <Pressable
           onPress={onPress}
           disabled={onPress === undefined}
@@ -207,121 +215,24 @@ export function PostCard({
               {post.content}
             </Text>
           )}
-
-          {tiles.length > 0 && (
-            <View style={{ flexDirection: 'row', gap: spacing.xs }}>
-              {tiles.map((item) => {
-                const clip = item.mimeType.startsWith('video/');
-                // File nằm trên máy khác (DB Neon chung) → vẽ ô "không có ở
-                // đây" thay vì một ảnh vỡ bấm vào được rồi 404.
-                if (item.available === false) {
-                  return (
-                    <View
-                      key={item.id}
-                      accessibilityLabel={t('post.mediaUnavailable')}
-                      style={{
-                        flex: isPair ? 1 : undefined,
-                        width: isPair ? undefined : '100%',
-                        height: isPair ? PAIR_MEDIA_HEIGHT : 120,
-                        borderRadius: isPair ? radius.lg : radius.xl,
-                        backgroundColor: colors.background.subtle,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 6,
-                      }}
-                    >
-                      <ImageOff size={20} color={colors.text.subtle} strokeWidth={2} />
-                      <Text variant="badge" color={colors.text.subtle}>
-                        {t('post.mediaUnavailable')}
-                      </Text>
-                    </View>
-                  );
-                }
-                return (
-                  // Mỗi tấm mở được: chạm vào ảnh trước đây chỉ mở bài đăng,
-                  // nên không có cách nào xem tấm ảnh cho lớn hay phát clip.
-                  <Pressable
-                    key={item.id}
-                    onPress={() => onMediaPress?.(item)}
-                    disabled={onMediaPress === undefined}
-                    accessibilityRole={onMediaPress === undefined ? undefined : 'imagebutton'}
-                    accessibilityLabel={clip ? t('post.openClip') : t('post.openPhoto')}
-                    style={{
-                      flex: isPair ? 1 : undefined,
-                      width: isPair ? undefined : '100%',
-                    }}
-                  >
-                    <Image
-                      source={thumbnailSource(item.id, item.mimeType)}
-                      style={{
-                        width: '100%',
-                        ...(isPair
-                          ? { height: PAIR_MEDIA_HEIGHT }
-                          : {
-                              aspectRatio: Math.min(
-                                MAX_SINGLE_RATIO,
-                                Math.max(
-                                  MIN_SINGLE_RATIO,
-                                  singleRatio[item.id] ?? DEFAULT_SINGLE_RATIO,
-                                ),
-                              ),
-                            }),
-                        borderRadius: isPair ? radius.lg : radius.xl,
-                        backgroundColor: colors.background.subtle,
-                      }}
-                      contentFit="cover"
-                      onLoad={
-                        isPair
-                          ? undefined
-                          : (e) => {
-                              const { width, height } = e.source;
-                              if (width > 0 && height > 0) {
-                                setSingleRatio((current) =>
-                                  current[item.id] !== undefined
-                                    ? current
-                                    : { ...current, [item.id]: width / height },
-                                );
-                              }
-                            }
-                      }
-                      // A moment is worth a beat of blur rather than a blank rectangle.
-                      transition={160}
-                      recyclingKey={item.id}
-                      accessibilityIgnoresInvertColors
-                    />
-                    {clip && (
-                      <View
-                        style={{
-                          position: 'absolute',
-                          left: 0,
-                          right: 0,
-                          top: 0,
-                          bottom: 0,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                        pointerEvents="none"
-                      >
-                        <View
-                          style={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: radius.full,
-                            backgroundColor: 'rgba(0,0,0,0.45)',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <Play size={20} color={colors.text.white} fill={colors.text.white} />
-                        </View>
-                      </View>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
         </Pressable>
+      )}
+
+      {/* Media is a SIBLING of the body, not inside it. Two reasons: each
+          tile is its own press target, and a button inside a button is
+          invalid on the web build; and the row scrolls sideways, which it
+          cannot do while a parent Pressable is claiming the gesture. */}
+      {post.media.length > 0 && (
+        <PostMedia
+          media={post.media}
+          singleRatio={singleRatio}
+          onRatio={(id: string, ratio: number) =>
+            setSingleRatio((current) =>
+              current[id] !== undefined ? current : { ...current, [id]: ratio },
+            )
+          }
+          onMediaPress={onMediaPress}
+        />
       )}
 
       {/* Ai có mặt trong khoảnh khắc này — tag vốn được ghi từ lúc đăng nhưng

@@ -80,7 +80,22 @@ function metrics(width: number) {
 
 type Metrics = ReturnType<typeof metrics>;
 
-export type TabConfig = { labelKey: string; icon: LucideIcon };
+export type TabConfig = {
+  labelKey: string;
+  icon: LucideIcon;
+  /**
+   * Drawn as a filled coral disc instead of a line glyph.
+   *
+   * The tree is the thing this app is *for* — the other four lead to it or
+   * away from it — and as a plain outline among five it read as one option
+   * of five. Colour and weight say "start here" without breaking the row:
+   * the raised disc tried on 2026-08-26 was reverted the same day because a
+   * slot lifted out of the bar reads as an action, not a destination, and
+   * this one is still very much a destination. Same reason the label stays
+   * and the glyph is `Network` — structure, not a `+`.
+   */
+  accent?: boolean;
+};
 
 /**
  * Home · Omoide · Family tree · AI · Profile — five ordinary slots (owner's
@@ -99,7 +114,7 @@ export type TabConfig = { labelKey: string; icon: LucideIcon };
 export const TABS: Record<string, TabConfig> = {
   index: { labelKey: 'nav.tab.home', icon: House },
   omoide: { labelKey: 'nav.tab.omoide', icon: History },
-  family: { labelKey: 'nav.tab.family', icon: Network },
+  family: { labelKey: 'nav.tab.family', icon: Network, accent: true },
   ai: { labelKey: 'nav.tab.ai', icon: Sparkles },
   profile: { labelKey: 'nav.tab.profile', icon: UserRound },
 };
@@ -112,6 +127,7 @@ function Slot({
   label,
   icon: Icon,
   selected,
+  accent = false,
   onPress,
   onLayout,
   m,
@@ -119,11 +135,19 @@ function Slot({
   label: string;
   icon: LucideIcon;
   selected: boolean;
+  accent?: boolean;
   onPress: () => void;
   onLayout: (event: LayoutChangeEvent) => void;
   m: Metrics;
 }) {
   const tint = selected ? colors.coral.deep : colors.text.secondary;
+  // On the accented slot the disc carries the colour, so the glyph inside it
+  // is white at both states and only the fill deepens on selection.
+  const iconTint = accent ? colors.text.white : tint;
+  // +12, not +16: the slot is 52 tall and the disc shares it with a 3px
+  // gap and the label. At 38 the stack came to 53 and the bar clips —
+  // BlurView carries overflow: hidden to keep its own radius.
+  const discSize = m.icon + 12;
 
   const press = usePressScale();
   // The icon pops on arrival only — the slot being left just fades.
@@ -156,7 +180,22 @@ function Slot({
       ]}
     >
       <Animated.View style={iconPop}>
-        <Icon size={m.icon} color={tint} strokeWidth={selected ? 2.4 : 2} />
+        {accent ? (
+          <View
+            style={{
+              width: discSize,
+              height: discSize,
+              borderRadius: radius.full,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: selected ? colors.coral.hover : colors.coral.primary,
+            }}
+          >
+            <Icon size={m.icon} color={iconTint} strokeWidth={2.3} />
+          </View>
+        ) : (
+          <Icon size={m.icon} color={tint} strokeWidth={selected ? 2.4 : 2} />
+        )}
       </Animated.View>
 
       {/* Ellipsises rather than wrapping on the narrowest phones, where
@@ -283,6 +322,7 @@ export function BottomNav({ state, navigation }: BottomTabBarProps) {
               label={t(config.labelKey)}
               icon={config.icon}
               selected={focused}
+              accent={config.accent ?? false}
               onPress={go}
               onLayout={pill.itemLayout(route.key)}
               m={m}

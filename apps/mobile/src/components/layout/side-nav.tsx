@@ -73,6 +73,7 @@ function Row({
   background,
   strokeWidth,
   accessibilityRole,
+  accent = false,
   selected,
   open,
   onPress,
@@ -83,6 +84,8 @@ function Row({
   background: string;
   strokeWidth: number;
   accessibilityRole: 'tab' | 'button';
+  /** Filled coral disc instead of a line glyph — see `TabConfig.accent`. */
+  accent?: boolean;
   selected?: boolean;
   /** 0 closed, 1 open — the label rides it in. */
   open: SharedValue<number>;
@@ -131,9 +134,22 @@ function Row({
           flexShrink: 0,
           alignItems: 'center',
           justifyContent: 'center',
+          // The rail is the same five destinations as the bar, so the tree is
+          // marked the same way here — one list, one emphasis, or the two
+          // navigations start disagreeing about what matters.
+          borderRadius: accent ? radius.full : undefined,
+          backgroundColor: accent
+            ? selected === true
+              ? colors.coral.hover
+              : colors.coral.primary
+            : undefined,
         }}
       >
-        <Icon size={ICON} color={tint} strokeWidth={strokeWidth} />
+        <Icon
+          size={accent ? ICON - 6 : ICON}
+          color={accent ? colors.text.white : tint}
+          strokeWidth={accent ? 2.3 : strokeWidth}
+        />
       </View>
 
       {/* `flexShrink: 0` so the word keeps its natural width and overflows to
@@ -283,9 +299,10 @@ export function SideNav() {
           <BrandMark size={26} />
         </View>
 
-        {/* No raised disc any more (owner's calls, 2026-08-26): compose moved
-            to Home's bar, and the family tree is an ordinary destination —
-            the same five rows the bottom bar has as slots. */}
+        {/* Still no raised disc — compose moved to Home's bar (owner's call,
+            2026-08-26). The tree is marked instead: same five rows, but its
+            glyph sits in a coral disc, matching the bar. Marked, not lifted;
+            lifting is what made the old centre slot read as an action. */}
         <View style={{ gap: 4 }}>
           {DESTINATIONS.map(({ name, href }) => {
             const config = TABS[name];
@@ -301,6 +318,7 @@ export function SideNav() {
                 key={href}
                 label={t(config.labelKey)}
                 icon={config.icon}
+                accent={config.accent ?? false}
                 tint={selected ? colors.coral.deep : colors.text.secondary}
                 background={selected ? colors.coral.light : 'transparent'}
                 strokeWidth={selected ? 2.4 : 2}
