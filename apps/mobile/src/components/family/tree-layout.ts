@@ -11,6 +11,8 @@
  * weight once trees are deep and irregular enough to be hand-placed badly.
  */
 
+import { assignOwners, buildBlocks, orderChildren, type Block } from './tree-blocks';
+
 export type NodeState = 'active' | 'pending' | 'empty';
 
 export type TreeMember = {
@@ -26,6 +28,8 @@ export type TreeMember = {
   isViewer?: boolean;
   /** Ảnh thật của người này (id Media) — không có thì node vẽ chữ cái đầu. */
   avatarKey?: string | null;
+  /** ISO date (YYYY-MM-DD) — siblings order oldest-left by it. */
+  birthDate?: string | null;
 };
 
 export type TreeGeneration = {
@@ -39,8 +43,14 @@ export type FamilyTreeData = {
   memberCount: number;
   pendingCount: number;
   generations: TreeGeneration[];
+  /** Members no edge mentions — drawn in a strip of their own, not GEN 1. */
+  unplaced: TreeMember[];
+  /** Gutter label for that strip. */
+  unplacedLabel: string;
   /** Partner links, drawn as a shallow arc between two nodes. */
   couples: { members: [string, string] }[];
+  /** Sibling links — no stroke of their own, but they anchor placement. */
+  siblings: [string, string][];
   /** A couple's joint down to a child. */
   descents: { from: [string, string]; to: string }[];
 };
@@ -70,33 +80,141 @@ export type TreeLayout = {
   nodes: Map<string, PositionedNode>;
   rows: PositionedRow[];
   height: number;
+  /** World width. At least the viewport; grows when a row genuinely needs it. */
+  width: number;
 };
 
-export function layoutTree(data: FamilyTreeData, width: number): TreeLayout {
+/** Centre-to-centre inside a couple block — close enough for the arc to read. */
+const COUPLE_PITCH = 104;
+/** Minimum centre-to-centre across neighbouring blocks — room for two labels. */
+const BLOCK_PITCH = 128;
+/** First and last node centre to the world's edge. */
+const EDGE_MARGIN = 72;
+
+/**
+ * Family-unit layout (2026-08-27, replacing even spacing by API order —
+ * `family-tree-rendering.md` records what that got wrong):
+ *
+ * 1. Partners are welded into blocks, so a couple can never be split by
+ *    whoever happened to sit between them in the payload.
+ * 2. A child's block hangs off its parents' block, and parents are centred
+ *    over the spread of their children — descents drop straight instead of
+ *    sweeping across the row.
+ * 3. Every block reserves its subtree's width, so neighbouring branches can
+ *    never overlap, and a crowded row widens the WORLD rather than
+ *    compressing nodes into each other — the canvas pans, the layout does
+ *    not squeeze.
+ *
+ * It is deliberately a bounding-box tidy-up, not Reingold–Tilford: family
+ * graphs are not strict trees (two roots marry; a child's parents may not
+ * be a couple), and the contour bookkeeping only earns its complexity once
+ * bounding boxes visibly waste space. `architecture.md` keeps d3-hierarchy
+ * as the eventual step.
+ */
+export function layoutTree(data: FamilyTreeData, viewportWidth: number): TreeLayout {
   const nodes = new Map<string, PositionedNode>();
   const rows: PositionedRow[] = [];
+
+  // ---- arrangement: welding, hanging, ordering — see tree-blocks.ts ----
+  const { blocks, blockOf } = buildBlocks(data);
+  assignOwners(data, blocks, blockOf);
+  orderChildren(data, blocks);
+
+  // ---- widths, bottom-up: a subtree reserves its bounding box ----------
+  const extents = new Map<Block, number>();
+  const extentOf = (block: Block): number => {
+    const cached = extents.get(block);
+    if (cached !== undefined) return cached;
+    const own = (block.ids.length - 1) * COUPLE_PITCH;
+    const children = block.children.reduce(
+      (sum, child, index) => sum + extentOf(child) + (index > 0 ? BLOCK_PITCH : 0),
+      0,
+    );
+    const extent = Math.max(own, block.children.length > 0 ? children : 0);
+    extents.set(block, extent);
+    return extent;
+  };
+
+  // ---- placement, top-down ----------------------------------------------
+  const place = (block: Block, left: number): void => {
+    if (block.children.length > 0) {
+      // Children first, side by side; parents then centre over their spread.
+      let cursor = left;
+      for (const child of block.children) {
+        place(child, cursor);
+        cursor += extentOf(child) + BLOCK_PITCH;
+      }
+      const first = block.children[0];
+      const last = block.children[block.children.length - 1];
+      const mid = (first.firstX + last.lastX) / 2;
+      const own = (block.ids.length - 1) * COUPLE_PITCH;
+      block.firstX = mid - own / 2;
+    } else {
+      block.firstX = left;
+    }
+    block.lastX = block.firstX + (block.ids.length - 1) * COUPLE_PITCH;
+  };
+
+  // Roots side by side: the main tree first, then any stray ownerless
+  // branch, each keeping its whole bounding box.
+  let cursor = 0;
+  for (const block of blocks) {
+    if (block.owner !== null) continue;
+    place(block, cursor);
+    cursor += extentOf(block) + BLOCK_PITCH;
+  }
+
+  // ---- normalise into world coordinates --------------------------------
+  let minX = Infinity;
+  let maxX = -Infinity;
+  for (const block of blocks) {
+    minX = Math.min(minX, block.firstX);
+    maxX = Math.max(maxX, block.lastX);
+  }
+  if (blocks.length === 0) {
+    minX = 0;
+    maxX = 0;
+  }
+
+  const spanWidth = maxX - minX + EDGE_MARGIN * 2;
+  const width = Math.max(viewportWidth, spanWidth);
+  // A tree narrower than the viewport sits centred, like it always has.
+  const shift = EDGE_MARGIN - minX + (width - spanWidth) / 2;
 
   data.generations.forEach((generation, row) => {
     const y = FIRST_ROW_Y + row * ROW_GAP;
     rows.push({ id: generation.id, label: generation.label, y });
-
-    const count = generation.members.length;
-    generation.members.forEach((member, index) => {
+    for (const member of generation.members) {
+      const block = blockOf.get(member.id);
+      if (block === undefined) continue;
+      const index = block.ids.indexOf(member.id);
       nodes.set(member.id, {
         ...member,
-        // Evenly spaced, which lands within a few px of the mockup for the
-        // two-per-generation case it happens to draw.
-        x: (width * (index + 1)) / (count + 1),
+        x: block.firstX + index * COUPLE_PITCH + shift,
+        y,
+        size: member.isViewer === true ? VIEWER_NODE_SIZE : NODE_SIZE,
+      });
+    }
+  });
+
+  // ---- the unplaced strip ------------------------------------------------
+  if (data.unplaced.length > 0) {
+    const y = FIRST_ROW_Y + rows.length * ROW_GAP;
+    rows.push({ id: 'unplaced', label: data.unplacedLabel, y });
+    data.unplaced.forEach((member, index) => {
+      nodes.set(member.id, {
+        ...member,
+        x: (width * (index + 1)) / (data.unplaced.length + 1),
         y,
         size: member.isViewer === true ? VIEWER_NODE_SIZE : NODE_SIZE,
       });
     });
-  });
+  }
 
   const lastRow = rows[rows.length - 1];
   const height = lastRow === undefined ? 0 : lastRow.y + NODE_SIZE / 2 + LABEL_BLOCK;
 
-  return { nodes, rows, height };
+  return { nodes, rows, height, width };
 }
 
 /** Where a couple's two threads meet, and the descent leaves from. */

@@ -296,7 +296,8 @@
         "hasMembers": "Other members still belong to this family. They need to leave first."
       }
     },
-    "noFamilyBody": "The tree starts with a family. Create one, or join with a code someone sent you."
+    "noFamilyBody": "The tree starts with a family. Create one, or join with a code someone sent you.",
+    "unplacedRow": "UNPLACED"
   },
   "invite": {
     "sheet": {

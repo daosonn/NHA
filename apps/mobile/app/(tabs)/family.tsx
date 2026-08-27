@@ -165,6 +165,7 @@ export default function FamilyTreeScreen() {
         : treeFromGraph(payload, {
             viewerUserId: user?.id ?? null,
             generationLabel: (index) => t('family.generation', { index: index + 1 }),
+            unplacedLabel: t('family.unplacedRow'),
             translate: t,
             pendingMemberIds,
           }),

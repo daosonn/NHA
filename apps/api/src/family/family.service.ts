@@ -64,6 +64,12 @@ export interface RelationshipSummary {
 /** A tree node: member plus whether a live invitation is holding the spot. */
 export interface TreeMemberSummary extends FamilyMemberSummary {
   pending: boolean;
+  /**
+   * ISO date (YYYY-MM-DD) from their Life Profile, null when unknown.
+   * Tree-only: the layout orders siblings oldest-to-youngest with it
+   * (added 2026-08-27).
+   */
+  birthDate: string | null;
 }
 
 export interface FamilyTree {
@@ -179,7 +185,10 @@ export class FamilyService {
    * tư của tác giả. Media của mốc đời placeholder trong nhà thì dọn file như
    * `removeMember`, vì storageKey chỉ sống trên Media row sắp mất.
    */
-  async remove(userId: string, familyId: string): Promise<{ success: boolean }> {
+  async remove(
+    userId: string,
+    familyId: string,
+  ): Promise<{ success: boolean }> {
     await this.requireMembership(familyId, userId);
     const family = await this.prisma.family.findUnique({
       where: { id: familyId },
@@ -237,7 +246,21 @@ export class FamilyService {
         id: true,
         name: true,
         coverMediaId: true,
-        members: { select: memberSelect, orderBy: { joinedAt: 'asc' } },
+        members: {
+          select: {
+            ...memberSelect,
+            // Birth dates live on the Life Profile — the placeholder's own,
+            // or the account's for a linked member (LifeProfile is XOR).
+            placeholderProfile: { select: { birthDate: true } },
+            user: {
+              select: {
+                avatarKey: true,
+                lifeProfile: { select: { birthDate: true } },
+              },
+            },
+          },
+          orderBy: { joinedAt: 'asc' },
+        },
         relationships: {
           select: {
             id: true,
@@ -268,10 +291,17 @@ export class FamilyService {
     );
     return {
       ...family,
-      members: family.members.map((member) => ({
-        ...toMemberSummary(member),
-        pending: pendingMemberIds.has(member.id),
-      })),
+      members: family.members.map(({ placeholderProfile, ...member }) => {
+        const birthDate = member.userId
+          ? (member.user?.lifeProfile?.birthDate ?? null)
+          : (placeholderProfile?.birthDate ?? null);
+        return {
+          ...toMemberSummary(member),
+          pending: pendingMemberIds.has(member.id),
+          birthDate:
+            birthDate === null ? null : birthDate.toISOString().slice(0, 10),
+        };
+      }),
     };
   }
 

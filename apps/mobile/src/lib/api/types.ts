@@ -203,12 +203,21 @@ export type CreateRelationshipRequest = {
  * "Grandmother" is derived from these edges plus the direction of travel and
  * who is looking (`docs/00-shared/api-contract.md`).
  */
+/** A tree node: member plus tree-only fields the layout needs. */
+export type TreeMemberSummary = FamilyMemberSummary & {
+  /**
+   * ISO date (YYYY-MM-DD) from their Life Profile, null when unknown —
+   * siblings draw oldest-to-youngest, left to right (2026-08-27).
+   */
+  birthDate: string | null;
+};
+
 export type FamilyTree = {
   id: string;
   name: string;
   /** Ảnh cả nhà — id Media, xem qua `mediaSource()` như mọi ảnh khác */
   coverMediaId: string | null;
-  members: FamilyMemberSummary[];
+  members: TreeMemberSummary[];
   relationships: RelationshipSummary[];
 };
 

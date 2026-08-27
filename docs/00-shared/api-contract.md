@@ -155,7 +155,14 @@ Create body: `{ name, relationshipType, email?, kinshipKey?, newMemberIsFrom?,
 relationshipLabel?, memberId? }`. Sending an invite **reserves the spot
 immediately** (design-system.md): the server creates the placeholder
 member and its relationship edge to the inviter in the same transaction —
-the tree shows the node as `pending` from that moment. `newMemberIsFrom`
+the tree shows the node as `pending` from that moment. For
+`relationshipType: SIBLING` it also **mirrors the inviter's plain `PARENT`
+edges onto the new member** (added 2026-08-27): siblings share parents,
+and without them the new node floats unconnected in the tree. Adopted and
+step parent edges are not mirrored — they are the inviter's own story, not
+automatically the sibling's. Tree members also carry `birthDate`
+(`YYYY-MM-DD` from the Life Profile, null when unset; added 2026-08-27) —
+the client orders siblings oldest-to-youngest with it. `newMemberIsFrom`
 is the edge direction from `features/family/kinship.ts` (Mother `true`, Daughter
 `false`). Pass `memberId` instead to invite an existing placeholder to
 its spot (no new edge). One live invitation per spot — a second is a 409.

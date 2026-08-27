@@ -1309,7 +1309,38 @@ dev` **did not regenerate the client**, and the stale client survived
   springs back on a tree that fits), wheel zooms at the cursor to 190%
   after a drag, double-click toggles fit ↔ 1.7×, pan-while-zoomed sticks,
   zero console errors. Native untouched by all three fixes. Also verified:
-  tsc, prettier.
+  tsc, prettier. **The rendering pipeline and layout algorithm are now
+  documented** in `docs/01-frontend/family-tree-rendering.md` — read it
+  before touching placement.
+
+- **The tree lays itself out by family unit (2026-08-27,
+  `feature/tree-pan-zoom`)**: even spacing by API order is gone — it split
+  couples, swept arcs behind strangers' faces and let crowded rows overlap.
+  `layoutTree` now welds partners into blocks (remarriage chains included),
+  hangs child blocks off their parents' block — a parentless block with a
+  placed SIBLING adopts that sibling's owner and sits beside them, so the
+  composition stays centred instead of leaning — reserves bounding boxes so
+  branches cannot collide, and centres parents over their children — and a
+  crowded row **widens the world instead of squeezing**: the canvas opens
+  and recenters at a fit scale, never cropped. Three decisions taken with
+  it (Đạt, 2026-08-27): members no edge mentions draw in a labelled
+  **"unplaced" strip** below the tree instead of GEN 1
+  (`family.unplacedRow`, en+ja); inviting a **SIBLING now mirrors the
+  inviter's plain `PARENT` edges** onto the new member server-side so the
+  sibling hangs from the same joint instead of floating (contract updated,
+  adopted/step deliberately not mirrored); everything is written down in
+  `family-tree-rendering.md`. Verified: mobile tsc, api tsc, check:i18n
+  (820 keys), prettier, and the seed family drawn in headless Chromium —
+  couples adjacent, descents straight, opens at 75% fit with nothing cut
+  off. e2e not run (stays off shared Neon). Same day, three more rules
+  (Đạt): **siblings order oldest-left** by Life Profile `birthDate`, now
+  carried on tree members (`GET /families/:id/tree`, contract updated) and
+  keyed on the block's anchor so a young spouse cannot displace an eldest
+  child; **a partner is auto-joined to their spouse's children** in the
+  drawing — no "their" vs "our" children, DB edges untouched; and the
+  arrangement rules moved to **`tree-blocks.ts`** (welding / hanging /
+  ordering, one function per rule) so the next rule is a slot-in, with
+  `tree-layout.ts` keeping only pixels.
 
 - **One create form, one join form (2026-08-27, `feature/invite-method-choice`)**:
   `create-family.tsx` (the create/join tab combo) put a second create-family

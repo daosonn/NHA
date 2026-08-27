@@ -208,6 +208,33 @@ export class InvitationService {
                 : null,
           },
         });
+        // A sibling with only a SIBLING edge floats unconnected in the tree:
+        // threads are drawn from parent edges, and the sibling has none
+        // (docs/01-frontend/family-tree-rendering.md). Siblings share
+        // parents, so the inviter's are mirrored onto the new member here,
+        // in the same transaction (decided 2026-08-27). Plain PARENT only —
+        // an adoptive or step edge is the inviter's own story, and copying
+        // it would assert something nobody said about the sibling.
+        if (dto.relationshipType === RelationshipType.SIBLING) {
+          const parentEdges = await tx.relationship.findMany({
+            where: {
+              familyId,
+              toMemberId: inviterMember.id,
+              type: RelationshipType.PARENT,
+            },
+            select: { fromMemberId: true },
+          });
+          for (const parentEdge of parentEdges) {
+            await tx.relationship.create({
+              data: {
+                familyId,
+                fromMemberId: parentEdge.fromMemberId,
+                toMemberId: member.id,
+                type: RelationshipType.PARENT,
+              },
+            });
+          }
+        }
         memberId = member.id;
       }
 

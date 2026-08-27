@@ -200,6 +200,8 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
    * gesture whose whole job is to feel direct.
    */
   const contentHeight = Math.max(layout.height, height);
+  /** The world's width — wider than the viewport when a row needs the room. */
+  const contentWidth = layout.width;
 
   /**
    * Where `tx`/`ty` may rest at a given scale — the prototype's `getBounds`.
@@ -208,7 +210,7 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
    */
   const boundsFor = (at: number) => {
     'worklet';
-    const cw = width * at;
+    const cw = contentWidth * at;
     const ch = contentHeight * at;
     const minX = cw <= width ? (width - cw) / 2 : width - cw;
     const maxX = cw <= width ? (width - cw) / 2 : 0;
@@ -255,12 +257,33 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
     setZoom(next);
   };
 
+  /**
+   * "Fit": the whole tree in view. 1 while the world fits the viewport; a
+   * wide world opens zoomed out instead of opening cropped — the prototype
+   * opens at its own fit (0.62) for the same reason.
+   */
+  const fitScale = Math.max(ZOOM_MIN, Math.min(1, width / contentWidth));
+
   const recenter = () => {
-    scale.value = withTiming(1, { duration: SETTLE_MS });
-    tx.value = withTiming(0, { duration: SETTLE_MS });
+    scale.value = withTiming(fitScale, { duration: SETTLE_MS });
+    // A world wider than the viewport centres; one that fits lands on 0.
+    tx.value = withTiming((width - contentWidth * fitScale) / 2, { duration: SETTLE_MS });
     ty.value = withTiming(0, { duration: SETTLE_MS });
-    setZoom(1);
+    setZoom(fitScale);
   };
+
+  /**
+   * When the world's size changes — a member arrived, a row widened — the
+   * old view may point at nothing. Refit rather than clamp: the person just
+   * added the member and wants to see where they landed anyway.
+   */
+  useEffect(() => {
+    scale.value = fitScale;
+    tx.value = (width - contentWidth * fitScale) / 2;
+    ty.value = 0;
+    setZoom(fitScale);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sizes only.
+  }, [contentWidth, contentHeight, width, height]);
 
   /**
    * Whether a pan is (or just was) driving the pointer. On native, a gesture
@@ -356,7 +379,7 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
     .numberOfTaps(2)
     .onEnd((event, success) => {
       if (!success) return;
-      const target = scale.value < DOUBLE_TAP_THRESHOLD ? DOUBLE_TAP_SCALE : 1;
+      const target = scale.value < DOUBLE_TAP_THRESHOLD ? DOUBLE_TAP_SCALE : fitScale;
       const worldX = (event.x - tx.value) / scale.value;
       const worldY = (event.y - ty.value) / scale.value;
       const bounds = boundsFor(target);
@@ -432,7 +455,7 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
       const rect = node.getBoundingClientRect();
       const focalX = event.clientX - rect.left;
       const focalY = event.clientY - rect.top;
-      const target = scale.value < DOUBLE_TAP_THRESHOLD ? DOUBLE_TAP_SCALE : 1;
+      const target = scale.value < DOUBLE_TAP_THRESHOLD ? DOUBLE_TAP_SCALE : fitScale;
       zoomTo(target, focalX, focalY);
     };
 
@@ -507,14 +530,14 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
                 position: 'absolute',
                 left: 0,
                 top: 0,
-                width,
+                width: contentWidth,
                 height: contentHeight,
                 transformOrigin: 'top left',
               },
               canvasStyle,
             ]}
           >
-            <TreeThreads data={data} layout={layout} width={width} height={contentHeight} />
+            <TreeThreads data={data} layout={layout} width={contentWidth} height={contentHeight} />
 
             {layout.rows.map((row) => (
               <GenerationLabel key={row.id} label={row.label} y={row.y} />
