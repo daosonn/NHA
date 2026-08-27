@@ -229,6 +229,13 @@ export const invitations = {
   /** Newest first. Includes accepted and cancelled ones, so filter by status. */
   list: (familyId: string) => apiRequest<InvitationSummary[]>(`/families/${familyId}/invitations`),
 
+  /**
+   * Invitations addressed to me and still live — what a `FAMILY_INVITE`
+   * notification links to. Codes handed over by hand never appear: nobody was
+   * named, so there is no "me" to match.
+   */
+  mine: () => apiRequest<InvitationSummary[]>('/me/invitations'),
+
   /** Extends the expiry by a week. There is no email to re-send today. */
   resend: (familyId: string, invitationId: string) =>
     apiRequest<InvitationSummary>(`/families/${familyId}/invitations/${invitationId}/resend`, {

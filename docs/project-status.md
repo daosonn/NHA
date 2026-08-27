@@ -1239,6 +1239,15 @@ dev` **did not regenerate the client**, and the stale client survived
   which is exactly "a code handed over by hand", so nothing old changes
   behaviour. Contract in `api-contract.md` → Invitations.
 
+  **Mobile side landed the same day**: an optional email field on the invite
+  sheet, `family/my-invitations` for invitations addressed to you, and a Home
+  banner that appears only while one is waiting — it has to reach an account
+  with no family at all, where Home is otherwise a single "start a family"
+  empty state and telling someone to found a household they were just invited
+  into is the wrong instruction. Tapping a `FAMILY_INVITE` notification opens
+  `/invite/:code`. Both new surfaces use the 600px content column, so the
+  phone layout is untouched and the web one does not stretch.
+
 - **Object storage for media (2026-08-26)**: step 1 done — `StorageService`
   decoupled from filesystem paths (see Current Focus). Step 2 is the R2
   driver. Architecture change, so it merges only after backend-owner review.

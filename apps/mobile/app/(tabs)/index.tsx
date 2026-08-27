@@ -13,6 +13,7 @@ import { RecommendationGrid } from '../../src/components/home/recommendation-gri
 import { AppHeader } from '../../src/components/layout/app-header';
 import { contentColumn } from '../../src/components/layout/content-column';
 import { BrandWordmark, NotificationBell } from '../../src/components/layout/header-slots';
+import { PendingInvitesBanner } from '../../src/components/family/pending-invites-banner';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { SectionHeader } from '../../src/components/ui/section-header';
 import { useActiveFamily } from '../../src/features/family/active-family';
@@ -177,6 +178,12 @@ export default function HomeScreen() {
           is the one place the app says its whole name — and without it the
           header row on a wide window is a bell and 1500px of nothing. */}
       <AppHeader left={<BrandWordmark />} right={<NotificationBell />} paddingRight={spacing.lg} />
+
+      {/* Above the body rather than inside it: an invitation has to reach an
+          account with no family at all, where the body is a single empty
+          state and there is no list to hang a header off. Renders nothing
+          when nothing is waiting. */}
+      <PendingInvitesBanner />
 
       {/* The family strip stood pinned here until 2026-08-26, when it moved
           to the family screen. The compose bar that replaced it now lives in

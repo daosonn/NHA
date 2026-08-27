@@ -174,8 +174,9 @@ instead of being a code you hand over yourself:
   in to. The address is trimmed, nothing more.
 - Already a member of that family → **409**.
 - On success the invitee gets a `FAMILY_INVITE` notification whose payload
-  carries `invitation_id`, `code`, `family_id`, `family_name`,
-  `inviter_name` and `as_name`. It is raised **after** the transaction
+  carries `invitationId`, `code`, `familyId`, `familyName`, `inviterName`
+  and `asName` — camelCase, like every notification except the video one.
+  Tapping it opens `/invite/:code`. It is raised **after** the transaction
   commits: an undeliverable notification must not roll back an invitation that
   was written correctly.
 - `GET /me/invitations` lists the live invitations addressed to the caller —

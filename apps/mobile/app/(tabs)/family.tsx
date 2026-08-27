@@ -179,6 +179,7 @@ export default function FamilyTreeScreen() {
   const sendInvitation = ({
     name,
     option,
+    email,
   }: Parameters<NonNullable<React.ComponentProps<typeof InviteSheet>['onSubmit']>>[0]) => {
     if (viewerMemberId === null) return;
 
@@ -188,6 +189,10 @@ export default function FamilyTreeScreen() {
         relationshipType: option.type,
         kinshipKey: option.value,
         newMemberIsFrom: option.newMemberIsFrom,
+        // Omitted rather than sent empty: the server validates the field when
+        // it is present, so '' would fail as a malformed address instead of
+        // meaning "no address given".
+        ...(email === '' ? {} : { email }),
       },
       { onSuccess: setCreated },
     );
@@ -383,6 +388,7 @@ export default function FamilyTreeScreen() {
         onSubmit={sendInvitation}
         submitting={createInvitation.isPending}
         errorKey={inviteErrorKey(createInvitation.error, viewerMemberId)}
+        emailErrorKey={inviteEmailErrorKey(createInvitation.error)}
       />
     </View>
   );
@@ -401,7 +407,23 @@ function inviteErrorKey(error: unknown, viewerMemberId: string | null): string |
   if (!(error instanceof ApiError)) return 'errors.generic';
   if (error.isOffline) return 'errors.offline';
   if (error.status === 403) return 'invite.sheet.errors.forbidden';
+  // Handled on the field itself — saying it twice reads as two problems.
+  if (error.status === 404 || error.status === 409) return null;
   return 'errors.generic';
+}
+
+/**
+ * The two failures that are about the address, kept apart on purpose.
+ *
+ * 404 and 409 need different actions from the inviter — sign them up first
+ * versus they are already here — and collapsing both into "something went
+ * wrong" would leave the second one looking like a bug.
+ */
+function inviteEmailErrorKey(error: unknown): string | null {
+  if (!(error instanceof ApiError)) return null;
+  if (error.status === 404) return 'invite.sheet.errors.emailUnknown';
+  if (error.status === 409) return 'invite.sheet.errors.emailAlreadyMember';
+  return null;
 }
 
 /** Turns whatever the member routes threw into a line the sheet can show. */

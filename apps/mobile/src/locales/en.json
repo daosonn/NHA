@@ -310,8 +310,13 @@
       "sentSubtitle": "It is held for a week. Send them the code below.",
       "errors": {
         "noAnchor": "You are not in this tree yet, so there is nothing to relate the new person to.",
-        "forbidden": "Only a member of this family can invite someone to it."
-      }
+        "forbidden": "Only a member of this family can invite someone to it.",
+        "emailUnknown": "Nobody uses that email yet. Ask them to sign up first, or leave it blank and share the code.",
+        "emailAlreadyMember": "They are already in this family."
+      },
+      "emailLabel": "Their email (optional)",
+      "emailPlaceholder": "name@example.com",
+      "emailHelp": "They get the invitation in the app. Leave it blank and you get a code to pass on instead — the only way to invite someone without an account yet."
     },
     "preview": {
       "yourSpot": "YOUR SPOT"
@@ -335,6 +340,21 @@
       "errors": {
         "alreadyMember": "You are already part of this family."
       }
+    },
+    "mine": {
+      "title": "Invitations for you",
+      "from": "{{name}} invited you",
+      "open": "Open the invitation from {{name}}",
+      "expiresIn": "Expires in {{count}} day",
+      "expiresIn_other": "Expires in {{count}} days",
+      "emptyTitle": "No invitations waiting",
+      "emptyBody": "When a family invites you, it will show up here.",
+      "bannerTitle": "You have an invitation",
+      "bannerTitle_other": "You have {{count}} invitations",
+      "bannerOne": "{{name}} is waiting for you to join",
+      "bannerMany": "{{count}} families are waiting for you",
+      "bannerAction": "See your invitation",
+      "bannerAction_other": "See your {{count}} invitations"
     }
   },
   "member": {

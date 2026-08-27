@@ -118,10 +118,17 @@ export type InviteSheetProps = {
    * so there is nothing to show before this.
    */
   created: InvitationSummary | null;
-  onSubmit?: (input: { name: string; option: KinshipOption }) => void;
+  onSubmit?: (input: { name: string; option: KinshipOption; email: string }) => void;
   submitting?: boolean;
   /** Catalogue key for whatever went wrong, shown above the button. */
   errorKey?: string | null;
+  /**
+   * What went wrong with the address specifically, shown on the field.
+   * "Nobody uses that email" is about the thing they typed, and an error
+   * about a field belongs against that field — not in a line at the bottom
+   * that leaves them hunting for which input to fix.
+   */
+  emailErrorKey?: string | null;
 };
 
 /**
@@ -144,10 +151,12 @@ export function InviteSheet({
   onSubmit,
   submitting = false,
   errorKey = null,
+  emailErrorKey = null,
 }: InviteSheetProps) {
   const { t } = useTranslation();
 
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [kinship, setKinship] = useState<string>(kinshipOptions[0]?.value ?? 'sister');
 
   const chosen = kinshipOptions.find((option) => option.value === kinship);
@@ -166,6 +175,7 @@ export function InviteSheet({
   /** Both states leave the form blank, so the next invite starts clean. */
   const close = () => {
     setName('');
+    setEmail('');
     onClose();
   };
 
@@ -221,6 +231,23 @@ export function InviteSheet({
                 maxLength={50}
               />
 
+              {/* Optional on purpose. Filled in, the invitation is delivered
+                  to that account as a notification; left blank, it comes back
+                  as a code to hand over — which is the only way to invite
+                  somebody who has not signed up yet. */}
+              <TextField
+                label={t('invite.sheet.emailLabel')}
+                value={email}
+                onChangeText={setEmail}
+                placeholder={t('invite.sheet.emailPlaceholder')}
+                hint={t('invite.sheet.emailHelp')}
+                error={emailErrorKey === null ? undefined : t(emailErrorKey)}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                maxLength={254}
+              />
+
               <SelectField
                 label={t('invite.sheet.relationship')}
                 title={t('invite.sheet.relationshipTitle')}
@@ -250,7 +277,7 @@ export function InviteSheet({
                 loading={submitting}
                 onPress={() => {
                   if (onSubmit === undefined || chosen === undefined) return;
-                  onSubmit({ name: name.trim(), option: chosen });
+                  onSubmit({ name: name.trim(), option: chosen, email: email.trim() });
                 }}
                 renderIcon={({ size, color }) => (
                   <UserRoundPlus size={size} color={color} strokeWidth={2.1} />

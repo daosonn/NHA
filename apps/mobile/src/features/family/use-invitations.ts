@@ -38,6 +38,20 @@ export function outstanding(list: InvitationSummary[], now: number): InvitationS
  * this replaced the old add-member-then-add-edge pair, which could leave an
  * unconnected person in the tree whenever the second call failed.
  */
+/**
+ * Invitations addressed to me and still live.
+ *
+ * Not scoped to a family, unlike everything else here: the point of this list
+ * is families the viewer is *not* in yet, so there is no active family to
+ * hang it off.
+ */
+export function useMyInvitations() {
+  return useQuery({
+    queryKey: queryKeys.myInvitations(),
+    queryFn: () => invitations.mine(),
+  });
+}
+
 export function useCreateInvitation(familyId: string | null) {
   const queryClient = useQueryClient();
 

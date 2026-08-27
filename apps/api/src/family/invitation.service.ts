@@ -233,14 +233,18 @@ export class InvitationService {
       await this.notifications.create({
         recipientUserId: invitee.id,
         type: NotificationType.FAMILY_INVITE,
+        // camelCase keys: that is what every other notification writes and
+        // what the client's payload parser reads. video.service is the one
+        // exception, and the client carries a special case to cope with it —
+        // not a precedent worth following.
         payload: {
           kind: 'family_invite',
-          invitation_id: invitation.id,
+          invitationId: invitation.id,
           code: invitation.code,
-          family_id: familyId,
-          family_name: invitation.family.name,
-          inviter_name: invitation.inviter.name,
-          as_name: invitation.name,
+          familyId,
+          familyName: invitation.family.name,
+          inviterName: invitation.inviter.name,
+          asName: invitation.name,
         },
       });
     }

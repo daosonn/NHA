@@ -241,6 +241,8 @@ export type InvitationSummary = {
   kinshipKey: string | null;
   status: InvitationStatus;
   inviterName: string;
+  /** Null when the code is meant to be handed over rather than delivered. */
+  inviteeUserId: string | null;
   expiresAt: IsoDateTime;
   createdAt: IsoDateTime;
 };
@@ -277,6 +279,13 @@ export type InvitationPreview = {
  */
 export type CreateInvitationRequest = {
   name: string;
+  /**
+   * Address the invitation to an existing account instead of handing over a
+   * code. The server 404s an address nobody has registered — delivery is an
+   * in-app notification, so there is nowhere else for it to arrive — and 409s
+   * someone already in the family.
+   */
+  email?: string;
   memberId?: string;
   relationshipType: RelationshipType;
   kinshipKey?: string;
@@ -587,6 +596,8 @@ export type NotificationPayload = {
   daysUntil?: number;
   /** kind 'video_done' — server ghi snake_case `video_job_id` */
   videoJobId?: string;
+  /** kind 'family_invite' — mã lời mời, mở thẳng /invite/[code] */
+  code?: string;
 };
 
 /** `GET /api/me/notifications` (WBS 3.1.2). */

@@ -26,6 +26,7 @@ export function payloadOf(item: NotificationDetail): NotificationPayload {
     daysUntil: num('daysUntil'),
     // server viết snake_case (video.service tạo thông báo video_done)
     videoJobId: str('video_job_id'),
+    code: str('code'),
   };
 }
 
@@ -108,6 +109,7 @@ export type NotificationTarget =
   | { kind: 'post'; id: string }
   | { kind: 'member'; id: string }
   | { kind: 'video'; id: string }
+  | { kind: 'invite'; code: string }
   | null;
 
 /**
@@ -123,6 +125,12 @@ export function notificationTarget(item: NotificationDetail): NotificationTarget
   // Video xong thì mở đúng màn video — hàng này từng bị disabled vì target null.
   if (payload.kind === 'video_done' && payload.videoJobId !== undefined) {
     return { kind: 'video', id: payload.videoJobId };
+  }
+  // Before memberId: an invite payload carries one too — the reserved spot —
+  // and opening that placeholder instead of the invitation would show the
+  // invitee a stranger's profile rather than the offer they were sent.
+  if (payload.kind === 'family_invite' && payload.code !== undefined) {
+    return { kind: 'invite', code: payload.code };
   }
   if (payload.postId !== undefined) return { kind: 'post', id: payload.postId };
   if (payload.memberId !== undefined) return { kind: 'member', id: payload.memberId };
