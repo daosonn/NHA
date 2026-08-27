@@ -332,7 +332,7 @@ export default function FamilyTreeScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('family.joinBanner.action')}
-            onPress={() => router.push({ pathname: '/create-family', params: { mode: 'join' } })}
+            onPress={() => router.push('/join-family')}
             style={{
               height: 44,
               borderRadius: radius.lg,
@@ -363,6 +363,21 @@ export default function FamilyTreeScreen() {
             title={t('family.loadFailed')}
             actionLabel={t('home.retry')}
             onActionPress={() => void refetch()}
+          />
+        ) : families !== undefined && families.length === 0 ? (
+          /* No family at all — `tree === null` used to swallow this into a
+             blank canvas. Same cat and same door as Home's no-family state. */
+          <EmptyState
+            cat
+            renderIcon={({ size, color }) => (
+              <UsersRound size={size} color={color} strokeWidth={2} />
+            )}
+            title={t('home.noFamilyTitle')}
+            description={t('family.noFamilyBody')}
+            actionLabel={t('home.startFamily')}
+            onActionPress={() => router.push('/family/new')}
+            secondaryActionLabel={t('joinFamily.heading')}
+            onSecondaryActionPress={() => router.push('/join-family')}
           />
         ) : isPending || tree === null ? null : tree.memberCount === 0 ? (
           <EmptyState

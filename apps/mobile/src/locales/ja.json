@@ -203,7 +203,8 @@
       "codeLabel": "家族コード",
       "codeMeta": "このグループ専用・期限なし",
       "codeHint": "このコードを持っている人は誰でも参加できます。家系図の枠はあとから追加できます。",
-      "done": "完了"
+      "done": "完了",
+      "joinLink": "届いたコードをお持ちですか？家族に参加する"
     },
     "nodeHint": "長押しすると家系図での位置を変更できます。",
     "member": {
@@ -285,12 +286,13 @@
         "forbidden": "作成した本人だけが削除できます。",
         "hasMembers": "ほかのメンバーがまだいます。先に退出してもらってください。"
       }
-    }
+    },
+    "noFamilyBody": "家系図は家族から始まります。家族をつくるか、届いたコードで参加しましょう。"
   },
   "invite": {
     "sheet": {
       "title": "家族を招待する",
-      "subtitle": "選んだ場所にそのまま入れるコードを渡します",
+      "subtitle": "送った時点でその人の場所を確保します",
       "closeScrim": "招待画面を閉じる",
       "nameLabel": "呼び名",
       "namePlaceholder": "お名前",
@@ -315,12 +317,17 @@
       "errors": {
         "noAnchor": "あなたがまだこの家系図にいないため、続柄をたどる相手がいません。",
         "forbidden": "この家族のメンバーだけが招待できます。",
-        "emailUnknown": "そのメールアドレスのアカウントはまだありません。先に登録してもらうか、空欄のまま招待コードを渡してください。",
+        "emailUnknown": "そのメールアドレスのアカウントはまだありません。先に登録してもらうか、招待コードに切り替えてください。",
         "emailAlreadyMember": "その方はすでにこの家族にいます。"
       },
-      "emailLabel": "メールアドレス（任意）",
+      "emailLabel": "相手のアカウントのメールアドレス",
       "emailPlaceholder": "name@example.com",
-      "emailHelp": "アプリに招待が届きます。空欄のままなら、代わりに渡せる招待コードが表示されます。まだ登録していない人を招くにはこちらを。"
+      "methodTitle": "招待の届け方",
+      "methodEmail": "メールアドレスで",
+      "methodCode": "招待コードで",
+      "methodEmailHint": "すでにアカウントがある人向け。招待は相手の通知に届きます。",
+      "methodCodeHint": "まだアカウントがない人向け。自分で渡せる招待コードが表示されます。",
+      "sentEmailSubtitle": "招待は相手の通知に届いています。"
     },
     "preview": {
       "yourSpot": "あなたの場所"
@@ -336,7 +343,7 @@
       "join": "家族に参加する",
       "notNow": "あとで",
       "finePrint": "アカウントがなくても大丈夫です。次の画面で作れます。コード {{code}}",
-      "joinSignedOut": "アカウントを作って参加",
+      "joinSignedOut": "アカウントを作成",
       "dead": "この招待はもう使えません",
       "deadBody": "取り消されたか、すでに使われたか、期限が切れています。送ってくれた人に新しいコードをもらってください。",
       "finePrintExpiry_other": "コード {{code}}・あと{{count}}日で期限切れ",
@@ -765,25 +772,6 @@
     "offline": "サーバーに接続できませんでした。通信環境を確認してもう一度お試しください。",
     "generic": "問題が発生しました。もう一度お試しください。"
   },
-  "createFamily": {
-    "title": "家族",
-    "createTab": "作成",
-    "joinTab": "参加",
-    "createHeading": "家族のスペースを作る",
-    "createBody": "招待した人だけが、ここに残したものを見られます。",
-    "nameLabel": "家族の名前",
-    "namePlaceholder": "母方の家族",
-    "createSubmit": "家族を作成",
-    "joinHeading": "コードで参加",
-    "joinBody": "家族の誰かから届いた 8 文字のコードです。",
-    "codeLabel": "招待コード",
-    "codePlaceholder": "ABCD2345",
-    "joinSubmit": "家族に参加",
-    "errors": {
-      "codeNotFound": "そのコードの家族が見つかりません。",
-      "alreadyMember": "すでにその家族に参加しています。"
-    }
-  },
   "post": {
     "title": "思い出",
     "openLabel": "{{name}}さんの投稿を開く",
@@ -865,7 +853,8 @@
     "emptyTitle": "まだ写真がありません",
     "emptyBody": "家族が写真や動画を共有すると、ここに集まります。",
     "yourAlbums": "あなたのアルバム",
-    "yourAlbumsHint": "あなただけ・家族には共有されません"
+    "yourAlbumsHint": "あなただけ・家族には共有されません",
+    "noFamilyBody": "家族が共有した写真や動画はここに集まります。まずは家族をつくるか、参加しましょう。"
   },
   "profileEdit": {
     "title": "プロフィールを編集",
@@ -1098,6 +1087,18 @@
       "care": "{{name}}さんとしばらく連絡をとっていません",
       "aiSuggestion": "新しい提案が届いています",
       "videoDone": "動画「{{title}}」ができあがりました"
+    }
+  },
+  "joinFamily": {
+    "heading": "コードで参加",
+    "body": "家族の誰かから届いた 8 文字のコードです。家族コードでも招待コードでも使えます。",
+    "codeLabel": "招待コード",
+    "codePlaceholder": "ABCD2345",
+    "submit": "家族に参加",
+    "createLink": "新しい家族を作りたい方はこちら",
+    "errors": {
+      "codeNotFound": "そのコードに一致するものが見つかりません。送ってくれた人に確認してください。",
+      "alreadyMember": "すでにその家族に参加しています。"
     }
   }
 }
