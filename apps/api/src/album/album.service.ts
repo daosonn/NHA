@@ -57,13 +57,23 @@ export class AlbumService {
     const albums = await this.prisma.album.findMany({
       where: { ownerUserId: userId },
       orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
-      include: { _count: { select: { items: true } } },
+      include: {
+        _count: { select: { items: true } },
+        // Ảnh mới nhất, để làm bìa DỰ PHÒNG khi người dùng chưa tự chọn bìa —
+        // album có ảnh mà ô lại hiện icon xám thì trông như rỗng/hỏng (Sơn
+        // 27/08). Có bìa tự chọn thì tôn trọng nó.
+        items: {
+          orderBy: { addedAt: 'desc' },
+          take: 1,
+          select: { mediaId: true },
+        },
+      },
     });
     return albums.map((album) => ({
       id: album.id,
       name: album.name,
       description: album.description,
-      coverMediaId: album.coverMediaId,
+      coverMediaId: album.coverMediaId ?? album.items[0]?.mediaId ?? null,
       itemCount: album._count.items,
       createdAt: album.createdAt,
       updatedAt: album.updatedAt,
