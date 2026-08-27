@@ -339,7 +339,7 @@
       "join": "Join the family",
       "notNow": "Not now",
       "finePrint": "No account yet? You will set one up in one step. Code {{code}}.",
-      "joinSignedOut": "Create an account and join",
+      "joinSignedOut": "Create an account",
       "dead": "This invitation is no longer open",
       "deadBody": "It may have been withdrawn, already used, or run out of time. Ask whoever sent it for a new code.",
       "finePrintExpiry": "Code {{code}} · {{count}} day left to accept",
