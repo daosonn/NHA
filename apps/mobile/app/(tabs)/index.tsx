@@ -130,7 +130,7 @@ export default function HomeScreen() {
           filled any in has nothing coming up — and an empty celebration
           card would be a strange thing to look at. */}
       {nextOccasion !== undefined && (
-        <Animated.View entering={enter.up(0)}>
+        <Animated.View entering={enter.up(0)} style={{ gap: 14, paddingTop: 20 }}>
           <EventWidget occasion={nextOccasion} moreCount={(occasions?.items.length ?? 1) - 1} />
         </Animated.View>
       )}

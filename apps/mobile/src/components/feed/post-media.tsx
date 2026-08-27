@@ -5,13 +5,12 @@
  * saying so — `slice(0, 2)`, no counter, no way in. The third one simply did
  * not exist as far as the feed was concerned.
  *
- * One photo still draws full width at its own aspect ratio. Two or more sit
- * in a **row that scrolls sideways**, each tile half the card wide, so a pair
- * looks exactly as it did in mockup 2a and a third leans in from the edge —
- * which is the affordance: you can see there is more before touching
- * anything. Tiles are sized from the measured row rather than a constant,
- * because the same card is ~358px on a phone and ~568px in the content
- * column.
+ * One photo draws full width at its own aspect ratio. Two or more sit in a
+ * **row that scrolls sideways**, every tile the same height and **as wide as
+ * its own photo asks for** — so a portrait stays a portrait beside a
+ * landscape, and neither is squeezed into a shared box. The next tile leans
+ * in from the edge, which is the affordance: you can see there is more before
+ * touching anything.
  *
  * Tapping a tile opens the viewer, where the set can be seen at full size.
  * That is deliberately not this component's job: a carousel inside a
@@ -30,8 +29,27 @@ import { Text } from '../ui/text';
 
 type MediaItem = PostDetail['media'][number];
 
-/** Two photos share the width at a fixed height. Mockup 2a. */
-const PAIR_MEDIA_HEIGHT = 104;
+/**
+ * The carousel's height. Every tile shares it and takes whatever width its
+ * own aspect ratio asks for, so nothing is squeezed and a portrait sits
+ * beside a landscape without either being cropped to a common box.
+ *
+ * The first pass gave every tile half the row at 104 tall, borrowing the
+ * pair layout from mockup 2a. That reads fine for two square-ish photos and
+ * badly for anything else: a portrait shot came out as a squat letterbox,
+ * and three photos meant three small ones. Height fixed, width free is what
+ * keeps a photo looking like the photo that was posted.
+ */
+const CAROUSEL_HEIGHT = 232;
+
+/**
+ * Clamp on the tile's width. The floor keeps a very tall portrait from
+ * becoming a sliver; the ceiling stops a panorama from filling the card so
+ * completely that nothing peeks past it, which is the whole signal that the
+ * row scrolls.
+ */
+const MIN_TILE_RATIO = 0.6;
+const MAX_TILE_RATIO = 1.6;
 
 /**
  * Anh DON ve theo dung ty le cua no (khai qua onLoad), thay vi khung cung
@@ -98,20 +116,27 @@ function PlayBadge() {
 
 function Tile({
   item,
-  width,
+  ratio,
+  maxWidth,
+  onRatio,
   onPress,
 }: {
   item: MediaItem;
-  width: number;
+  ratio: number | undefined;
+  maxWidth: number;
+  onRatio: (id: string, ratio: number) => void;
   onPress?: (item: MediaItem) => void;
 }) {
   const { t } = useTranslation();
   const clip = item.mimeType.startsWith('video/');
 
+  const shape = Math.min(MAX_TILE_RATIO, Math.max(MIN_TILE_RATIO, ratio ?? 1));
+  const width = Math.min(maxWidth, CAROUSEL_HEIGHT * shape);
+
   // File nam tren may khac (DB Neon chung) thi ve o "khong co o day", thay vi
   // mot anh vo bam vao duoc roi 404.
   if (item.available === false) {
-    return <Unavailable style={{ width, height: PAIR_MEDIA_HEIGHT, borderRadius: radius.lg }} />;
+    return <Unavailable style={{ width, height: CAROUSEL_HEIGHT, borderRadius: radius.lg }} />;
   }
 
   return (
@@ -120,7 +145,7 @@ function Tile({
       disabled={onPress === undefined}
       accessibilityRole={onPress === undefined ? undefined : 'imagebutton'}
       accessibilityLabel={clip ? t('post.openClip') : t('post.openPhoto')}
-      style={{ width, height: PAIR_MEDIA_HEIGHT }}
+      style={{ width, height: CAROUSEL_HEIGHT }}
     >
       <Image
         source={thumbnailSource(item.id, item.mimeType)}
@@ -130,7 +155,13 @@ function Tile({
           borderRadius: radius.lg,
           backgroundColor: colors.background.subtle,
         }}
+        // Only the extremes are cropped, and only to the clamp above: a tile
+        // sized from its own ratio has nothing left to trim.
         contentFit="cover"
+        onLoad={(e) => {
+          const { width: w, height: h } = e.source;
+          if (w > 0 && h > 0) onRatio(item.id, w / h);
+        }}
         transition={160}
         recyclingKey={item.id}
         accessibilityIgnoresInvertColors
@@ -198,8 +229,8 @@ export function PostMedia({ media, singleRatio, onRatio, onMediaPress }: PostMed
     );
   }
 
-  // Half the row, so two fill it exactly as before and a third peeks in.
-  const tileWidth = rowWidth === 0 ? 0 : (rowWidth - spacing.xs) / 2;
+  // A tile may take the whole row when its photo is wide, but never more.
+  const maxTileWidth = rowWidth;
 
   return (
     <View onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}>
@@ -213,14 +244,22 @@ export function PostMedia({ media, singleRatio, onRatio, onMediaPress }: PostMed
           contentContainerStyle={{ gap: spacing.xs }}
         >
           {media.map((item) => (
-            <Tile key={item.id} item={item} width={tileWidth} onPress={onMediaPress} />
+            <Tile
+              key={item.id}
+              item={item}
+              ratio={singleRatio[item.id]}
+              maxWidth={maxTileWidth}
+              onRatio={onRatio}
+              onPress={onMediaPress}
+            />
           ))}
         </ScrollView>
       )}
 
-      {/* Only past the two that fit. On a pair the count is the thing you can
-          already see, and a badge stating it would be noise. */}
-      {media.length > 2 && (
+      {/* From two up. Tiles are as wide as their photos, so even a pair
+          usually runs past the card's edge — the count is then telling you
+          something the row cannot. */}
+      {media.length > 1 && (
         <View
           pointerEvents="none"
           style={{

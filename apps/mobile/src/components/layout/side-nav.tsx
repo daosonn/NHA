@@ -161,15 +161,24 @@ function Row({
               height: ACCENT_DISC,
               borderRadius: radius.full,
               backgroundColor: selected === true ? colors.coral.hover : colors.coral.primary,
+              // Web paints POSITIONED elements above static siblings whatever
+              // the DOM order, so without this the disc covered the glyph and
+              // the rail showed a bare coral blob. Native honours order, which
+              // is why the phone bar looked right and only desktop broke.
+              zIndex: 0,
             }}
           />
         )}
 
-        <Icon
-          size={ICON}
-          color={accent ? colors.text.white : tint}
-          strokeWidth={accent ? 2.2 : strokeWidth}
-        />
+        {/* Positioned too, or its z-index means nothing — and react-native-svg
+            renders a real <svg> that will not carry one on its own. */}
+        <View style={{ position: 'relative', zIndex: 1 }}>
+          <Icon
+            size={ICON}
+            color={accent ? colors.text.white : tint}
+            strokeWidth={accent ? 2.2 : strokeWidth}
+          />
+        </View>
       </View>
 
       {/* `flexShrink: 0` so the word keeps its natural width and overflows to
@@ -300,16 +309,31 @@ export function SideNav() {
           panelStyle,
         ]}
       >
-        {/* Same glass as the bottom bar — 30 blur under 86% white — so the two
-            navigations are visibly the same object in two positions. It is a
-            filled layer behind the contents rather than a wrapper around them,
-            because a `BlurView` that owns the children would also own the
-            pointer events the bar needs for its hover. */}
+        {/* Same glass as the bottom bar, but opaque and outlined here.
+            Frosted glass needs something behind it to frost: the bar floats
+            over a scrolling feed, while this rail sits against the page
+            margin, where 86% white over a #FAF9F8 page composites to within a
+            shade of the page itself. The pill's shape was left to its shadow
+            alone, and grey glyphs on an almost-invisible surface read as
+            washed out. Card white with a hairline gives the rail an edge and
+            the icons a ground to sit on.
+
+            It is a filled layer behind the contents rather than a wrapper
+            around them, because a `BlurView` that owns the children would
+            also own the pointer events the rail needs for its hover. */}
         <BlurView
           intensity={30}
           tint="light"
           pointerEvents="none"
-          style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.86)' }]}
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: colors.background.card,
+              borderRadius: radius.full,
+              borderWidth: 1,
+              borderColor: colors.state.borderNeutral,
+            },
+          ]}
         />
 
         {/* The mark alone while closed. Home's header carries the full lockup,
