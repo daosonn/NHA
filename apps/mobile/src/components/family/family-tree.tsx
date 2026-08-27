@@ -61,6 +61,9 @@ const RESISTANCE = 0.45;
 /** Pinching past the scale range keeps moving too, at half speed. */
 const SCALE_RESISTANCE = 0.5;
 
+/** How long after a drag a click on a node is still the drag's fault. */
+const CLICK_SUPPRESS_MS = 250;
+
 /** Soft white bloom behind the tree, so the tint does not read as flat. */
 function CanvasGlow({ width, height }: { width: number; height: number }) {
   const id = `glow-${useId()}`;
@@ -259,6 +262,25 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
     setZoom(1);
   };
 
+  /**
+   * Whether a pan is (or just was) driving the pointer. On native, a gesture
+   * activating cancels the touch the node Pressables were tracking; on web
+   * the two systems do not talk, so a drag that started on a face ended by
+   * OPENING that face's profile — the canvas moved, then navigated out from
+   * under you (found driving headless Chromium, 2026-08-27). The click
+   * suppressor in the web effect below is the stand-in for that missing
+   * cancellation.
+   */
+  const dragGuard = useRef({ dragging: false, endedAt: 0 });
+  const markPanStart = () => {
+    dragGuard.current.dragging = true;
+  };
+  const markPanEnd = () => {
+    if (!dragGuard.current.dragging) return;
+    dragGuard.current.dragging = false;
+    dragGuard.current.endedAt = Date.now();
+  };
+
   const pinch = Gesture.Pinch()
     .onStart((event) => {
       pinchStart.value = scale.value;
@@ -291,6 +313,7 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
     .onStart(() => {
       panStartX.value = tx.value;
       panStartY.value = ty.value;
+      runOnJS(markPanStart)();
     })
     .onUpdate((event) => {
       const bounds = boundsFor(scale.value);
@@ -321,6 +344,11 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
         clamp: [bounds.minY, bounds.maxY],
         rubberBandEffect: true,
       });
+    })
+    // Finalize, not end: it also fires when the gesture is cancelled, and a
+    // guard that stays up after a cancelled drag would eat real taps.
+    .onFinalize(() => {
+      runOnJS(markPanEnd)();
     });
 
   /** Double-tap: quick look at a face, second double-tap steps back out. */
@@ -368,6 +396,12 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
 
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
+      // Gesture-handler registers on the same element first and, once a pan
+      // has completed, starts swallowing wheel events before bubble
+      // listeners see them (found driving headless Chromium: the first wheel
+      // zoomed, any wheel after a drag did nothing). Handled here in the
+      // capture phase on the PARENT, and stopped, so neither side fights.
+      event.stopPropagation();
 
       const rect = node.getBoundingClientRect();
       const focalX = event.clientX - rect.left;
@@ -390,10 +424,41 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
       wheelSettle.current = setTimeout(() => setZoom(scale.value), WHEEL_SETTLE_MS);
     };
 
+    // The browser's own double-click, because gesture-handler's two-tap
+    // recognition proved unreliable under a mouse — same toggle as the
+    // native double tap.
+    const onDoubleClick = (event: MouseEvent) => {
+      event.stopPropagation();
+      const rect = node.getBoundingClientRect();
+      const focalX = event.clientX - rect.left;
+      const focalY = event.clientY - rect.top;
+      const target = scale.value < DOUBLE_TAP_THRESHOLD ? DOUBLE_TAP_SCALE : 1;
+      zoomTo(target, focalX, focalY);
+    };
+
+    // A drag that started on a face must not ALSO open that face: the click
+    // the browser synthesises after the pan is swallowed while the guard is
+    // up. Real taps never raise the guard — pan only activates past
+    // PAN_SLOP.
+    const onClick = (event: MouseEvent) => {
+      const guard = dragGuard.current;
+      if (guard.dragging || Date.now() - guard.endedAt < CLICK_SUPPRESS_MS) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    // On the parent, capture phase: capture descends outside-in, so this
+    // runs before anything gesture-handler holds on the wrapper itself.
     // `passive: false` is what allows the preventDefault above.
-    node.addEventListener('wheel', onWheel, { passive: false });
+    const host = node.parentElement ?? node;
+    host.addEventListener('wheel', onWheel, { passive: false, capture: true });
+    host.addEventListener('dblclick', onDoubleClick, true);
+    host.addEventListener('click', onClick, true);
     return () => {
-      node.removeEventListener('wheel', onWheel);
+      host.removeEventListener('wheel', onWheel, { capture: true });
+      host.removeEventListener('dblclick', onDoubleClick, true);
+      host.removeEventListener('click', onClick, true);
       if (wheelSettle.current !== null) clearTimeout(wheelSettle.current);
     };
     // The clamp limits close over the measured sizes — rebind when they move.
@@ -406,7 +471,6 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
 
   return (
     <View
-      ref={containerRef}
       onLayout={onLayout}
       className="flex-1 overflow-hidden border bg-coral-light"
       style={{ borderRadius: radius['6xl'], borderColor: 'rgba(245,139,123,0.22)' }}
@@ -421,6 +485,11 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
             nothing. The web styles stop the browser from claiming the
             pointer for scrolling or text selection before the pan sees it. */}
         <View
+          // The wheel/dblclick ref lives HERE, on a plain View: the NativeWind
+          // -wrapped container above does not hand its ref the DOM element,
+          // which left the wheel listener silently unattached (found driving
+          // headless Chromium, 2026-08-27).
+          ref={containerRef}
           collapsable={false}
           style={[
             { flex: 1 },

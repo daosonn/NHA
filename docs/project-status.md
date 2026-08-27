@@ -1291,8 +1291,25 @@ dev` **did not regenerate the client**, and the stale client survived
   the canvas centre in 0.35 steps, and the range widened to 0.35–2.4×. The
   pinch itself is elastic past both ends of that range. Content smaller
   than the viewport now centres instead of pinning to an edge, and the
-  canvas hint carries a live zoom percentage. Verified: mobile tsc,
-  prettier; not tried on a device or real browser yet.
+  canvas hint carries a live zoom percentage.
+
+  **Then it was actually driven in a browser** (headless Chromium +
+  playwright-core, trusted input events, seeded account), which found three
+  web-only breaks no typecheck could: (1) the NativeWind-wrapped container
+  does not hand its ref the DOM element, so the wheel listener was silently
+  never attached — it lives on a plain inner View now; (2) gesture-handler
+  swallows wheel events after the first completed pan, so the wheel/dblclick
+  listeners moved to the parent element in the CAPTURE phase; (3) the big
+  one — **a drag that started on a face ended by opening that face's
+  profile**: on web, RNGH's pan activating does not cancel the node
+  Pressable's press the way it does on native, so panning read as "broken"
+  while it was actually navigating away. A capture-phase click suppressor,
+  armed only while a pan is live (and 250ms after), is the web stand-in for
+  that cancellation. Browser-verified end to end: drag pans (elastic,
+  springs back on a tree that fits), wheel zooms at the cursor to 190%
+  after a drag, double-click toggles fit ↔ 1.7×, pan-while-zoomed sticks,
+  zero console errors. Native untouched by all three fixes. Also verified:
+  tsc, prettier.
 
 - **One create form, one join form (2026-08-27, `feature/invite-method-choice`)**:
   `create-family.tsx` (the create/join tab combo) put a second create-family
