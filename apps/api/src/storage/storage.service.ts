@@ -113,6 +113,23 @@ export class StorageService {
       : createReadStream(path);
   }
 
+  /**
+   * Có file thật cho key này trên backend hiện tại không.
+   *
+   * Cần vì DB là Neon dùng chung còn file nằm trên máy TỪNG NGƯỜI (seed
+   * media per machine, thiệp/video render ở máy khác): một Media row hoàn
+   * toàn hợp lệ vẫn có thể không có file ở đây. 26/08 render video chết vì
+   * ffmpeg mở đúng một file như vậy. Trên object store sau này đây là HEAD.
+   */
+  async exists(storageKey: string): Promise<boolean> {
+    try {
+      await stat(this.resolvePath(storageKey));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   /** Missing files count as already removed. */
   async remove(storageKey: string): Promise<void> {
     await rm(this.resolvePath(storageKey), { force: true });

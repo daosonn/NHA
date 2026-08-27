@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { Heart, MessageCircle, Play, UserRound } from 'lucide-react-native';
+import { Heart, ImageOff, MessageCircle, Play, UserRound } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
@@ -212,6 +212,31 @@ export function PostCard({
             <View style={{ flexDirection: 'row', gap: spacing.xs }}>
               {tiles.map((item) => {
                 const clip = item.mimeType.startsWith('video/');
+                // File nằm trên máy khác (DB Neon chung) → vẽ ô "không có ở
+                // đây" thay vì một ảnh vỡ bấm vào được rồi 404.
+                if (item.available === false) {
+                  return (
+                    <View
+                      key={item.id}
+                      accessibilityLabel={t('post.mediaUnavailable')}
+                      style={{
+                        flex: isPair ? 1 : undefined,
+                        width: isPair ? undefined : '100%',
+                        height: isPair ? PAIR_MEDIA_HEIGHT : 120,
+                        borderRadius: isPair ? radius.lg : radius.xl,
+                        backgroundColor: colors.background.subtle,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                      }}
+                    >
+                      <ImageOff size={20} color={colors.text.subtle} strokeWidth={2} />
+                      <Text variant="badge" color={colors.text.subtle}>
+                        {t('post.mediaUnavailable')}
+                      </Text>
+                    </View>
+                  );
+                }
                 return (
                   // Mỗi tấm mở được: chạm vào ảnh trước đây chỉ mở bài đăng,
                   // nên không có cách nào xem tấm ảnh cho lớn hay phát clip.

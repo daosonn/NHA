@@ -864,6 +864,7 @@
       "failed": "Could not delete that. Try again."
     },
     "openTagged": "Open {{name}}'s profile",
+    "mediaUnavailable": "Not on this device",
     "actions": {
       "menu": "More actions",
       "closeScrim": "Close",
@@ -1047,6 +1048,8 @@
     "filterEveryone": "Everyone",
     "filterMine": "Mine",
     "filterRecipient": "Of {{name}}",
+    "unavailableCount_one": "{{count}} item is stored on another device and can't be used here",
+    "unavailableCount_other": "{{count}} items are stored on another device and can't be used here",
     "addTile": "Add",
     "preview": "Preview",
     "ownSong": "Use your own song",

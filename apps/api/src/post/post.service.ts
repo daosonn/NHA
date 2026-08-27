@@ -21,6 +21,20 @@ export interface PostMediaSummary {
   id: string;
   mimeType: string;
   sizeBytes: number;
+  /**
+   * File có thật trên máy chủ ĐANG phục vụ không. DB là Neon dùng chung còn
+   * file nằm trên máy từng người, nên một row hợp lệ vẫn có thể không mở
+   * được ở đây — client dùng cờ này để không cho chọn/không vẽ ảnh vỡ.
+   */
+  available: boolean;
+}
+
+/** Media như Prisma trả về trong `detailInclude`, trước khi gắn `available`. */
+interface MediaRow {
+  id: string;
+  mimeType: string;
+  sizeBytes: number;
+  storageKey: string;
 }
 
 export interface PostDetail {
@@ -68,7 +82,7 @@ interface PostRecord {
   author: { name: string; avatarKey: string | null };
   families: { familyId: string }[];
   memberTags: { memberId: string }[];
-  media: PostMediaSummary[];
+  media: MediaRow[];
   /** Filtered to the viewer's own reaction (0 or 1 rows). */
   reactions: { type: ReactionType }[];
   _count: { comments: number; reactions: number };
@@ -94,7 +108,8 @@ export class PostService {
       families: { select: { familyId: true } },
       memberTags: { select: { memberId: true } },
       media: {
-        select: { id: true, mimeType: true, sizeBytes: true },
+        // storageKey chỉ để kiểm `available` rồi bỏ — không bao giờ trả ra ngoài.
+        select: { id: true, mimeType: true, sizeBytes: true, storageKey: true },
         orderBy: { createdAt: 'asc' as const },
       },
       reactions: { where: { userId }, select: { type: true } },
@@ -231,7 +246,7 @@ export class PostService {
     });
     const page = posts.slice(0, limit);
     return {
-      items: page.map((post) => this.toDetail(userId, post)),
+      items: await Promise.all(page.map((post) => this.toDetail(userId, post))),
       nextCursor: posts.length > limit ? page[page.length - 1].id : null,
     };
   }
@@ -268,7 +283,7 @@ export class PostService {
     });
     const page = posts.slice(0, limit);
     return {
-      items: page.map((post) => this.toDetail(userId, post)),
+      items: await Promise.all(page.map((post) => this.toDetail(userId, post))),
       nextCursor: posts.length > limit ? page[page.length - 1].id : null,
     };
   }
@@ -504,11 +519,19 @@ export class PostService {
     );
   }
 
-  private toDetail(userId: string, post: PostRecord): PostDetail {
+  private async toDetail(userId: string, post: PostRecord): Promise<PostDetail> {
     // Author-only (see update()/remove()); the fine print — an ex-member
     // author can still un-share but not keep sharing — stays enforced by
     // the write paths themselves.
     const isAuthor = post.authorUserId === userId;
+    // Một stat/file, chạy song song — rẻ trên đĩa local; trên object store
+    // là một HEAD, vẫn chấp nhận được cho ≤ 50 bài một trang.
+    const media = await Promise.all(
+      post.media.map(async ({ storageKey, ...m }) => ({
+        ...m,
+        available: await this.storage.exists(storageKey),
+      })),
+    );
     return {
       id: post.id,
       authorUserId: post.authorUserId,
@@ -521,7 +544,7 @@ export class PostService {
       place: post.place,
       familyIds: post.families.map((f) => f.familyId),
       taggedMemberIds: post.memberTags.map((t) => t.memberId),
-      media: post.media,
+      media,
       commentCount: post._count.comments,
       reactionCount: post._count.reactions,
       myReaction: post.reactions[0]?.type ?? null,
