@@ -267,6 +267,23 @@ export class ProfileService {
             where: { id: profile.userId },
             data: { name: nextName },
           });
+          // …and every family node that account holds. FamilyMember carries
+          // its own copy of the name, seeded from User.name when the person
+          // joins, and renaming the account used to leave all of them behind:
+          // Settings said one name while the tree, the feed and every tag
+          // said the old one, for as long as nobody looked (four rows had
+          // drifted by 2026-08-27, when it was reported).
+          //
+          // Writing through rather than resolving on read, because the rule
+          // already exists in this file — a linked member shows the ACCOUNT's
+          // name and avatar, the member row's copy only matters for
+          // placeholders (see getForMember). Fifty-odd call sites read
+          // displayName directly; making the data true once beats asking each
+          // of them to remember.
+          await tx.familyMember.updateMany({
+            where: { userId: profile.userId },
+            data: { displayName: nextName },
+          });
         } else if (profile.memberId) {
           await tx.familyMember.update({
             where: { id: profile.memberId },

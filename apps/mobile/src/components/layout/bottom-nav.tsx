@@ -141,15 +141,12 @@ function Slot({
   m: Metrics;
 }) {
   const tint = selected ? colors.coral.deep : colors.text.secondary;
-  // On the accented slot the disc carries the colour, so the glyph inside it
-  // is white at both states and only the fill deepens on selection.
-  const iconTint = accent ? colors.text.white : tint;
-  // 36 against a 22 glyph, the same proportion the rail's disc uses — a disc
-  // barely wider than the glyph reads as a smudge. It cannot grow past this:
-  // the slot is 52 tall and the disc shares it with a 3px gap and the label,
-  // so 38 would total 53 and the bar clips (BlurView carries overflow:
-  // hidden to keep its own radius).
-  const discSize = m.icon + 14;
+  // Accent by size and colour, not by a filled disc. Two attempts at a disc
+  // were read as a smudge (owner's calls, 2026-08-26 and 27): a filled shape
+  // among four line drawings keeps looking like a button that wandered into
+  // a row of destinations. +6 fits — the slot is 52 tall and the glyph shares
+  // it with a 3px gap and the label, so 28 + 3 + 12 leaves room to spare.
+  const accentIcon = m.icon + 6;
 
   const press = usePressScale();
   // The icon pops on arrival only — the slot being left just fades.
@@ -182,22 +179,11 @@ function Slot({
       ]}
     >
       <Animated.View style={iconPop}>
-        {accent ? (
-          <View
-            style={{
-              width: discSize,
-              height: discSize,
-              borderRadius: radius.full,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: selected ? colors.coral.hover : colors.coral.primary,
-            }}
-          >
-            <Icon size={m.icon} color={iconTint} strokeWidth={2.3} />
-          </View>
-        ) : (
-          <Icon size={m.icon} color={tint} strokeWidth={selected ? 2.4 : 2} />
-        )}
+        <Icon
+          size={accent ? accentIcon : m.icon}
+          color={accent && !selected ? colors.coral.brand : tint}
+          strokeWidth={accent || selected ? 2.4 : 2}
+        />
       </Animated.View>
 
       {/* Ellipsises rather than wrapping on the narrowest phones, where
