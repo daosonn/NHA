@@ -152,13 +152,27 @@ invitation codes are separate, same 8-char alphabet.
 | `GET /me/invitations`                             | ✔    | `InvitationSummary[]`        |
 
 Create body: `{ name, relationshipType, email?, kinshipKey?, newMemberIsFrom?,
-relationshipLabel?, memberId? }`. Sending an invite **reserves the spot
-immediately** (design-system.md): the server creates the placeholder
-member and its relationship edge to the inviter in the same transaction —
-the tree shows the node as `pending` from that moment. `newMemberIsFrom`
-is the edge direction from `features/family/kinship.ts` (Mother `true`, Daughter
-`false`). Pass `memberId` instead to invite an existing placeholder to
-its spot (no new edge). One live invitation per spot — a second is a 409.
+relationshipLabel?, memberId?, anchorMemberId?, gender? }`. Sending an
+invite **reserves the spot immediately** (design-system.md): the server
+creates the placeholder member and its relationship edge in the same
+transaction — the tree shows the node as `pending` from that moment. The
+edge attaches to `anchorMemberId` when given (added 2026-08-28 for the
+tree's edit mode: a slot is added onto whichever node is selected, so the
+anchor may be any member of the family, placeholders included) and to the
+inviter's own node otherwise, which is how every invite worked before.
+`gender` (added the same day) is stored on the created placeholder — the
+"add mother / add father" slots need it to know which parent spot is still
+missing later. For `relationshipType: SIBLING` it also **mirrors the
+anchor's plain `PARENT` edges onto the new member** (added 2026-08-27):
+siblings share parents, and without them the new node floats unconnected
+in the tree. Adopted and step parent edges are not mirrored — they are the
+anchor's own story, not automatically the sibling's. Tree members also
+carry `birthDate` (`YYYY-MM-DD` from the Life Profile, null when unset;
+added 2026-08-27) — the client orders siblings oldest-to-youngest with it.
+`newMemberIsFrom` is the edge direction from `features/family/kinship.ts`
+(Mother `true`, Daughter `false`). Pass `memberId` instead to invite an
+existing placeholder to its spot (no new edge; `anchorMemberId` is ignored
+too). One live invitation per spot — a second is a 409.
 
 #### Inviting by email (added 2026-08-26)
 

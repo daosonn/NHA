@@ -164,6 +164,22 @@
     "addMember": "家族を追加",
     "addHere": "ここに追加",
     "addMemberHere": "ここに家族を追加",
+    "editTree": "家系図を編集",
+    "doneEditing": "編集を終了",
+    "editHint": "人をタップすると、まわりに追加できます",
+    "editHintSlot": "点線の枠をタップして追加",
+    "slots": {
+      "mother": "母を追加",
+      "father": "父を追加",
+      "child": "子を追加",
+      "spouse": "パートナーを追加",
+      "will": {
+        "mother": "{{name}}さんの母として表示されます",
+        "father": "{{name}}さんの父として表示されます",
+        "child": "{{name}}さんの子として表示されます",
+        "spouse": "{{name}}さんのパートナーとして表示されます"
+      }
+    },
     "you": "あなた",
     "nodeLabel": "{{name}}、{{role}}",
     "pendingRole": "{{role}}・承認待ち",
@@ -289,7 +305,8 @@
         "hasMembers": "ほかのメンバーがまだいます。先に退出してもらってください。"
       }
     },
-    "noFamilyBody": "家系図は家族から始まります。家族をつくるか、届いたコードで参加しましょう。"
+    "noFamilyBody": "家系図は家族から始まります。家族をつくるか、届いたコードで参加しましょう。",
+    "unplacedRow": "未配置"
   },
   "invite": {
     "sheet": {

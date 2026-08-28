@@ -1,4 +1,5 @@
-import type { RelationshipType } from '../../lib/api';
+import type { SlotKind } from '../../components/family/tree-slots';
+import type { Gender, RelationshipType } from '../../lib/api';
 
 /**
  * The words a person picks, and the edges they mean.
@@ -107,6 +108,32 @@ export function kinshipOption(value: string | null): KinshipOption | undefined {
 }
 
 /**
+ * What a tapped edit-mode slot means as a stored edge.
+ *
+ * Same one-way rule as the picker table above: the slot kind chooses a base
+ * `RelationshipType` plus direction, and for the two parent slots a gender —
+ * that gender is what lets the NEXT edit session know which parent spot is
+ * still open. `kinshipKey` is display-only, exactly like the picker's.
+ */
+export function slotEdge(kind: SlotKind): {
+  type: RelationshipType;
+  newMemberIsFrom: boolean;
+  gender?: Gender;
+  kinshipKey: string;
+} {
+  switch (kind) {
+    case 'mother':
+      return { type: 'PARENT', newMemberIsFrom: true, gender: 'FEMALE', kinshipKey: 'mother' };
+    case 'father':
+      return { type: 'PARENT', newMemberIsFrom: true, gender: 'MALE', kinshipKey: 'father' };
+    case 'child':
+      return { type: 'PARENT', newMemberIsFrom: false, kinshipKey: 'child' };
+    case 'spouse':
+      return { type: 'SPOUSE', newMemberIsFrom: false, kinshipKey: 'partner' };
+  }
+}
+
+/**
  * The word an invitation was sent under, for the pending banner and the
  * invitation page.
  *
@@ -122,6 +149,11 @@ export function invitedAsKey(
 ): string {
   const option = kinshipOption(kinshipKey);
   if (option !== undefined) return option.labelKey;
+
+  // The "add child" slot sends a key the picker never offered — without
+  // this, a child invite would fall through to the PARENT fallback below
+  // and read as the inverse of itself.
+  if (kinshipKey === 'child') return 'family.relation.child';
 
   switch (relationshipType) {
     case 'PARENT':

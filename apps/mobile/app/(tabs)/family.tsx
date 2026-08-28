@@ -9,6 +9,7 @@ import { FamilyTree } from '../../src/components/family/family-tree';
 import { InviteSheet } from '../../src/components/family/invite-sheet';
 import { MemberSheet } from '../../src/components/family/member-sheet';
 import type { PositionedNode } from '../../src/components/family/tree-layout';
+import type { SlotKind, TreeSlot } from '../../src/components/family/tree-slots';
 import { GroupStrip, type FamilyGroupSummary } from '../../src/components/home/group-strip';
 import { AppHeader } from '../../src/components/layout/app-header';
 import { ContentColumn } from '../../src/components/layout/content-column';
@@ -19,6 +20,7 @@ import { Text } from '../../src/components/ui/text';
 import { useToast } from '../../src/components/ui/toast';
 import { useSession } from '../../src/features/auth/session';
 import { useActiveFamily } from '../../src/features/family/active-family';
+import { slotEdge } from '../../src/features/family/kinship';
 import { treeFromGraph } from '../../src/features/family/tree-from-graph';
 import {
   outstanding,
@@ -78,6 +80,20 @@ export default function FamilyTreeScreen() {
   const cancelInvitation = useCancelInvitation(familyId);
 
   const [inviting, setInviting] = useState(false);
+  /**
+   * Chế độ chỉnh sửa cây (prototype `src/family-tree-canvas.html`,
+   * 28/08): bút chì bật nó, chạm một người để chọn, các ô nét đứt quanh họ
+   * là chỗ thêm được. Thêm bằng cách CHẠM VÀO CHỖ thay vì gõ quan hệ —
+   * gõ nhầm quan hệ là lỗi hay gặp nhất của form cũ.
+   */
+  const [editing, setEditing] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  /** Ô vừa chạm — mở sheet mời với quan hệ đã chốt theo ô. */
+  const [slotPick, setSlotPick] = useState<{
+    kind: SlotKind;
+    anchorId: string;
+    anchorName: string;
+  } | null>(null);
   /** The invitation just created, which is what turns the sheet into its code state. */
   const [created, setCreated] = useState<InvitationSummary | null>(null);
   /** Which node is being managed, by id — the payload is the source of truth. */
@@ -165,6 +181,7 @@ export default function FamilyTreeScreen() {
         : treeFromGraph(payload, {
             viewerUserId: user?.id ?? null,
             generationLabel: (index) => t('family.generation', { index: index + 1 }),
+            unplacedLabel: t('family.unplacedRow'),
             translate: t,
             pendingMemberIds,
           }),
@@ -184,10 +201,26 @@ export default function FamilyTreeScreen() {
           t('family.members', { count: tree.memberCount }),
         ].join(' · ');
 
-  // Every node is a real person now, so every tap opens a profile. Empty and
-  // pending spots need a per-spot invite the server does not have yet.
+  // Every node is a real person now, so outside edit mode every tap opens a
+  // profile. In edit mode a tap chooses instead — the slots draw around them.
   const openNode = (node: PositionedNode) => {
+    if (editing) {
+      setSelectedId((current) => (current === node.id ? null : node.id));
+      return;
+    }
     router.push({ pathname: '/member/[id]', params: { id: node.id } });
+  };
+
+  const toggleEditing = () => {
+    setEditing((current) => !current);
+    setSelectedId(null);
+  };
+
+  const pickSlot = (slot: TreeSlot) => {
+    if (selectedId === null) return;
+    const anchor = payload?.members.find((member) => member.id === selectedId);
+    if (anchor === undefined) return;
+    setSlotPick({ kind: slot.kind, anchorId: anchor.id, anchorName: anchor.displayName });
   };
 
   /**
@@ -206,7 +239,26 @@ export default function FamilyTreeScreen() {
     option,
     email,
   }: Parameters<NonNullable<React.ComponentProps<typeof InviteSheet>['onSubmit']>>[0]) => {
-    if (viewerMemberId === null) return;
+    // Slot flow: the tapped spot already decided the edge AND who it hangs
+    // off — the selected node, not the inviter.
+    if (slotPick !== null) {
+      const edge = slotEdge(slotPick.kind);
+      createInvitation.mutate(
+        {
+          name,
+          anchorMemberId: slotPick.anchorId,
+          relationshipType: edge.type,
+          kinshipKey: edge.kinshipKey,
+          newMemberIsFrom: edge.newMemberIsFrom,
+          ...(edge.gender === undefined ? {} : { gender: edge.gender }),
+          ...(email === '' ? {} : { email }),
+        },
+        { onSuccess: setCreated },
+      );
+      return;
+    }
+
+    if (viewerMemberId === null || option === null) return;
 
     createInvitation.mutate(
       {
@@ -225,6 +277,7 @@ export default function FamilyTreeScreen() {
 
   const closeInvite = () => {
     setInviting(false);
+    setSlotPick(null);
     setCreated(null);
     createInvitation.reset();
   };
@@ -402,7 +455,10 @@ export default function FamilyTreeScreen() {
                 data={tree}
                 onSelectNode={openNode}
                 onManageNode={(node) => setManagingId(node.id)}
-                onAddMember={() => setInviting(true)}
+                editing={editing}
+                onToggleEditing={toggleEditing}
+                selectedId={selectedId}
+                onPickSlot={pickSlot}
               />
             </View>
           </>
@@ -444,13 +500,19 @@ export default function FamilyTreeScreen() {
       )}
 
       <InviteSheet
-        visible={inviting}
+        visible={inviting || slotPick !== null}
         onClose={closeInvite}
         familyName={activeFamily?.name ?? ''}
         created={created}
+        spot={slotPick === null ? null : { kind: slotPick.kind, anchorName: slotPick.anchorName }}
         onSubmit={sendInvitation}
         submitting={createInvitation.isPending}
-        errorKey={inviteErrorKey(createInvitation.error, viewerMemberId)}
+        // Ở luồng slot, mỏ neo là node đang chọn — không cần node của chính
+        // mình trong cây, nên lỗi "noAnchor" chỉ thuộc luồng form cũ.
+        errorKey={inviteErrorKey(
+          createInvitation.error,
+          slotPick === null ? viewerMemberId : slotPick.anchorId,
+        )}
         emailErrorKey={inviteEmailErrorKey(createInvitation.error)}
       />
 

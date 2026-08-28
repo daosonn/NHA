@@ -13,6 +13,8 @@ export type TreeFromGraphOptions = {
   viewerUserId: string | null;
   /** `(index) => 'GEN 1'` — the caller owns the copy, so this file stays i18n-free. */
   generationLabel: (index: number) => string;
+  /** Gutter label for the strip of members no edge mentions. */
+  unplacedLabel: string;
   /** Turns a relationship key into a word. */
   translate: (key: string) => string;
   /**
@@ -44,7 +46,7 @@ export type TreeFromGraphOptions = {
  * is a drawing idea, not a row in the database.
  */
 export function treeFromGraph(tree: FamilyTree, options: TreeFromGraphOptions): FamilyTreeData {
-  const { viewerUserId, generationLabel, translate, pendingMemberIds } = options;
+  const { viewerUserId, generationLabel, unplacedLabel, translate, pendingMemberIds } = options;
 
   const ids = new Set(tree.members.map((member) => member.id));
 
@@ -53,6 +55,20 @@ export function treeFromGraph(tree: FamilyTree, options: TreeFromGraphOptions): 
   const edges = tree.relationships.filter(
     (edge) => ids.has(edge.fromMemberId) && ids.has(edge.toMemberId),
   );
+
+  /**
+   * Members no edge mentions at all. Depth would put them in the top row
+   * beside the grandparents, which reads as a claim about their place; they
+   * go to a strip of their own instead (decided 2026-08-27) — but only when
+   * the tree has edges to be apart FROM. A brand-new family of one is not
+   * "unplaced", it is the whole tree.
+   */
+  const mentioned = new Set<string>();
+  for (const edge of edges) {
+    mentioned.add(edge.fromMemberId);
+    mentioned.add(edge.toMemberId);
+  }
+  const isUnplaced = (memberId: string) => edges.length > 0 && !mentioned.has(memberId);
 
   const parentsOf = new Map<string, string[]>();
   for (const edge of edges) {
@@ -80,9 +96,10 @@ export function treeFromGraph(tree: FamilyTree, options: TreeFromGraphOptions): 
 
   // Rows, top-down, with only the depths that actually contain someone.
   const byDepth = new Map<number, TreeMember[]>();
+  const unplaced: TreeMember[] = [];
   tree.members.forEach((member) => {
     const depth = depths.get(member.id) ?? 0;
-    const row = byDepth.get(depth) ?? [];
+    const row = isUnplaced(member.id) ? unplaced : (byDepth.get(depth) ?? []);
     const key = relationshipKey(tree, viewerMemberId, member.id);
 
     row.push({
@@ -97,9 +114,11 @@ export function treeFromGraph(tree: FamilyTree, options: TreeFromGraphOptions): 
       state: pendingMemberIds?.has(member.id) === true ? 'pending' : 'active',
       isViewer: member.id === viewerMemberId ? true : undefined,
       avatarKey: member.avatarKey,
+      birthDate: member.birthDate ?? null,
+      gender: member.gender,
     });
 
-    byDepth.set(depth, row);
+    if (row !== unplaced) byDepth.set(depth, row);
   });
 
   const generations = [...byDepth.entries()]
@@ -115,7 +134,10 @@ export function treeFromGraph(tree: FamilyTree, options: TreeFromGraphOptions): 
     memberCount: tree.members.length,
     pendingCount: tree.members.filter((member) => pendingMemberIds?.has(member.id) === true).length,
     generations,
+    unplaced,
+    unplacedLabel,
     couples: spousePairs.map((members) => ({ members })),
+    siblings: siblingPairs,
     descents: buildDescents(parentsOf, spousePairs),
   };
 }
@@ -199,15 +221,17 @@ function levelSideways(
  *
  * Three cases:
  *
- * - **One known parent** — pass that id twice. The joint collapses onto the
- *   parent and the thread is a straight drop.
+ * - **One known parent WITH a partner** — the child hangs from the couple's
+ *   joint, partner included (Đạt, 2026-08-27: no distinction between "their"
+ *   children and "our" children — a partner is auto-joined to their spouse's
+ *   children in the DRAWING; the database still records only the edges
+ *   people actually created).
+ * - **One known parent, no partner** — pass that id twice. The joint
+ *   collapses onto the parent and the thread is a straight drop.
  * - **Two parents who are partners** — the joint sits on their arc.
- * - **Two parents with no spouse edge between them** — previously this hung
- *   the thread off the midpoint of two unrelated nodes, so it appeared to
- *   come out of empty space between them, or out of whichever node happened
- *   to be near it. Each parent now gets a thread of its own. Two lines is
- *   the honest drawing: the app knows both are parents and does not know
- *   they are a couple, and inventing the arc would be inventing a marriage.
+ * - **Two parents with no spouse edge between them** — each parent gets a
+ *   thread of its own; hanging the thread off the midpoint of two unrelated
+ *   nodes made it appear from empty space.
  */
 function buildDescents(
   parentsOf: Map<string, string[]>,
@@ -227,6 +251,12 @@ function buildDescents(
 
     if (couple !== undefined) {
       descents.push({ from: couple, to: child });
+      continue;
+    }
+
+    if (parents.length === 1) {
+      const partnered = spousePairs.find(([x, y]) => x === parents[0] || y === parents[0]);
+      descents.push({ from: partnered ?? [parents[0], parents[0]], to: child });
       continue;
     }
 

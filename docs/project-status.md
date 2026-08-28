@@ -28,6 +28,39 @@ screens.
 
 ## Current Focus
 
+- **The tree adds people by tapping the spot now (2026-08-28,
+  `feature/tree-layout-units`).** Per the owner's prototype
+  `apps/mobile/src/family-tree-canvas.html`: the canvas's add button became
+  an **edit toggle** (pencil ↔ check); in edit mode tapping a person selects
+  them and dashed **slots** appear for whatever is still missing around them
+  (mother/father judged from the drawn parents and their gender, child
+  always, spouse while single), each with a dashed preview of the exact
+  thread that will exist. Tapping a slot opens the same invite sheet minus
+  the kinship picker — the slot already decided the edge — and the request
+  carries the new `anchorMemberId`, so the edge hangs off the selected node,
+  **the first flow where the anchor is not the inviter** (this was the gap
+  discussed 2026-08-28: uncle/grandparent-shaped relatives were previously
+  inexpressible). `POST /invitations` also takes `gender` for the parent
+  slots. New nodes spring in. **Second pass the same day: the relayout
+  slides.** When an addition re-arranges the rows, existing nodes glide to
+  their new places and the threads morph along, with threads born in the
+  payload fading in on the slide's tail — react-native-svg cannot tween a
+  path's `d`, so `use-animated-tree-layout.ts` tweens the LAYOUT (a ~550ms
+  rAF interpolation re-rendering from in-between coordinates; rare and
+  sub-second, so the re-render-per-frame the gesture layer avoids is fine
+  here). Mechanism in `family-tree-rendering.md` § Edit mode. **Third pass
+  the same day: air.** Node spacing loosened (couple 104→118, blocks
+  128→152, rows 150→172, edge margins 72→96 — labels sat edge-to-edge) and
+  the pan may rest 72px past flush on every side (`PAN_MARGIN`) so a
+  viewport-sized tree is draggable at all and border nodes can be pulled
+  inward; edit-mode slots spread to match. Follow-up the same day: edit mode
+  gives the world a 96px top gutter (rides the slide; refit ignores it, so
+  the pencil never resets pan/zoom) — a top-row person's add-mother/father
+  slots were clamping onto their face — and the two parent slots spread
+  ±95px. Verified: api build+lint, mobile
+  tsc, check:i18n (828 keys), prettier on touched files; not yet tapped
+  through on a device or browser.
+
 - **Home's IA swapped: tree to the bar's centre, posting to the top of the
   feed (2026-08-26, `feature/motion-system`) — owner's call, deviates from
   the mockups, ratify or revert.** The diagnosis: Home showed two `+`
@@ -1381,7 +1414,43 @@ dev` **did not regenerate the client**, and the stale client survived
   springs back on a tree that fits), wheel zooms at the cursor to 190%
   after a drag, double-click toggles fit ↔ 1.7×, pan-while-zoomed sticks,
   zero console errors. Native untouched by all three fixes. Also verified:
-  tsc, prettier.
+  tsc, prettier. **The rendering pipeline and layout algorithm are now
+  documented** in `docs/01-frontend/family-tree-rendering.md` — read it
+  before touching placement.
+
+- **The tree lays itself out by family unit (2026-08-27,
+  `feature/tree-pan-zoom`)**: even spacing by API order is gone — it split
+  couples, swept arcs behind strangers' faces and let crowded rows overlap.
+  `layoutTree` now welds partners into blocks (remarriage chains included),
+  hangs child blocks off their parents' block — a parentless block with a
+  placed SIBLING adopts that sibling's owner and sits beside them, so the
+  composition stays centred instead of leaning — reserves bounding boxes so
+  branches cannot collide, and centres parents over their children — and a
+  crowded row **widens the world instead of squeezing**: the canvas opens
+  and recenters at a fit scale, never cropped. Three decisions taken with
+  it (Đạt, 2026-08-27): members no edge mentions draw in a labelled
+  **"unplaced" strip** below the tree instead of GEN 1
+  (`family.unplacedRow`, en+ja); inviting a **SIBLING now mirrors the
+  inviter's plain `PARENT` edges** onto the new member server-side so the
+  sibling hangs from the same joint instead of floating (contract updated,
+  adopted/step deliberately not mirrored); everything is written down in
+  `family-tree-rendering.md`. Verified: mobile tsc, api tsc, check:i18n
+  (820 keys), prettier, and the seed family drawn in headless Chromium —
+  couples adjacent, descents straight, opens at 75% fit with nothing cut
+  off. e2e not run (stays off shared Neon). Same day, three more rules
+  (Đạt): **siblings order oldest-left** by Life Profile `birthDate`, now
+  carried on tree members (`GET /families/:id/tree`, contract updated) and
+  keyed on the block's anchor so a young spouse cannot displace an eldest
+  child; **a partner is auto-joined to their spouse's children** in the
+  drawing — no "their" vs "our" children, DB edges untouched; and the
+  arrangement rules moved to **`tree-blocks.ts`** (welding / hanging /
+  ordering / balance, one function per rule) so the next rule is a slot-in,
+  with `tree-layout.ts` keeping only pixels. The balance rule
+  (`interleaveAdopted`, same day): sibling-adopted blocks alternate left
+  and right around the thread-connected core and parents centre over the
+  CORE — grandparents were sitting askew of the parents when adopted
+  siblings piled up on one side. Browser-verified on the seed family:
+  adopted left, couple centre, pending right, descent vertical.
 
 - **One create form, one join form (2026-08-27, `feature/invite-method-choice`)**:
   `create-family.tsx` (the create/join tab combo) put a second create-family

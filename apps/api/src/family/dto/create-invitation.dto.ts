@@ -10,7 +10,7 @@ import {
   IsUUID,
   MaxLength,
 } from 'class-validator';
-import { RelationshipType } from '../../generated/prisma/enums';
+import { Gender, RelationshipType } from '../../generated/prisma/enums';
 
 export class CreateInvitationDto {
   @ApiProperty({
@@ -44,6 +44,28 @@ export class CreateInvitationDto {
   @IsOptional()
   @IsUUID()
   memberId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Member the stored edge attaches to. Omitted = the inviter’s own ' +
+      'node, which is how every invite worked before the tree’s edit ' +
+      'mode let a slot be added onto anybody (2026-08-28). Ignored when ' +
+      'memberId is given.',
+  })
+  @IsOptional()
+  @IsUUID()
+  anchorMemberId?: string;
+
+  @ApiPropertyOptional({
+    enum: Gender,
+    description:
+      'Gender of the placeholder being created — the tree’s ' +
+      '“add mother / add father” slots need it to know which ' +
+      'parent spot is still missing. Ignored when memberId is given.',
+  })
+  @IsOptional()
+  @IsEnum(Gender)
+  gender?: Gender;
 
   @ApiProperty({
     enum: RelationshipType,

@@ -177,30 +177,46 @@ export class InvitationService {
         }
         memberId = member.id;
       } else {
-        const inviterMember = await tx.familyMember.findUnique({
-          where: { familyId_userId: { familyId, userId } },
-          select: { id: true },
-        });
-        if (!inviterMember) {
-          // requireMembership passed above, so this is a race, not a 403.
-          throw new NotFoundException('Your member record was not found');
+        // The edge attaches to the anchor: the tree's edit mode adds a spot
+        // onto whichever node is selected (2026-08-28), so the anchor may be
+        // anyone in the family — a placeholder included. Without one it is
+        // the inviter's own node, as every invite was before.
+        let anchorMember: { id: string } | null;
+        if (dto.anchorMemberId) {
+          anchorMember = await tx.familyMember.findFirst({
+            where: { id: dto.anchorMemberId, familyId },
+            select: { id: true },
+          });
+          if (!anchorMember) {
+            throw new NotFoundException(
+              'Anchor member not found in this family',
+            );
+          }
+        } else {
+          anchorMember = await tx.familyMember.findUnique({
+            where: { familyId_userId: { familyId, userId } },
+            select: { id: true },
+          });
+          if (!anchorMember) {
+            // requireMembership passed above, so this is a race, not a 403.
+            throw new NotFoundException('Your member record was not found');
+          }
         }
         const member = await tx.familyMember.create({
           data: {
             familyId,
             displayName: dto.name,
+            gender: dto.gender ?? null,
             placeholderProfile: { create: {} },
           },
           select: { id: true },
         });
-        // The edge is stored against the inviter — the sheet's kinship
-        // options are all phrased "relative to you" (fixtures/invite.ts).
         const newMemberIsFrom = dto.newMemberIsFrom ?? false;
         await tx.relationship.create({
           data: {
             familyId,
-            fromMemberId: newMemberIsFrom ? member.id : inviterMember.id,
-            toMemberId: newMemberIsFrom ? inviterMember.id : member.id,
+            fromMemberId: newMemberIsFrom ? member.id : anchorMember.id,
+            toMemberId: newMemberIsFrom ? anchorMember.id : member.id,
             type: dto.relationshipType,
             label:
               dto.relationshipType === RelationshipType.OTHER
@@ -208,6 +224,33 @@ export class InvitationService {
                 : null,
           },
         });
+        // A sibling with only a SIBLING edge floats unconnected in the tree:
+        // threads are drawn from parent edges, and the sibling has none
+        // (docs/01-frontend/family-tree-rendering.md). Siblings share
+        // parents, so the anchor's are mirrored onto the new member here,
+        // in the same transaction (decided 2026-08-27). Plain PARENT only —
+        // an adoptive or step edge is the anchor's own story, and copying
+        // it would assert something nobody said about the sibling.
+        if (dto.relationshipType === RelationshipType.SIBLING) {
+          const parentEdges = await tx.relationship.findMany({
+            where: {
+              familyId,
+              toMemberId: anchorMember.id,
+              type: RelationshipType.PARENT,
+            },
+            select: { fromMemberId: true },
+          });
+          for (const parentEdge of parentEdges) {
+            await tx.relationship.create({
+              data: {
+                familyId,
+                fromMemberId: parentEdge.fromMemberId,
+                toMemberId: member.id,
+                type: RelationshipType.PARENT,
+              },
+            });
+          }
+        }
         memberId = member.id;
       }
 

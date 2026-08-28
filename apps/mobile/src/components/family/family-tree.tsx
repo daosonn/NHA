@@ -19,10 +19,18 @@ import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 import { colors, radius } from '../../theme';
 import { Text } from '../ui/text';
-import { AddMemberButton, CanvasHint, ZoomControls } from './tree-controls';
-import { layoutTree, type FamilyTreeData, type PositionedNode } from './tree-layout';
+import { CanvasHint, EditToggleButton, ZoomControls } from './tree-controls';
+import {
+  layoutTree,
+  type FamilyTreeData,
+  type PositionedNode,
+  type TreeLayout,
+} from './tree-layout';
 import { TreeNode } from './tree-node';
+import { TreeSlotMarker } from './tree-slot-marker';
+import { slotsFor, type TreeSlot } from './tree-slots';
 import { TreeThreads } from './tree-threads';
+import { useAnimatedTreeLayout } from './use-animated-tree-layout';
 
 // Ranges and feel are the prototype's numbers, not invented here:
 // `src/Family Tree Canvas.dc.html` is the spec for this interaction
@@ -57,6 +65,24 @@ const WHEEL_SETTLE_MS = 120;
 
 /** Past-the-edge drags move at this fraction of finger speed (iOS-style). */
 const RESISTANCE = 0.45;
+
+/**
+ * Breathing room the pan may rest in beyond "content flush with the edge",
+ * each side (owner's call 2026-08-28: "thêm không gian để vuốt cho thoải
+ * mái"). Without it a tree that fits the viewport cannot be dragged at all
+ * — only rubber-banded — and a bigger tree always stops dead exactly at its
+ * own edge, so a border node sits pinned against the frame with no way to
+ * pull it toward the middle to read or tap it comfortably.
+ */
+const PAN_MARGIN = 72;
+
+/**
+ * Extra world above the first row while editing, so a top-row person's "add
+ * mother / father" slots have real room instead of clamping onto their face.
+ * The layout change rides the relayout slide — entering edit mode, the tree
+ * glides down to make the space.
+ */
+const EDIT_HEADROOM = 96;
 
 /** Pinching past the scale range keeps moving too, at half speed. */
 const SCALE_RESISTANCE = 0.5;
@@ -123,7 +149,17 @@ export type FamilyTreeProps = {
   onSelectNode?: (node: PositionedNode) => void;
   /** Long press: manage the person rather than open them. */
   onManageNode?: (node: PositionedNode) => void;
-  onAddMember?: () => void;
+  /**
+   * Edit mode (owner's prototype `src/family-tree-canvas.html`, 2026-08-28):
+   * the pencil toggles it, tapping a person selects them, and dashed slots
+   * appear for whoever is still missing around them. The screen owns the
+   * state — it has to coordinate the sheet the slots open.
+   */
+  editing?: boolean;
+  onToggleEditing?: () => void;
+  /** The person the slots are drawn around; `null` = nobody chosen yet. */
+  selectedId?: string | null;
+  onPickSlot?: (slot: TreeSlot) => void;
 };
 
 /**
@@ -139,7 +175,15 @@ export type FamilyTreeProps = {
  * React state on every finger move stutters on a mid-range Android the moment
  * there are a dozen nodes and their connecting threads.
  */
-export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: FamilyTreeProps) {
+export function FamilyTree({
+  data,
+  onSelectNode,
+  onManageNode,
+  editing = false,
+  onToggleEditing,
+  selectedId = null,
+  onPickSlot,
+}: FamilyTreeProps) {
   const { t } = useTranslation();
 
   const window = useWindowDimensions();
@@ -180,7 +224,52 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
   const width = measured?.width ?? (window.width > 0 ? window.width - CANVAS_INSET : DESIGN_WIDTH);
   const height = measured?.height ?? 0;
 
-  const layout = useMemo(() => layoutTree(data, width), [data, width]);
+  const layout = useMemo(
+    () => layoutTree(data, width, editing ? EDIT_HEADROOM : 0),
+    [data, width, editing],
+  );
+
+  /**
+   * What is actually DRAWN this frame: the target layout, except while a
+   * relayout slide is in flight — then everyone is somewhere on the way
+   * (`use-animated-tree-layout.ts`). Sizes, bounds and the refit below stay
+   * on the target `layout`, so the world resizes once and the camera aims
+   * where things settle.
+   */
+  const { layout: drawn, progress } = useAnimatedTreeLayout(layout);
+
+  /** Edit mode's dashed spots around the chosen person, in world coordinates.
+      Computed from `drawn`, so the previews travel with the slide. */
+  const slots = useMemo(
+    () => (editing && selectedId !== null ? slotsFor(data, drawn, selectedId) : []),
+    [editing, selectedId, data, drawn],
+  );
+
+  /**
+   * Who was NOT in the previous arrangement — they pop in (the prototype's
+   * `ftcPop`). Keyed to the target layout's identity, NOT recomputed per
+   * render: the slide above re-renders every frame, and a new person only
+   * mounts on the tween's first frame — one render after the payload — so a
+   * per-render diff would have already forgotten they were new. The very
+   * first payload plays no entrance; the whole tree draws at once.
+   */
+  const appearRef = useRef<{
+    layout: TreeLayout | null;
+    known: Set<string> | null;
+    ids: Set<string>;
+  }>({ layout: null, known: null, ids: new Set() });
+  if (appearRef.current.layout !== layout) {
+    const previouslyKnown = appearRef.current.known;
+    appearRef.current = {
+      layout,
+      known: new Set(layout.nodes.keys()),
+      ids:
+        previouslyKnown === null
+          ? new Set()
+          : new Set([...layout.nodes.keys()].filter((id) => !previouslyKnown.has(id))),
+    };
+  }
+  const appearedIds = appearRef.current.ids;
 
   const onLayout = (event: LayoutChangeEvent) => {
     const next = event.nativeEvent.layout;
@@ -200,20 +289,24 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
    * gesture whose whole job is to feel direct.
    */
   const contentHeight = Math.max(layout.height, height);
+  /** The world's width — wider than the viewport when a row needs the room. */
+  const contentWidth = layout.width;
 
   /**
-   * Where `tx`/`ty` may rest at a given scale — the prototype's `getBounds`.
-   * Content larger than the viewport pans between "far edge flush" and
-   * "near edge flush"; content that fits sits centred and does not pan.
+   * Where `tx`/`ty` may rest at a given scale — the prototype's `getBounds`,
+   * widened by PAN_MARGIN each side so the tree can always be nudged past
+   * flush. Content larger than the viewport pans between "far edge flush"
+   * and "near edge flush" plus the margin; content that fits sits centred
+   * and still moves within the margin instead of being pinned.
    */
   const boundsFor = (at: number) => {
     'worklet';
-    const cw = width * at;
+    const cw = contentWidth * at;
     const ch = contentHeight * at;
-    const minX = cw <= width ? (width - cw) / 2 : width - cw;
-    const maxX = cw <= width ? (width - cw) / 2 : 0;
-    const minY = ch <= height ? (height - ch) / 2 : height - ch;
-    const maxY = ch <= height ? (height - ch) / 2 : 0;
+    const minX = (cw <= width ? (width - cw) / 2 : width - cw) - PAN_MARGIN;
+    const maxX = (cw <= width ? (width - cw) / 2 : 0) + PAN_MARGIN;
+    const minY = (ch <= height ? (height - ch) / 2 : height - ch) - PAN_MARGIN;
+    const maxY = (ch <= height ? (height - ch) / 2 : 0) + PAN_MARGIN;
     return { minX, maxX, minY, maxY };
   };
 
@@ -255,12 +348,38 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
     setZoom(next);
   };
 
+  /**
+   * "Fit": the whole tree in view. 1 while the world fits the viewport; a
+   * wide world opens zoomed out instead of opening cropped — the prototype
+   * opens at its own fit (0.62) for the same reason.
+   */
+  const fitScale = Math.max(ZOOM_MIN, Math.min(1, width / contentWidth));
+
   const recenter = () => {
-    scale.value = withTiming(1, { duration: SETTLE_MS });
-    tx.value = withTiming(0, { duration: SETTLE_MS });
+    scale.value = withTiming(fitScale, { duration: SETTLE_MS });
+    // A world wider than the viewport centres; one that fits lands on 0.
+    tx.value = withTiming((width - contentWidth * fitScale) / 2, { duration: SETTLE_MS });
     ty.value = withTiming(0, { duration: SETTLE_MS });
-    setZoom(1);
+    setZoom(fitScale);
   };
+
+  /**
+   * When the world's size changes — a member arrived, a row widened — the
+   * old view may point at nothing. Refit rather than clamp: the person just
+   * added the member and wants to see where they landed anyway.
+   *
+   * Measured WITHOUT the edit headroom: toggling the pencil grows the world
+   * by a constant gutter, and refitting on that would throw away the pan and
+   * zoom the person had just lined up before pressing it.
+   */
+  const gutterlessHeight = layout.height - (editing ? EDIT_HEADROOM : 0);
+  useEffect(() => {
+    scale.value = fitScale;
+    tx.value = (width - contentWidth * fitScale) / 2;
+    ty.value = 0;
+    setZoom(fitScale);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sizes only.
+  }, [contentWidth, gutterlessHeight, width, height]);
 
   /**
    * Whether a pan is (or just was) driving the pointer. On native, a gesture
@@ -356,7 +475,7 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
     .numberOfTaps(2)
     .onEnd((event, success) => {
       if (!success) return;
-      const target = scale.value < DOUBLE_TAP_THRESHOLD ? DOUBLE_TAP_SCALE : 1;
+      const target = scale.value < DOUBLE_TAP_THRESHOLD ? DOUBLE_TAP_SCALE : fitScale;
       const worldX = (event.x - tx.value) / scale.value;
       const worldY = (event.y - ty.value) / scale.value;
       const bounds = boundsFor(target);
@@ -432,7 +551,7 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
       const rect = node.getBoundingClientRect();
       const focalX = event.clientX - rect.left;
       const focalY = event.clientY - rect.top;
-      const target = scale.value < DOUBLE_TAP_THRESHOLD ? DOUBLE_TAP_SCALE : 1;
+      const target = scale.value < DOUBLE_TAP_THRESHOLD ? DOUBLE_TAP_SCALE : fitScale;
       zoomTo(target, focalX, focalY);
     };
 
@@ -507,25 +626,42 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
                 position: 'absolute',
                 left: 0,
                 top: 0,
-                width,
+                width: contentWidth,
                 height: contentHeight,
                 transformOrigin: 'top left',
               },
               canvasStyle,
             ]}
           >
-            <TreeThreads data={data} layout={layout} width={width} height={contentHeight} />
+            <TreeThreads
+              data={data}
+              layout={drawn}
+              width={contentWidth}
+              height={contentHeight}
+              progress={progress}
+              slotPaths={slots.flatMap((slot) => slot.paths)}
+            />
 
-            {layout.rows.map((row) => (
+            {drawn.rows.map((row) => (
               <GenerationLabel key={row.id} label={row.label} y={row.y} />
             ))}
 
-            {[...layout.nodes.values()].map((node) => (
+            {[...drawn.nodes.values()].map((node) => (
               <TreeNode
                 key={node.id}
                 node={node}
+                selected={editing && node.id === selectedId}
+                appear={appearedIds.has(node.id)}
                 onPress={onSelectNode}
                 onLongPress={onManageNode}
+              />
+            ))}
+
+            {slots.map((slot) => (
+              <TreeSlotMarker
+                key={`${selectedId}-${slot.kind}`}
+                slot={slot}
+                onPress={() => onPickSlot?.(slot)}
               />
             ))}
           </Animated.View>
@@ -540,9 +676,16 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
         canZoomOut={zoom > ZOOM_MIN}
       />
 
-      {/* The prototype's readout: the current zoom beside the how-to. */}
-      <CanvasHint>{`${t('family.hint')} · ${Math.round(zoom * 100)}%`}</CanvasHint>
-      <AddMemberButton onPress={onAddMember} />
+      {/* The prototype's readout: the current zoom beside the how-to. In
+          edit mode the how-to changes job — it teaches the selection step. */}
+      <CanvasHint>
+        {editing
+          ? selectedId === null
+            ? t('family.editHint')
+            : t('family.editHintSlot')
+          : `${t('family.hint')} · ${Math.round(zoom * 100)}%`}
+      </CanvasHint>
+      <EditToggleButton editing={editing} onPress={onToggleEditing} />
     </View>
   );
 }
