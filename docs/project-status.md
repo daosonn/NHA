@@ -1226,6 +1226,53 @@ dev` **did not regenerate the client**, and the stale client survived
 
 ## In Progress
 
+- **⚠ Everyone has two scripts to run after pulling (2026-08-28).** Media
+  moved into the R2 bucket, and photographs now have thumbnails. Both are
+  shared, so what one person uploads serves the team — but only that person's
+  machine can supply the originals it holds:
+
+  ```powershell
+  pnpm --filter api r2:migrate        # your originals into the bucket
+  pnpm --filter api thumbs:backfill   # small copies for whatever that added
+  ```
+
+  In that order, and both are safe to re-run. **26 of 41 media rows were
+  still unmigrated on 2026-08-28** — those photos are a 404 for everybody
+  until the machine that holds them runs the first script. Full runbook:
+  `local-environment.md` § Media storage.
+
+- **Photographs are served small now (2026-08-28)**: the grid fetched the
+  originals to draw 120pt tiles — PNGs averaging 1.7 MB, some 4.7 — which was
+  most of why the app felt slow. Uploads make a 480px JPEG beside the
+  original and `GET /media/:id/thumb` serves it, falling back to the original
+  where none exists. Measured across the 89 photos stored: 78.0 MB of grid
+  traffic became 2.6 MB. What remains is ~0.7s of R2 round-trip per picture,
+  fixed whatever the size — presigned URLs or a CDN are what would remove
+  that, deliberately deferred (owner's call, 2026-08-28: no real users yet).
+
+- **Omoide is two levels (2026-08-28)**: the tab lists families, each opening
+  its own shelf at `/omoide/[familyId]` with a row of faces that opens one
+  person's album — the photos they posted or were tagged in, which the server
+  already assembled. It used to show only the active family, so somebody in
+  three families saw a third of their pictures. A person's album is **not**
+  scoped to the family it was opened from (owner's call): the viewer's own
+  permissions are the limit.
+
+- **The Album tab tells shared from private (2026-08-28)**: a post that
+  reached no family is private to its author, which the schema already
+  believed and nothing exposed — `GalleryMediaItem.shared` now says so. The
+  grid filters on it and groups by day, and "add a private photo" opens the
+  compose screen with every family unticked rather than a second uploader.
+
+- **A milestone announces itself (2026-08-27)**: adding a life event also
+  posts it as an EVENT, in the same transaction. Two owner's calls, since
+  neither followed from the code: one added from your own timeline reaches
+  **every family you are in**, one added from a member's page goes to that
+  family only. The switch defaults on but exists — a death or a separation is
+  recorded, not announced. **The photos stay on the timeline**: a Media row
+  may have exactly one parent, so they cannot hang off the post as well.
+  Duplicating them was considered and dropped (owner's call, 2026-08-28).
+
 - **Refresh without reloading (2026-08-27)**: the app had no refresh gesture
   at all — no pull-to-refresh anywhere, so a browser reload was the only way
   to see new data, and it threw away the bundle, the session read and the
@@ -1236,16 +1283,6 @@ dev` **did not regenerate the client**, and the stale client survived
   others when next opened. The feed is trimmed to its first page before the
   refetch — refetching an infinite list whole would re-request every page
   already scrolled through. `features/ui/soft-refresh.ts`.
-
-- **A milestone announces itself (2026-08-27)**: adding a life event also
-  posts it as an EVENT, in the same transaction. Two owner's calls, since
-  neither followed from the code: one added from your own timeline reaches
-  **every family you are in** (`me/life-events` has no family in its path,
-  and a profile is one person across all of them), while one added from a
-  member's page goes to that family only. The switch defaults **on** but
-  exists — a death or a separation is recorded, not announced — and is
-  offered only when adding, because editing a saved entry writes no post.
-  The photos stay on the timeline: a Media row may have exactly one parent.
 
 - **One name per person (2026-08-27)**: renaming your account now writes
   through to every `FamilyMember.displayName` that account holds, in the same
