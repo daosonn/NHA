@@ -202,6 +202,14 @@ export class MediaService {
 
     const poster = this.storage.posterPathFor(media.storageKey);
     if (!existsSync(poster)) {
+      // Same guard the stream path carries. Without it a video whose file is
+      // not in the bucket — uploaded from a machine that has not migrated —
+      // reached ffmpeg through withLocalCopy, the download threw, and the
+      // browser got a 500 for every card that video appeared on. A file that
+      // is somewhere else is not found here.
+      if (!(await this.storage.exists(media.storageKey))) {
+        throw new NotFoundException('Media not found');
+      }
       mkdirSync(path.dirname(poster), { recursive: true });
       // -ss 0.5: khung đúng số 0 của video quay bằng điện thoại thường là
       // một khung xám lúc cảm biến chưa kịp phơi sáng.
