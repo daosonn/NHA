@@ -18,7 +18,9 @@ export type OccasionChoice = { label: string; date: string | null };
 export type OccasionSheetProps = {
   visible: boolean;
   onClose: () => void;
-  /** The family's upcoming dates; rows for the chosen member float to the top. */
+  /** The family's upcoming dates; filtered down to the chosen member's own
+   *  occasions plus any family-wide one (no member tagged) — a birthday
+   *  picked for Xuân must never show her sister's. */
   items: SpecialDateItem[];
   memberId: string | null;
   onSelect: (choice: OccasionChoice) => void;
@@ -47,11 +49,16 @@ export function OccasionSheet({
   const occasionLabel = useOccasionLabel();
   const [custom, setCustom] = useState('');
 
-  const sorted = [...items].sort((a, b) => {
-    const aMine = memberId !== null && a.members.some((m) => m.memberId === memberId) ? 0 : 1;
-    const bMine = memberId !== null && b.members.some((m) => m.memberId === memberId) ? 0 : 1;
-    return aMine - bMine || a.daysUntil - b.daysUntil;
-  });
+  // Only this member's own occasions, plus any family-wide one (no member
+  // tagged at all) — never someone else's birthday/memorial/anniversary.
+  // No member chosen yet (sheet opened before "For" is filled) → show everyone.
+  const relevant =
+    memberId === null
+      ? items
+      : items.filter(
+          (item) => item.members.length === 0 || item.members.some((m) => m.memberId === memberId),
+        );
+  const sorted = [...relevant].sort((a, b) => a.daysUntil - b.daysUntil);
 
   const pick = (choice: OccasionChoice) => {
     onSelect(choice);
