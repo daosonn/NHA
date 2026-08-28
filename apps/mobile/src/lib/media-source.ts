@@ -42,9 +42,12 @@ export function mediaSource(mediaId: string): ImageSource {
  * cần chính file gốc để phát thì vẫn gọi `mediaSource`.
  */
 export function thumbnailSource(mediaId: string, mimeType: string): ImageSource {
+  // A grid tile is ~120pt wide and used to be served the original — a PNG
+  // averaging 1.7 MB, some of them 4.7. Both branches now fetch something
+  // made for the size it is drawn at.
   return mimeType.startsWith('video/')
     ? build(`poster:${mediaId}`, media.posterUrl(mediaId))
-    : mediaSource(mediaId);
+    : build(`thumb:${mediaId}`, media.thumbUrl(mediaId));
 }
 
 function build(cacheKey: string, uri: string): ImageSource {

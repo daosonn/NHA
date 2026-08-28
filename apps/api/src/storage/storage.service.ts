@@ -1,6 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import {
+  copyFile,
+  mkdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
 import { PassThrough } from 'node:stream';
 import type { Readable } from 'node:stream';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
@@ -341,6 +349,47 @@ export class StorageService {
         return Promise.resolve();
       },
     };
+  }
+
+  /**
+   * Where a photograph's small copy lives.
+   *
+   * Beside the original under `thumb/`, and in the bucket rather than on one
+   * machine's disk — unlike a video poster, which every machine can rebuild
+   * from a file it already has. A thumbnail is only worth making once, and
+   * the whole point of the bucket is that the next person does not repeat
+   * the work.
+   *
+   * Always `.jpg`: the source may be a 4 MB PNG, and re-encoding it as PNG
+   * would keep most of the weight the thumbnail exists to shed.
+   */
+  thumbKeyFor(storageKey: string): string {
+    return `thumb/${storageKey.replace(/.[^./]+$/, '')}.jpg`;
+  }
+
+  /**
+   * Stores a file this service derived itself — a thumbnail — at a key the
+   * caller chose, rather than at a fresh one like `promote`.
+   */
+  async putDerived(
+    storageKey: string,
+    sourcePath: string,
+    mimeType: string,
+  ): Promise<void> {
+    if (this.driver === 'r2') {
+      await this.r2!.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: storageKey,
+          Body: createReadStream(sourcePath),
+          ContentType: mimeType,
+        }),
+      );
+      return;
+    }
+    const target = this.resolvePath(storageKey);
+    await mkdir(dirname(target), { recursive: true });
+    await copyFile(sourcePath, target);
   }
 
   /**

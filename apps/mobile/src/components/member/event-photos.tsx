@@ -1,12 +1,20 @@
 import { Image } from 'expo-image';
 import type { ComponentProps } from 'react';
-import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Pressable, View } from 'react-native';
 
 import { colors, radius } from '../../theme';
 import { Text } from '../ui/text';
 
 export type EventPhoto = {
   key: string;
+  /**
+   * The media id, when this is a stored photograph. Absent on a draft the
+   * editor has not uploaded yet, which is why tapping one does nothing
+   * there: there is no full-size copy to open.
+   */
+  mediaId?: string;
+  mimeType?: string;
   /** `thumbnailSource(...)` for server media, `{ uri }` for a local draft. */
   source: ComponentProps<typeof Image>['source'];
 };
@@ -20,22 +28,58 @@ export type EventPhoto = {
  * Shared by the read timeline and the editor's cards, which is the point:
  * an entry must look like the same entry with the tools out.
  */
-export function EventPhotos({ photos }: { photos: EventPhoto[] }) {
+export function EventPhotos({
+  photos,
+  onOpen,
+}: {
+  photos: EventPhoto[];
+  /** Opens one at full size. The editor leaves it off — see `mediaId`. */
+  onOpen?: (photo: EventPhoto) => void;
+}) {
+  const { t } = useTranslation();
+
   if (photos.length === 0) return null;
 
-  if (photos.length === 1) {
-    return (
+  /**
+   * Tappable only when there is somewhere to go. A picture that grows under
+   * your finger everywhere else and does nothing here reads as broken, but
+   * so does a button that leads nowhere — so the two cases are kept apart
+   * rather than always wrapping.
+   */
+  const wrap = (photo: EventPhoto, child: React.ReactNode, style: object) =>
+    onOpen === undefined || photo.mediaId === undefined ? (
+      <View key={photo.key} style={style}>
+        {child}
+      </View>
+    ) : (
+      <Pressable
+        key={photo.key}
+        onPress={() => onOpen(photo)}
+        accessibilityRole="imagebutton"
+        accessibilityLabel={t('post.openPhoto')}
+        style={style}
+      >
+        {child}
+      </Pressable>
+    );
+
+  const only = photos[0];
+  if (photos.length === 1 && only !== undefined) {
+    return wrap(
+      only,
       <Image
-        source={photos[0]!.source}
+        source={only.source}
         contentFit="cover"
         transition={150}
-        style={{
-          width: '100%',
-          height: 110,
-          borderRadius: radius.lg,
-          backgroundColor: colors.background.subtle,
-        }}
-      />
+        style={{ width: '100%', height: '100%' }}
+      />,
+      {
+        width: '100%',
+        height: 110,
+        borderRadius: radius.lg,
+        overflow: 'hidden',
+        backgroundColor: colors.background.subtle,
+      },
     );
   }
 
@@ -44,44 +88,45 @@ export function EventPhotos({ photos }: { photos: EventPhoto[] }) {
 
   return (
     <View style={{ flexDirection: 'row', gap: 8 }}>
-      {shown.map((photo, index) => (
-        <View
-          key={photo.key}
-          style={{
+      {shown.map((photo, index) =>
+        wrap(
+          photo,
+          <>
+            <Image
+              source={photo.source}
+              contentFit="cover"
+              transition={150}
+              style={{ width: '100%', height: '100%' }}
+            />
+
+            {index === shown.length - 1 && extra > 0 && (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(24,24,27,0.45)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text weight="bold" color={colors.text.white} style={{ fontSize: 14 }}>
+                  {`+${extra}`}
+                </Text>
+              </View>
+            )}
+          </>,
+          {
             flex: 1,
             aspectRatio: 1,
             borderRadius: radius.md,
             overflow: 'hidden',
             backgroundColor: colors.background.subtle,
-          }}
-        >
-          <Image
-            source={photo.source}
-            contentFit="cover"
-            transition={150}
-            style={{ width: '100%', height: '100%' }}
-          />
-
-          {index === shown.length - 1 && extra > 0 && (
-            <View
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(24,24,27,0.45)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text weight="bold" color={colors.text.white} style={{ fontSize: 14 }}>
-                {`+${extra}`}
-              </Text>
-            </View>
-          )}
-        </View>
-      ))}
+          },
+        ),
+      )}
     </View>
   );
 }

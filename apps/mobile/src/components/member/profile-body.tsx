@@ -8,7 +8,7 @@ import type { MemberProfile } from '../../features/member/member-profile';
 import { useLifeEvents } from '../../features/member/use-life-events';
 import { useMemberGallery } from '../../features/member/use-member-gallery';
 import { useDeleteMemo, useMemberMemos, useMyMemos } from '../../features/member/use-memos';
-import { families, type GalleryMediaItem, type MemoDetail } from '../../lib/api';
+import { families, type MemoDetail } from '../../lib/api';
 import { queryKeys } from '../../lib/query-keys';
 import { colors } from '../../theme';
 import { enter, swapIn } from '../../theme/motion';
@@ -47,7 +47,7 @@ export type ProfileBodyProps = {
   onEditMemo?: (memo: MemoDetail) => void;
   onOpenMoment?: (postId: string) => void;
   /** Mở một tấm ảnh lẻ của tab Album trong trình xem toàn màn hình. */
-  onOpenPhoto?: (item: GalleryMediaItem) => void;
+  onOpenPhoto?: (item: { id: string; mimeType: string }) => void;
   /** Which tab opens first. Omoide arrives here wanting the album. */
   initialTab?: Tab;
   /** Start a post with no audience. Only wired on your own page. */
@@ -191,6 +191,9 @@ export function ProfileBody({
             failed={timeline.isError}
             onRetry={() => void timeline.refetch()}
             onAddEvent={onEditTimeline}
+            // The same viewer the Album tab opens. A photo is a photo
+            // wherever it is drawn.
+            onOpenPhoto={onOpenPhoto}
           />
         </Animated.View>
       )}

@@ -18,13 +18,15 @@ const DOT_CENTRE = DOT / 2 + 3;
 
 type RowProps = {
   event: LifeEventDetail;
+  /** Opens one of this entry's photos full size. */
+  onOpenPhoto?: (media: { id: string; mimeType: string }) => void;
   /** Repeated years are drawn once — the rail already implies continuity. */
   showYear: boolean;
   isLatest: boolean;
   isLast: boolean;
 };
 
-function TimelineRow({ event, showYear, isLatest, isLast }: RowProps) {
+function TimelineRow({ event, showYear, isLatest, isLast, onOpenPhoto }: RowProps) {
   const day = formatDayMonth(event.eventDate);
   const meta = [event.place, day].filter((part) => part !== null).join(' · ');
 
@@ -93,8 +95,18 @@ function TimelineRow({ event, showYear, isLatest, isLast }: RowProps) {
             <EventPhotos
               photos={event.media.map((item) => ({
                 key: item.id,
+                mediaId: item.id,
+                mimeType: item.mimeType,
                 source: thumbnailSource(item.id, item.mimeType),
               }))}
+              onOpen={
+                onOpenPhoto === undefined
+                  ? undefined
+                  : (photo) => {
+                      if (photo.mediaId === undefined || photo.mimeType === undefined) return;
+                      onOpenPhoto({ id: photo.mediaId, mimeType: photo.mimeType });
+                    }
+              }
             />
           </View>
         )}
@@ -105,6 +117,11 @@ function TimelineRow({ event, showYear, isLatest, isLast }: RowProps) {
 
 export type TimelineListProps = {
   events: LifeEventDetail[];
+  /**
+   * A photograph on the timeline was the only one in the app that did
+   * nothing when tapped — the Album tab has opened them full size all along.
+   */
+  onOpenPhoto?: (media: { id: string; mimeType: string }) => void;
   loading?: boolean;
   failed?: boolean;
   onRetry?: () => void;
@@ -134,6 +151,7 @@ export function TimelineList({
   failed = false,
   onRetry,
   onAddEvent,
+  onOpenPhoto,
 }: TimelineListProps) {
   const { t } = useTranslation();
 
@@ -177,6 +195,7 @@ export function TimelineList({
           showYear={i === 0 || event.eventDate.slice(0, 4) !== events[i - 1]?.eventDate.slice(0, 4)}
           isLatest={i === events.length - 1}
           isLast={i === events.length - 1}
+          onOpenPhoto={onOpenPhoto}
         />
       ))}
     </View>
