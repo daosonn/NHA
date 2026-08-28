@@ -66,6 +66,16 @@ const WHEEL_SETTLE_MS = 120;
 /** Past-the-edge drags move at this fraction of finger speed (iOS-style). */
 const RESISTANCE = 0.45;
 
+/**
+ * Breathing room the pan may rest in beyond "content flush with the edge",
+ * each side (owner's call 2026-08-28: "thêm không gian để vuốt cho thoải
+ * mái"). Without it a tree that fits the viewport cannot be dragged at all
+ * — only rubber-banded — and a bigger tree always stops dead exactly at its
+ * own edge, so a border node sits pinned against the frame with no way to
+ * pull it toward the middle to read or tap it comfortably.
+ */
+const PAN_MARGIN = 72;
+
 /** Pinching past the scale range keeps moving too, at half speed. */
 const SCALE_RESISTANCE = 0.5;
 
@@ -272,18 +282,20 @@ export function FamilyTree({
   const contentWidth = layout.width;
 
   /**
-   * Where `tx`/`ty` may rest at a given scale — the prototype's `getBounds`.
-   * Content larger than the viewport pans between "far edge flush" and
-   * "near edge flush"; content that fits sits centred and does not pan.
+   * Where `tx`/`ty` may rest at a given scale — the prototype's `getBounds`,
+   * widened by PAN_MARGIN each side so the tree can always be nudged past
+   * flush. Content larger than the viewport pans between "far edge flush"
+   * and "near edge flush" plus the margin; content that fits sits centred
+   * and still moves within the margin instead of being pinned.
    */
   const boundsFor = (at: number) => {
     'worklet';
     const cw = contentWidth * at;
     const ch = contentHeight * at;
-    const minX = cw <= width ? (width - cw) / 2 : width - cw;
-    const maxX = cw <= width ? (width - cw) / 2 : 0;
-    const minY = ch <= height ? (height - ch) / 2 : height - ch;
-    const maxY = ch <= height ? (height - ch) / 2 : 0;
+    const minX = (cw <= width ? (width - cw) / 2 : width - cw) - PAN_MARGIN;
+    const maxX = (cw <= width ? (width - cw) / 2 : 0) + PAN_MARGIN;
+    const minY = (ch <= height ? (height - ch) / 2 : height - ch) - PAN_MARGIN;
+    const maxY = (ch <= height ? (height - ch) / 2 : 0) + PAN_MARGIN;
     return { minX, maxX, minY, maxY };
   };
 

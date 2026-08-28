@@ -67,11 +67,13 @@ export type FamilyTreeData = {
 export const NODE_SIZE = 60;
 export const VIEWER_NODE_SIZE = 68;
 
-const FIRST_ROW_Y = 56;
+// Spacing loosened 2026-08-28 (owner's call: "tách các node ra xa xíu cho
+// dễ nhìn") — the first numbers packed labels edge-to-edge inside a couple.
+const FIRST_ROW_Y = 64;
 /** Exported for the edit-mode slots, which sit one row above/below a node. */
-export const ROW_GAP = 150;
+export const ROW_GAP = 172;
 /** Space under each node for the name and relationship labels. */
-const LABEL_BLOCK = 44;
+const LABEL_BLOCK = 52;
 
 export type PositionedNode = TreeMember & {
   x: number;
@@ -94,11 +96,11 @@ export type TreeLayout = {
 };
 
 /** Centre-to-centre inside a couple block — close enough for the arc to read. */
-export const COUPLE_PITCH = 104;
+export const COUPLE_PITCH = 118;
 /** Minimum centre-to-centre across neighbouring blocks — room for two labels. */
-const BLOCK_PITCH = 128;
+const BLOCK_PITCH = 152;
 /** First and last node centre to the world's edge. */
-const EDGE_MARGIN = 72;
+const EDGE_MARGIN = 96;
 
 /**
  * Family-unit layout (2026-08-27, replacing even spacing by API order —

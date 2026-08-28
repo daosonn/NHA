@@ -37,11 +37,11 @@ export type TreeSlot = {
 };
 
 /** Horizontal offset of the two parent slots when no parent is drawn yet. */
-const PARENT_SPREAD = 70;
+const PARENT_SPREAD = 80;
 /** A slot may not rise above the canvas — clamp like the prototype's `max(60, y)`. */
 const MIN_Y = 40;
 /** Two centres closer than this on a row count as "that spot is taken". */
-const CLEARANCE = 100;
+const CLEARANCE = 110;
 
 /** Just enough of a node for the path helpers, which read x/y/size only. */
 function ghostAt(x: number, y: number): PositionedNode {

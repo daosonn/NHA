@@ -103,8 +103,13 @@ overlap (the original sins are recorded in this file's git history).
    scale** so nothing is cropped. Trees narrower than the viewport sit
    centred, as before.
 
-Pitches: 104px centre-to-centre inside a couple, 128px minimum across
-blocks, 72px edge margins (`tree-layout.ts`). **Siblings order oldest to
+Pitches: 118px centre-to-centre inside a couple, 152px minimum across
+blocks, 172px between rows, 96px edge margins (`tree-layout.ts`; loosened
+from 104/128/150/72 on 2026-08-28 — owner's call, the labels sat
+edge-to-edge inside a couple). The pan may also rest 72px past "content
+flush" on every side (`PAN_MARGIN`, `family-tree.tsx`, same day): without
+it a tree that fits the viewport could not be dragged at all, and a border
+node was pinned against the frame. **Siblings order oldest to
 youngest, left to right** (2026-08-27): the tree payload now carries each
 member's Life Profile `birthDate`, and the sort key is the block's ANCHOR
 — the child of the couple above, never the partner who married in — so a

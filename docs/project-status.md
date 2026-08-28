@@ -48,9 +48,14 @@ screens.
   path's `d`, so `use-animated-tree-layout.ts` tweens the LAYOUT (a ~550ms
   rAF interpolation re-rendering from in-between coordinates; rare and
   sub-second, so the re-render-per-frame the gesture layer avoids is fine
-  here). Mechanism in `family-tree-rendering.md` § Edit mode. Verified: api
-  build+lint, mobile tsc, check:i18n (828 keys), prettier on touched files;
-  not yet tapped through on a device or browser.
+  here). Mechanism in `family-tree-rendering.md` § Edit mode. **Third pass
+  the same day: air.** Node spacing loosened (couple 104→118, blocks
+  128→152, rows 150→172, edge margins 72→96 — labels sat edge-to-edge) and
+  the pan may rest 72px past flush on every side (`PAN_MARGIN`) so a
+  viewport-sized tree is draggable at all and border nodes can be pulled
+  inward; edit-mode slots spread to match. Verified: api build+lint, mobile
+  tsc, check:i18n (828 keys), prettier on touched files; not yet tapped
+  through on a device or browser.
 
 - **Home's IA swapped: tree to the bar's centre, posting to the top of the
   feed (2026-08-26, `feature/motion-system`) — owner's call, deviates from
