@@ -79,6 +79,26 @@ export class MediaController {
     return new StreamableFile(createReadStream(path), { type: 'image/jpeg' });
   }
 
+  @Get(':mediaId/thumb')
+  @ApiOperation({
+    summary:
+      'Bản nhỏ của một tấm ảnh — lưới 3 cột từng tải nguyên ảnh gốc (PNG trung bình 1,7 MB)',
+  })
+  async thumb(
+    @CurrentUser() user: AuthUser,
+    @Param('mediaId', ParseUUIDPipe) mediaId: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const { stream, mimeType } = await this.mediaService.thumbForViewer(
+      user.userId,
+      mediaId,
+    );
+    // A thumbnail of an uploaded picture never changes.
+    res.setHeader('Cache-Control', 'private, max-age=86400');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    return new StreamableFile(stream, { type: mimeType });
+  }
+
   @Get(':mediaId')
   @ApiOperation({
     summary:

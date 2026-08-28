@@ -1,64 +1,103 @@
 import { useRouter } from 'expo-router';
 import { ChevronRight, Images, TriangleAlert } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, SectionList, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { AppHeader } from '../../src/components/layout/app-header';
-import { contentColumnBleed } from '../../src/components/layout/content-column';
+import { contentColumn } from '../../src/components/layout/content-column';
 import { NotificationBell, ScreenTitle } from '../../src/components/layout/header-slots';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { IconBadge } from '../../src/components/ui/icon-badge';
 import { Text } from '../../src/components/ui/text';
-import { GRID_GAP, PhotoRow } from '../../src/components/omoide/photo-row';
-import { useActiveFamily } from '../../src/features/family/active-family';
 import { useFamilies } from '../../src/features/family/use-families';
-import { useFamilyPhotos, type PhotoTile } from '../../src/features/omoide/use-family-photos';
-import { formatFullDate } from '../../src/lib/date';
+import type { FamilySummary } from '../../src/lib/api';
+import { mediaSource } from '../../src/lib/media-source';
 import { colors, radius, spacing, useLayout } from '../../src/theme';
 import { enter } from '../../src/theme/motion';
+import { Image } from 'expo-image';
 
-/**
- * Room the floating bottom bar needs at the end of the scroll.
- *
- * Only while the bar is at the bottom. From 1024px up the same destinations
- * are a rail down the left, which overlaps nothing, so reserving this much
- * there would just be 140px of dead space under the last row.
- */
+/** Room the floating bottom bar needs at the end of the scroll. */
 const BOTTOM_INSET = 140;
 
-/** How many photo rows join the entrance cascade on first paint (Home's rule). */
+/** How many rows join the entrance cascade on first paint (Home's rule). */
 const CASCADE_ROWS = 5;
 
+function FamilyRow({ family, onPress }: { family: FamilySummary; onPress: () => void }) {
+  const { t } = useTranslation();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={t('omoide.openFamily', { name: family.name })}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        padding: 10,
+        borderRadius: radius['2xl'],
+        backgroundColor: pressed ? colors.background.subtle : colors.background.card,
+        boxShadow: `inset 0 0 0 1px ${colors.state.borderDefault}`,
+      })}
+    >
+      <View
+        style={{
+          width: 58,
+          height: 58,
+          borderRadius: radius.xl,
+          overflow: 'hidden',
+          backgroundColor: colors.coral.light,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {family.coverMediaId === null ? (
+          <Images size={22} color={colors.coral.deep} strokeWidth={2} />
+        ) : (
+          <Image
+            source={mediaSource(family.coverMediaId)}
+            style={{ width: '100%', height: '100%' }}
+            contentFit="cover"
+            transition={160}
+            accessibilityIgnoresInvertColors
+          />
+        )}
+      </View>
+
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text variant="body1" weight="semibold" numberOfLines={1}>
+          {family.name}
+        </Text>
+        <Text variant="caption" color={colors.text.muted}>
+          {t('omoide.familyMembers', { count: family.memberCount })}
+        </Text>
+      </View>
+
+      <ChevronRight size={18} color={colors.text.lightMuted} strokeWidth={2.2} />
+    </Pressable>
+  );
+}
+
 /**
- * The family's shared pictures, newest day first.
+ * The shelf, one family at a time.
  *
- * The MVP is one shelf rather than a set of albums (decided 2026-08-18):
- * everything anyone shared with this family, grouped by the day it arrived.
- * Albums by occasion — mockup 10a — wait for an endpoint and for a decision
- * about what an album is derived from.
+ * This tab used to be a single wall of pictures belonging to whichever family
+ * happened to be active — which meant somebody in three families could only
+ * ever see a third of their photographs, and had to leave Omoide to change
+ * which third. It lists the families instead, and each one opens its own
+ * shelf (owner's call, 2026-08-28).
  *
- * Drawn to mockup 10b. Two controls from that mockup are deliberately
- * absent: search and the sort menu have nothing behind them yet, and a
- * button that leads nowhere costs more trust than a visibly missing feature
- * (`docs/project-status.md` → Important Decisions).
+ * Your private albums stay here rather than moving inside a family, because
+ * they belong to nobody else: the line between "everyone in this family can
+ * see this" and "only I can" should not be one you cross by accident.
  */
 export default function OmoideScreen() {
   const { t } = useTranslation();
   const { expanded } = useLayout();
   const router = useRouter();
-  const { familyId } = useActiveFamily();
-  // `familyId` is null both while families load and for an account with none
-  // — only the second deserves an empty state, so the list itself is needed.
-  const { data: families } = useFamilies();
 
-  const { days, total, contributors, isPending, isError, refetch, ...feed } =
-    useFamilyPhotos(familyId);
-
-  // Chạm vào một ô ở đây là muốn XEM tấm đó, không phải đọc bài đăng của nó —
-  // đường vào bài vẫn còn ở dòng thời gian trên Home.
-  const openMoment = (tile: PhotoTile) =>
-    router.push({ pathname: '/media/[id]', params: { id: tile.id, mime: tile.mimeType } });
+  const { data: families, isPending, isError, refetch } = useFamilies();
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.page }}>
@@ -86,10 +125,9 @@ export default function OmoideScreen() {
       );
     }
 
-    // No family at all used to fall through to the `null` below — a bare
-    // page with nothing but a header. Same cat and same door as Home's
-    // no-family state: this account's next step is one screen, everywhere.
-    if (families !== undefined && families.length === 0) {
+    if (isPending || families === undefined) return null;
+
+    if (families.length === 0) {
       return (
         <EmptyState
           cat
@@ -104,142 +142,73 @@ export default function OmoideScreen() {
       );
     }
 
-    if (isPending || familyId === null) return null;
-
-    if (days.length === 0) {
-      return (
-        <EmptyState
-          cat
-          renderIcon={({ size, color }) => <Images size={size} color={color} strokeWidth={2} />}
-          title={t('omoide.emptyTitle')}
-          description={t('omoide.emptyBody')}
-        />
-      );
-    }
-
-    // Vị trí toàn cục của từng hàng, vì SectionList chỉ đưa index trong section —
-    // cascade phải đếm tiếp qua ranh giới ngày. Header chiếm bậc 0.
-    let rowOffset = 1;
-    const sections = days.map((day) => {
-      const section = { ...day, data: day.rows, offset: rowOffset };
-      rowOffset += day.rows.length;
-      return section;
-    });
-
     return (
-      <SectionList
-        sections={sections}
-        keyExtractor={(row, index) => `${row[0]?.id ?? 'row'}-${index}`}
-        // The date heading stays put while its own photos scroll under it,
-        // so you always know what you are looking at.
-        stickySectionHeadersEnabled
+      <ScrollView
         contentContainerStyle={{
-          ...contentColumnBleed,
+          ...contentColumn,
+          paddingTop: 14,
           paddingBottom: expanded ? spacing['4xl'] : BOTTOM_INSET,
+          gap: 10,
         }}
         showsVerticalScrollIndicator={false}
-        onEndReachedThreshold={0.5}
-        onEndReached={() => {
-          if (feed.hasNextPage && !feed.isFetchingNextPage) void feed.fetchNextPage();
-        }}
-        ListHeaderComponent={
-          <Animated.View
-            entering={enter.up(0)}
-            style={{ paddingHorizontal: spacing.xl, paddingTop: 14, paddingBottom: 4, gap: 10 }}
-          >
-            <Text variant="body2" color={colors.text.muted}>
-              {t('omoide.summary', { photos: total, people: contributors })}
-            </Text>
-
-            {/* The way in to the private shelf, from the tab someone already
-                opens to look at pictures. Kept visually separate from the
-                shelf below it, which is the family's and is shared — one tap
-                between "everyone can see this" and "only I can" needs the
-                line drawn clearly. */}
-            <Pressable
-              onPress={() => router.push('/albums')}
-              accessibilityRole="button"
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 10,
-                paddingVertical: 10,
-                paddingHorizontal: 12,
-                borderRadius: radius.xl,
-                backgroundColor: colors.background.card,
-                boxShadow: `inset 0 0 0 1px ${colors.state.borderDefault}`,
-              }}
-            >
-              <IconBadge
-                size={30}
-                background={colors.coral.light}
-                foreground={colors.coral.deep}
-                renderIcon={(props) => <Images {...props} strokeWidth={2.1} />}
-              />
-
-              <View style={{ flex: 1, gap: 1 }}>
-                <Text variant="body2" weight="semibold">
-                  {t('omoide.yourAlbums')}
-                </Text>
-                <Text variant="badge" color={colors.text.subtle}>
-                  {t('omoide.yourAlbumsHint')}
-                </Text>
-              </View>
-
-              <ChevronRight size={17} color={colors.text.lightMuted} strokeWidth={2.2} />
-            </Pressable>
-          </Animated.View>
-        }
-        renderSectionHeader={({ section }) => (
-          <View
+      >
+        {/* Kept above the families, and visibly apart from them: this shelf is
+            the one nobody else can open. */}
+        <Animated.View entering={enter.up(0)}>
+          <Pressable
+            onPress={() => router.push('/albums')}
+            accessibilityRole="button"
             style={{
               flexDirection: 'row',
-              alignItems: 'baseline',
-              gap: 8,
-              paddingHorizontal: spacing.xl,
-              paddingTop: 12,
-              paddingBottom: 9,
-              backgroundColor: colors.background.page,
+              alignItems: 'center',
+              gap: 10,
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+              borderRadius: radius.xl,
+              backgroundColor: colors.background.card,
+              boxShadow: `inset 0 0 0 1px ${colors.state.borderDefault}`,
             }}
           >
-            <Text variant="body1" weight="bold" style={{ letterSpacing: -0.2 }}>
-              {formatFullDate(section.date) ?? section.date}
-            </Text>
+            <IconBadge
+              size={30}
+              background={colors.coral.light}
+              foreground={colors.coral.deep}
+              renderIcon={(props) => <Images {...props} strokeWidth={2.1} />}
+            />
 
-            <Text
-              variant="caption"
-              color={colors.text.lightMuted}
-              numberOfLines={1}
-              style={{ flex: 1 }}
-            >
-              {section.place ?? ''}
-            </Text>
+            <View style={{ flex: 1, gap: 1 }}>
+              <Text variant="body2" weight="semibold">
+                {t('omoide.yourAlbums')}
+              </Text>
+              <Text variant="badge" color={colors.text.subtle}>
+                {t('omoide.yourAlbumsHint')}
+              </Text>
+            </View>
 
-            <Text variant="caption" weight="medium" color={colors.text.subtle}>
-              {section.count}
-            </Text>
-          </View>
-        )}
-        renderItem={({ item, index, section }) => {
-          // Hàng ngoài đợt cascade đầu (và hàng mount sau do cuộn) hiện lên
-          // ngay — chờ hết delay giữa chừng cuộn đọc thành lag, không phải
-          // choreography. Cùng lý do với feed trên Home.
-          const cascadeIndex = section.offset + index;
-          return (
-            <Animated.View
-              entering={enter.up(cascadeIndex < CASCADE_ROWS ? cascadeIndex : 0)}
-              style={{ paddingHorizontal: spacing.md, paddingBottom: GRID_GAP }}
-            >
-              <PhotoRow tiles={item} onPress={openMoment} />
-            </Animated.View>
-          );
-        }}
-        ListFooterComponent={
-          feed.isFetchingNextPage ? (
-            <ActivityIndicator color={colors.coral.primary} style={{ paddingVertical: 16 }} />
-          ) : null
-        }
-      />
+            <ChevronRight size={17} color={colors.text.lightMuted} strokeWidth={2.2} />
+          </Pressable>
+        </Animated.View>
+
+        <Text
+          variant="caption"
+          weight="semibold"
+          color={colors.text.secondary}
+          style={{ paddingTop: 6 }}
+        >
+          {t('omoide.families')}
+        </Text>
+
+        {families.map((family, index) => (
+          <Animated.View key={family.id} entering={enter.up(index < CASCADE_ROWS ? index + 1 : 0)}>
+            <FamilyRow
+              family={family}
+              onPress={() =>
+                router.push({ pathname: '/omoide/[familyId]', params: { familyId: family.id } })
+              }
+            />
+          </Animated.View>
+        ))}
+      </ScrollView>
     );
   }
 }

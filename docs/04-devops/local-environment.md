@@ -293,33 +293,55 @@ writing to disk while believing it is writing to the bucket.
 Neon names a key that has to exist in the bucket; flip the driver without
 moving them and every existing photo becomes a 404.
 
+Run these in order. Each is safe to re-run — nothing here deletes anything,
+and a second run of either script is mostly a no-op.
+
 ```powershell
 git pull
-pnpm install                                  # @aws-sdk/client-s3 is new
-pnpm --filter api r2:migrate -- --dry-run     # what would go up
-pnpm --filter api r2:migrate                  # send it
-# then set STORAGE_DRIVER="r2" in apps/api/.env and restart the API
+pnpm install                                   # @aws-sdk/client-s3 is new
+
+# 1. What this machine would contribute, before contributing it
+pnpm --filter api r2:migrate -- --dry-run
+pnpm --filter api r2:migrate
+
+# 2. Small copies for whatever step 1 just added
+pnpm --filter api thumbs:backfill -- --dry-run
+pnpm --filter api thumbs:backfill
+
+# 3. Only then: set STORAGE_DRIVER="r2" in apps/api/.env and restart the API
 ```
 
-The migration walks the `Media` table, uploads every row whose file is here
-and not yet in the bucket, and skips the rest. It never deletes anything, so
-re-running is safe.
+**Why step 2 follows step 1 every time.** A thumbnail can only be made from
+an original that is in the bucket. Whatever you upload in step 1 arrives
+without one, and until it has one the grid falls back to fetching the full
+picture — which is the thing thumbnails exist to stop. The originals you
+did not upload are somebody else's to supply; the script names them and
+moves on.
 
-It finishes by listing rows it could not help with — those files are on
-somebody else's disk. **Everyone runs it once**, and the gap closes as each
-person contributes what they hold. Until then, media nobody has migrated is
-still missing, which the app now reports honestly as a 404 rather than a 500.
+`r2:migrate` walks the `Media` table and uploads every row whose file is
+here and not yet in the bucket. It finishes by listing the rows it could not
+help with — those files are on another machine's disk. **Everyone runs both
+scripts once**, and the gap closes as each person contributes what they
+hold. Until then, media nobody has migrated is missing, which the app
+reports as a 404 rather than a 500.
 
 ### What changes once it is on
 
 - Uploads go straight to the bucket; `apps/api/uploads/` stops growing except
   for temp files and video scratch.
+- **Every uploaded photograph gets a 480px JPEG beside it**, served by
+  `GET /media/:id/thumb` and used for every grid and card. The grid used to
+  fetch the originals — PNGs averaging 1.7 MB — to draw 120pt tiles; across
+  the 89 photos stored on 2026-08-28 that was 78 MB of traffic against 2.6 MB
+  now. Where a thumbnail is missing the original is served instead, so
+  nothing breaks while a backfill catches up.
 - ffmpeg and sharp still need real files, so `newBorrow()` downloads to
   `uploads/tmp` and deletes on `dispose()`. That is why the borrow exists.
 - Video posters stay local — they are derived and regenerate on demand.
 - The bucket is **private**. Nothing is served straight from R2 yet: bytes
-  still pass through NestJS, which is what enforces `canView`. Presigned URLs
-  are the next step and would take the API out of the delivery path
+  still pass through NestJS, which is what enforces `canView`. That leaves
+  roughly 0.7s of round-trip per picture whatever its size, which is now the
+  whole cost — presigned URLs or a CDN are what would remove it
   (`deployment.md`).
 
 ## Seeding demo data

@@ -332,6 +332,7 @@ export const media = {
 
   /** Ảnh xem trước của một video — thẻ bài đăng và lưới ảnh vẽ tấm này. */
   posterUrl: (mediaId: string) => `${apiBaseUrl()}/media/${mediaId}/poster`,
+  thumbUrl: (mediaId: string) => `${apiBaseUrl()}/media/${mediaId}/thumb`,
 };
 
 /**

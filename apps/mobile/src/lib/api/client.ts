@@ -112,6 +112,22 @@ export function resetRefreshState(): void {
 
 type RawResponse = { status: number; ok: boolean; payload: unknown };
 
+/**
+ * How long a request may hang before it is called a failure.
+ *
+ * There was no limit at all, which is how "posting…" could spin for as long
+ * as somebody was willing to watch it: a stalled connection never rejects,
+ * so the mutation stayed pending, the button stayed loading, and the screen
+ * that does show errors had none to show. A timeout turns a hang into an
+ * ordinary failure the app already knows how to talk about.
+ *
+ * Uploads get their own, longer budget. A video over a phone connection is
+ * slow on purpose, not stuck, and cutting it off at the same mark as a
+ * JSON GET would fail the very requests most worth waiting for.
+ */
+const REQUEST_TIMEOUT_MS = 20_000;
+const UPLOAD_TIMEOUT_MS = 120_000;
+
 async function send(path: string, options: RequestOptions): Promise<RawResponse> {
   const { method = 'GET', body, authenticated = true, signal } = options;
 
@@ -127,17 +143,34 @@ async function send(path: string, options: RequestOptions): Promise<RawResponse>
     if (token !== null) headers.Authorization = `Bearer ${token}`;
   }
 
+  // A plain controller and a timer, not `AbortSignal.timeout`/`any`: those
+  // are recent additions and Hermes is not a browser. This works on every
+  // runtime the app runs on, which for a network path is worth more than the
+  // shorter spelling.
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(),
+    multipart ? UPLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS,
+  );
+  // The caller's own signal still cancels: this adds a deadline, it does not
+  // take the cancel away.
+  signal?.addEventListener('abort', () => controller.abort());
+
   let response: Response;
   try {
     response = await fetch(`${config.baseUrl}${path}`, {
       method,
       headers,
       body: body === undefined ? undefined : multipart ? (body as FormData) : JSON.stringify(body),
-      signal,
+      signal: controller.signal,
     });
   } catch (cause) {
-    // No status to report: the request never reached the server.
+    // No status to report: the request never reached the server — or it did
+    // and took longer than the deadline, which the reader cannot tell apart
+    // and does not need to.
     throw ApiError.offline(cause);
+  } finally {
+    clearTimeout(timer);
   }
 
   // 204 and an empty 200 both have no body to parse.

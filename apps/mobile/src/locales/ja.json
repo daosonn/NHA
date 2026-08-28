@@ -398,7 +398,7 @@
       "shareToFeedHint": "家族のフィードに出来事として投稿します。写真は年表にだけ残ります。"
     },
     "timeline": "年表",
-    "album": "アルバム",
+    "album": "フォト",
     "memo": "メモ",
     "editSelf": "プロフィールを編集",
     "viewPhoto": "{{name}}さんの写真を見る",
@@ -472,7 +472,13 @@
       "failed": "写真を読み込めませんでした",
       "headingOwn": "マイライブラリ",
       "emptyBodyOwn": "思い出を投稿するか、誰かにタグ付けされると、ここに表示されます。",
-      "openPhoto": "写真を大きく表示"
+      "openPhoto": "写真を大きく表示",
+      "filterAll": "すべて",
+      "filterShared": "共有",
+      "filterPrivate": "自分だけ",
+      "filterLabel": "写真を絞り込む",
+      "addPrivate": "自分だけの写真を追加",
+      "noneInFilter": "まだありません"
     },
     "facts": {
       "born": "{{date}}生まれ",
@@ -859,7 +865,12 @@
     "emptyBody": "家族が写真や動画を共有すると、ここに集まります。",
     "yourAlbums": "あなたのアルバム",
     "yourAlbumsHint": "あなただけ・家族には共有されません",
-    "noFamilyBody": "家族が共有した写真や動画はここに集まります。まずは家族をつくるか、参加しましょう。"
+    "noFamilyBody": "家族が共有した写真や動画はここに集まります。まずは家族をつくるか、参加しましょう。",
+    "families": "家族",
+    "openFamily": "{{name}}の写真を開く",
+    "familyMembers_other": "{{count}}人",
+    "byPerson": "人ごと",
+    "openPersonAlbum": "{{name}}のアルバムを開く"
   },
   "profileEdit": {
     "title": "プロフィールを編集",

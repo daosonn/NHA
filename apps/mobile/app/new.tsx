@@ -80,6 +80,8 @@ export default function NewMomentScreen() {
     attachMime?: string;
     tagMemberId?: string;
     caption?: string;
+    /** '1' starts with every family unticked — a picture kept to yourself. */
+    private?: string;
   }>();
 
   const { user } = useSession();
@@ -111,6 +113,18 @@ export default function NewMomentScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.attachMediaId]);
+
+  // Arriving from "add a private photo": untick everything once the
+  // families are known. Not initial state — they load after the first
+  // render, so there is nothing to exclude yet at that point. The ref makes
+  // it a one-off, or re-ticking a family here would be undone on every
+  // render while the flag is still in the URL.
+  const wentPrivate = useRef(false);
+  useEffect(() => {
+    if (params.private !== '1' || wentPrivate.current || families === undefined) return;
+    wentPrivate.current = true;
+    setExcludedIds(families.map((family) => family.id));
+  }, [params.private, families]);
 
   const audience = families === undefined ? [] : toAudience(families);
   const selected = audience.filter((group) => !excludedIds.includes(group.id));

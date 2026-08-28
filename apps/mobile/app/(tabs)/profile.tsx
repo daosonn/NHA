@@ -144,6 +144,11 @@ export default function ProfileScreen() {
           ownProfile
           onEdit={() => router.push('/profile/edit')}
           onEditTimeline={() => router.push('/profile/edit-timeline')}
+          // The compose screen with every family unticked. Reusing it rather
+          // than building a second uploader means a private picture gets the
+          // same caption box, the same picker and the same tag rules as any
+          // other — it just goes nowhere but here.
+          onAddPrivate={() => router.push({ pathname: '/new', params: { private: '1' } })}
           onChangeAvatar={() => void pickAvatar()}
           uploadingAvatar={updateAvatar.isPending}
           // Không có ảnh thật thì vòng tròn chữ cái đứng yên — không có gì để xem

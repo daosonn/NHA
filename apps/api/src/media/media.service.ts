@@ -1,7 +1,10 @@
 import type { Readable } from 'node:stream';
+import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync } from 'node:fs';
+import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import sharp from 'sharp';
 import {
   BadRequestException,
   Injectable,
@@ -14,6 +17,33 @@ import { FFMPEG } from '../video/engine/exec';
 import { PostService } from '../post/post.service';
 import { ProfileService } from '../profile/profile.service';
 import { StorageService } from '../storage/storage.service';
+
+/**
+ * Longest edge of a thumbnail. The grid draws three across a phone, so
+ * ~120pt a tile; 480 covers that at 3x and still leaves a usable picture
+ * behind a fullscreen tap while the original loads.
+ */
+const THUMB_EDGE = 480;
+
+/** Everything `canView` needs, in one place so its two callers agree. */
+const mediaGateSelect = {
+  id: true,
+  storageKey: true,
+  mimeType: true,
+  uploaderUserId: true,
+  memo: { select: { ownerUserId: true } },
+  post: {
+    select: {
+      authorUserId: true,
+      families: { select: { familyId: true } },
+    },
+  },
+  lifeEvent: {
+    select: {
+      profile: { select: { userId: true, memberId: true } },
+    },
+  },
+} as const;
 
 /** Multer file injected by FileInterceptor (streamed to a temp file). */
 export interface UploadedMediaFile {
@@ -106,7 +136,30 @@ export class MediaService {
         `Only ${this.storage.supportedMimeTypes().join(', ')} are supported`,
       );
     }
+    // Made from the temp file, before promote consumes it. A grid of
+    // 100px tiles was downloading the originals — 1.7 MB on average for a
+    // PNG, some of them 4.7 — which is most of why the app felt slow.
+    const thumbTemp = await this.makeThumbnail(file.path, file.mimetype);
+
     const storageKey = await this.storage.promote(file.path, file.mimetype);
+
+    if (thumbTemp !== null) {
+      try {
+        await this.storage.putDerived(
+          this.storage.thumbKeyFor(storageKey),
+          thumbTemp,
+          'image/jpeg',
+        );
+      } catch (error) {
+        // A missing thumbnail costs bandwidth, not correctness: the reader
+        // still gets the original. Losing the upload over it would be worse.
+        this.logger.warn(
+          `Could not store a thumbnail for ${storageKey}: ${String(error)}`,
+        );
+      }
+      await this.storage.discardTemp(thumbTemp);
+    }
+
     try {
       return await this.prisma.media.create({
         data: {
@@ -128,6 +181,78 @@ export class MediaService {
         );
       }
       throw error;
+    }
+  }
+
+  /**
+   * The small copy of a photograph, for a grid.
+   *
+   * Falls back to the original when there is no thumbnail — pictures
+   * uploaded before thumbnails existed, and any whose generation failed.
+   * The reader sees the picture either way; only the bytes differ.
+   */
+  async thumbForViewer(
+    userId: string,
+    mediaId: string,
+  ): Promise<{ stream: Readable; mimeType: string }> {
+    const media = await this.prisma.media.findUnique({
+      where: { id: mediaId },
+      select: mediaGateSelect,
+    });
+    if (!media || !(await this.canView(userId, media))) {
+      throw new NotFoundException('Media not found');
+    }
+
+    const thumbKey = this.storage.thumbKeyFor(media.storageKey);
+    if (await this.storage.exists(thumbKey)) {
+      return {
+        stream: this.storage.openRead(thumbKey),
+        mimeType: 'image/jpeg',
+      };
+    }
+
+    if (!(await this.storage.exists(media.storageKey))) {
+      throw new NotFoundException('Media not found');
+    }
+    return {
+      stream: this.storage.openRead(media.storageKey),
+      mimeType: media.mimeType,
+    };
+  }
+
+  /**
+   * A small JPEG beside the original, or null when there is nothing to
+   * shrink — video posters are a separate thing, made on demand from a file
+   * ffmpeg has to open anyway.
+   *
+   * Never throws: an upload that succeeded must not fail because its
+   * thumbnail did.
+   */
+  private async makeThumbnail(
+    sourcePath: string,
+    mimeType: string,
+  ): Promise<string | null> {
+    if (!mimeType.startsWith('image/')) return null;
+
+    const target = path.join(this.storage.tempDir, `thumb-${randomUUID()}.jpg`);
+    try {
+      await mkdir(this.storage.tempDir, { recursive: true });
+      await sharp(sourcePath)
+        // rotate() first, or a portrait taken on a phone is thumbnailed
+        // sideways — EXIF orientation is not applied by resize alone.
+        .rotate()
+        .resize({
+          width: THUMB_EDGE,
+          height: THUMB_EDGE,
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .jpeg({ quality: 72 })
+        .toFile(target);
+      return target;
+    } catch (error) {
+      this.logger.warn(`Could not make a thumbnail: ${String(error)}`);
+      return null;
     }
   }
 
@@ -202,6 +327,14 @@ export class MediaService {
 
     const poster = this.storage.posterPathFor(media.storageKey);
     if (!existsSync(poster)) {
+      // Same guard the stream path carries. Without it a video whose file is
+      // not in the bucket — uploaded from a machine that has not migrated —
+      // reached ffmpeg through withLocalCopy, the download threw, and the
+      // browser got a 500 for every card that video appeared on. A file that
+      // is somewhere else is not found here.
+      if (!(await this.storage.exists(media.storageKey))) {
+        throw new NotFoundException('Media not found');
+      }
       mkdirSync(path.dirname(poster), { recursive: true });
       // -ss 0.5: khung đúng số 0 của video quay bằng điện thoại thường là
       // một khung xám lúc cảm biến chưa kịp phơi sáng.
@@ -241,24 +374,7 @@ export class MediaService {
   ): Promise<MediaStreamResult> {
     const media = await this.prisma.media.findUnique({
       where: { id: mediaId },
-      select: {
-        id: true,
-        storageKey: true,
-        mimeType: true,
-        uploaderUserId: true,
-        memo: { select: { ownerUserId: true } },
-        post: {
-          select: {
-            authorUserId: true,
-            families: { select: { familyId: true } },
-          },
-        },
-        lifeEvent: {
-          select: {
-            profile: { select: { userId: true, memberId: true } },
-          },
-        },
-      },
+      select: mediaGateSelect,
     });
     // 404 in both cases — do not confirm that private content exists.
     if (!media || !(await this.canView(userId, media))) {

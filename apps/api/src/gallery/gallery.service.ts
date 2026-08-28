@@ -15,6 +15,14 @@ export interface GalleryMediaItem {
   createdAt: Date;
   postId: string | null;
   lifeEventId: string | null;
+  /**
+   * False when the photo reached no family at all — a post written with
+   * every audience unticked, which the schema already treats as private to
+   * its author (`database.md` → Post). The gallery is the only screen that
+   * shows those beside shared ones, so it is the only one that has to tell
+   * them apart.
+   */
+  shared: boolean;
 }
 
 /**
@@ -137,6 +145,7 @@ export class GalleryService {
           ...media,
           postId: post.id,
           lifeEventId: null,
+          shared: post.families.length > 0,
         })),
       );
 
@@ -163,6 +172,10 @@ export class GalleryService {
         ...media,
         postId: null,
         lifeEventId: event.id,
+        // A milestone has no audience of its own: it hangs off a profile,
+        // and anyone who may read the profile may see it. There is no way
+        // to add a private one, so none of these are.
+        shared: true,
       })),
     );
 

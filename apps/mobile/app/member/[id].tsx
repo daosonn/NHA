@@ -26,7 +26,9 @@ import { spacing } from '../../src/theme';
  * out of the profile.
  */
 export default function MemberScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // `tab` lets another screen open this one where it means to — Omoide
+  // sends people to a person's photographs, not to their timeline.
+  const { id, tab } = useLocalSearchParams<{ id: string; tab?: string }>();
   const router = useRouter();
   const { user } = useSession();
   const { familyId } = useActiveFamily();
@@ -64,6 +66,7 @@ export default function MemberScreen() {
           profile={profile}
           familyId={familyId}
           memberId={id}
+          initialTab={tab === 'album' || tab === 'memo' ? tab : 'timeline'}
           onEdit={() =>
             familyId === null
               ? undefined
