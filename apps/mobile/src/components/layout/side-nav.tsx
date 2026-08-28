@@ -13,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useSoftRefresh } from '../../features/ui/soft-refresh';
 import { colors, elevation, layout, radius, spacing } from '../../theme';
 import { BrandMark } from '../ui/brand-mark';
 import { Text } from '../ui/text';
@@ -40,16 +41,15 @@ const DESTINATIONS: readonly {
 const ITEM = 48;
 const ICON = 22;
 /**
- * The accented glyph's disc.
+ * The accented glyph, drawn larger than the rest.
  *
- * Drawn BEHIND the icon box and larger than it, rather than as a tint on the
- * box itself: at 22 the disc was the same size as the glyph it held, so it
- * read as a coral smudge rather than a mark — and it sat visibly smaller
- * than the selected row's own pill, which made it look like a mistake. At 36
- * against a 22 glyph the proportion matches the pill, and because it is
- * absolutely positioned it costs the row no width, so nothing shifts.
+ * Two attempts at a coral disc were read as a smudge rather than a mark
+ * (owner's calls, 2026-08-26 and 27) — a filled shape among five line
+ * drawings keeps looking like a button that wandered in. Size and colour say
+ * "this one matters" without introducing a different kind of object, and
+ * with nothing positioned there is no paint-order trap on web either.
  */
-const ACCENT_DISC = 36;
+const ACCENT_ICON = 28;
 /** Side padding of the panel. Everything inside is measured from it. */
 const PAD = 14;
 /**
@@ -150,25 +150,10 @@ function Row({
           // navigations start disagreeing about what matters.
         }}
       >
-        {accent && (
-          <View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              top: (ICON - ACCENT_DISC) / 2,
-              left: (ICON - ACCENT_DISC) / 2,
-              width: ACCENT_DISC,
-              height: ACCENT_DISC,
-              borderRadius: radius.full,
-              backgroundColor: selected === true ? colors.coral.hover : colors.coral.primary,
-            }}
-          />
-        )}
-
         <Icon
-          size={ICON}
-          color={accent ? colors.text.white : tint}
-          strokeWidth={accent ? 2.2 : strokeWidth}
+          size={accent ? ACCENT_ICON : ICON}
+          color={accent ? colors.coral.brand : tint}
+          strokeWidth={accent ? 2.4 : strokeWidth}
         />
       </View>
 
@@ -237,6 +222,7 @@ export function SideNav() {
   const { t } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
+  const { refresh } = useSoftRefresh();
   const insets = useSafeAreaInsets();
 
   /** 0 closed, 1 open. */
@@ -300,23 +286,54 @@ export function SideNav() {
           panelStyle,
         ]}
       >
-        {/* Same glass as the bottom bar — 30 blur under 86% white — so the two
-            navigations are visibly the same object in two positions. It is a
-            filled layer behind the contents rather than a wrapper around them,
-            because a `BlurView` that owns the children would also own the
-            pointer events the bar needs for its hover. */}
+        {/* Same glass as the bottom bar, but opaque and outlined here.
+            Frosted glass needs something behind it to frost: the bar floats
+            over a scrolling feed, while this rail sits against the page
+            margin, where 86% white over a #FAF9F8 page composites to within a
+            shade of the page itself. The pill's shape was left to its shadow
+            alone, and grey glyphs on an almost-invisible surface read as
+            washed out. Card white with a hairline gives the rail an edge and
+            the icons a ground to sit on.
+
+            It is a filled layer behind the contents rather than a wrapper
+            around them, because a `BlurView` that owns the children would
+            also own the pointer events the rail needs for its hover. */}
         <BlurView
           intensity={30}
           tint="light"
           pointerEvents="none"
-          style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.86)' }]}
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: colors.background.card,
+              // RADIUS, never `full`. A radius is clamped to half the box,
+              // and this box changes width: closed it is 76 so `full` lands
+              // on 38 and agrees with the container by luck, but a hover
+              // opens it to 240 and `full` becomes 120 while the container
+              // still clips at 38 — which drew a great arc straight across
+              // the open rail. Reported 2026-08-27.
+              borderRadius: RADIUS,
+              borderWidth: 1,
+              borderColor: colors.state.borderNeutral,
+            },
+          ]}
         />
 
         {/* The mark alone while closed. Home's header carries the full lockup,
             so the name is already said once on the screen that has room for
             it; opening the bar is not the moment to say it twice. */}
         <View style={{ paddingLeft: 11 }}>
-          <BrandMark size={26} />
+          <Pressable
+            onPress={() => {
+              router.navigate('/');
+              refresh();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t('nav.home')}
+            hitSlop={6}
+          >
+            <BrandMark size={26} />
+          </Pressable>
         </View>
 
         {/* Still no raised disc — compose moved to Home's bar (owner's call,

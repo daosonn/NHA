@@ -569,6 +569,13 @@ export type CreateLifeEventRequest = {
   type?: string;
   taggedMemberIds?: string[];
   mediaIds?: string[];
+  /**
+   * Also announce the milestone in the feed as an EVENT post. Defaults to
+   * true server-side. The post carries the title, date, place and
+   * description but **not** the photos — a Media row may have only one
+   * parent, and the timeline is where they were put.
+   */
+  shareToFeed?: boolean;
 };
 
 /**

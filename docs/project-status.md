@@ -1226,6 +1226,41 @@ dev` **did not regenerate the client**, and the stale client survived
 
 ## In Progress
 
+- **Refresh without reloading (2026-08-27)**: the app had no refresh gesture
+  at all — no pull-to-refresh anywhere, so a browser reload was the only way
+  to see new data, and it threw away the bundle, the session read and the
+  reader's place. Tapping the logo, or the tab you are already on, now
+  refetches in place and returns to the top. `invalidateQueries()` with no
+  filter is the whole mechanism: React Query refetches what is mounted and
+  marks the rest stale, so the screen in front of you updates now and the
+  others when next opened. The feed is trimmed to its first page before the
+  refetch — refetching an infinite list whole would re-request every page
+  already scrolled through. `features/ui/soft-refresh.ts`.
+
+- **A milestone announces itself (2026-08-27)**: adding a life event also
+  posts it as an EVENT, in the same transaction. Two owner's calls, since
+  neither followed from the code: one added from your own timeline reaches
+  **every family you are in** (`me/life-events` has no family in its path,
+  and a profile is one person across all of them), while one added from a
+  member's page goes to that family only. The switch defaults **on** but
+  exists — a death or a separation is recorded, not announced — and is
+  offered only when adding, because editing a saved entry writes no post.
+  The photos stay on the timeline: a Media row may have exactly one parent.
+
+- **One name per person (2026-08-27)**: renaming your account now writes
+  through to every `FamilyMember.displayName` that account holds, in the same
+  transaction. The two columns had been drifting since join time — Settings
+  read `User.name` while the tree, the feed and every tag read the member
+  row's copy, and four people were showing two names each by the time it was
+  noticed. Written through rather than resolved at ~50 read sites because the
+  rule already existed here: for a **linked** member the account wins, which
+  is how avatars already behaved. A placeholder's `displayName` is untouched
+  — it is the only name that person has. Existing drift was realigned with
+  `pnpm --filter api names:sync` (dry-run first; it prints every old → new
+  before applying). Direction confirmed from the data, not assumed: all four
+  accounts had been renamed **after** joining, so the account name was the
+  newer choice in every case.
+
 - **Invite by email (2026-08-26)**: `POST /families/:id/invitations` now takes
   an `email` and raises a `FAMILY_INVITE` notification for that account;
   `GET /me/invitations` is what it links to. Delivery is **in-app only** — an

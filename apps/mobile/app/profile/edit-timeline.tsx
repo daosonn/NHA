@@ -14,6 +14,7 @@ import { MediaStrip, type DraftMedia } from '../../src/components/moment/media-s
 import { Button } from '../../src/components/ui/button';
 import { SheetModal } from '../../src/components/ui/sheet-modal';
 import { Text } from '../../src/components/ui/text';
+import { Checkbox } from '../../src/components/ui/checkbox';
 import { TextField } from '../../src/components/ui/text-field';
 import { useToast } from '../../src/components/ui/toast';
 import { useLifeEvents } from '../../src/features/member/use-life-events';
@@ -67,6 +68,12 @@ type DraftEntry = {
    * abandoned draft leaves nothing on the server. Always empty on saved rows.
    */
   media: DraftMedia[];
+  /**
+   * Announce this milestone in the family feed too. New entries only —
+   * editing a saved one never creates a post, so the switch is not offered
+   * there and this value is ignored.
+   */
+  shareToFeed: boolean;
   /** An existing entry with unsaved edits. */
   dirty: boolean;
 };
@@ -127,6 +134,9 @@ export default function EditTimelineScreen() {
         mediaCount: event.media.length,
         serverMedia: event.media,
         media: [],
+        // Saved rows never create a post, so this is only here to satisfy
+        // the shape — editing one leaves the feed alone.
+        shareToFeed: true,
         dirty: false,
       })),
     );
@@ -204,6 +214,7 @@ export default function EditTimelineScreen() {
             eventDate: entry.eventDate,
             ...(entry.description === '' ? {} : { description: entry.description }),
             ...(entry.place === '' ? {} : { place: entry.place }),
+            shareToFeed: entry.shareToFeed,
           },
           media: entry.media,
         })),
@@ -507,6 +518,7 @@ function EntrySheet({
     place: string;
     eventDate: string;
     media: DraftMedia[];
+    shareToFeed: boolean;
   }) => void;
 }) {
   const { t } = useTranslation();
@@ -516,6 +528,7 @@ function EntrySheet({
   const [description, setDescription] = useState('');
   const [place, setPlace] = useState('');
   const [media, setMedia] = useState<DraftMedia[]>([]);
+  const [shareToFeed, setShareToFeed] = useState(true);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -531,6 +544,9 @@ function EntrySheet({
     setDescription(entry?.description ?? '');
     setPlace(entry?.place ?? '');
     setMedia(entry?.media ?? []);
+    // Defaults back on for each new entry: a milestone is usually news, and
+    // the last one having been kept private says nothing about this one.
+    setShareToFeed(entry?.shareToFeed ?? true);
     setPermissionDenied(false);
     setError(null);
   }, [visible, entry]);
@@ -568,6 +584,7 @@ function EntrySheet({
       place: place.trim(),
       eventDate,
       media,
+      shareToFeed,
     });
   };
 
@@ -646,6 +663,24 @@ function EntrySheet({
             onChangeText={setPlace}
             maxLength={200}
           />
+
+          {/* New entries only. Editing a saved milestone never writes a post,
+              so offering the choice there would promise something that does
+              not happen. */}
+          {entry === null && (
+            <View style={{ gap: 4 }}>
+              <Checkbox
+                checked={shareToFeed}
+                onChange={setShareToFeed}
+                accessibilityLabel={t('member.editTimeline.shareToFeed')}
+              >
+                <Text variant="body2">{t('member.editTimeline.shareToFeed')}</Text>
+              </Checkbox>
+              <Text variant="caption" color={colors.text.muted}>
+                {t('member.editTimeline.shareToFeedHint')}
+              </Text>
+            </View>
+          )}
 
           {photosEditable ? (
             <View style={{ gap: 2 }}>

@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
 import { HousePlus, TriangleAlert } from 'lucide-react-native';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, View } from 'react-native';
+import { FlatList, ActivityIndicator, View } from 'react-native';
 import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 
 import { PostCard } from '../../src/components/feed/post-card';
@@ -14,6 +14,7 @@ import { AppHeader } from '../../src/components/layout/app-header';
 import { contentColumn } from '../../src/components/layout/content-column';
 import { BrandWordmark, NotificationBell } from '../../src/components/layout/header-slots';
 import { PendingInvitesBanner } from '../../src/components/family/pending-invites-banner';
+import { registerScrollToTop } from '../../src/features/ui/soft-refresh';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { SectionHeader } from '../../src/components/ui/section-header';
 import { useActiveFamily } from '../../src/features/family/active-family';
@@ -64,6 +65,18 @@ export default function HomeScreen() {
    * times a second to shrink a bar by seven pixels is not a trade worth
    * making.
    */
+  // Home is the screen a refresh returns you to the top of, so it lends its
+  // scroller to the shared registry — the gesture starts in the tab bar or
+  // the header, neither of which can reach this list by props.
+  const listRef = useRef<FlatList<PostDetail>>(null);
+  useEffect(
+    () =>
+      registerScrollToTop(() => {
+        listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }),
+    [],
+  );
+
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler((event) => {
     scrollY.value = event.contentOffset.y;
@@ -130,7 +143,7 @@ export default function HomeScreen() {
           filled any in has nothing coming up — and an empty celebration
           card would be a strange thing to look at. */}
       {nextOccasion !== undefined && (
-        <Animated.View entering={enter.up(0)}>
+        <Animated.View entering={enter.up(0)} style={{ gap: 14, paddingTop: 20 }}>
           <EventWidget occasion={nextOccasion} moreCount={(occasions?.items.length ?? 1) - 1} />
         </Animated.View>
       )}
@@ -234,6 +247,7 @@ export default function HomeScreen() {
 
     return (
       <Animated.FlatList
+        ref={listRef}
         data={posts}
         keyExtractor={(post: PostDetail) => post.id}
         ListHeaderComponent={intro}

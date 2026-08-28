@@ -32,7 +32,9 @@
       "family": "Family",
       "ai": "AI",
       "profile": "Profile"
-    }
+    },
+    "refresh": "Refresh",
+    "home": "Home"
   },
   "auth": {
     "modeLabel": "Sign in or create an account",
@@ -406,7 +408,9 @@
       "editEntry": "Edit {{title}}",
       "removeEntry": "Remove {{title}}",
       "saved": "Timeline saved",
-      "saveFailed": "Could not save every change — the list was reloaded, press Done to try the rest again."
+      "saveFailed": "Could not save every change — the list was reloaded, press Done to try the rest again.",
+      "shareToFeed": "Also share this with the family",
+      "shareToFeedHint": "Posts the milestone to your families as an event. The photos stay here on the timeline."
     },
     "timeline": "Timeline",
     "album": "Album",

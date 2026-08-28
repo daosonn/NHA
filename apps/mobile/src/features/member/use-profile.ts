@@ -43,6 +43,10 @@ export function useUpdateMyProfile() {
       queryClient.setQueryData(queryKeys.myProfile(), detail);
       // The same person is read through every family they belong to.
       void queryClient.invalidateQueries({ queryKey: queryKeys.families() });
+      // And every post already on screen carries its author's name, so a
+      // rename leaves the old one sitting in the feed until something else
+      // happens to refetch it.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.myFeed() });
     },
   });
 }
