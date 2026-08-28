@@ -122,9 +122,19 @@ const EDGE_MARGIN = 96;
  * bounding boxes visibly waste space. `architecture.md` keeps d3-hierarchy
  * as the eventual step.
  */
-export function layoutTree(data: FamilyTreeData, viewportWidth: number): TreeLayout {
+export function layoutTree(
+  data: FamilyTreeData,
+  viewportWidth: number,
+  /**
+   * Extra room above the first row. Edit mode passes it so the "add mother /
+   * father" slots of a TOP-ROW person have somewhere to be — without it they
+   * clamp down right onto the selected face (owner's report 2026-08-28).
+   */
+  topGutter = 0,
+): TreeLayout {
   const nodes = new Map<string, PositionedNode>();
   const rows: PositionedRow[] = [];
+  const firstRowY = FIRST_ROW_Y + topGutter;
 
   // ---- arrangement: weld, hang, order, balance — see tree-blocks.ts ----
   const { blocks, blockOf } = buildBlocks(data);
@@ -201,7 +211,7 @@ export function layoutTree(data: FamilyTreeData, viewportWidth: number): TreeLay
   const shift = EDGE_MARGIN - minX + (width - spanWidth) / 2;
 
   data.generations.forEach((generation, row) => {
-    const y = FIRST_ROW_Y + row * ROW_GAP;
+    const y = firstRowY + row * ROW_GAP;
     rows.push({ id: generation.id, label: generation.label, y });
     for (const member of generation.members) {
       const block = blockOf.get(member.id);
@@ -218,7 +228,7 @@ export function layoutTree(data: FamilyTreeData, viewportWidth: number): TreeLay
 
   // ---- the unplaced strip ------------------------------------------------
   if (data.unplaced.length > 0) {
-    const y = FIRST_ROW_Y + rows.length * ROW_GAP;
+    const y = firstRowY + rows.length * ROW_GAP;
     rows.push({ id: 'unplaced', label: data.unplacedLabel, y });
     data.unplaced.forEach((member, index) => {
       nodes.set(member.id, {

@@ -193,7 +193,11 @@ by tapping WHERE the person belongs.
   father while the **drawn** parents leave room (descents, so a partner
   auto-joined over a child counts as occupying that spot; a lone parent's
   gender decides which slot is still open), a child always, a spouse while
-  single. Each slot carries dashed preview paths that trace the exact
+  single. While editing, `layoutTree` is given a 96px **top gutter**
+  (`EDIT_HEADROOM`) — the tree glides down on the relayout slide to make it
+  — so a top-row person's parent slots have real room above instead of
+  clamping onto their face; the camera-refit effect measures the world
+  WITHOUT the gutter, so toggling the pencil never resets pan/zoom. Each slot carries dashed preview paths that trace the exact
   thread the tree will draw once the person exists — built with the same
   `couplePath`/`descentPath` the real threads use.
 - Tapping a slot opens the **same invite sheet**, but the kinship picker is

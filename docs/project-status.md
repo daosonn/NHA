@@ -53,7 +53,11 @@ screens.
   128→152, rows 150→172, edge margins 72→96 — labels sat edge-to-edge) and
   the pan may rest 72px past flush on every side (`PAN_MARGIN`) so a
   viewport-sized tree is draggable at all and border nodes can be pulled
-  inward; edit-mode slots spread to match. Verified: api build+lint, mobile
+  inward; edit-mode slots spread to match. Follow-up the same day: edit mode
+  gives the world a 96px top gutter (rides the slide; refit ignores it, so
+  the pencil never resets pan/zoom) — a top-row person's add-mother/father
+  slots were clamping onto their face — and the two parent slots spread
+  ±95px. Verified: api build+lint, mobile
   tsc, check:i18n (828 keys), prettier on touched files; not yet tapped
   through on a device or browser.
 

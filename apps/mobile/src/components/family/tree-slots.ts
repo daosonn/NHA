@@ -36,8 +36,9 @@ export type TreeSlot = {
   paths: string[];
 };
 
-/** Horizontal offset of the two parent slots when no parent is drawn yet. */
-const PARENT_SPREAD = 80;
+/** Horizontal offset of the two parent slots when no parent is drawn yet —
+ *  wide enough that their labels read apart (owner's call 2026-08-28). */
+const PARENT_SPREAD = 95;
 /** A slot may not rise above the canvas — clamp like the prototype's `max(60, y)`. */
 const MIN_Y = 40;
 /** Two centres closer than this on a row count as "that spot is taken". */

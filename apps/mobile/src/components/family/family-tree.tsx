@@ -76,6 +76,14 @@ const RESISTANCE = 0.45;
  */
 const PAN_MARGIN = 72;
 
+/**
+ * Extra world above the first row while editing, so a top-row person's "add
+ * mother / father" slots have real room instead of clamping onto their face.
+ * The layout change rides the relayout slide — entering edit mode, the tree
+ * glides down to make the space.
+ */
+const EDIT_HEADROOM = 96;
+
 /** Pinching past the scale range keeps moving too, at half speed. */
 const SCALE_RESISTANCE = 0.5;
 
@@ -216,7 +224,10 @@ export function FamilyTree({
   const width = measured?.width ?? (window.width > 0 ? window.width - CANVAS_INSET : DESIGN_WIDTH);
   const height = measured?.height ?? 0;
 
-  const layout = useMemo(() => layoutTree(data, width), [data, width]);
+  const layout = useMemo(
+    () => layoutTree(data, width, editing ? EDIT_HEADROOM : 0),
+    [data, width, editing],
+  );
 
   /**
    * What is actually DRAWN this frame: the target layout, except while a
@@ -356,14 +367,19 @@ export function FamilyTree({
    * When the world's size changes — a member arrived, a row widened — the
    * old view may point at nothing. Refit rather than clamp: the person just
    * added the member and wants to see where they landed anyway.
+   *
+   * Measured WITHOUT the edit headroom: toggling the pencil grows the world
+   * by a constant gutter, and refitting on that would throw away the pan and
+   * zoom the person had just lined up before pressing it.
    */
+  const gutterlessHeight = layout.height - (editing ? EDIT_HEADROOM : 0);
   useEffect(() => {
     scale.value = fitScale;
     tx.value = (width - contentWidth * fitScale) / 2;
     ty.value = 0;
     setZoom(fitScale);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sizes only.
-  }, [contentWidth, contentHeight, width, height]);
+  }, [contentWidth, gutterlessHeight, width, height]);
 
   /**
    * Whether a pan is (or just was) driving the pointer. On native, a gesture
