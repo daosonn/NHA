@@ -200,9 +200,22 @@ by tapping WHERE the person belongs.
   inviter.
 - Arrival animation: a node whose id was not in the previous payload
   springs in (overshooting scale + fade, `TreeNode`'s `appear`), slots pop
-  the same way. Sliding existing nodes to their new positions and morphing
-  thread paths (the prototype's CSS `transition: d`) is **not** built —
-  react-native-svg has no path-d tweening, so a relayout still snaps.
+  the same way, and a thread born with the payload fades in on the tail of
+  the slide.
+- Relayout motion (2026-08-28, second pass): when an addition re-arranges
+  the rows, existing nodes **slide** to their new places and the threads
+  **morph** along — the prototype's `transition: left/top` + `transition: d`.
+  react-native-svg cannot tween a path's `d`, so
+  `use-animated-tree-layout.ts` animates the LAYOUT instead: a ~550ms
+  requestAnimationFrame tween interpolates every shared node's coordinates
+  and re-renders nodes, threads, row labels and slot previews from the
+  in-between layout each frame — the threads morph for free because they are
+  recomputed from the sliding endpoints with the same path functions as
+  ever. A re-render per frame is exactly what the pinch/pan layer avoids,
+  but a relayout is a rare sub-second event, not a gesture. Sizes, pan
+  bounds and the refit stay on the TARGET layout, so the camera aims where
+  things settle; a payload arriving mid-slide starts the next tween from
+  wherever things are currently drawn.
 
 The generic form (with the kinship picker, anchored to the viewer) remains
 only behind the empty-tree state, where there is nothing to select yet.
@@ -238,9 +251,8 @@ and sibling parent-edge inference. Still open, roughly by cost:
    tidy-tree needs adaptation. Only worth it when bounding boxes visibly
    waste space.
 2. ~~**Explicit spot picking** ("add here" on the canvas)~~ — built
-   2026-08-28 as edit mode's slots (section above). What remains of it is
-   motion: sliding existing nodes and morphing threads when the layout
-   re-arranges around an addition.
+   2026-08-28 as edit mode's slots (section above); the relayout slide/morph
+   followed the same day (`use-animated-tree-layout.ts`).
 
 Known gaps, accepted for now: the everyone-shifts-down parent insert (a
 new grandparent relabels every generation); a child whose two parents sit

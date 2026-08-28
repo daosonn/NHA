@@ -20,11 +20,17 @@ import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { colors, radius } from '../../theme';
 import { Text } from '../ui/text';
 import { CanvasHint, EditToggleButton, ZoomControls } from './tree-controls';
-import { layoutTree, type FamilyTreeData, type PositionedNode } from './tree-layout';
+import {
+  layoutTree,
+  type FamilyTreeData,
+  type PositionedNode,
+  type TreeLayout,
+} from './tree-layout';
 import { TreeNode } from './tree-node';
 import { TreeSlotMarker } from './tree-slot-marker';
 import { slotsFor, type TreeSlot } from './tree-slots';
 import { TreeThreads } from './tree-threads';
+import { useAnimatedTreeLayout } from './use-animated-tree-layout';
 
 // Ranges and feel are the prototype's numbers, not invented here:
 // `src/Family Tree Canvas.dc.html` is the spec for this interaction
@@ -202,24 +208,47 @@ export function FamilyTree({
 
   const layout = useMemo(() => layoutTree(data, width), [data, width]);
 
-  /** Edit mode's dashed spots around the chosen person, in world coordinates. */
+  /**
+   * What is actually DRAWN this frame: the target layout, except while a
+   * relayout slide is in flight — then everyone is somewhere on the way
+   * (`use-animated-tree-layout.ts`). Sizes, bounds and the refit below stay
+   * on the target `layout`, so the world resizes once and the camera aims
+   * where things settle.
+   */
+  const { layout: drawn, progress } = useAnimatedTreeLayout(layout);
+
+  /** Edit mode's dashed spots around the chosen person, in world coordinates.
+      Computed from `drawn`, so the previews travel with the slide. */
   const slots = useMemo(
-    () => (editing && selectedId !== null ? slotsFor(data, layout, selectedId) : []),
-    [editing, selectedId, data, layout],
+    () => (editing && selectedId !== null ? slotsFor(data, drawn, selectedId) : []),
+    [editing, selectedId, data, drawn],
   );
 
   /**
-   * Who was NOT here a render ago — they pop in (the prototype's `ftcPop`).
-   * A ref, not state: arrival is a fact about this render pass, and the very
-   * first payload plays no entrance — the whole tree draws at once.
+   * Who was NOT in the previous arrangement — they pop in (the prototype's
+   * `ftcPop`). Keyed to the target layout's identity, NOT recomputed per
+   * render: the slide above re-renders every frame, and a new person only
+   * mounts on the tween's first frame — one render after the payload — so a
+   * per-render diff would have already forgotten they were new. The very
+   * first payload plays no entrance; the whole tree draws at once.
    */
-  const knownIds = useRef<Set<string> | null>(null);
-  const currentIds = new Set(layout.nodes.keys());
-  const appearedIds =
-    knownIds.current === null
-      ? new Set<string>()
-      : new Set([...currentIds].filter((id) => !knownIds.current?.has(id)));
-  knownIds.current = currentIds;
+  const appearRef = useRef<{
+    layout: TreeLayout | null;
+    known: Set<string> | null;
+    ids: Set<string>;
+  }>({ layout: null, known: null, ids: new Set() });
+  if (appearRef.current.layout !== layout) {
+    const previouslyKnown = appearRef.current.known;
+    appearRef.current = {
+      layout,
+      known: new Set(layout.nodes.keys()),
+      ids:
+        previouslyKnown === null
+          ? new Set()
+          : new Set([...layout.nodes.keys()].filter((id) => !previouslyKnown.has(id))),
+    };
+  }
+  const appearedIds = appearRef.current.ids;
 
   const onLayout = (event: LayoutChangeEvent) => {
     const next = event.nativeEvent.layout;
@@ -578,17 +607,18 @@ export function FamilyTree({
           >
             <TreeThreads
               data={data}
-              layout={layout}
+              layout={drawn}
               width={contentWidth}
               height={contentHeight}
+              progress={progress}
               slotPaths={slots.flatMap((slot) => slot.paths)}
             />
 
-            {layout.rows.map((row) => (
+            {drawn.rows.map((row) => (
               <GenerationLabel key={row.id} label={row.label} y={row.y} />
             ))}
 
-            {[...layout.nodes.values()].map((node) => (
+            {[...drawn.nodes.values()].map((node) => (
               <TreeNode
                 key={node.id}
                 node={node}

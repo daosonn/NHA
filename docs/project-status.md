@@ -41,10 +41,16 @@ screens.
   **the first flow where the anchor is not the inviter** (this was the gap
   discussed 2026-08-28: uncle/grandparent-shaped relatives were previously
   inexpressible). `POST /invitations` also takes `gender` for the parent
-  slots. New nodes spring in; sliding/morphing the rest of the layout on
-  re-arrange is recorded as not built (`family-tree-rendering.md` § Edit
-  mode). Verified: api build+lint, mobile tsc, check:i18n (828 keys),
-  prettier on touched files; not yet tapped through on a device or browser.
+  slots. New nodes spring in. **Second pass the same day: the relayout
+  slides.** When an addition re-arranges the rows, existing nodes glide to
+  their new places and the threads morph along, with threads born in the
+  payload fading in on the slide's tail — react-native-svg cannot tween a
+  path's `d`, so `use-animated-tree-layout.ts` tweens the LAYOUT (a ~550ms
+  rAF interpolation re-rendering from in-between coordinates; rare and
+  sub-second, so the re-render-per-frame the gesture layer avoids is fine
+  here). Mechanism in `family-tree-rendering.md` § Edit mode. Verified: api
+  build+lint, mobile tsc, check:i18n (828 keys), prettier on touched files;
+  not yet tapped through on a device or browser.
 
 - **Home's IA swapped: tree to the bar's centre, posting to the top of the
   feed (2026-08-26, `feature/motion-system`) — owner's call, deviates from
