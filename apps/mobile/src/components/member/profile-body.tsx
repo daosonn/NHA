@@ -48,6 +48,8 @@ export type ProfileBodyProps = {
   onOpenMoment?: (postId: string) => void;
   /** Mở một tấm ảnh lẻ của tab Album trong trình xem toàn màn hình. */
   onOpenPhoto?: (item: GalleryMediaItem) => void;
+  /** Which tab opens first. Omoide arrives here wanting the album. */
+  initialTab?: Tab;
 };
 
 /**
@@ -78,10 +80,14 @@ export function ProfileBody({
   onEditMemo,
   onOpenMoment,
   onOpenPhoto,
+  initialTab = 'timeline',
 }: ProfileBodyProps) {
   const { t } = useTranslation();
 
-  const [tab, setTab] = useState<Tab>('timeline');
+  // Openable straight onto a tab: Omoide sends people here to look at
+  // somebody's photographs, and landing on the timeline first would make
+  // them find the album themselves every time.
+  const [tab, setTab] = useState<Tab>(initialTab);
 
   /**
    * Trên hồ sơ của CHÍNH BẠN, tab メモ hiện TOÀN BỘ sổ tay của bạn; trên hồ sơ

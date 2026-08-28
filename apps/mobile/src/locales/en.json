@@ -412,7 +412,7 @@
       "shareToFeedHint": "Posts the milestone to your families as an event. The photos stay here on the timeline."
     },
     "timeline": "Timeline",
-    "album": "Album",
+    "album": "Gallery",
     "memo": "Memo",
     "editSelf": "Edit your profile",
     "viewPhoto": "View {{name}}'s photo",
@@ -896,7 +896,13 @@
     "emptyBody": "Everything the family shares with a photo or a video shows up here.",
     "yourAlbums": "Your albums",
     "yourAlbumsHint": "Private to you — not shared with the family",
-    "noFamilyBody": "Every photo and video your family shares gathers here - once there is a family to share with."
+    "noFamilyBody": "Every photo and video your family shares gathers here - once there is a family to share with.",
+    "families": "Families",
+    "openFamily": "Open {{name}}'s pictures",
+    "familyMembers": "{{count}} person",
+    "familyMembers_other": "{{count}} people",
+    "byPerson": "By person",
+    "openPersonAlbum": "Open {{name}}'s album"
   },
   "profileEdit": {
     "title": "Edit profile",
