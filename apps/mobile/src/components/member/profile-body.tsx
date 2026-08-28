@@ -50,6 +50,8 @@ export type ProfileBodyProps = {
   onOpenPhoto?: (item: GalleryMediaItem) => void;
   /** Which tab opens first. Omoide arrives here wanting the album. */
   initialTab?: Tab;
+  /** Start a post with no audience. Only wired on your own page. */
+  onAddPrivate?: () => void;
 };
 
 /**
@@ -81,6 +83,7 @@ export function ProfileBody({
   onOpenMoment,
   onOpenPhoto,
   initialTab = 'timeline',
+  onAddPrivate,
 }: ProfileBodyProps) {
   const { t } = useTranslation();
 
@@ -201,6 +204,7 @@ export function ProfileBody({
             failed={gallery.isError}
             onRetry={() => void gallery.refetch()}
             onOpenPhoto={onOpenPhoto}
+            onAddPrivate={ownProfile ? onAddPrivate : undefined}
             // Chạm = xem ảnh; giữ = mở bài đăng gốc (nếu ảnh thuộc một bài)
             onOpenMoment={onOpenMoment}
           />

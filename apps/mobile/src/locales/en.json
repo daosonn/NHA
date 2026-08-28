@@ -492,7 +492,13 @@
       "failed": "Could not load the photos",
       "headingOwn": "My library",
       "emptyBodyOwn": "Photos appear here when you post a moment, or when somebody tags you in theirs.",
-      "openPhoto": "View this photo full screen"
+      "openPhoto": "View this photo full screen",
+      "filterAll": "All",
+      "filterShared": "Shared",
+      "filterPrivate": "Private",
+      "filterLabel": "Filter photos",
+      "addPrivate": "Add a private photo",
+      "noneInFilter": "Nothing here yet"
     },
     "facts": {
       "born": "Born {{date}}",

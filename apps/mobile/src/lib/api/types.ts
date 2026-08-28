@@ -735,6 +735,12 @@ export type GalleryMediaItem = {
   createdAt: IsoDateTime;
   postId: string | null;
   lifeEventId: string | null;
+  /**
+   * False when the photo reached no family — a post written with every
+   * audience unticked, which the server already treats as private to its
+   * author. Drives the Shared/Private filter on the Album tab.
+   */
+  shared: boolean;
 };
 
 // ---------------------------------------------------------------- memos

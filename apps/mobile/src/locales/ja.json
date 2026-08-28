@@ -472,7 +472,13 @@
       "failed": "写真を読み込めませんでした",
       "headingOwn": "マイライブラリ",
       "emptyBodyOwn": "思い出を投稿するか、誰かにタグ付けされると、ここに表示されます。",
-      "openPhoto": "写真を大きく表示"
+      "openPhoto": "写真を大きく表示",
+      "filterAll": "すべて",
+      "filterShared": "共有",
+      "filterPrivate": "自分だけ",
+      "filterLabel": "写真を絞り込む",
+      "addPrivate": "自分だけの写真を追加",
+      "noneInFilter": "まだありません"
     },
     "facts": {
       "born": "{{date}}生まれ",

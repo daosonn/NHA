@@ -1,15 +1,44 @@
 import { Image } from 'expo-image';
-import { Camera, Play, TriangleAlert } from 'lucide-react-native';
+import { Camera, ImagePlus, Lock, Play, TriangleAlert } from 'lucide-react-native';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import type { MemberGallery } from '../../features/member/use-member-gallery';
 import type { GalleryMediaItem } from '../../lib/api';
+import { formatFullDate } from '../../lib/date';
 import { thumbnailSource } from '../../lib/media-source';
 import { colors, radius } from '../../theme';
+import { Button } from '../ui/button';
 import { EmptyState } from '../ui/empty-state';
 import { PhotoPlaceholder } from '../ui/photo-placeholder';
+import { SegmentedTabs } from '../ui/segmented-tabs';
 import { Text } from '../ui/text';
+
+/** All / shared with a family / shared with nobody. */
+type Filter = 'all' | 'shared' | 'private';
+
+type DayGroup = { date: string; items: GalleryMediaItem[] };
+
+/**
+ * Newest day first, newest photo first inside it.
+ *
+ * Not `features/omoide/group-photos.ts`: that one takes whole posts, packs
+ * rows of four and works out a place from the moments that day — none of
+ * which this grid has or wants. Sharing it would mean bending both.
+ */
+function groupByDay(items: GalleryMediaItem[]): DayGroup[] {
+  const byDate = new Map<string, GalleryMediaItem[]>();
+  for (const item of items) {
+    const date = item.createdAt.slice(0, 10);
+    const bucket = byDate.get(date);
+    if (bucket === undefined) byDate.set(date, [item]);
+    else bucket.push(item);
+  }
+  return [...byDate.entries()]
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([date, dayItems]) => ({ date, items: dayItems }));
+}
 
 const GRID_GAP = 6;
 /** Ba cột: (100 − 2 khoảng hở ~1.7%) / 3. */
@@ -27,6 +56,12 @@ export type AlbumGridProps = {
   onOpenPhoto?: (item: GalleryMediaItem) => void;
   /** Giữ một tấm — mở bài đăng nó thuộc về (nếu có), nơi còn caption/bình luận. */
   onOpenMoment?: (postId: string) => void;
+  /**
+   * Start a post with no audience — a picture kept to yourself. Only your
+   * own page passes this: there is no way to add a photograph to somebody
+   * else's page, and a button implying otherwise would be a lie.
+   */
+  onAddPrivate?: () => void;
 };
 
 /**
@@ -52,8 +87,10 @@ export function AlbumGrid({
   onRetry,
   onOpenPhoto,
   onOpenMoment,
+  onAddPrivate,
 }: AlbumGridProps) {
   const { t } = useTranslation();
+  const [filter, setFilter] = useState<Filter>('all');
 
   if (loading) {
     return (
@@ -90,6 +127,11 @@ export function AlbumGrid({
     );
   }
 
+  const privateCount = items.filter((item) => !item.shared).length;
+  const visible =
+    filter === 'all' ? items : items.filter((item) => item.shared === (filter === 'shared'));
+  const days = groupByDay(visible);
+
   return (
     <View style={{ gap: 12 }}>
       <View style={{ gap: 3 }}>
@@ -102,61 +144,112 @@ export function AlbumGrid({
         </Text>
       </View>
 
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP }}>
-        {items.map((item) => {
-          const isVideo = item.mimeType.startsWith('video/');
-          return (
-            <Pressable
-              key={item.id}
-              onPress={() => onOpenPhoto?.(item)}
-              onLongPress={
-                item.postId !== null ? () => onOpenMoment?.(item.postId as string) : undefined
-              }
-              accessibilityRole="imagebutton"
-              accessibilityLabel={t('member.moments.openPhoto')}
-              style={{
-                width: TILE_WIDTH,
-                aspectRatio: 1,
-                borderRadius: radius.lg,
-                overflow: 'hidden',
-                backgroundColor: colors.background.subtle,
-              }}
-            >
-              {/* Lót sau ảnh: đang tải hay tải hỏng đều còn vân nền, không ô trắng */}
-              <PhotoPlaceholder style={StyleSheet.absoluteFill} />
-              <Image
-                source={thumbnailSource(item.id, item.mimeType)}
-                recyclingKey={item.id}
-                contentFit="cover"
-                transition={160}
-                style={StyleSheet.absoluteFill}
-              />
-              {isVideo && (
-                <View
+      {/* Only where there is something to separate. On a page whose pictures
+          are all shared the filter would be three buttons doing one thing. */}
+      {privateCount > 0 && (
+        <SegmentedTabs
+          options={[
+            { value: 'all', label: t('member.moments.filterAll'), count: items.length },
+            {
+              value: 'shared',
+              label: t('member.moments.filterShared'),
+              count: items.length - privateCount,
+            },
+            {
+              value: 'private',
+              label: t('member.moments.filterPrivate'),
+              count: privateCount,
+            },
+          ]}
+          value={filter}
+          onChange={setFilter}
+          accessibilityLabel={t('member.moments.filterLabel')}
+        />
+      )}
+
+      {onAddPrivate !== undefined && (
+        <Button
+          label={t('member.moments.addPrivate')}
+          variant="ghost"
+          onPress={onAddPrivate}
+          renderIcon={({ size, color }) => (
+            <ImagePlus size={size} color={color} strokeWidth={2.1} />
+          )}
+        />
+      )}
+
+      {visible.length === 0 && (
+        <EmptyState
+          renderIcon={(props) => <Lock {...props} strokeWidth={2} />}
+          title={t('member.moments.noneInFilter')}
+        />
+      )}
+
+      {days.map((day) => (
+        <View key={day.date} style={{ gap: 7 }}>
+          {/* The day on its own line, then that day's pictures under it —
+              the shape Omoide already uses, so the two shelves read alike. */}
+          <Text variant="caption" weight="semibold" color={colors.text.secondary}>
+            {formatFullDate(day.date) ?? day.date}
+          </Text>
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP }}>
+            {day.items.map((item) => {
+              const isVideo = item.mimeType.startsWith('video/');
+              return (
+                <Pressable
+                  key={item.id}
+                  onPress={() => onOpenPhoto?.(item)}
+                  onLongPress={
+                    item.postId !== null ? () => onOpenMoment?.(item.postId as string) : undefined
+                  }
+                  accessibilityRole="imagebutton"
+                  accessibilityLabel={t('member.moments.openPhoto')}
                   style={{
-                    position: 'absolute',
-                    right: 5,
-                    bottom: 5,
-                    width: 22,
-                    height: 22,
-                    borderRadius: radius.full,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: 'rgba(24,24,27,0.62)',
+                    width: TILE_WIDTH,
+                    aspectRatio: 1,
+                    borderRadius: radius.lg,
+                    overflow: 'hidden',
+                    backgroundColor: colors.background.subtle,
                   }}
                 >
-                  <Play
-                    size={11}
-                    color={colors.text.white}
-                    strokeWidth={2.4}
-                    fill={colors.text.white}
+                  {/* Lót sau ảnh: đang tải hay tải hỏng đều còn vân nền, không ô trắng */}
+                  <PhotoPlaceholder style={StyleSheet.absoluteFill} />
+                  <Image
+                    source={thumbnailSource(item.id, item.mimeType)}
+                    recyclingKey={item.id}
+                    contentFit="cover"
+                    transition={160}
+                    style={StyleSheet.absoluteFill}
                   />
-                </View>
-              )}
-            </Pressable>
-          );
-        })}
-      </View>
+                  {isVideo && (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        right: 5,
+                        bottom: 5,
+                        width: 22,
+                        height: 22,
+                        borderRadius: radius.full,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'rgba(24,24,27,0.62)',
+                      }}
+                    >
+                      <Play
+                        size={11}
+                        color={colors.text.white}
+                        strokeWidth={2.4}
+                        fill={colors.text.white}
+                      />
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      ))}
     </View>
   );
 }
