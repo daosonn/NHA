@@ -12,12 +12,19 @@ import {
 const STROKE = 2.2;
 /** A thread to someone who has not accepted yet. */
 const PENDING_DASH = [3, 7];
+/** Edit mode's slot previews — airier than pending, clearly not real yet. */
+const SLOT_DASH = [4, 8];
 
 export type TreeThreadsProps = {
   data: FamilyTreeData;
   layout: TreeLayout;
   width: number;
   height: number;
+  /**
+   * Dashed previews for edit mode's empty slots — each traces the exact
+   * thread that will exist once the person is added (`tree-slots.ts`).
+   */
+  slotPaths?: string[];
 };
 
 /**
@@ -26,11 +33,23 @@ export type TreeThreadsProps = {
  * Threads are a single curved stroke leaving the couple's joint and entering
  * the child's avatar edge — organic beziers, never right-angle branch lines.
  */
-export function TreeThreads({ data, layout, width, height }: TreeThreadsProps) {
+export function TreeThreads({ data, layout, width, height, slotPaths }: TreeThreadsProps) {
   const { nodes } = layout;
 
   return (
     <Svg width={width} height={height} style={{ position: 'absolute', left: 0, top: 0 }}>
+      {slotPaths?.map((d, index) => (
+        <Path
+          key={`slot-${index}`}
+          d={d}
+          stroke={colors.coral.borderLight}
+          strokeWidth={STROKE}
+          strokeLinecap="round"
+          fill="none"
+          strokeDasharray={SLOT_DASH}
+        />
+      ))}
+
       {data.couples.map(({ members: [aId, bId] }) => {
         const a = nodes.get(aId);
         const b = nodes.get(bId);

@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Family Tree Canvas — bản handoff có comment</title>
+<!-- ============================================================
+  MÀN HÌNH CÂY GIA ĐÌNH (xem + chỉnh sửa) — file standalone
+  Stack: React 18 (UMD) + Babel — mở trực tiếp là chạy, không cần build.
+
+  KIẾN TRÚC TỔNG QUAN
+  1. DỮ LIỆU (state):
+     - people:   mỗi người = { id, name, role, g ('f'/'m'), x, gen }
+                 · x   = toạ độ ngang trong "world" (hệ toạ độ ảo của cây)
+                 · gen = số thế hệ (0 = ông bà, 1 = bố mẹ, 2 = con...)
+                   → toạ độ dọc KHÔNG lưu, luôn tính từ gen ⇒ mỗi thế hệ
+                     nằm đúng một hàng.
+     - couples:  danh sách cặp vợ chồng [idA, idB] → vẽ đường cong nối ngang.
+     - parentOf: map con → [bố mẹ] → vẽ nhánh dọc xuống con.
+  2. PAN / ZOOM: viewport bắt pointer events, world dịch bằng
+     transform: translate3d + scale (không re-render React khi kéo → mượt).
+     Có quán tính (velocity), kéo quá biên đàn hồi kéo về (elastic + settle loop).
+  3. CHẾ ĐỘ CHỈNH SỬA: nút tròn góc phải dưới bật editing.
+     Chạm node → hiện các Ô TRỐNG (slot) nét đứt: mẹ / bố / con / vợ chồng.
+     Đường nét đứt của slot vẽ ĐÚNG hình nhánh thật sẽ có sau khi thêm.
+     Chạm slot → bottom sheet nhập tên + email (email → gửi lời mời, badge Invited).
+  4. LAYOUT TỰ ĐỘNG sau khi thêm người:
+     - tìm chỗ trống trên hàng (findFreeX / findPairX cho cặp đôi)
+     - căn lại từng hàng quanh TRỤC GIỮA x = 353 → cây luôn cân đối
+     - node/label trượt mượt bằng CSS transition; đường nối morph theo
+       (transition thuộc tính d của <path>).
+============================================================ -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Lora:wght@600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#EDEBE7;font-family:'Be Vietnam Pro',sans-serif}
+.ftc-world{will-change:transform;transform-origin:0 0}
+/* Vẽ nét đường nối: path có pathLength=1, dashoffset chạy 1 → 0 */
+@keyframes ftcDraw{to{stroke-dashoffset:0}}
+/* Node nảy vào (scale 0.5 → 1, có overshoot nhờ cubic-bezier) */
+@keyframes ftcPop{from{opacity:0;transform:translate(-50%,-50%) scale(0.5)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes ftcFade{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+class FamilyTreeCanvas extends React.Component {
+  // ---- Hằng số layout ----
+  MIN_S = 0.35; MAX_S = 2.4;   // giới hạn zoom
+  ROW = 270;                    // khoảng cách dọc giữa 2 thế hệ (px world)
+  AXIS = 353;                   // trục giữa của cây — mọi hàng căn quanh x này
+  // Hoạ tiết placeholder cho avatar (nữ đậm hơn nam một chút)
+  PAT_F = 'repeating-linear-gradient(135deg,#E9E6E2 0 8px,#DDD9D4 8px 16px)';
+  PAT_M = 'repeating-linear-gradient(135deg,#EFEDEA 0 8px,#E4E1DC 8px 16px)';
+  // Viền node: thường / node "YOU" (cam) / node đang chọn (đỏ gạch)
+  RING_BASE = '0 0 0 4px #FFFFFF,0 0 0 5.5px rgba(24,24,27,0.06)';
+  RING_YOU  = '0 0 0 4px #FFFFFF,0 0 0 6.5px #F58B7B,0 0 0 13px rgba(245,139,123,0.14)';
+  RING_SEL  = '0 0 0 4px #FFFFFF,0 0 0 6.5px #B8422F,0 0 0 13px rgba(184,66,47,0.18)';
+
+  constructor(props) {
+    super(props);
+    this.state = {
+      // delay = độ trễ animation lúc mở trang (vẽ dần theo thế hệ);
+      // người thêm sau có delay '0s' → hiện ngay
+      people: [
+        { id: 'gm',  name: 'Ba Lan',   role: 'Grandmother', g: 'f', x: 224, gen: 0, delay: '0s' },
+        { id: 'gf',  name: 'Ong Tuan', role: 'Grandfather', g: 'm', x: 482, gen: 0, delay: '0s' },
+        { id: 'mom', name: 'Mai',      role: 'Mother',      g: 'f', x: 224, gen: 1, delay: '1.05s' },
+        { id: 'dad', name: 'Hoang',    role: 'Father',      g: 'm', x: 482, gen: 1, delay: '1.05s' },
+        { id: 'you', name: 'Minh',     role: '', you: true,          x: 216, gen: 2, delay: '2.1s' },
+        { id: 'sis', name: 'Linh',     role: 'Sister',      g: 'f', x: 490, gen: 2, delay: '2.1s' },
+      ],
+      couples: [['gm', 'gf'], ['mom', 'dad']],
+      parentOf: { mom: ['gm', 'gf'], you: ['mom', 'dad'], sis: ['mom', 'dad'] },
+      editing: false,     // đang ở chế độ chỉnh sửa?
+      selectedId: null,   // node đang chọn (chỉ có nghĩa khi editing)
+      sheet: null,        // { kind, x, gen } — bottom sheet đang mở cho slot nào
+      formName: '', formEmail: '', toast: '',
+    };
+    // Delay vẽ nét cho các đường nối ban đầu (khớp nhịp node hiện ra)
+    this.edgeDelays = { 'c:gm|gf': '0.35s', 'c:mom|dad': '1.4s', 'k:mom': '0.7s', 'k:you': '1.75s', 'k:sis': '1.75s' };
+    // ---- Trạng thái pan/zoom (giữ ngoài state để không re-render khi kéo) ----
+    this.tx = -42; this.ty = -36; this.scale = 0.62;        // transform đang hiển thị
+    this.rawTx = this.tx; this.rawTy = this.ty; this.rawScale = this.scale; // giá trị "thô" trước khi đàn hồi
+    this.WORLD_W = 706; this.WORLD_H = 900;                  // kích thước world (cập nhật trong render)
+    this.pointers = new Map();  // các ngón tay đang chạm
+    this.dragging = false; this.pinching = false;
+    this.velocity = { x: 0, y: 0 };  // vận tốc để tạo quán tính khi thả tay
+    this.lastMove = null; this.rafId = null;
+    this.lastTapTime = 0;  // để nhận nhấn đúp
+    this.dragDist = 0;     // quãng kéo — phân biệt "kéo" với "tap"
+    this.onPointerDown = this.onPointerDown.bind(this);
+    this.onPointerMove = this.onPointerMove.bind(this);
+    this.onPointerUp = this.onPointerUp.bind(this);
+    this.onWheel = this.onWheel.bind(this);
+  }
+
+  /* ==================== PAN / ZOOM ==================== */
+
+  // Biên pan hợp lệ theo mức zoom (world nhỏ hơn khung → căn giữa)
+  getBounds(scale) {
+    const vw = this.viewportEl ? this.viewportEl.clientWidth : 353;
+    const vh = this.viewportEl ? this.viewportEl.clientHeight : 486;
+    const cw = this.WORLD_W * scale, ch = this.WORLD_H * scale;
+    const minTx = cw <= vw ? (vw - cw) / 2 : vw - cw;
+    const maxTx = cw <= vw ? (vw - cw) / 2 : 0;
+    const minTy = ch <= vh ? (vh - ch) / 2 : vh - ch;
+    const maxTy = ch <= vh ? (vh - ch) / 2 : 0;
+    return { minTx, maxTx, minTy, maxTy };
+  }
+
+  // Kéo quá biên thì chỉ đi được một phần (cảm giác cao su như iOS)
+  elastic(v, min, max, resist) {
+    if (v < min) return min - (min - v) * resist;
+    if (v > max) return max + (v - max) * resist;
+    return v;
+  }
+
+  // Ghi transform trực tiếp vào DOM (không qua setState → 60fps)
+  apply() {
+    if (this.worldEl) this.worldEl.style.transform = `translate3d(${this.tx}px,${this.ty}px,0) scale(${this.scale})`;
+    if (this.readoutEl) this.readoutEl.firstChild.textContent =
+      `Pinch to zoom · drag to pan · ${Math.round(this.scale * 100)}%`;
+  }
+
+  updateDisplay() {
+    const b = this.getBounds(this.scale);
+    this.tx = this.elastic(this.rawTx, b.minTx, b.maxTx, 0.45);
+    this.ty = this.elastic(this.rawTy, b.minTy, b.maxTy, 0.45);
+    this.apply();
+  }
+
+  stopRaf() { if (this.rafId) { cancelAnimationFrame(this.rafId); this.rafId = null; } }
+  dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+  mid(a, b) { return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; }
+
+  setViewportRef = (el) => {
+    if (!el || this.viewportEl) return;
+    this.viewportEl = el;
+    el.addEventListener('pointerdown', this.onPointerDown);
+    window.addEventListener('pointermove', this.onPointerMove);
+    window.addEventListener('pointerup', this.onPointerUp);
+    window.addEventListener('pointercancel', this.onPointerUp);
+    el.addEventListener('wheel', this.onWheel, { passive: false });
+  };
+  setWorldRef = (el) => { this.worldEl = el; };
+  setReadoutRef = (el) => { this.readoutEl = el; };
+
+  onPointerDown(e) {
+    this.stopRaf();
+    this.dragDist = 0;
+    this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const rect = this.viewportEl.getBoundingClientRect();
+    if (this.pointers.size === 1) {
+      // 1 ngón: bắt đầu kéo + kiểm tra nhấn đúp (zoom vào điểm chạm)
+      this.dragging = true; this.pinching = false;
+      this.rawTx = this.tx; this.rawTy = this.ty;
+      this.lastMove = { x: e.clientX, y: e.clientY, t: performance.now() };
+      this.velocity = { x: 0, y: 0 };
+      this.viewportEl.style.cursor = 'grabbing';
+      const now = performance.now();
+      if (now - this.lastTapTime < 300) this.toggleZoom(e.clientX - rect.left, e.clientY - rect.top);
+      this.lastTapTime = now;
+    } else if (this.pointers.size === 2) {
+      // 2 ngón: pinch zoom quanh điểm giữa 2 ngón
+      this.dragging = false; this.pinching = true;
+      this.dragDist = 100; // pinch không bao giờ tính là tap
+      const pts = Array.from(this.pointers.values());
+      this.pinchStartDist = this.dist(pts[0], pts[1]);
+      this.pinchStartScale = this.scale;
+      this.pinchStartRawTx = this.rawTx;
+      this.pinchStartRawTy = this.rawTy;
+      const m = this.mid(pts[0], pts[1]);
+      this.pinchStartMid = { x: m.x - rect.left, y: m.y - rect.top };
+    }
+  }
+
+  onPointerMove(e) {
+    if (!this.pointers.has(e.pointerId)) return;
+    this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (this.dragging && this.pointers.size === 1) {
+      const now = performance.now();
+      const dx = e.clientX - this.lastMove.x, dy = e.clientY - this.lastMove.y;
+      const dt = Math.max(1, now - this.lastMove.t);
+      this.dragDist += Math.hypot(dx, dy);
+      this.rawTx += dx; this.rawTy += dy;
+      this.velocity.x = dx / dt * 16; this.velocity.y = dy / dt * 16; // px mỗi frame ~60fps
+      this.lastMove = { x: e.clientX, y: e.clientY, t: now };
+      this.updateDisplay();
+    } else if (this.pinching && this.pointers.size === 2) {
+      // Zoom sao cho điểm world dưới giữa 2 ngón đứng yên
+      const rect = this.viewportEl.getBoundingClientRect();
+      const pts = Array.from(this.pointers.values());
+      const ratio = this.dist(pts[0], pts[1]) / this.pinchStartDist;
+      this.rawScale = this.pinchStartScale * ratio;
+      this.scale = this.elastic(this.rawScale, this.MIN_S, this.MAX_S, 0.5);
+      const m = this.mid(pts[0], pts[1]);
+      const mid = { x: m.x - rect.left, y: m.y - rect.top };
+      const worldX = (this.pinchStartMid.x - this.pinchStartRawTx) / this.pinchStartScale;
+      const worldY = (this.pinchStartMid.y - this.pinchStartRawTy) / this.pinchStartScale;
+      this.rawTx = mid.x - worldX * this.scale;
+      this.rawTy = mid.y - worldY * this.scale;
+      this.updateDisplay();
+    }
+  }
+
+  onPointerUp(e) {
+    this.pointers.delete(e.pointerId);
+    if (this.viewportEl) this.viewportEl.style.cursor = 'grab';
+    if (this.pointers.size === 0) {
+      this.dragging = false; this.pinching = false;
+      this.startSettleLoop(); // thả tay → chạy quán tính + kéo về biên
+    } else if (this.pointers.size === 1 && this.pinching) {
+      // nhấc 1 ngón khi đang pinch → chuyển về kéo
+      this.pinching = false; this.dragging = true;
+      const [p] = this.pointers.values();
+      this.rawTx = this.tx; this.rawTy = this.ty;
+      this.lastMove = { x: p.x, y: p.y, t: performance.now() };
+      this.velocity = { x: 0, y: 0 };
+      this.startSettleLoop(true);
+    }
+  }
+
+  // Vòng lặp "ổn định": quán tính giảm dần (×0.93/frame),
+  // vượt biên thì lò xo kéo về (22%/frame), zoom quá giới hạn nảy lại
+  startSettleLoop(scaleOnly) {
+    this.stopRaf();
+    const EPS_POS = 0.4, EPS_SCALE = 0.004;
+    const step = () => {
+      let settled = true;
+      if (!scaleOnly && !this.dragging) {
+        const bb = this.getBounds(this.scale);
+        const outX = this.rawTx < bb.minTx || this.rawTx > bb.maxTx;
+        const outY = this.rawTy < bb.minTy || this.rawTy > bb.maxTy;
+        if (!outX) { this.rawTx += this.velocity.x; this.velocity.x *= 0.93; }
+        else {
+          this.velocity.x = 0;
+          const clamped = Math.min(Math.max(this.rawTx, bb.minTx), bb.maxTx);
+          const diff = clamped - this.rawTx;
+          this.rawTx += Math.abs(diff) < EPS_POS ? diff : diff * 0.22;
+        }
+        if (!outY) { this.rawTy += this.velocity.y; this.velocity.y *= 0.93; }
+        else {
+          this.velocity.y = 0;
+          const clamped = Math.min(Math.max(this.rawTy, bb.minTy), bb.maxTy);
+          const diff = clamped - this.rawTy;
+          this.rawTy += Math.abs(diff) < EPS_POS ? diff : diff * 0.22;
+        }
+        const stillOutX = this.rawTx < bb.minTx - EPS_POS || this.rawTx > bb.maxTx + EPS_POS;
+        const stillOutY = this.rawTy < bb.minTy - EPS_POS || this.rawTy > bb.maxTy + EPS_POS;
+        if (Math.abs(this.velocity.x) > 0.05 || Math.abs(this.velocity.y) > 0.05 || stillOutX || stillOutY) settled = false;
+      }
+      if (this.rawScale < this.MIN_S - EPS_SCALE || this.rawScale > this.MAX_S + EPS_SCALE) {
+        const target = Math.min(Math.max(this.rawScale, this.MIN_S), this.MAX_S);
+        const diff = target - this.rawScale;
+        this.rawScale += Math.abs(diff) < EPS_SCALE ? diff : diff * 0.25;
+        this.scale = this.rawScale;
+        const nb = this.getBounds(this.scale);
+        this.rawTx = Math.min(Math.max(this.rawTx, nb.minTx), nb.maxTx);
+        this.rawTy = Math.min(Math.max(this.rawTy, nb.minTy), nb.maxTy);
+        settled = false;
+      } else {
+        this.scale = this.rawScale;
+      }
+      this.updateDisplay();
+      this.rafId = settled ? null : requestAnimationFrame(step);
+    };
+    this.rafId = requestAnimationFrame(step);
+  }
+
+  // Zoom bằng con lăn chuột, giữ điểm dưới con trỏ đứng yên
+  onWheel(e) {
+    e.preventDefault();
+    this.stopRaf();
+    const rect = this.viewportEl.getBoundingClientRect();
+    const px = e.clientX - rect.left, py = e.clientY - rect.top;
+    const factor = Math.exp(-e.deltaY * 0.0016);
+    const newScale = Math.min(Math.max(this.scale * factor, this.MIN_S), this.MAX_S);
+    const worldX = (px - this.tx) / this.scale, worldY = (py - this.ty) / this.scale;
+    this.scale = newScale; this.rawScale = newScale;
+    this.rawTx = px - worldX * newScale;
+    this.rawTy = py - worldY * newScale;
+    this.updateDisplay();
+    clearTimeout(this._wheelTimer);
+    this._wheelTimer = setTimeout(() => this.startSettleLoop(), 120);
+  }
+
+  // Nhấn đúp: phóng to 1.7x vào điểm chạm, đúp lần nữa thu về 0.62x
+  toggleZoom(px, py) { this.animateTo(this.scale < 1.1 ? 1.7 : 0.62, px, py); }
+
+  // Tween zoom mượt về targetScale, neo quanh điểm (px, py) của khung
+  animateTo(targetScale, px, py) {
+    this.stopRaf();
+    const startScale = this.scale, startTx = this.tx, startTy = this.ty;
+    const worldX = (px - startTx) / startScale, worldY = (py - startTy) / startScale;
+    const t0 = performance.now(), dur = 320;
+    const step = (now) => {
+      const p = Math.min(1, (now - t0) / dur);
+      const ease = 1 - Math.pow(1 - p, 3); // ease-out cubic
+      this.scale = startScale + (targetScale - startScale) * ease;
+      this.rawScale = this.scale;
+      this.rawTx = px - worldX * this.scale;
+      this.rawTy = py - worldY * this.scale;
+      const b = this.getBounds(this.scale);
+      this.rawTx = Math.min(Math.max(this.rawTx, b.minTx), b.maxTx);
+      this.rawTy = Math.min(Math.max(this.rawTy, b.minTy), b.maxTy);
+      this.tx = this.rawTx; this.ty = this.rawTy;
+      this.apply();
+      this.rafId = p < 1 ? requestAnimationFrame(step) : null;
+    };
+    this.rafId = requestAnimationFrame(step);
+  }
+
+  zoomIn = (e) => { if (e) e.stopPropagation(); this.animateTo(Math.min(this.scale + 0.35, this.MAX_S), 176.5, 243); };
+  zoomOut = (e) => { if (e) e.stopPropagation(); this.animateTo(Math.max(this.scale - 0.35, this.MIN_S), 176.5, 243); };
+
+  // Nút reset: tween cả vị trí + zoom về trạng thái ban đầu
+  reset = (e) => {
+    if (e) e.stopPropagation();
+    this.stopRaf();
+    const startScale = this.scale, startTx = this.tx, startTy = this.ty;
+    const targetScale = 0.62, targetTx = -42, targetTy = -36;
+    const t0 = performance.now(), dur = 380;
+    const step = (now) => {
+      const p = Math.min(1, (now - t0) / dur);
+      const ease = 1 - Math.pow(1 - p, 3);
+      this.scale = this.rawScale = startScale + (targetScale - startScale) * ease;
+      this.tx = this.rawTx = startTx + (targetTx - startTx) * ease;
+      this.ty = this.rawTy = startTy + (targetTy - startTy) * ease;
+      this.apply();
+      this.rafId = p < 1 ? requestAnimationFrame(step) : null;
+    };
+    this.rafId = requestAnimationFrame(step);
+  };
+
+  componentWillUnmount() {
+    this.stopRaf();
+    clearTimeout(this._toastT);
+    if (this.viewportEl) {
+      this.viewportEl.removeEventListener('pointerdown', this.onPointerDown);
+      this.viewportEl.removeEventListener('wheel', this.onWheel);
+    }
+    window.removeEventListener('pointermove', this.onPointerMove);
+    window.removeEventListener('pointerup', this.onPointerUp);
+    window.removeEventListener('pointercancel', this.onPointerUp);
+  }
+
+  /* ==================== CHẾ ĐỘ CHỈNH SỬA ==================== */
+
+  genderOf(id) { const p = this.state.people.find(p => p.id === id); return p ? p.g : undefined; }
+  nodeById(id) { return this.state.people.find(p => p.id === id); }
+
+  // Tìm x trống trên một hàng thế hệ (cách người khác ≥110px),
+  // ưu tiên gần vị trí gợi ý, quét dần sang hai bên
+  findFreeX(x, gen) {
+    const candidates = [x, x + 135, x - 135, x + 270, x - 270, x + 405, x - 405];
+    for (const cx of candidates) {
+      const hit = this.state.people.some(p => p.gen === gen && Math.abs(p.x - cx) < 110);
+      if (!hit) return cx;
+    }
+    let cx = x, guard = 0;
+    while (this.state.people.some(p => p.gen === gen && Math.abs(p.x - cx) < 110) && guard++ < 20) cx += 135;
+    return cx;
+  }
+
+  // Tìm chỗ cho MỘT CẶP (trái, phải) cách nhau 258px như các cặp khác,
+  // căn giữa phía trên con, dịch cả cặp nếu vướng người khác trên hàng
+  findPairX(centerX, gen, ignoreIds) {
+    const HALF = 129, MIN = 110;
+    const others = this.state.people.filter(p => p.gen === gen && !ignoreIds.includes(p.id));
+    const fits = (lx, rx) => !others.some(p => p.x > lx - MIN && p.x < rx + MIN);
+    const offsets = [0, 200, -200, 400, -400, 600, -600];
+    for (const off of offsets) {
+      const lx = centerX + off - HALF, rx = centerX + off + HALF;
+      if (fits(lx, rx)) return [lx, rx];
+    }
+    const maxX = others.length ? Math.max(...others.map(p => p.x)) : 70;
+    return [maxX + MIN + 25, maxX + MIN + 25 + 2 * HALF];
+  }
+
+  toggleEdit = (e) => {
+    if (e) e.stopPropagation();
+    this.setState(s => ({ editing: !s.editing, selectedId: null, sheet: null }));
+  };
+
+  // Tap nền (không phải kéo) → bỏ chọn node
+  bgClick = () => {
+    if (this.dragDist > 8) return;
+    if (this.state.selectedId) this.setState({ selectedId: null });
+  };
+
+  closeSheet = (e) => { if (e) e.stopPropagation(); this.setState({ sheet: null }); };
+  onNameChange = (e) => this.setState({ formName: e.target.value });
+  onEmailChange = (e) => this.setState({ formEmail: e.target.value });
+
+  roleLabel(kind, sel) {
+    const noun = { mother: 'Mother', father: 'Father', child: 'Child', spouse: 'Spouse' }[kind];
+    return sel.you ? noun : `${noun} of ${sel.name}`;
+  }
+
+  // Xác nhận thêm người từ bottom sheet
+  submitAdd = (e) => {
+    if (e) e.stopPropagation();
+    const s = this.state;
+    const name = s.formName.trim();
+    if (!name || !s.sheet) return;           // bắt buộc có tên
+    const email = s.formEmail.trim();
+    const sel = this.nodeById(s.selectedId);
+    const k = s.sheet.kind;                   // 'mother' | 'father' | 'child' | 'spouse'
+    const id = 'p' + Date.now();
+    const np = {
+      id, name,
+      role: this.roleLabel(k, sel),
+      x: this.findFreeX(s.sheet.x, s.sheet.gen), gen: s.sheet.gen,
+      g: k === 'mother' ? 'f' : k === 'father' ? 'm' : undefined,
+      pending: !!email,                       // có email → badge "Invited"
+      delay: '0s',                            // hiện ngay, không chờ stagger
+    };
+    const parentOf = { ...s.parentOf };
+    const couples = s.couples.map(c => [...c]);
+    let people = [...s.people, np];
+    if (k === 'mother' || k === 'father') {
+      const existing = parentOf[sel.id] || [];
+      parentOf[sel.id] = [...existing, id];
+      if (existing.length === 1) {
+        // đủ 2 phụ huynh → thành cặp; xếp lại cân đối trên đầu con
+        // (mẹ bên trái, bố bên phải)
+        couples.push([existing[0], id]);
+        const [lx, rx] = this.findPairX(sel.x, s.sheet.gen, [existing[0], id]);
+        np.x = k === 'mother' ? lx : rx;
+        people = people.map(p => p.id === existing[0] ? { ...p, x: k === 'mother' ? rx : lx } : p);
+      }
+    } else if (k === 'spouse') {
+      couples.push([sel.id, id]);
+    } else { // child: nếu người được chọn có vợ/chồng thì con thuộc cả hai
+      const c = couples.find(c => c.includes(sel.id));
+      parentOf[id] = c ? [...c] : [sel.id];
+    }
+    // CĂN TRỤC GIỮA: dịch từng hàng để trung bình x của hàng = AXIS
+    // → cây luôn cân trái phải; node trượt mượt nhờ CSS transition
+    const gens = [...new Set(people.map(p => p.gen))];
+    for (const g of gens) {
+      const row = people.filter(p => p.gen === g);
+      const mean = row.reduce((a, p) => a + p.x, 0) / row.length;
+      const off = this.AXIS - mean;
+      if (Math.abs(off) > 0.5) people = people.map(p => p.gen === g ? { ...p, x: p.x + off } : p);
+    }
+    this.setState({
+      people, parentOf, couples,
+      sheet: null, formName: '', formEmail: '',
+      toast: email ? `Invite sent to ${email}` : `${name} added to the tree`,
+    });
+    clearTimeout(this._toastT);
+    this._toastT = setTimeout(() => this.setState({ toast: '' }), 2400);
+  };
+
+  /* ==================== TÍNH LAYOUT + RENDER ==================== */
+
+  render() {
+    const s = this.state;
+    const sel = s.editing && s.selectedId ? this.nodeById(s.selectedId) : null;
+
+    // --- Hàng thế hệ: mọi người cùng gen dùng chung một y ---
+    let minG = Math.min(...s.people.map(p => p.gen));
+    let maxG = Math.max(...s.people.map(p => p.gen));
+
+    // Node đang chọn thiếu gì thì hiện slot đó
+    let slotKinds = [];
+    if (sel) {
+      const parents = s.parentOf[sel.id] || [];
+      const hasMother = parents.some(pid => this.genderOf(pid) === 'f');
+      const hasFather = parents.some(pid => this.genderOf(pid) === 'm');
+      if (!hasMother) slotKinds.push('mother');
+      if (!hasFather) slotKinds.push('father');
+      slotKinds.push('child'); // con thì luôn thêm được
+      if (!s.couples.some(c => c.includes(sel.id))) slotKinds.push('spouse'); // độc thân → thêm vợ/chồng
+    }
+
+    const rowY = (g) => 130 + (g - minG) * this.ROW;
+    const worldH = (maxG - minG) * this.ROW + 360;
+    // World tự nới rộng khi một hàng dài ra; offX dịch phải nếu có node âm
+    const offX = Math.max(0, 100 - Math.min(...s.people.map(p => p.x)));
+    const worldW = Math.max(706, Math.max(...s.people.map(p => p.x)) + offX + 100);
+    this.WORLD_H = worldH; this.WORLD_W = worldW;
+
+    // pos = toạ độ vẽ cuối cùng (x đã cộng offX, y theo hàng thế hệ)
+    const pos = {};
+    for (const p of s.people) pos[p.id] = { x: p.x + offX, y: rowY(p.gen) };
+
+    // --- Ô trống (slot) đặt SÁT node đang chọn; khi thêm thật thì người mới
+    //     vẫn rơi đúng hàng thế hệ (gen truyền vào sheet) ---
+    const slots = [];
+    if (sel) {
+      const sp = pos[sel.id];
+      const mk = (kind, label, lx, y, gen) => {
+        const cy = Math.max(60, y);
+        slots.push({
+          kind, label, x: lx + offX, y: cy, labelY: cy + 40,
+          pick: (e) => {
+            e.stopPropagation();
+            if (this.dragDist > 8) return;
+            this.setState({ sheet: { kind, x: lx, gen }, formName: '', formEmail: '' });
+          },
+        });
+      };
+      if (slotKinds.includes('mother')) mk('mother', 'Add mother', sel.x - 80, sp.y - 125, sel.gen - 1);
+      if (slotKinds.includes('father')) mk('father', 'Add father', sel.x + 80, sp.y - 125, sel.gen - 1);
+      mk('child', 'Add child', this.findFreeX(sel.x, sel.gen + 1), sp.y + 135, sel.gen + 1);
+      if (slotKinds.includes('spouse')) {
+        // đặt bên phải nếu trống, không thì bên trái
+        const rightFree = !s.people.some(p => p.gen === sel.gen && p.id !== sel.id && p.x > sel.x && p.x - sel.x < 240);
+        mk('spouse', 'Add spouse', rightFree ? sel.x + 130 : sel.x - 130, sp.y, sel.gen);
+      }
+    }
+
+    // --- Đường nối thật ---
+    // Cặp đôi: cong nhẹ võng xuống + chấm tròn ở giữa
+    // Bố mẹ → con: từ chấm giữa cặp, bezier chảy xuống node con
+    const edges = [], dots = [], slotLinks = [];
+    for (const [a, b] of s.couples) {
+      const A = pos[a], B = pos[b];
+      if (!A || !B) continue;
+      const mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2 + 18;
+      const delay = this.edgeDelays['c:' + a + '|' + b] || '0s';
+      edges.push({ d: `M${A.x},${A.y} Q${mx},${my} ${B.x},${B.y}`, delay });
+      dots.push({ x: mx, y: (A.y + B.y) / 2 + 13, delay: `${parseFloat(delay) + 0.3}s` });
+    }
+    for (const cid of Object.keys(s.parentOf)) {
+      const C = pos[cid];
+      const ps = (s.parentOf[cid] || []).map(id => pos[id]).filter(Boolean);
+      if (!C || !ps.length) continue;
+      const delay = this.edgeDelays['k:' + cid] || '0s';
+      if (ps.length === 2) {
+        const mx = (ps[0].x + ps[1].x) / 2, my = (ps[0].y + ps[1].y) / 2 + 18;
+        edges.push({ d: `M${mx},${my} C${mx},${my + 72} ${C.x},${my + 92} ${C.x},${C.y}`, delay });
+      } else {
+        const P = ps[0];
+        edges.push({ d: `M${P.x},${P.y} C${P.x},${P.y + 80} ${C.x},${C.y - 80} ${C.x},${C.y}`, delay });
+      }
+    }
+    // --- Đường nét đứt của slot: vẽ ĐÚNG hình nhánh sẽ có sau khi thêm ---
+    if (sel) {
+      const sp = pos[sel.id];
+      const selParents = (s.parentOf[sel.id] || []).map(id => pos[id]).filter(Boolean);
+      const selCouple = s.couples.find(c => c.includes(sel.id));
+      for (const sl of slots) {
+        if (sl.kind === 'mother' || sl.kind === 'father') {
+          if (selParents.length === 1) {
+            // đã có 1 phụ huynh → preview đường cặp đôi + nhánh xuống con
+            const P = selParents[0];
+            const mx = (P.x + sl.x) / 2, my = (P.y + sl.y) / 2 + 18;
+            slotLinks.push({ d: `M${P.x},${P.y} Q${mx},${my} ${sl.x},${sl.y}` });
+            slotLinks.push({ d: `M${mx},${my} C${mx},${my + 72} ${sp.x},${my + 92} ${sp.x},${sp.y}` });
+          } else {
+            slotLinks.push({ d: `M${sl.x},${sl.y} C${sl.x},${sl.y + 80} ${sp.x},${sp.y - 80} ${sp.x},${sp.y}` });
+          }
+        } else if (sl.kind === 'spouse') {
+          const mx = (sp.x + sl.x) / 2, my = (sp.y + sl.y) / 2 + 18;
+          slotLinks.push({ d: `M${sp.x},${sp.y} Q${mx},${my} ${sl.x},${sl.y}` });
+        } else { // child
+          if (selCouple) {
+            const A = pos[selCouple[0]], B = pos[selCouple[1]];
+            const mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2 + 18;
+            slotLinks.push({ d: `M${mx},${my} C${mx},${my + 72} ${sl.x},${my + 92} ${sl.x},${sl.y}` });
+          } else {
+            slotLinks.push({ d: `M${sp.x},${sp.y} C${sp.x},${sp.y + 80} ${sl.x},${sl.y - 80} ${sl.x},${sl.y}` });
+          }
+        }
+      }
+    }
+
+    const kindTitles = { mother: 'Add mother', father: 'Add father', child: 'Add child', spouse: 'Add spouse' };
+    const kindNouns = { mother: 'mother', father: 'father', child: 'child', spouse: 'spouse' };
+    // transition dùng chung cho mọi thứ trượt khi cây sắp xếp lại
+    const slide = 'left 0.55s cubic-bezier(0.22,1,0.36,1),top 0.55s cubic-bezier(0.22,1,0.36,1)';
+
+    return (
+      <div style={{padding:48,display:'flex',flexDirection:'column',gap:12,alignItems:'flex-start'}}>
+        {/* ============ KHUNG ĐIỆN THOẠI 393×852 ============ */}
+        <div style={{width:393,height:852,position:'relative',background:'#FAF9F8',borderRadius:44,overflow:'hidden',border:'1px solid rgba(24,24,27,0.08)',boxShadow:'0 24px 60px rgba(24,24,27,0.14)'}}>
+
+          {/* Status bar giả lập */}
+          <div style={{height:62,padding:'0 30px 8px',display:'flex',alignItems:'flex-end',justifyContent:'space-between'}}>
+            <span style={{font:"600 15px/18px 'Be Vietnam Pro',sans-serif",color:'#18181B',letterSpacing:-0.2}}>9:41</span>
+            <div style={{display:'flex',alignItems:'center',gap:6}}>
+              <div style={{display:'flex',alignItems:'flex-end',gap:2}}>
+                {[4,6,8,10].map(h => <div key={h} style={{width:3,height:h,borderRadius:1,background:'#18181B'}}/>)}
+              </div>
+              <div style={{width:23,height:12,border:'1px solid rgba(24,24,27,0.5)',borderRadius:3.5,padding:1.5,boxSizing:'border-box'}}>
+                <div style={{width:'72%',height:'100%',background:'#18181B',borderRadius:1.5}}/>
+              </div>
+            </div>
+          </div>
+
+          {/* Header: tên nhánh + chip EDITING + số thành viên */}
+          <div style={{height:56,padding:'0 20px',display:'flex',alignItems:'center',justifyContent:'space-between',backgroundColor:'#FAF9F8B8',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',boxShadow:'0 2px 10px rgba(24,24,27,0.06)',position:'relative',zIndex:6}}>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <span style={{font:"700 17px/24px 'Be Vietnam Pro',sans-serif",letterSpacing:-0.2,color:'#18181B'}}>Mom's side</span>
+              {s.editing && <span style={{height:20,padding:'0 8px',borderRadius:999,background:'#FDE7E2',font:"600 10.5px/20px 'Be Vietnam Pro',sans-serif",letterSpacing:0.3,color:'#B8422F'}}>EDITING</span>}
+            </div>
+            <span style={{font:"400 12px/16px 'Be Vietnam Pro',sans-serif",color:'#A6968F'}}>{s.people.length} members</span>
+          </div>
+
+          {/* ============ VIEWPORT (khung canvas pan/zoom) ============ */}
+          <div style={{padding:'16px 20px 0',display:'flex',justifyContent:'center'}}>
+            <div ref={this.setViewportRef} onClick={this.bgClick}
+                 style={{position:'relative',width:353,height:486,borderRadius:26,background:'#FDE7E2',overflow:'hidden',boxShadow:'inset 0 0 0 1px rgba(245,139,123,0.22)',touchAction:'none',cursor:'grab'}}>
+              {/* Vệt sáng trang trí */}
+              <div style={{position:'absolute',inset:0,background:'radial-gradient(circle at 50% 32%,rgba(255,255,255,0.55) 0%,rgba(255,255,255,0) 62%)',pointerEvents:'none',zIndex:2}}/>
+
+              {/* Pill gợi ý khi vừa bật edit */}
+              {s.editing && !s.selectedId && (
+                <div style={{position:'absolute',left:'50%',top:12,transform:'translateX(-50%)',height:26,padding:'0 12px',borderRadius:999,background:'rgba(255,255,255,0.9)',display:'flex',alignItems:'center',zIndex:3,pointerEvents:'none',boxShadow:'0 2px 8px rgba(24,24,27,0.06)'}}>
+                  <span style={{font:"500 10.5px/1 'Be Vietnam Pro',sans-serif",color:'#B8422F'}}>Tap a person to add family</span>
+                </div>
+              )}
+
+              {/* ===== WORLD: mọi node/đường vẽ trong hệ toạ độ này,
+                    pan/zoom chỉ đổi transform của div này ===== */}
+              <div ref={this.setWorldRef} className="ftc-world"
+                   style={{position:'absolute',left:0,top:0,width:worldW,height:worldH,transform:'translate3d(-42px,-36px,0) scale(0.62)'}}>
+                <svg width={worldW} height={worldH} viewBox={`0 0 ${worldW} ${worldH}`} fill="none" style={{position:'absolute',left:0,top:0}}>
+                  {/* Đường nối thật: vẽ nét (ftcDraw) + morph theo d khi cây xếp lại */}
+                  {edges.map((e2, i) => (
+                    <path key={i} d={e2.d} stroke="#EFB0A3" strokeWidth="3" strokeLinecap="round" pathLength="1"
+                          style={{d:`path('${e2.d}')`,transition:'d 0.55s cubic-bezier(0.22,1,0.36,1)',strokeDasharray:1,strokeDashoffset:1,animation:`ftcDraw 0.55s ease-out ${e2.delay} forwards`}}/>
+                  ))}
+                  {/* Đường nét đứt preview của slot */}
+                  {slotLinks.map((sl, i) => (
+                    <path key={'sl'+i} d={sl.d} stroke="#E9AFA3" strokeWidth="3" strokeLinecap="round" strokeDasharray="4 8"/>
+                  ))}
+                  {/* Chấm giữa mỗi cặp đôi */}
+                  {dots.map((d2, i) => (
+                    <circle key={'d'+i} cx={d2.x} cy={d2.y} r="5" fill="#F58B7B"
+                            style={{animation:`ftcFade 0.3s ease ${d2.delay} both`,transition:'cx 0.55s cubic-bezier(0.22,1,0.36,1),cy 0.55s cubic-bezier(0.22,1,0.36,1)'}}/>
+                  ))}
+                </svg>
+
+                {/* ===== NODE từng người ===== */}
+                {s.people.map(p => {
+                  const pp = pos[p.id];
+                  const ring = sel && p.id === s.selectedId ? this.RING_SEL : (p.you ? this.RING_YOU : this.RING_BASE);
+                  const labelDelay = p.delay === '0s' || !p.delay ? '0.1s' : `${parseFloat(p.delay) + 0.2}s`;
+                  return (
+                    <React.Fragment key={p.id}>
+                      {/* avatar tròn — tap để chọn (chỉ khi editing) */}
+                      <div onClick={(e) => {
+                             e.stopPropagation();
+                             if (!this.state.editing || this.dragDist > 8) return;
+                             this.setState(st => ({ selectedId: st.selectedId === p.id ? null : p.id, sheet: null }));
+                           }}
+                           style={{position:'absolute',left:pp.x,top:pp.y,transform:'translate(-50%,-50%)',width:76,height:76,borderRadius:999,background:p.g === 'm' ? this.PAT_M : this.PAT_F,boxShadow:ring,cursor:'pointer',animation:`ftcPop 0.45s cubic-bezier(0.34,1.56,0.64,1) ${p.delay || '0s'} both`,transition:slide}}/>
+                      {/* tên + badge dưới node */}
+                      <div style={{position:'absolute',left:pp.x,top:pp.y + 48,transform:'translateX(-50%)',width:150,display:'flex',flexDirection:'column',alignItems:'center',gap:3,pointerEvents:'none',animation:`ftcFade 0.4s ease ${labelDelay} both`,transition:slide}}>
+                        <span style={{font:"600 15px/19px 'Be Vietnam Pro',sans-serif",color:'#18181B',whiteSpace:'nowrap'}}>{p.name}</span>
+                        {p.you && <span style={{height:19,padding:'0 8px',borderRadius:999,background:'#F58B7B',font:"700 10.5px/19px 'Be Vietnam Pro',sans-serif",letterSpacing:0.4,color:'#FFFFFF'}}>YOU</span>}
+                        {p.role ? <span style={{font:"400 13px/17px 'Be Vietnam Pro',sans-serif",color:'#A6968F',whiteSpace:'nowrap'}}>{p.role}</span> : null}
+                        {p.pending && <span style={{height:19,padding:'0 8px',borderRadius:999,background:'#FBEED8',font:"600 10.5px/19px 'Be Vietnam Pro',sans-serif",letterSpacing:0.3,color:'#B07C2A',whiteSpace:'nowrap'}}>Invited</span>}
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
+
+                {/* ===== Ô TRỐNG thêm người (nét đứt, dấu +) ===== */}
+                {slots.map(sl => (
+                  <React.Fragment key={sl.kind}>
+                    <div onClick={sl.pick}
+                         style={{position:'absolute',left:sl.x,top:sl.y,transform:'translate(-50%,-50%)',width:64,height:64,borderRadius:999,border:'2px dashed #E9AFA3',background:'rgba(255,255,255,0.62)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',animation:'ftcPop 0.3s ease-out both'}}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D98C7C" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                    </div>
+                    <div style={{position:'absolute',left:sl.x,top:sl.labelY,transform:'translateX(-50%)',pointerEvents:'none',animation:'ftcFade 0.3s ease both'}}>
+                      <span style={{font:"600 12px/16px 'Be Vietnam Pro',sans-serif",color:'#C97F6F',whiteSpace:'nowrap'}}>{sl.label}</span>
+                    </div>
+                  </React.Fragment>
+                ))}
+              </div>
+
+              {/* Cụm nút zoom (+ / − / reset) góc phải trên */}
+              <div style={{position:'absolute',right:12,top:12,width:40,borderRadius:999,background:'rgba(255,255,255,0.94)',boxShadow:'0 2px 10px rgba(24,24,27,0.08)',display:'flex',flexDirection:'column',alignItems:'center',zIndex:3}}>
+                <div onClick={this.zoomIn} style={{height:40,width:40,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#52525B" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                </div>
+                <div style={{width:20,height:1,background:'#EFEBE7'}}/>
+                <div onClick={this.zoomOut} style={{height:40,width:40,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#52525B" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14"/></svg>
+                </div>
+                <div style={{width:20,height:1,background:'#EFEBE7'}}/>
+                <div onClick={this.reset} style={{height:40,width:40,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" strokeWidth="2" strokeLinecap="round"><path d="M12 2v3"/><path d="M12 19v3"/><path d="M2 12h3"/><path d="M19 12h3"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.6"/></svg>
+                </div>
+              </div>
+
+              {/* NÚT EDIT tròn — góc phải dưới sơ đồ; bật edit → cam + icon ✓ */}
+              <div onClick={this.toggleEdit}
+                   style={{position:'absolute',right:12,bottom:12,width:52,height:52,borderRadius:999,background:s.editing ? '#F58B7B' : '#FFFFFF',boxShadow:'0 6px 18px rgba(24,24,27,0.18)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',zIndex:4}}>
+                {s.editing
+                  ? <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B8422F" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>}
+              </div>
+
+              {/* Readout % zoom (cập nhật trực tiếp bằng DOM trong apply()) */}
+              <div ref={this.setReadoutRef} style={{position:'absolute',left:14,bottom:14,height:28,padding:'0 11px',borderRadius:999,background:'rgba(255,255,255,0.86)',display:'flex',alignItems:'center',gap:6,zIndex:3,pointerEvents:'none'}}>
+                <span style={{font:"500 10.5px/1 'Be Vietnam Pro',sans-serif",color:'#8A857E'}}>Pinch to zoom · drag to pan · 62%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Toast thông báo (đã thêm / đã gửi lời mời) */}
+          {s.toast && (
+            <div style={{position:'absolute',left:'50%',bottom:118,transform:'translateX(-50%)',height:38,padding:'0 16px',borderRadius:999,background:'#18181B',display:'flex',alignItems:'center',zIndex:12,boxShadow:'0 8px 24px rgba(24,24,27,0.25)'}}>
+              <span style={{font:"500 12.5px/1 'Be Vietnam Pro',sans-serif",color:'#FFFFFF',whiteSpace:'nowrap'}}>{s.toast}</span>
+            </div>
+          )}
+
+          {/* ============ BOTTOM SHEET nhập tên + email ============ */}
+          {s.sheet && (
+            <React.Fragment>
+              <div onClick={this.closeSheet} style={{position:'absolute',inset:0,background:'rgba(24,24,27,0.35)',zIndex:9}}/>
+              <div style={{position:'absolute',left:0,right:0,bottom:0,zIndex:10,background:'#FFFFFF',borderRadius:'28px 28px 0 0',padding:'20px 24px 34px',display:'flex',flexDirection:'column',gap:16,boxShadow:'0 -12px 40px rgba(24,24,27,0.16)'}}>
+                <div style={{width:40,height:4,borderRadius:999,background:'#E5E1DC',alignSelf:'center'}}/>
+                <div style={{display:'flex',alignItems:'center',gap:12}}>
+                  <div style={{width:48,height:48,borderRadius:999,border:'2px dashed #E9AFA3',background:'#FDF3F0',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D98C7C" strokeWidth="2.2" strokeLinecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                  </div>
+                  <div style={{display:'flex',flexDirection:'column',gap:2}}>
+                    <span style={{font:"700 17px/22px 'Be Vietnam Pro',sans-serif",letterSpacing:-0.2,color:'#18181B'}}>{kindTitles[s.sheet.kind]}</span>
+                    <span style={{font:"400 12.5px/16px 'Be Vietnam Pro',sans-serif",color:'#A6968F'}}>{sel ? `Will appear as ${sel.name}'s ${kindNouns[s.sheet.kind]}` : ''}</span>
+                  </div>
+                </div>
+                <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                  <span style={{font:"500 12.5px/16px 'Be Vietnam Pro',sans-serif",color:'#8A857E'}}>Name</span>
+                  <input value={s.formName} onChange={this.onNameChange} placeholder="Full name"
+                         style={{height:48,borderRadius:12,border:'1px solid #E5E1DC',padding:'0 14px',font:"400 15px/1 'Be Vietnam Pro',sans-serif",color:'#18181B',background:'#FAF9F8',outline:'none',boxSizing:'border-box',width:'100%'}}/>
+                </div>
+                <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                  <span style={{font:"500 12.5px/16px 'Be Vietnam Pro',sans-serif",color:'#8A857E'}}>Email · optional</span>
+                  <input value={s.formEmail} onChange={this.onEmailChange} placeholder="name@email.com"
+                         style={{height:48,borderRadius:12,border:'1px solid #E5E1DC',padding:'0 14px',font:"400 15px/1 'Be Vietnam Pro',sans-serif",color:'#18181B',background:'#FAF9F8',outline:'none',boxSizing:'border-box',width:'100%'}}/>
+                  <span style={{font:"400 11.5px/15px 'Be Vietnam Pro',sans-serif",color:'#A6968F'}}>If you add an email, we'll send them an invite to join the family tree.</span>
+                </div>
+                <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                  {/* Nút chính: đổi nhãn theo việc có email hay không; mờ khi chưa nhập tên */}
+                  <div onClick={this.submitAdd} style={{height:52,borderRadius:999,background:'#F58B7B',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',opacity:s.formName.trim() ? 1 : 0.45}}>
+                    <span style={{font:"600 15px/1 'Be Vietnam Pro',sans-serif",color:'#FFFFFF'}}>{s.formEmail.trim() ? 'Add & send invite' : 'Add to tree'}</span>
+                  </div>
+                  <div onClick={this.closeSheet} style={{height:44,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+                    <span style={{font:"500 14px/1 'Be Vietnam Pro',sans-serif",color:'#8A857E'}}>Cancel</span>
+                  </div>
+                </div>
+              </div>
+            </React.Fragment>
+          )}
+
+          {/* ============ BOTTOM NAV 5 tab (Family active) ============ */}
+          <div style={{position:'absolute',left:0,right:0,bottom:0,height:98,padding:'0 8px',boxSizing:'border-box',background:'rgba(255,255,255,0.72)',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',borderTop:'1px solid rgba(24,24,27,0.06)',display:'flex',alignItems:'flex-start',justifyContent:'space-around',zIndex:7}}>
+            {[
+              { label: 'Home',    active: false, icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 21v-8H9v8"/><path d="M3 10.6V19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-8.4"/><path d="m2 11 9.3-8.1a1 1 0 0 1 1.4 0L22 11"/></svg> },
+              { label: 'Omoide',  active: false, icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3.6-7.2"/><path d="M3 4v5h5"/><path d="M12 7.5V12l3.5 2"/></svg> },
+              { label: 'Family',  active: true,  icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#F58B7B" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="6" r="3"/><circle cx="5" cy="18" r="3"/><circle cx="19" cy="18" r="3"/><path d="M12 9v3"/><path d="M9.5 12h5"/><path d="M7.5 15.5 6 17"/><path d="M16.5 15.5 18 17"/></svg> },
+              { label: 'AI',      active: false, icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3.5l1.7 4.3 4.3 1.7-4.3 1.7L12 15.5l-1.7-4.3L6 9.5l4.3-1.7z"/><path d="M18.5 15.5l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z"/></svg> },
+              { label: 'Profile', active: false, icon: <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg> },
+            ].map(t => (
+              <div key={t.label} style={{width:60,height:56,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3}}>
+                <div style={{width:40,height:26,borderRadius:999,background:t.active ? '#FDE7E2' : 'transparent',display:'flex',alignItems:'center',justifyContent:'center'}}>{t.icon}</div>
+                <span style={{font:`${t.active ? 600 : 500} 10px/12px 'Be Vietnam Pro',sans-serif`,letterSpacing:0.2,color:t.active ? '#18181B' : '#A1A1AA'}}>{t.label}</span>
+              </div>
+            ))}
+          </div>
+          {/* Home indicator */}
+          <div style={{position:'absolute',left:'50%',bottom:9,transform:'translateX(-50%)',width:139,height:5,borderRadius:999,background:'rgba(24,24,27,0.25)',zIndex:8}}/>
+        </div>
+      </div>
+    );
+  }
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<FamilyTreeCanvas/>);
+</script>
+</body>
+</html>

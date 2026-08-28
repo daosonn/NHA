@@ -157,8 +157,9 @@ All strokes live in one SVG layer under the nodes (`tree-threads.tsx`):
 ## What happens when a new person is added, today
 
 The invite flow (`POST /families/:id/invitations`) creates the placeholder
-member **and** its edge to the inviter in one transaction, the tree
-refetches, and the passes above run again. Concretely:
+member **and** its edge to the anchor (the selected node in edit mode, the
+inviter otherwise) in one transaction, the tree refetches, and the passes
+above run again. Concretely:
 
 | New person is a…                                              | Where they land                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -169,9 +170,42 @@ refetches, and the passes above run again. Concretely:
 | Member with **no edges at all** (`POST /members` placeholder) | The **"unplaced" strip** — a labelled row of its own under the last generation (`family.unplacedRow`), not GEN 1 beside the grandparents. Only exists while the tree has edges to be apart from: a brand-new family of one is the whole tree, not unplaced.                                                                                                                                                     |
 
 The kinship words on invites (`features/family/kinship.ts`) always measure
-from the inviter, and the server stores only the edge — so where someone
+from the **anchor** of the invite — the selected node in edit mode, the
+inviter otherwise — and the server stores only the edge; where someone
 _lands_ is entirely the client passes above, never something the API
 promised.
+
+## Edit mode: adding by tapping the spot (2026-08-28)
+
+Per the owner's prototype `src/family-tree-canvas.html` (Đạt): typing a
+relationship was the error-prone part of adding, so the add button became
+an **edit toggle** (pencil ↔ check, `EditToggleButton`) and adding happens
+by tapping WHERE the person belongs.
+
+- In edit mode a tap **selects** a node (deep-coral ring) instead of
+  opening its profile; long-press still manages it.
+- `tree-slots.ts` computes the dashed slots around the selection: mother /
+  father while the **drawn** parents leave room (descents, so a partner
+  auto-joined over a child counts as occupying that spot; a lone parent's
+  gender decides which slot is still open), a child always, a spouse while
+  single. Each slot carries dashed preview paths that trace the exact
+  thread the tree will draw once the person exists — built with the same
+  `couplePath`/`descentPath` the real threads use.
+- Tapping a slot opens the **same invite sheet**, but the kinship picker is
+  gone: the slot already decided the edge (`slotEdge` in `kinship.ts` —
+  type, direction, gender for the parent slots, display `kinshipKey`), and
+  the spot card says the placement in words instead. The request carries
+  `anchorMemberId` (the selected node) so the edge hangs off the person the
+  slots were drawn around — the first flow where the anchor is not the
+  inviter.
+- Arrival animation: a node whose id was not in the previous payload
+  springs in (overshooting scale + fade, `TreeNode`'s `appear`), slots pop
+  the same way. Sliding existing nodes to their new positions and morphing
+  thread paths (the prototype's CSS `transition: d`) is **not** built —
+  react-native-svg has no path-d tweening, so a relayout still snaps.
+
+The generic form (with the kinship picker, anchored to the viewer) remains
+only behind the empty-tree state, where there is nothing to select yet.
 
 ## The interaction layer (for completeness)
 
@@ -203,8 +237,10 @@ and sibling parent-edge inference. Still open, roughly by cost:
    boxes on staggered trees. Family graphs are not strict trees, so naive
    tidy-tree needs adaptation. Only worth it when bounding boxes visibly
    waste space.
-2. **Explicit spot picking** ("add here" on the canvas): turns placement
-   from derived to authored. Product decision, not a rendering one.
+2. ~~**Explicit spot picking** ("add here" on the canvas)~~ — built
+   2026-08-28 as edit mode's slots (section above). What remains of it is
+   motion: sliding existing nodes and morphing threads when the layout
+   re-arranges around an addition.
 
 Known gaps, accepted for now: the everyone-shifts-down parent insert (a
 new grandparent relabels every generation); a child whose two parents sit

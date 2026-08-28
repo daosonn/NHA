@@ -298,6 +298,17 @@ export type CreateInvitationRequest = {
    */
   email?: string;
   memberId?: string;
+  /**
+   * Member the stored edge attaches to. Omitted = the inviter's own node.
+   * The tree's edit mode sends the selected node here, so a slot can be
+   * added onto anybody (2026-08-28). Ignored when `memberId` is given.
+   */
+  anchorMemberId?: string;
+  /**
+   * Gender of the placeholder being created — the "add mother / add father"
+   * slots store it so the missing parent can still be told apart later.
+   */
+  gender?: Gender;
   relationshipType: RelationshipType;
   kinshipKey?: string;
   /** `PARENT` points parent→child, so "Mother" is `true`, "Daughter" `false`. */

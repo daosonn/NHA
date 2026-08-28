@@ -52,6 +52,9 @@ const DYNAMIC = [
   'home.occasion.',
   // src/features/family/kinship.ts carries a label key per picker option.
   'family.kinship.',
+  // Edit mode's slot markers and the invite sheet build these from the
+  // tapped slot's kind (tree-slot-marker.tsx, invite-sheet.tsx).
+  'family.slots.',
   // app/profile/edit.tsx picks one per failed field, and one per API status.
   'profileEdit.errors.',
   // app/ai/card.tsx picks one per template id.

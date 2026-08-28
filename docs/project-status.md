@@ -28,6 +28,24 @@ screens.
 
 ## Current Focus
 
+- **The tree adds people by tapping the spot now (2026-08-28,
+  `feature/tree-layout-units`).** Per the owner's prototype
+  `apps/mobile/src/family-tree-canvas.html`: the canvas's add button became
+  an **edit toggle** (pencil ↔ check); in edit mode tapping a person selects
+  them and dashed **slots** appear for whatever is still missing around them
+  (mother/father judged from the drawn parents and their gender, child
+  always, spouse while single), each with a dashed preview of the exact
+  thread that will exist. Tapping a slot opens the same invite sheet minus
+  the kinship picker — the slot already decided the edge — and the request
+  carries the new `anchorMemberId`, so the edge hangs off the selected node,
+  **the first flow where the anchor is not the inviter** (this was the gap
+  discussed 2026-08-28: uncle/grandparent-shaped relatives were previously
+  inexpressible). `POST /invitations` also takes `gender` for the parent
+  slots. New nodes spring in; sliding/morphing the rest of the layout on
+  re-arrange is recorded as not built (`family-tree-rendering.md` § Edit
+  mode). Verified: api build+lint, mobile tsc, check:i18n (828 keys),
+  prettier on touched files; not yet tapped through on a device or browser.
+
 - **Home's IA swapped: tree to the bar's centre, posting to the top of the
   feed (2026-08-26, `feature/motion-system`) — owner's call, deviates from
   the mockups, ratify or revert.** The diagnosis: Home showed two `+`

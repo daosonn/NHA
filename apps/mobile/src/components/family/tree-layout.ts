@@ -36,6 +36,8 @@ export type TreeMember = {
   avatarKey?: string | null;
   /** ISO date (YYYY-MM-DD) — siblings order oldest-left by it. */
   birthDate?: string | null;
+  /** Giới tính — chế độ chỉnh sửa cần nó để biết còn thiếu mẹ hay bố. */
+  gender?: 'MALE' | 'FEMALE' | 'OTHER' | null;
 };
 
 export type TreeGeneration = {
@@ -66,7 +68,8 @@ export const NODE_SIZE = 60;
 export const VIEWER_NODE_SIZE = 68;
 
 const FIRST_ROW_Y = 56;
-const ROW_GAP = 150;
+/** Exported for the edit-mode slots, which sit one row above/below a node. */
+export const ROW_GAP = 150;
 /** Space under each node for the name and relationship labels. */
 const LABEL_BLOCK = 44;
 
@@ -91,7 +94,7 @@ export type TreeLayout = {
 };
 
 /** Centre-to-centre inside a couple block — close enough for the arc to read. */
-const COUPLE_PITCH = 104;
+export const COUPLE_PITCH = 104;
 /** Minimum centre-to-centre across neighbouring blocks — room for two labels. */
 const BLOCK_PITCH = 128;
 /** First and last node centre to the world's edge. */

@@ -170,6 +170,22 @@
     "addMember": "Add a family member",
     "addHere": "Add here",
     "addMemberHere": "Add a family member here",
+    "editTree": "Edit the tree",
+    "doneEditing": "Done editing",
+    "editHint": "Tap a person to add family around them",
+    "editHintSlot": "Tap a dashed spot to add someone there",
+    "slots": {
+      "mother": "Add mother",
+      "father": "Add father",
+      "child": "Add child",
+      "spouse": "Add partner",
+      "will": {
+        "mother": "Will appear as {{name}}’s mother",
+        "father": "Will appear as {{name}}’s father",
+        "child": "Will appear as {{name}}’s child",
+        "spouse": "Will appear as {{name}}’s partner"
+      }
+    },
     "you": "YOU",
     "nodeLabel": "{{name}}, {{role}}",
     "pendingRole": "{{role}} · pending",

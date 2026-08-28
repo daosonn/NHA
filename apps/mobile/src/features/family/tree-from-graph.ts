@@ -115,6 +115,7 @@ export function treeFromGraph(tree: FamilyTree, options: TreeFromGraphOptions): 
       isViewer: member.id === viewerMemberId ? true : undefined,
       avatarKey: member.avatarKey,
       birthDate: member.birthDate ?? null,
+      gender: member.gender,
     });
 
     if (row !== unplaced) byDepth.set(depth, row);

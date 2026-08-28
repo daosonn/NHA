@@ -1,4 +1,4 @@
-import { Crosshair, Minus, Plus, UserRoundPlus } from 'lucide-react-native';
+import { Check, Crosshair, Minus, Pencil, Plus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
@@ -103,19 +103,37 @@ export function CanvasHint({ children }: { children: string }) {
   );
 }
 
-/** Add-a-member action, bottom right of the canvas. */
-export function AddMemberButton({ onPress }: { onPress?: () => void }) {
+/**
+ * Edit-mode toggle, bottom right of the canvas — it replaced the plain
+ * add-member button (owner's prototype `src/family-tree-canvas.html`,
+ * 2026-08-28): typing a relationship was the error-prone part of adding, so
+ * adding now happens by tapping the dashed slot where the person belongs,
+ * and this button only opens and closes that mode. White pencil at rest,
+ * coral check while editing.
+ */
+export function EditToggleButton({ editing, onPress }: { editing: boolean; onPress?: () => void }) {
   const { t } = useTranslation();
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={t('family.addMember')}
-      className="absolute bottom-lg right-lg h-[52px] w-[52px] items-center justify-center bg-coral"
-      style={{ borderRadius: radius.full }}
+      accessibilityLabel={editing ? t('family.doneEditing') : t('family.editTree')}
+      accessibilityState={{ selected: editing }}
+      className="absolute bottom-lg right-lg h-[52px] w-[52px] items-center justify-center"
+      style={[
+        {
+          borderRadius: radius.full,
+          backgroundColor: editing ? colors.coral.primary : colors.background.card,
+        },
+        elevation.floating,
+      ]}
     >
-      <UserRoundPlus size={23} color={colors.text.white} strokeWidth={2.1} />
+      {editing ? (
+        <Check size={22} color={colors.text.white} strokeWidth={2.4} />
+      ) : (
+        <Pencil size={20} color={colors.coral.deep} strokeWidth={2.1} />
+      )}
     </Pressable>
   );
 }

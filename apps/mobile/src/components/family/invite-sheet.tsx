@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Share, View } from 'react-native';
 
 import { kinshipOptions, type KinshipOption } from '../../features/family/kinship';
+import type { SlotKind } from './tree-slots';
 import type { InvitationSummary } from '../../lib/api';
 import { daysUntil } from '../../lib/date';
 import { colors, elevation, radius } from '../../theme';
@@ -66,7 +67,7 @@ function SheetHeader({
  * the inviter has typed and picked — which is also the thing they might have
  * got wrong.
  */
-function SpotCard({ name, option }: { name: string; option: KinshipOption | undefined }) {
+function SpotCard({ name, hint }: { name: string; hint: string }) {
   const { t } = useTranslation();
 
   return (
@@ -101,7 +102,7 @@ function SpotCard({ name, option }: { name: string; option: KinshipOption | unde
           {name === '' ? t('invite.sheet.spotEmpty') : name}
         </Text>
         <Text variant="badge" color={colors.text.subtle} numberOfLines={1}>
-          {option === undefined ? t('invite.sheet.spotUnset') : t(option.hintKey)}
+          {hint}
         </Text>
       </View>
     </View>
@@ -119,7 +120,16 @@ export type InviteSheetProps = {
    * so there is nothing to show before this.
    */
   created: InvitationSummary | null;
-  onSubmit?: (input: { name: string; option: KinshipOption; email: string }) => void;
+  /**
+   * The dashed slot this sheet was opened from, when edit mode did the
+   * choosing: the relationship is already decided by WHERE the tap landed,
+   * so the kinship picker disappears and the spot card says the placement in
+   * words ("Will appear as Mai's mother"). `null`/absent keeps the classic
+   * form with the picker — the empty-tree state still uses it.
+   */
+  spot?: { kind: SlotKind; anchorName: string } | null;
+  /** `option` is null exactly when `spot` decided the relationship instead. */
+  onSubmit?: (input: { name: string; option: KinshipOption | null; email: string }) => void;
   submitting?: boolean;
   /** Catalogue key for whatever went wrong, shown above the button. */
   errorKey?: string | null;
@@ -167,6 +177,7 @@ export function InviteSheet({
   onClose,
   familyName,
   created,
+  spot = null,
   onSubmit,
   submitting = false,
   errorKey = null,
@@ -180,6 +191,12 @@ export function InviteSheet({
   const [kinship, setKinship] = useState<string>(kinshipOptions[0]?.value ?? 'sister');
 
   const chosen = kinshipOptions.find((option) => option.value === kinship);
+  const spotHint =
+    spot !== null
+      ? t(`family.slots.will.${spot.kind}`, { name: spot.anchorName })
+      : chosen === undefined
+        ? t('invite.sheet.spotUnset')
+        : t(chosen.hintKey);
   const expiresIn = created === null ? null : daysUntil(created.expiresAt);
 
   // What the second screen confirms is decided by the server's answer, not
@@ -189,7 +206,7 @@ export function InviteSheet({
 
   const ready =
     name.trim() !== '' &&
-    chosen !== undefined &&
+    (spot !== null || chosen !== undefined) &&
     (method === 'code' || looksLikeEmail(email.trim()));
 
   const share = (code: string, invitee: string) => {
@@ -271,7 +288,7 @@ export function InviteSheet({
                 </Text>
               </View>
 
-              <SpotCard name={name.trim()} option={chosen} />
+              <SpotCard name={name.trim()} hint={spotHint} />
 
               <TextField
                 label={t('invite.sheet.nameLabel')}
@@ -295,16 +312,21 @@ export function InviteSheet({
                 />
               )}
 
-              <SelectField
-                label={t('invite.sheet.relationship')}
-                title={t('invite.sheet.relationshipTitle')}
-                value={kinship}
-                options={kinshipOptions.map((option) => ({
-                  value: option.value,
-                  label: t(option.labelKey),
-                }))}
-                onChange={setKinship}
-              />
+              {/* The slot already said the relationship — offering the picker
+                  again would let the form contradict the dashed preview the
+                  person just tapped. */}
+              {spot === null && (
+                <SelectField
+                  label={t('invite.sheet.relationship')}
+                  title={t('invite.sheet.relationshipTitle')}
+                  value={kinship}
+                  options={kinshipOptions.map((option) => ({
+                    value: option.value,
+                    label: t(option.labelKey),
+                  }))}
+                  onChange={setKinship}
+                />
+              )}
 
               {errorKey !== null && (
                 <Text
@@ -323,10 +345,13 @@ export function InviteSheet({
                 disabled={!ready}
                 loading={submitting}
                 onPress={() => {
-                  if (onSubmit === undefined || chosen === undefined) return;
+                  if (onSubmit === undefined) return;
+                  if (spot === null && chosen === undefined) return;
                   onSubmit({
                     name: name.trim(),
-                    option: chosen,
+                    // Null when the slot decided — the screen maps the slot
+                    // kind to the stored edge instead.
+                    option: spot === null ? (chosen ?? null) : null,
                     // The code tab sends no address even if one was typed on
                     // the other tab — what is submitted is what is on screen.
                     email: method === 'email' ? email.trim() : '',

@@ -19,9 +19,11 @@ import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 import { colors, radius } from '../../theme';
 import { Text } from '../ui/text';
-import { AddMemberButton, CanvasHint, ZoomControls } from './tree-controls';
+import { CanvasHint, EditToggleButton, ZoomControls } from './tree-controls';
 import { layoutTree, type FamilyTreeData, type PositionedNode } from './tree-layout';
 import { TreeNode } from './tree-node';
+import { TreeSlotMarker } from './tree-slot-marker';
+import { slotsFor, type TreeSlot } from './tree-slots';
 import { TreeThreads } from './tree-threads';
 
 // Ranges and feel are the prototype's numbers, not invented here:
@@ -123,7 +125,17 @@ export type FamilyTreeProps = {
   onSelectNode?: (node: PositionedNode) => void;
   /** Long press: manage the person rather than open them. */
   onManageNode?: (node: PositionedNode) => void;
-  onAddMember?: () => void;
+  /**
+   * Edit mode (owner's prototype `src/family-tree-canvas.html`, 2026-08-28):
+   * the pencil toggles it, tapping a person selects them, and dashed slots
+   * appear for whoever is still missing around them. The screen owns the
+   * state — it has to coordinate the sheet the slots open.
+   */
+  editing?: boolean;
+  onToggleEditing?: () => void;
+  /** The person the slots are drawn around; `null` = nobody chosen yet. */
+  selectedId?: string | null;
+  onPickSlot?: (slot: TreeSlot) => void;
 };
 
 /**
@@ -139,7 +151,15 @@ export type FamilyTreeProps = {
  * React state on every finger move stutters on a mid-range Android the moment
  * there are a dozen nodes and their connecting threads.
  */
-export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: FamilyTreeProps) {
+export function FamilyTree({
+  data,
+  onSelectNode,
+  onManageNode,
+  editing = false,
+  onToggleEditing,
+  selectedId = null,
+  onPickSlot,
+}: FamilyTreeProps) {
   const { t } = useTranslation();
 
   const window = useWindowDimensions();
@@ -181,6 +201,25 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
   const height = measured?.height ?? 0;
 
   const layout = useMemo(() => layoutTree(data, width), [data, width]);
+
+  /** Edit mode's dashed spots around the chosen person, in world coordinates. */
+  const slots = useMemo(
+    () => (editing && selectedId !== null ? slotsFor(data, layout, selectedId) : []),
+    [editing, selectedId, data, layout],
+  );
+
+  /**
+   * Who was NOT here a render ago — they pop in (the prototype's `ftcPop`).
+   * A ref, not state: arrival is a fact about this render pass, and the very
+   * first payload plays no entrance — the whole tree draws at once.
+   */
+  const knownIds = useRef<Set<string> | null>(null);
+  const currentIds = new Set(layout.nodes.keys());
+  const appearedIds =
+    knownIds.current === null
+      ? new Set<string>()
+      : new Set([...currentIds].filter((id) => !knownIds.current?.has(id)));
+  knownIds.current = currentIds;
 
   const onLayout = (event: LayoutChangeEvent) => {
     const next = event.nativeEvent.layout;
@@ -537,7 +576,13 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
               canvasStyle,
             ]}
           >
-            <TreeThreads data={data} layout={layout} width={contentWidth} height={contentHeight} />
+            <TreeThreads
+              data={data}
+              layout={layout}
+              width={contentWidth}
+              height={contentHeight}
+              slotPaths={slots.flatMap((slot) => slot.paths)}
+            />
 
             {layout.rows.map((row) => (
               <GenerationLabel key={row.id} label={row.label} y={row.y} />
@@ -547,8 +592,18 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
               <TreeNode
                 key={node.id}
                 node={node}
+                selected={editing && node.id === selectedId}
+                appear={appearedIds.has(node.id)}
                 onPress={onSelectNode}
                 onLongPress={onManageNode}
+              />
+            ))}
+
+            {slots.map((slot) => (
+              <TreeSlotMarker
+                key={`${selectedId}-${slot.kind}`}
+                slot={slot}
+                onPress={() => onPickSlot?.(slot)}
               />
             ))}
           </Animated.View>
@@ -563,9 +618,16 @@ export function FamilyTree({ data, onSelectNode, onManageNode, onAddMember }: Fa
         canZoomOut={zoom > ZOOM_MIN}
       />
 
-      {/* The prototype's readout: the current zoom beside the how-to. */}
-      <CanvasHint>{`${t('family.hint')} · ${Math.round(zoom * 100)}%`}</CanvasHint>
-      <AddMemberButton onPress={onAddMember} />
+      {/* The prototype's readout: the current zoom beside the how-to. In
+          edit mode the how-to changes job — it teaches the selection step. */}
+      <CanvasHint>
+        {editing
+          ? selectedId === null
+            ? t('family.editHint')
+            : t('family.editHintSlot')
+          : `${t('family.hint')} · ${Math.round(zoom * 100)}%`}
+      </CanvasHint>
+      <EditToggleButton editing={editing} onPress={onToggleEditing} />
     </View>
   );
 }
