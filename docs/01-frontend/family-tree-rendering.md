@@ -74,63 +74,57 @@ Rows are then whatever depths actually contain someone, sorted, and
 labelled `GEN 1..n` **by index, not by depth** — so gaps in depth do not
 produce empty rows or skipped labels.
 
-## Horizontal placement: family-unit blocks (2026-08-27)
+## Horizontal placement: the prototype's replay (2026-08-31)
 
-Even spacing by API order was replaced the day this document was written —
-it split couples, swept arcs behind strangers' faces, and let crowded rows
-overlap (the original sins are recorded in this file's git history).
-`layoutTree` now arranges **blocks**, not individuals:
+This is the third scheme, and each replaced the previous for a recorded
+reason. Even spacing by API order split couples and let rows overlap
+(2026-08-27, this file's git history). The **family-unit block layout**
+that replaced it (welding couples into blocks, hanging child blocks off
+parents, bounding boxes bottom-up, parents centred over children —
+`tree-blocks.ts`, now deleted, readable at commit `2ccbe13`) guaranteed
+straight descents and no overlaps, but recomputed the whole arrangement
+from structure on every payload: one addition could re-seat many people,
+and the composition never matched the owner's prototype, which nobody
+ever re-arranges. Replaced 2026-08-31 (owner's call) with what the
+prototype actually does:
 
-1. **Weld partners into blocks.** A couple is one block and can never be
-   separated by payload order; a remarriage (A–B, A–C on one row) chains
-   into a single block with the shared person between the arcs.
-2. **Hang child blocks off their parents' block** (ownership goes to the
-   first parent with a known block, and only when that parent's row is
-   above — malformed data cannot recurse). A block with no parents but a
-   **sibling that has a place adopts that sibling's owner** and is placed
-   right beside them — siblings share parents even when the data has not
-   said whose, and without this a sibling-only member trailed off to the
-   side as a stray root and the whole composition leaned instead of
-   centring.
-3. **Reserve bounding boxes bottom-up**: a block's extent is
-   `max(own span, Σ children extents + gaps)`, so neighbouring branches
-   cannot overlap by construction.
-4. **Place top-down**: children side by side, parents centred over their
-   children's actual spread — descents drop straight instead of sweeping.
-5. **A crowded row widens the WORLD, not the spacing.** The canvas is a
-   pan/zoom surface; `layoutTree` returns its own `width`, the world can
-   exceed the viewport, and the view opens (and recenters) at a **fit
-   scale** so nothing is cropped. Trees narrower than the viewport sit
-   centred, as before.
+The prototype gives each person a spot **when they are added** and then
+keeps it: `findFreeX` scans outward from a suggested x until the row has
+room, `findPairX` seats a completed parent-pair over their child (mother
+left when the genders say so), and after every addition each row shifts so
+its mean sits on the tree's centre axis — balance without anybody moving
+relative to their neighbours. The app cannot store an x (the server sends
+members and edges only), so **`tree-placement.ts` replays that history**:
+the payload lists members in join order (`data.order`, from the server's
+`joinedAt asc`), and walking them through the same rules yields the same
+coordinates every time. Adding a member appends to the order, so everyone
+already placed replays to the spot they already had — **the layout is
+stable by construction**.
 
-Pitches: 118px centre-to-centre inside a couple, 152px minimum across
-blocks, 172px between rows, 96px edge margins (`tree-layout.ts`; loosened
-from 104/128/150/72 on 2026-08-28 — owner's call, the labels sat
-edge-to-edge inside a couple). The pan may also rest 72px past "content
-flush" on every side (`PAN_MARGIN`, `family-tree.tsx`, same day): without
-it a tree that fits the viewport could not be dragged at all, and a border
-node was pinned against the frame. **Siblings order oldest to
-youngest, left to right** (2026-08-27): the tree payload now carries each
-member's Life Profile `birthDate`, and the sort key is the block's ANCHOR
-— the child of the couple above, never the partner who married in — so a
-young spouse cannot drag an eldest sibling rightward. Members without a
-date keep arrival order, after everyone dated.
+Suggestions per case, in the order tried: a parent arriving to a partner
+who already stands over their child re-seats BOTH as a pair centred on the
+child; a spouse sits one couple-pitch beside their partner on whichever
+side is free (the prototype's `rightFree` check — without it a sibling to
+the right pushed the spouse past them and the arc swept behind a face); a
+child starts under their parents' joint, nudged by the sibling rule; a
+sibling-only member starts beside their placed sibling; a root starts on
+the axis.
 
-The arrangement rules live in their own module, **`tree-blocks.ts`**, one
-exported function per rule so a new rule is a new function in the
-pipeline, not a bigger loop: `buildBlocks` (welding), `assignOwners`
-(hanging: parentage, then sibling adoption), `orderChildren` (age),
-`interleaveAdopted` (balance). `tree-layout.ts` keeps only pixels:
-extents, placement, normalising, the unplaced strip, and the SVG path
-helpers.
+Pitches: **204px** centre-to-centre inside a couple (the prototype's 258
+scaled to our 60px nodes — the long arc with the joint dot is the look),
+135px `findFreeX` scan step, 120px minimum clearance (the prototype's 110,
+raised because our name labels are 104px wide), **212px between rows** (the
+prototype's 270, scaled), 96px edge margins. The pan may rest 72px past
+"content flush" on every side (`PAN_MARGIN`, `family-tree.tsx`,
+2026-08-28). A crowded row still **widens the WORLD, not the spacing** —
+the placement is axis-centred, `layoutTree` measures its extent, and the
+view opens at fit scale.
 
-**Balance** (2026-08-27, "vẽ kiểu xen kẽ và căn giữa"): sibling-adopted
-blocks have no thread, and piled to one side they dragged the parents'
-centring away from the children the threads DO reach — grandparents sat
-askew of the parents below. Adopted blocks now alternate left and right
-around the thread-connected core, and the parents centre over the CORE
-(clamped inside the subtree's reserved box), so the grandparents stand
-straight above the parents and the descent drops vertically.
+**Siblings order oldest to youngest, left to right** (2026-08-27) survives
+as a _bias_, not a sort: someone younger than every placed sibling starts
+looking for a spot to their right, someone older to their left, and
+`findFreeX` has the final word. Members without a date arrive to the
+right, after everyone (arrival order).
 
 **A partner is auto-joined to their spouse's children** (2026-08-27, "no
 'their children' vs 'our children'"): a child with ONE known parent whose
@@ -138,11 +132,13 @@ parent has a partner hangs from the couple's joint, partner included —
 a drawing rule in `buildDescents`; the database still records only the
 edges people actually created.
 
-It is deliberately a bounding-box tidy-up, not Reingold–Tilford: family
-graphs are not strict trees (two roots marry; a child's parents may not be
-a couple), and contour bookkeeping only earns its complexity once bounding
-boxes visibly waste space. `architecture.md` keeps d3-hierarchy as the
-eventual step if that day comes.
+The recorded trade (both directions honest): the block layout guaranteed a
+parent geometrically centred over the spread of their children forever;
+the replay guarantees it at the moment the pair is seated and lets the
+composition settle organically afterwards, exactly like the prototype. In
+exchange, adding a person moves nobody else sideways — rows only glide as
+a group when their mean shifts — which is what makes the tree feel like a
+place rather than a diagram that keeps redrawing itself.
 
 ## Threads
 
@@ -150,14 +146,48 @@ All strokes live in one SVG layer under the nodes (`tree-threads.tsx`):
 
 - **Couple arc** — a shallow quadratic from avatar edge to avatar edge
   (never under a face), with a small coral **joint** dot at the midpoint,
-  6px below the row line.
+  10px below the row line (numbers rescaled 2026-08-31 to the prototype's
+  proportions: sag 16, dot r4, and the 204px pitch gives the arc its
+  length).
 - **Descent** — one cubic bezier from the joint down into the top edge of
-  the child's avatar. Dashed while the child is `pending`.
-- **Two parents who are not a couple** get **two separate straight
-  drops**, one from each parent — the app knows both are parents and does
-  not know they are a couple, and drawing the arc would invent a marriage.
-- **One known parent** — the joint collapses onto that parent (the pair is
-  the same id twice) and the thread is a straight drop.
+  the child's avatar, both control points near the top so the thread falls
+  and flares late (the prototype's shape). Dashed while the child is
+  `pending`.
+- **A single known parent's thread** is the prototype's other curve: an
+  S-bend from the parent's own chin with controls near each end
+  (`singleDescentPath`), so a drop to an offset child flows instead of
+  kinking.
+- **Two co-parents of the same child are DRAWN as a couple** even with no
+  SPOUSE edge between them (2026-08-28, owner's report: an added
+  grandmother + grandfather each got their own line stuck straight into the
+  child instead of "connect, then descend" — and two placeholders can never
+  be given a spouse edge in the UI, so that was every added-parents pair).
+  Same contract as the partner auto-join: the drawing infers, the database
+  records only edges people created. Skipped when either co-parent already
+  has a real partner — nobody is welded into two couples — and then:
+- **Two parents who are not (and cannot be inferred as) a couple** get
+  **two separate single-parent threads**, one from each parent.
+- **One known parent** — the descent carries the same id twice and the
+  drawing switches to the single-parent S-curve above.
+
+One consequence named on purpose: an inferred couple hides both people's
+"add partner" slot in edit mode, since the slots read the same drawn
+couples list — consistent with what the canvas shows.
+
+## The opening draw-on: built and removed the same day (2026-08-31)
+
+The prototype opens by _drawing itself_ — generations popping in 1.05s
+apart, arcs and descents drawing between them in equal 550ms strokes
+(dash-to-measured-length, since react-native-svg has no `pathLength`). It
+was built faithfully and **removed the same day at the owner's call**:
+on a real tree the choreography costs three-plus seconds before the last
+row exists, every open, and the tree is a navigation surface — "thấy mất
+thời gian quá". The implementation is in this branch's history if a
+one-time variant (first launch, empty-to-first-member) is ever wanted.
+What the canvas keeps: new nodes spring in, new threads fade in on the
+relayout slide's tail, and edit-mode slots pop — shortened the same day
+(0.75→1, damping 17/420, `tree-slot-marker.tsx`) because four slots doing
+the full new-person bounce at once read as fussy.
 
 ## What happens when a new person is added, today
 
@@ -250,21 +280,22 @@ not cropped.
 
 ## When the tree grows — what remains on the table
 
-Done 2026-08-27 (this branch): family-unit blocks, children centred under
-parents, min spacing with a wider world + fit-to-view, the unplaced strip,
-and sibling parent-edge inference. Still open, roughly by cost:
+Done 2026-08-27: min spacing with a wider world + fit-to-view, the
+unplaced strip, sibling parent-edge inference. Done 2026-08-28: edit-mode
+slots ("add here" on the canvas) and the relayout slide/morph
+(`use-animated-tree-layout.ts`). Done 2026-08-31: the prototype-replay
+placement (the opening draw-on was tried and removed — section above).
 
-1. **Computed layout — `d3-hierarchy` or hand-rolled Reingold–Tilford**
-   (expensive): contour-based x placement wastes less width than bounding
-   boxes on staggered trees. Family graphs are not strict trees, so naive
-   tidy-tree needs adaptation. Only worth it when bounding boxes visibly
-   waste space.
-2. ~~**Explicit spot picking** ("add here" on the canvas)~~ — built
-   2026-08-28 as edit mode's slots (section above); the relayout slide/morph
-   followed the same day (`use-animated-tree-layout.ts`).
+Still open: **a computed layout** (`d3-hierarchy` or hand-rolled
+Reingold–Tilford) remains the eventual step if a tree ever needs
+structure-perfect geometry — family graphs are not strict trees, so naive
+tidy-tree needs adaptation, and it would trade away the replay's stability;
+only worth it if organic settling visibly fails on a real family.
 
 Known gaps, accepted for now: the everyone-shifts-down parent insert (a
-new grandparent relabels every generation); a child whose two parents sit
-in DIFFERENT blocks hangs under the first parent and its second thread may
-cross; a sibling created by a non-invite path without parent edges still
-floats unconnected.
+new grandparent relabels every generation); a parent stands exactly over
+their children only at the moment the pair is seated — later additions
+settle around them rather than re-centring anybody; threads may cross on a
+genuinely tangled graph (a child's two parents seated far apart); a
+sibling created by a non-invite path without parent edges still floats
+unconnected.

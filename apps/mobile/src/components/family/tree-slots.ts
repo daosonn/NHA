@@ -15,11 +15,13 @@
 
 import {
   COUPLE_PITCH,
+  FREE_STEP,
   NODE_SIZE,
   ROW_GAP,
   coupleJoint,
   couplePath,
   descentPath,
+  singleDescentPath,
   type FamilyTreeData,
   type PositionedNode,
   type TreeLayout,
@@ -37,22 +39,24 @@ export type TreeSlot = {
 };
 
 /** Horizontal offset of the two parent slots when no parent is drawn yet —
- *  wide enough that their labels read apart (owner's call 2026-08-28). */
-const PARENT_SPREAD = 95;
+ *  half the couple pitch, so the preview stands where the pair will seat. */
+const PARENT_SPREAD = COUPLE_PITCH / 2;
 /** A slot may not rise above the canvas — clamp like the prototype's `max(60, y)`. */
 const MIN_Y = 40;
-/** Two centres closer than this on a row count as "that spot is taken". */
-const CLEARANCE = 110;
+/** Two centres closer than this on a row count as "that spot is taken" —
+ *  the placement's own clearance (`tree-placement.ts`). */
+const CLEARANCE = 120;
 
 /** Just enough of a node for the path helpers, which read x/y/size only. */
 function ghostAt(x: number, y: number): PositionedNode {
   return { id: 'slot', state: 'empty', x, y, size: NODE_SIZE };
 }
 
-/** Nearest free x on a row, scanning outward from the preferred spot. */
+/** Nearest free x on a row — the placement's own scan (`FREE_STEP`), so the
+ *  slot stands where the person will actually land. */
 function findFreeX(layout: TreeLayout, y: number, preferred: number): number {
   const row = [...layout.nodes.values()].filter((node) => Math.abs(node.y - y) < 1);
-  const candidates = [0, 1, -1, 2, -2, 3, -3].map((step) => preferred + step * COUPLE_PITCH);
+  const candidates = [0, 1, -1, 2, -2, 3, -3].map((step) => preferred + step * FREE_STEP);
   for (const x of candidates) {
     if (!row.some((node) => Math.abs(node.x - x) < CLEARANCE)) return x;
   }
@@ -85,12 +89,12 @@ export function slotsFor(data: FamilyTreeData, layout: TreeLayout, selectedId: s
     const y = Math.max(MIN_Y, sel.y - ROW_GAP);
     for (const kind of ['mother', 'father'] as const) {
       const x = sel.x + (kind === 'mother' ? -PARENT_SPREAD : PARENT_SPREAD);
-      // A lone parent's thread is a straight drop from their own chin.
+      // A lone parent's thread is the S-curve from their own chin.
       slots.push({
         kind,
         x,
         y,
-        paths: [descentPath(coupleJoint(ghostAt(x, y), ghostAt(x, y)), sel)],
+        paths: [singleDescentPath(ghostAt(x, y), sel)],
       });
     }
   } else if (parents.length === 1) {
@@ -122,7 +126,7 @@ export function slotsFor(data: FamilyTreeData, layout: TreeLayout, selectedId: s
       y,
       paths: [
         partner === undefined
-          ? descentPath(coupleJoint(sel, sel), ghost)
+          ? singleDescentPath(sel, ghost)
           : descentPath(coupleJoint(sel, partner), ghost),
       ],
     });

@@ -6,18 +6,15 @@
  * are computed from the measured width instead, so the tree holds together
  * from an iPhone Mini to a Pro Max.
  *
- * Layout is still *authored* — generations and couples come from the data. A
- * computed layout (`d3-hierarchy`, per architecture.md) only becomes worth its
- * weight once trees are deep and irregular enough to be hand-placed badly.
+ * Rows come from generations; x comes from `tree-placement.ts`, which replays
+ * the prototype's add-one-at-a-time placement over the member order. This
+ * file keeps only pixels: rows, normalising, the unplaced strip, and the SVG
+ * path helpers.
  */
 
-import {
-  assignOwners,
-  buildBlocks,
-  interleaveAdopted,
-  orderChildren,
-  type Block,
-} from './tree-blocks';
+import { COUPLE_PITCH, FREE_STEP, placeMembers } from './tree-placement';
+
+export { COUPLE_PITCH, FREE_STEP };
 
 export type NodeState = 'active' | 'pending' | 'empty';
 
@@ -61,17 +58,25 @@ export type FamilyTreeData = {
   siblings: [string, string][];
   /** A couple's joint down to a child. */
   descents: { from: [string, string]; to: string }[];
+  /**
+   * Every member id in the order they joined the family — the placement
+   * replay walks it so each person keeps the spot they were given the day
+   * they were added (`tree-placement.ts`).
+   */
+  order: string[];
 };
 
 /** Standard node diameter. The viewer is larger so it reads first. */
 export const NODE_SIZE = 60;
 export const VIEWER_NODE_SIZE = 68;
 
-// Spacing loosened 2026-08-28 (owner's call: "tách các node ra xa xíu cho
-// dễ nhìn") — the first numbers packed labels edge-to-edge inside a couple.
 const FIRST_ROW_Y = 64;
-/** Exported for the edit-mode slots, which sit one row above/below a node. */
-export const ROW_GAP = 172;
+/**
+ * Row pitch, the prototype's 270 scaled to our 60px nodes (2026-08-31; the
+ * wide couples want the taller descent — 172 read squat under a 204 pair).
+ * Exported for the edit-mode slots, which sit one row above/below a node.
+ */
+export const ROW_GAP = 212;
 /** Space under each node for the name and relationship labels. */
 const LABEL_BLOCK = 52;
 
@@ -95,32 +100,20 @@ export type TreeLayout = {
   width: number;
 };
 
-/** Centre-to-centre inside a couple block — close enough for the arc to read. */
-export const COUPLE_PITCH = 118;
-/** Minimum centre-to-centre across neighbouring blocks — room for two labels. */
-const BLOCK_PITCH = 152;
 /** First and last node centre to the world's edge. */
 const EDGE_MARGIN = 96;
 
 /**
- * Family-unit layout (2026-08-27, replacing even spacing by API order —
- * `family-tree-rendering.md` records what that got wrong):
+ * Prototype-replay layout (2026-08-31, replacing the family-unit block
+ * layout of 2026-08-27 — `family-tree-rendering.md` records both):
  *
- * 1. Partners are welded into blocks, so a couple can never be split by
- *    whoever happened to sit between them in the payload.
- * 2. A child's block hangs off its parents' block, and parents are centred
- *    over the spread of their children — descents drop straight instead of
- *    sweeping across the row.
- * 3. Every block reserves its subtree's width, so neighbouring branches can
- *    never overlap, and a crowded row widens the WORLD rather than
- *    compressing nodes into each other — the canvas pans, the layout does
- *    not squeeze.
- *
- * It is deliberately a bounding-box tidy-up, not Reingold–Tilford: family
- * graphs are not strict trees (two roots marry; a child's parents may not
- * be a couple), and the contour bookkeeping only earns its complexity once
- * bounding boxes visibly waste space. `architecture.md` keeps d3-hierarchy
- * as the eventual step.
+ * 1. Rows are generations, top-down — unchanged.
+ * 2. x replays the prototype's placement per member in join order
+ *    (`tree-placement.ts`): a spot is found once and kept, pairs seat over
+ *    their child, and every row balances around a centre axis.
+ * 3. A crowded row still widens the WORLD, not the spacing: the placement is
+ *    axis-centred, this function measures its extent and gives the world
+ *    that much room. The canvas pans; the layout does not squeeze.
  */
 export function layoutTree(
   data: FamilyTreeData,
@@ -136,71 +129,16 @@ export function layoutTree(
   const rows: PositionedRow[] = [];
   const firstRowY = FIRST_ROW_Y + topGutter;
 
-  // ---- arrangement: weld, hang, order, balance — see tree-blocks.ts ----
-  const { blocks, blockOf } = buildBlocks(data);
-  assignOwners(data, blocks, blockOf);
-  orderChildren(data, blocks);
-  interleaveAdopted(blocks);
-
-  // ---- widths, bottom-up: a subtree reserves its bounding box ----------
-  const extents = new Map<Block, number>();
-  const extentOf = (block: Block): number => {
-    const cached = extents.get(block);
-    if (cached !== undefined) return cached;
-    const own = (block.ids.length - 1) * COUPLE_PITCH;
-    const children = block.children.reduce(
-      (sum, child, index) => sum + extentOf(child) + (index > 0 ? BLOCK_PITCH : 0),
-      0,
-    );
-    const extent = Math.max(own, block.children.length > 0 ? children : 0);
-    extents.set(block, extent);
-    return extent;
-  };
-
-  // ---- placement, top-down ----------------------------------------------
-  const place = (block: Block, left: number): void => {
-    if (block.children.length > 0) {
-      // Children first, side by side; parents then centre over the
-      // thread-connected CORE (the interleave rule keeps it in the middle),
-      // so the descent drops straight down. Adopted-only children fall back
-      // to the whole spread — there is no thread to line up with.
-      let cursor = left;
-      for (const child of block.children) {
-        place(child, cursor);
-        cursor += extentOf(child) + BLOCK_PITCH;
-      }
-      const core = block.children.filter((child) => child.ownedVia === 'parent');
-      const span = core.length > 0 ? core : block.children;
-      const first = span[0];
-      const last = span[span.length - 1];
-      const mid = (first.firstX + last.lastX) / 2;
-      const own = (block.ids.length - 1) * COUPLE_PITCH;
-      // Clamped inside the subtree's reserved box: an off-centre core must
-      // not push the parents into the neighbouring branch's space.
-      block.firstX = Math.min(left + extentOf(block) - own, Math.max(left, mid - own / 2));
-    } else {
-      block.firstX = left;
-    }
-    block.lastX = block.firstX + (block.ids.length - 1) * COUPLE_PITCH;
-  };
-
-  // Roots side by side: the main tree first, then any stray ownerless
-  // branch, each keeping its whole bounding box.
-  let cursor = 0;
-  for (const block of blocks) {
-    if (block.owner !== null) continue;
-    place(block, cursor);
-    cursor += extentOf(block) + BLOCK_PITCH;
-  }
+  const xs = placeMembers(data);
 
   // ---- normalise into world coordinates --------------------------------
   let minX = Infinity;
   let maxX = -Infinity;
-  for (const block of blocks) {
-    minX = Math.min(minX, block.firstX);
-    maxX = Math.max(maxX, block.lastX);
+  for (const x of xs.values()) {
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
   }
-  if (blocks.length === 0) {
+  if (xs.size === 0) {
     minX = 0;
     maxX = 0;
   }
@@ -214,12 +152,11 @@ export function layoutTree(
     const y = firstRowY + row * ROW_GAP;
     rows.push({ id: generation.id, label: generation.label, y });
     for (const member of generation.members) {
-      const block = blockOf.get(member.id);
-      if (block === undefined) continue;
-      const index = block.ids.indexOf(member.id);
+      const x = xs.get(member.id);
+      if (x === undefined) continue;
       nodes.set(member.id, {
         ...member,
-        x: block.firstX + index * COUPLE_PITCH + shift,
+        x: x + shift,
         y,
         size: member.isViewer === true ? VIEWER_NODE_SIZE : NODE_SIZE,
       });
@@ -248,12 +185,14 @@ export function layoutTree(
 
 /** Where a couple's two threads meet, and the descent leaves from. */
 export function coupleJoint(a: PositionedNode, b: PositionedNode) {
-  return { x: (a.x + b.x) / 2, y: a.y + 6 };
+  return { x: (a.x + b.x) / 2, y: a.y + 10 };
 }
 
 /**
  * A shallow arc between partners. It leaves the edge of each avatar rather
- * than its centre so the stroke never runs underneath a face.
+ * than its centre so the stroke never runs underneath a face. The sag is the
+ * prototype's 18, scaled to our nodes — with the 204 pitch the arc finally
+ * has the length to read as the prototype's swoop.
  */
 export function couplePath(a: PositionedNode, b: PositionedNode): string {
   const left = a.x < b.x ? a : b;
@@ -263,17 +202,33 @@ export function couplePath(a: PositionedNode, b: PositionedNode): string {
   const endX = right.x - right.size / 2 - gap;
   const midX = (a.x + b.x) / 2;
 
-  return `M${startX} ${left.y} Q${midX} ${left.y + 12} ${endX} ${right.y}`;
+  return `M${startX} ${left.y} Q${midX} ${left.y + 16} ${endX} ${right.y}`;
 }
 
 /**
  * One continuous bezier from the couple's joint into the top edge of the
- * child — never a right-angle branch line (design-system.md).
+ * child — never a right-angle branch line (design-system.md). Both control
+ * points sit near the TOP (the prototype's 72/92 of a 252 drop): the thread
+ * falls from the joint and flares out late toward the child.
  */
 export function descentPath(joint: { x: number; y: number }, child: PositionedNode): string {
   const startY = joint.y + 1;
   const endY = child.y - child.size / 2 - 4;
   const span = endY - startY;
 
-  return `M${joint.x} ${startY} C${joint.x} ${startY + span * 0.4} ${child.x} ${startY + span * 0.42} ${child.x} ${endY}`;
+  return `M${joint.x} ${startY} C${joint.x} ${startY + span * 0.3} ${child.x} ${startY + span * 0.38} ${child.x} ${endY}`;
+}
+
+/**
+ * A lone parent's thread — the prototype's other descent: an S-curve whose
+ * controls sit symmetrically near each end, so a drop to an offset child
+ * flows instead of kinking. Starts at the parent's centre (hidden behind
+ * their avatar, like the prototype's) and enters the child's top edge.
+ */
+export function singleDescentPath(parent: PositionedNode, child: PositionedNode): string {
+  const startY = parent.y;
+  const endY = child.y - child.size / 2 - 4;
+  const bend = (endY - startY) * 0.32;
+
+  return `M${parent.x} ${startY} C${parent.x} ${startY + bend} ${child.x} ${endY - bend} ${child.x} ${endY}`;
 }

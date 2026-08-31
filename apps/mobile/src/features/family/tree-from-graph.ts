@@ -82,6 +82,26 @@ export function treeFromGraph(tree: FamilyTree, options: TreeFromGraphOptions): 
     .filter((edge) => edge.type === 'SPOUSE')
     .map((edge): [string, string] => [edge.fromMemberId, edge.toMemberId]);
 
+  /**
+   * Two people who parent the same child are DRAWN as a couple — arc, joint,
+   * one thread down — even when nobody recorded a SPOUSE edge between them
+   * (owner's report 2026-08-28: adding a grandmother and grandfather through
+   * the edit-mode slots gave each their own line stuck straight into the
+   * child, "hai cái dính vào chứ không kết nối rồi sinh ra"; two
+   * placeholders can never be given a spouse edge in the UI, so this was
+   * every added-parents pair). Same rule as the partner auto-join over
+   * children below: the DRAWING infers, the database still records only the
+   * edges people actually created. Someone already partnered is skipped —
+   * one person cannot be welded into two couple blocks.
+   */
+  const isPartnered = (id: string) => spousePairs.some(([a, b]) => a === id || b === id);
+  for (const parents of parentsOf.values()) {
+    if (parents.length !== 2) continue;
+    const [a, b] = parents;
+    if (a === b || isPartnered(a) || isPartnered(b)) continue;
+    spousePairs.push([a, b]);
+  }
+
   const siblingPairs = edges
     .filter((edge) => edge.type === 'SIBLING')
     .map((edge): [string, string] => [edge.fromMemberId, edge.toMemberId]);
@@ -139,6 +159,10 @@ export function treeFromGraph(tree: FamilyTree, options: TreeFromGraphOptions): 
     couples: spousePairs.map((members) => ({ members })),
     siblings: siblingPairs,
     descents: buildDescents(parentsOf, spousePairs),
+    // The server orders members by joinedAt, so this IS the order people were
+    // added — the replay in tree-placement.ts walks it to give everyone the
+    // spot they were given the day they arrived.
+    order: tree.members.map((member) => member.id),
   };
 }
 
@@ -231,7 +255,10 @@ function levelSideways(
  * - **Two parents who are partners** — the joint sits on their arc.
  * - **Two parents with no spouse edge between them** — each parent gets a
  *   thread of its own; hanging the thread off the midpoint of two unrelated
- *   nodes made it appear from empty space.
+ *   nodes made it appear from empty space. Since 2026-08-28 this case is
+ *   rare: co-parents of the same child are inferred into `spousePairs`
+ *   upstream, so it remains only for a third parent or someone whose real
+ *   partner is elsewhere in the tree.
  */
 function buildDescents(
   parentsOf: Map<string, string[]>,

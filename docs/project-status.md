@@ -28,6 +28,35 @@ screens.
 
 ## Current Focus
 
+- **The tree draws like the prototype now (2026-08-31,
+  `feature/tree-layout-units`).** Two changes kept of three tried, all
+  pulling `family-tree-canvas.html` and the app together (owner's call
+  after reviewing the deltas):
+  - **Placement is the prototype's replay, not blocks.** `tree-blocks.ts`
+    (2026-08-27's family-unit layout) is deleted; `tree-placement.ts`
+    replays the prototype's add-one-at-a-time rules over the payload's
+    join order (`findFreeX`, `findPairX` seating a parent-pair over their
+    child mother-left, spouse beside partner on the free side, rows
+    balanced around a centre axis). Stable by construction: adding someone
+    moves nobody else sideways — verified by simulation (max relative
+    displacement 0). Oldest-left sibling rule survives as a bias.
+    Recorded trade in `family-tree-rendering.md` § Horizontal placement.
+  - **Thread shapes match the prototype**: couple pitch 118→204 (258 scaled
+    to 60px nodes), rows 172→212, arc sag 16 with a bigger joint dot,
+    descents with both controls near the top, and a lone parent's thread is
+    the prototype's S-curve (`singleDescentPath`).
+  - **The opening draw-on was built and removed the same day** (owner's
+    call: three-plus seconds of choreography on every open of a navigation
+    surface — "thấy mất thời gian quá"; the implementation stays in branch
+    history if a first-launch-only variant is ever wanted). The edit-mode
+    slot pop was shortened in the same pass (0.75→1, damping 17/420 —
+    four slots doing the full new-person bounce at once read as fussy;
+    "ngắn hơn nhưng vẫn hay").
+
+  Verified: mobile tsc, prettier, check:i18n (828 keys), and a node
+  simulation of the placement (6 scenarios); not yet watched in a
+  browser, and nothing tapped through on a device.
+
 - **The tree adds people by tapping the spot now (2026-08-28,
   `feature/tree-layout-units`).** Per the owner's prototype
   `apps/mobile/src/family-tree-canvas.html`: the canvas's add button became
@@ -57,7 +86,11 @@ screens.
   gives the world a 96px top gutter (rides the slide; refit ignores it, so
   the pencil never resets pan/zoom) — a top-row person's add-mother/father
   slots were clamping onto their face — and the two parent slots spread
-  ±95px. Verified: api build+lint, mobile
+  ±95px. And **co-parents draw as a couple** (2026-08-28): two people
+  parenting the same child get the arc + joint + one descent even with no
+  SPOUSE edge recorded (two placeholders can never be given one), same
+  drawing-only contract as the partner auto-join; skipped when either has a
+  real partner. Detail in `family-tree-rendering.md` § Threads. Verified: api build+lint, mobile
   tsc, check:i18n (828 keys), prettier on touched files; not yet tapped
   through on a device or browser.
 
