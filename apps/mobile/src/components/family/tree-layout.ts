@@ -205,13 +205,226 @@ export function layoutTree(
     block.lastX = block.firstX + (block.ids.length - 1) * COUPLE_PITCH;
   };
 
-  // Roots side by side: the main tree first, then any stray ownerless
-  // branch, each keeping its whole bounding box.
-  let cursor = 0;
+  // ---- in-law roots dock over their child, not beside the tree ---------
+  // A couple hangs under ONE side's parents (`assignOwners`); the other
+  // side's parents own nothing, so they used to be placed as a stray root
+  // at the tree's right edge with a long slanted thread back to their
+  // child. They now dock above the partner they parent (owner's call
+  // 2026-08-31: "phải căn chỉnh sao cho 2 bên đối xứng" — both families
+  // symmetric around the couple).
+  const dockings: { root: Block; couple: Block; childId: string }[] = [];
+  const docked = new Set<Block>();
   for (const block of blocks) {
-    if (block.owner !== null) continue;
-    place(block, cursor);
-    cursor += extentOf(block) + BLOCK_PITCH;
+    if (block.owner !== null || block.children.length > 0) continue;
+    const descent = data.descents.find(({ from, to }) => {
+      if (!from.some((id) => block.ids.includes(id))) return false;
+      const child = blockOf.get(to);
+      return (
+        child !== undefined &&
+        child !== block &&
+        child.owner !== null &&
+        child.owner !== block &&
+        child.owner.row === block.row &&
+        child.row === block.row + 1
+      );
+    });
+    if (descent === undefined) continue;
+    dockings.push({ root: block, couple: blockOf.get(descent.to) as Block, childId: descent.to });
+    docked.add(block);
+  }
+
+  /** In-law roots the untangler has told to seat on the couple's other side. */
+  const flipped = new Set<Block>();
+
+  /**
+   * The whole placement, re-runnable: roots side by side (the main tree
+   * first, then any stray ownerless branch, each keeping its bounding box),
+   * then the in-law blocks seated around their couple. The untangler below
+   * re-runs this after every adjustment it tries.
+   */
+  const placeAll = () => {
+    let cursor = 0;
+    for (const block of blocks) {
+      if (block.owner !== null || docked.has(block)) continue;
+      place(block, cursor);
+      cursor += extentOf(block) + BLOCK_PITCH;
+    }
+
+    const pending = new Set(dockings.map(({ root }) => root));
+    for (const { root, couple, childId } of dockings) {
+      const own = (root.ids.length - 1) * COUPLE_PITCH;
+      const owner = couple.owner as Block;
+      const coupleMid = (couple.firstX + couple.lastX) / 2;
+      const childX = couple.firstX + couple.ids.indexOf(childId) * COUPLE_PITCH;
+      const naturalRight = childX >= coupleMid;
+      const rootRight = flipped.has(root) ? !naturalRight : naturalRight;
+
+      const ownerIsLoneCouple =
+        owner.owner === null && owner.children.length === 1 && owner.children[0] === couple;
+      if (ownerIsLoneCouple) {
+        // The symmetric H: both parent blocks side by side, centred over the
+        // couple, each above their own child — descents mirror each other.
+        const ownerOwn = (owner.ids.length - 1) * COUPLE_PITCH;
+        const left = coupleMid - (ownerOwn + BLOCK_PITCH + own) / 2;
+        owner.firstX = rootRight ? left : left + own + BLOCK_PITCH;
+        root.firstX = rootRight ? left + ownerOwn + BLOCK_PITCH : left;
+        owner.lastX = owner.firstX + ownerOwn;
+        root.lastX = root.firstX + own;
+      } else {
+        // The owner side carries a wider subtree (siblings, grandparents):
+        // best effort — straight above their own child (mirrored about the
+        // couple when flipped), stepped outward until the row has room.
+        const mates = blocks.filter(
+          (other) => other !== root && other.row === root.row && !pending.has(other),
+        );
+        let firstX = (flipped.has(root) ? 2 * coupleMid - childX : childX) - own / 2;
+        const overlaps = (fx: number) =>
+          mates.some(
+            (other) => fx - BLOCK_PITCH < other.lastX && fx + own + BLOCK_PITCH > other.firstX,
+          );
+        const step = (rootRight ? 1 : -1) * BLOCK_PITCH;
+        for (let guard = 0; overlaps(firstX) && guard < 40; guard++) firstX += step;
+        root.firstX = firstX;
+        root.lastX = firstX + own;
+      }
+      pending.delete(root);
+    }
+  };
+  placeAll();
+
+  // ---- no two threads may cross (owner, 2026-08-31) ----------------------
+  // "luôn luôn không có đường cắt nhau… nếu phát hiện cắt nhau thì tự điều
+  // chỉnh". The block structure already prevents most crossings; what
+  // remains (a child whose parents live in different blocks, a docked
+  // in-law squeezed past a sibling) is DETECTED on straight-line proxies of
+  // the descents and fixed by swapping the two subtrees at their point of
+  // divergence — or flipping a docked in-law to the couple's other side. An
+  // adjustment is kept only when the total number of crossings drops, so
+  // the pass cannot trade one crossing for two and always terminates. A
+  // genuinely non-planar family graph keeps its crossing — no flat drawing
+  // of it exists. Runs inside layoutTree, so adding OR removing a member
+  // re-establishes the invariant on the next layout.
+  type ThreadSegment = {
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    parent: Block;
+    child: Block;
+  };
+  const rowYOf = (row: number) => firstRowY + row * ROW_GAP;
+  const threadSegments = (): ThreadSegment[] => {
+    const segments: ThreadSegment[] = [];
+    for (const {
+      from: [a, b],
+      to,
+    } of data.descents) {
+      const parent = blockOf.get(a);
+      const partner = blockOf.get(b);
+      const child = blockOf.get(to);
+      if (parent === undefined || partner === undefined || child === undefined) continue;
+      const ax = parent.firstX + parent.ids.indexOf(a) * COUPLE_PITCH;
+      const bx = partner.firstX + partner.ids.indexOf(b) * COUPLE_PITCH;
+      const cx = child.firstX + child.ids.indexOf(to) * COUPLE_PITCH;
+      segments.push({
+        x1: (ax + bx) / 2,
+        y1: rowYOf(parent.row),
+        x2: cx,
+        y2: rowYOf(child.row),
+        parent,
+        child,
+      });
+    }
+    return segments;
+  };
+  const orient = (ox: number, oy: number, ax: number, ay: number, bx: number, by: number) =>
+    (ax - ox) * (by - oy) - (ay - oy) * (bx - ox);
+  /** Properly intersecting pairs — shared endpoints (one joint fanning out
+   *  to several children, two threads into one child) do not count. */
+  const crossings = (): [ThreadSegment, ThreadSegment][] => {
+    const segments = threadSegments();
+    const pairs: [ThreadSegment, ThreadSegment][] = [];
+    for (let i = 0; i < segments.length; i++) {
+      for (let j = i + 1; j < segments.length; j++) {
+        const s = segments[i];
+        const t = segments[j];
+        const d1 = orient(s.x1, s.y1, s.x2, s.y2, t.x1, t.y1);
+        const d2 = orient(s.x1, s.y1, s.x2, s.y2, t.x2, t.y2);
+        const d3 = orient(t.x1, t.y1, t.x2, t.y2, s.x1, s.y1);
+        const d4 = orient(t.x1, t.y1, t.x2, t.y2, s.x2, s.y2);
+        if (d1 * d2 < 0 && d3 * d4 < 0) pairs.push([s, t]);
+      }
+    }
+    return pairs;
+  };
+  /** Where two blocks' ancestries part ways — the swappable pair. */
+  const divergingAt = (
+    a: Block,
+    b: Block,
+  ): { common: Block; first: Block; second: Block } | null => {
+    const chainOf = (block: Block): Block[] => {
+      const list = [block];
+      for (let cursor = block; cursor.owner !== null; cursor = cursor.owner)
+        list.push(cursor.owner);
+      return list;
+    };
+    const chainA = chainOf(a);
+    const chainB = chainOf(b);
+    const inB = new Set(chainB);
+    const at = chainA.findIndex((block) => inB.has(block));
+    if (at <= 0) return null; // no common owner, or one contains the other
+    const common = chainA[at];
+    const second = chainB[chainB.indexOf(common) - 1];
+    if (second === undefined) return null;
+    return { common, first: chainA[at - 1], second };
+  };
+
+  const tried = new Set<string>();
+  let tangled = crossings();
+  for (let guard = 0; guard < 20 && tangled.length > 0; guard++) {
+    let acted = false;
+    for (const [s, t] of tangled) {
+      const swap = divergingAt(s.child, t.child);
+      if (swap !== null) {
+        const key = `swap:${[swap.first.anchorId, swap.second.anchorId].sort().join('|')}`;
+        const children = swap.common.children;
+        const i = children.indexOf(swap.first);
+        const j = children.indexOf(swap.second);
+        if (!tried.has(key) && i >= 0 && j >= 0) {
+          tried.add(key);
+          [children[i], children[j]] = [children[j], children[i]];
+          placeAll();
+          const after = crossings();
+          if (after.length < tangled.length) {
+            tangled = after;
+          } else {
+            [children[i], children[j]] = [children[j], children[i]];
+            placeAll();
+          }
+          acted = true;
+          break;
+        }
+      }
+      const dockedParent = [s.parent, t.parent].find((block) => docked.has(block));
+      if (dockedParent !== undefined) {
+        const key = `flip:${dockedParent.anchorId}`;
+        if (!tried.has(key)) {
+          tried.add(key);
+          flipped.add(dockedParent);
+          placeAll();
+          const after = crossings();
+          if (after.length < tangled.length) {
+            tangled = after;
+          } else {
+            flipped.delete(dockedParent);
+            placeAll();
+          }
+          acted = true;
+          break;
+        }
+      }
+    }
+    if (!acted) break;
   }
 
   // ---- normalise into world coordinates --------------------------------

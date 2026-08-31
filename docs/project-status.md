@@ -47,6 +47,24 @@ screens.
     118→204 (258 scaled to 60px nodes), rows 172→212, arc sag 16 with a
     bigger joint dot, descents with both controls near the top, and a lone
     parent's thread is the prototype's S-curve (`singleDescentPath`).
+  - **Both families sit symmetric around a couple** ("phải căn chỉnh sao
+    cho 2 bên đối xứng"): the spouse's parents used to land as a stray
+    root at the tree's right edge, thread slanting across. In-law blocks
+    now dock — two lone parent blocks centre side by side over the couple
+    (each above their own child, descents mirrored); against a wider
+    owning subtree they seat straight above their child, stepped outward
+    if the row is taken. Rule in `family-tree-rendering.md` § Horizontal
+    placement.
+  - **Threads never cross** ("luôn luôn không có đường cắt nhau… tự điều
+    chỉnh"): prevented structurally (bounding boxes; children grouped by
+    the joint they descend from, so a remarriage cannot cross at birth),
+    then DETECTED pairwise on straight-line proxies after placement, and
+    adjusted — swap the two subtrees at their divergence point, or flip a
+    docked in-law — keeping only changes that reduce the crossing count,
+    so the pass terminates. Runs inside `layoutTree`, so add/remove both
+    re-establish the invariant and the centring. Non-planar graphs keep
+    their unavoidable crossing. Rule in `family-tree-rendering.md`
+    § Horizontal placement.
   - **The opening draw-on was built and removed the same day** (owner's
     call: three-plus seconds of choreography on every open of a navigation
     surface — "thấy mất thời gian quá"; the implementation stays in branch
@@ -65,9 +83,10 @@ screens.
     fixed, detail in `family-tree-rendering.md` § Vertical placement.
     Verified: mobile tsc, prettier, check:i18n (828 keys), and node
     simulations (children grouped per family with no interleave, joints
-    landing exactly over their children, couple pitch 204, plus 3 depth
-    repros); not yet watched in a browser, and nothing tapped through on
-    a device.
+    landing exactly over their children, couple pitch 204, in-law H
+    symmetric to the pixel, remarriage and cross-block-parents cases at
+    zero crossings, plus 3 depth repros); not yet watched in a browser,
+    and nothing tapped through on a device.
 
 - **The tree adds people by tapping the spot now (2026-08-28,
   `feature/tree-layout-units`).** Per the owner's prototype

@@ -108,7 +108,39 @@ of them twice in a day:
       the children hugged the block's left edge and the joint hung 26px
       off the descent's landing — latent since 08-27, visible once
       couples got wide).
-   4. **A crowded row widens the WORLD, not the spacing** — the canvas
+   4. **In-law parents dock above their own child** (2026-08-31, owner:
+      "phải căn chỉnh sao cho 2 bên đối xứng"). A couple hangs under ONE
+      side's parents, so the other side's parents own nothing and used to
+      be dropped as a stray root at the tree's right edge, thread slanting
+      all the way back. Now: when the owning side is a lone parent block,
+      the two parent blocks stand side by side **centred over the couple**
+      — each above their own child, descents mirrored (the classic
+      nhà-nội/nhà-ngoại H). When the owning side carries a wider subtree,
+      the in-laws seat straight above their child, stepped outward until
+      the row has room.
+   5. **No two threads may cross** (2026-08-31, owner: "luôn luôn không có
+      đường cắt nhau… nếu phát hiện cắt nhau thì tự điều chỉnh"). Three
+      layers deep:
+      - _prevented_: the bounding boxes above make sibling branches
+        uncrossable, and `orderChildren` groups a block's children by the
+        JOINT they descend from before age — a remarried block `[B, A, C]`
+        has two joints, and age alone could seat a right-joint child left
+        of a left-joint child, crossing at birth;
+      - _detected_: after placement, every descent is checked pairwise for
+        proper intersection on straight-line proxies (shared endpoints —
+        one joint fanning out, two threads into one child — don't count);
+      - _adjusted_: a found crossing swaps the two subtrees at their point
+        of divergence, or flips a docked in-law to the couple's other
+        side; a change is kept only when the total crossing count DROPS,
+        so the pass cannot trade one crossing for two and always
+        terminates. A genuinely non-planar family graph keeps its crossing
+        — no flat drawing of it exists.
+
+      The pass lives inside `layoutTree`, which re-runs on every payload —
+      so adding or removing a member re-establishes the invariant (and the
+      centring rules, which every adjustment re-applies) automatically.
+
+   6. **A crowded row widens the WORLD, not the spacing** — the canvas
       pans, the view opens at fit scale.
 
 What survives of the replay experiment is the prototype's LOOK: **204px**
@@ -282,6 +314,7 @@ boxes visibly waste space.
 
 Known gaps, accepted for now: the everyone-shifts-down parent insert (a
 new grandparent relabels every generation); a child whose two parents sit
-in DIFFERENT blocks hangs under the first parent and its second thread may
-cross; a sibling created by a non-invite path without parent edges still
-floats unconnected.
+in DIFFERENT blocks hangs under the first parent — its second thread now
+gets untangled by the no-crossing pass where a swap can fix it, but a
+non-planar tangle keeps its crossing; a sibling created by a non-invite
+path without parent edges still floats unconnected.
