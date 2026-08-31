@@ -29,22 +29,24 @@ screens.
 ## Current Focus
 
 - **The tree draws like the prototype now (2026-08-31,
-  `feature/tree-layout-units`).** Two changes kept of three tried, all
-  pulling `family-tree-canvas.html` and the app together (owner's call
-  after reviewing the deltas):
-  - **Placement is the prototype's replay, not blocks.** `tree-blocks.ts`
-    (2026-08-27's family-unit layout) is deleted; `tree-placement.ts`
-    replays the prototype's add-one-at-a-time rules over the payload's
-    join order (`findFreeX`, `findPairX` seating a parent-pair over their
-    child mother-left, spouse beside partner on the free side, rows
-    balanced around a centre axis). Stable by construction: adding someone
-    moves nobody else sideways — verified by simulation (max relative
-    displacement 0). Oldest-left sibling rule survives as a bias.
-    Recorded trade in `family-tree-rendering.md` § Horizontal placement.
-  - **Thread shapes match the prototype**: couple pitch 118→204 (258 scaled
-    to 60px nodes), rows 172→212, arc sag 16 with a bigger joint dot,
-    descents with both controls near the top, and a lone parent's thread is
-    the prototype's S-curve (`singleDescentPath`).
+  `feature/tree-layout-units`).** A day of pulling
+  `family-tree-canvas.html` and the app together, with two experiments
+  tried and reversed the same day on the owner's calls:
+  - **The prototype's replay placement was tried and taken out.**
+    `tree-placement.ts` gave each member a spot in join order
+    (`findFreeX`/`findPairX`, rows balanced on a centre axis) — perfectly
+    stable, and structurally blind: with no notion of a family unit,
+    children of different couples interleaved along a row and their
+    threads CROSSED on the first real tree ("bị đan chéo… nên gom thành
+    cụm rồi sắp xếp"). The family-unit **block layout is restored**
+    (`tree-blocks.ts`) — grouping is the cluster idea — and while putting
+    it back a latent centring bug got fixed: children now centre under a
+    parent pair WIDER than their spread, so the joint lands exactly over
+    the descent (26px off with 204 couples; latent since 08-27).
+  - **Thread shapes and spacing match the prototype**: couple pitch
+    118→204 (258 scaled to 60px nodes), rows 172→212, arc sag 16 with a
+    bigger joint dot, descents with both controls near the top, and a lone
+    parent's thread is the prototype's S-curve (`singleDescentPath`).
   - **The opening draw-on was built and removed the same day** (owner's
     call: three-plus seconds of choreography on every open of a navigation
     surface — "thấy mất thời gian quá"; the implementation stays in branch
@@ -61,9 +63,11 @@ screens.
     as a fixed point of three pull-down rules (child below parents, parent
     one above shallowest child, partners/siblings level) — 3 repro cases
     fixed, detail in `family-tree-rendering.md` § Vertical placement.
-    Verified: mobile tsc, prettier, check:i18n (828 keys), and a node
-    simulation of the placement (6 layout scenarios + 3 depth repros); not
-    yet watched in a browser, and nothing tapped through on a device.
+    Verified: mobile tsc, prettier, check:i18n (828 keys), and node
+    simulations (children grouped per family with no interleave, joints
+    landing exactly over their children, couple pitch 204, plus 3 depth
+    repros); not yet watched in a browser, and nothing tapped through on
+    a device.
 
 - **The tree adds people by tapping the spot now (2026-08-28,
   `feature/tree-layout-units`).** Per the owner's prototype

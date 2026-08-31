@@ -160,10 +160,6 @@ export function treeFromGraph(tree: FamilyTree, options: TreeFromGraphOptions): 
     couples: spousePairs.map((members) => ({ members })),
     siblings: siblingPairs,
     descents: buildDescents(parentsOf, spousePairs),
-    // The server orders members by joinedAt, so this IS the order people were
-    // added — the replay in tree-placement.ts walks it to give everyone the
-    // spot they were given the day they arrived.
-    order: tree.members.map((member) => member.id),
   };
 }
 

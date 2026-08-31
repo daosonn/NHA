@@ -6,15 +6,19 @@
  * are computed from the measured width instead, so the tree holds together
  * from an iPhone Mini to a Pro Max.
  *
- * Rows come from generations; x comes from `tree-placement.ts`, which replays
- * the prototype's add-one-at-a-time placement over the member order. This
- * file keeps only pixels: rows, normalising, the unplaced strip, and the SVG
- * path helpers.
+ * Rows come from generations; x comes from the family-unit blocks built in
+ * `tree-blocks.ts` (weld couples, hang children, order by age). This file
+ * keeps only pixels: extents, placement, normalising, the unplaced strip,
+ * and the SVG path helpers.
  */
 
-import { COUPLE_PITCH, FREE_STEP, placeMembers } from './tree-placement';
-
-export { COUPLE_PITCH, FREE_STEP };
+import {
+  assignOwners,
+  buildBlocks,
+  interleaveAdopted,
+  orderChildren,
+  type Block,
+} from './tree-blocks';
 
 export type NodeState = 'active' | 'pending' | 'empty';
 
@@ -58,12 +62,6 @@ export type FamilyTreeData = {
   siblings: [string, string][];
   /** A couple's joint down to a child. */
   descents: { from: [string, string]; to: string }[];
-  /**
-   * Every member id in the order they joined the family — the placement
-   * replay walks it so each person keeps the spot they were given the day
-   * they were added (`tree-placement.ts`).
-   */
-  order: string[];
 };
 
 /** Standard node diameter. The viewer is larger so it reads first. */
@@ -100,20 +98,40 @@ export type TreeLayout = {
   width: number;
 };
 
+/**
+ * Centre-to-centre inside a couple. The prototype seats pairs 258 apart with
+ * 76px avatars; scaled to our 60px nodes that is ~204 — a long, readable arc
+ * with the joint dot in the middle (2026-08-31, was 118).
+ */
+export const COUPLE_PITCH = 204;
+/** Minimum centre-to-centre across neighbouring blocks — room for two labels. */
+const BLOCK_PITCH = 152;
 /** First and last node centre to the world's edge. */
 const EDGE_MARGIN = 96;
 
 /**
- * Prototype-replay layout (2026-08-31, replacing the family-unit block
- * layout of 2026-08-27 — `family-tree-rendering.md` records both):
+ * Family-unit layout: blocks, not individuals — "gom thành cụm rồi sắp xếp"
+ * (Đạt). Built 2026-08-27, swapped for the prototype's replay placement on
+ * the morning of 2026-08-31, and restored the same day: the replay had no
+ * notion of a cluster, so children of different couples interleaved along a
+ * row and their threads crossed. `family-tree-rendering.md` records all
+ * three schemes.
  *
- * 1. Rows are generations, top-down — unchanged.
- * 2. x replays the prototype's placement per member in join order
- *    (`tree-placement.ts`): a spot is found once and kept, pairs seat over
- *    their child, and every row balances around a centre axis.
- * 3. A crowded row still widens the WORLD, not the spacing: the placement is
- *    axis-centred, this function measures its extent and gives the world
- *    that much room. The canvas pans; the layout does not squeeze.
+ * 1. Partners are welded into blocks, so a couple can never be split by
+ *    whoever happened to sit between them in the payload.
+ * 2. A child's block hangs off its parents' block, and parents are centred
+ *    over the spread of their children — descents drop straight instead of
+ *    sweeping, and branches can never cross.
+ * 3. Every block reserves its subtree's width, so neighbouring branches can
+ *    never overlap, and a crowded row widens the WORLD rather than
+ *    compressing nodes into each other — the canvas pans, the layout does
+ *    not squeeze.
+ *
+ * It is deliberately a bounding-box tidy-up, not Reingold–Tilford: family
+ * graphs are not strict trees (two roots marry; a child's parents may not
+ * be a couple), and the contour bookkeeping only earns its complexity once
+ * bounding boxes visibly waste space. `architecture.md` keeps d3-hierarchy
+ * as the eventual step.
  */
 export function layoutTree(
   data: FamilyTreeData,
@@ -129,16 +147,81 @@ export function layoutTree(
   const rows: PositionedRow[] = [];
   const firstRowY = FIRST_ROW_Y + topGutter;
 
-  const xs = placeMembers(data);
+  // ---- arrangement: weld, hang, order, balance — see tree-blocks.ts ----
+  const { blocks, blockOf } = buildBlocks(data);
+  assignOwners(data, blocks, blockOf);
+  orderChildren(data, blocks);
+  interleaveAdopted(blocks);
+
+  // ---- widths, bottom-up: a subtree reserves its bounding box ----------
+  const extents = new Map<Block, number>();
+  const extentOf = (block: Block): number => {
+    const cached = extents.get(block);
+    if (cached !== undefined) return cached;
+    const own = (block.ids.length - 1) * COUPLE_PITCH;
+    const children = block.children.reduce(
+      (sum, child, index) => sum + extentOf(child) + (index > 0 ? BLOCK_PITCH : 0),
+      0,
+    );
+    const extent = Math.max(own, block.children.length > 0 ? children : 0);
+    extents.set(block, extent);
+    return extent;
+  };
+
+  // ---- placement, top-down ----------------------------------------------
+  const place = (block: Block, left: number): void => {
+    if (block.children.length > 0) {
+      // Children first, side by side; parents then centre over the
+      // thread-connected CORE (the interleave rule keeps it in the middle),
+      // so the descent drops straight down. Adopted-only children fall back
+      // to the whole spread — there is no thread to line up with.
+      //
+      // When the PARENTS are the wider side (a 204 couple over one or two
+      // children), the children start centred inside the parents' span —
+      // without this they hugged the left edge and the joint hung 26px off
+      // the descent's landing (visible from 2026-08-31's wide couples;
+      // latent since 2026-08-27 with a single child under a 118 pair).
+      const childrenSpan = block.children.reduce(
+        (sum, child, index) => sum + extentOf(child) + (index > 0 ? BLOCK_PITCH : 0),
+        0,
+      );
+      let cursor = left + Math.max(0, (extentOf(block) - childrenSpan) / 2);
+      for (const child of block.children) {
+        place(child, cursor);
+        cursor += extentOf(child) + BLOCK_PITCH;
+      }
+      const core = block.children.filter((child) => child.ownedVia === 'parent');
+      const span = core.length > 0 ? core : block.children;
+      const first = span[0];
+      const last = span[span.length - 1];
+      const mid = (first.firstX + last.lastX) / 2;
+      const own = (block.ids.length - 1) * COUPLE_PITCH;
+      // Clamped inside the subtree's reserved box: an off-centre core must
+      // not push the parents into the neighbouring branch's space.
+      block.firstX = Math.min(left + extentOf(block) - own, Math.max(left, mid - own / 2));
+    } else {
+      block.firstX = left;
+    }
+    block.lastX = block.firstX + (block.ids.length - 1) * COUPLE_PITCH;
+  };
+
+  // Roots side by side: the main tree first, then any stray ownerless
+  // branch, each keeping its whole bounding box.
+  let cursor = 0;
+  for (const block of blocks) {
+    if (block.owner !== null) continue;
+    place(block, cursor);
+    cursor += extentOf(block) + BLOCK_PITCH;
+  }
 
   // ---- normalise into world coordinates --------------------------------
   let minX = Infinity;
   let maxX = -Infinity;
-  for (const x of xs.values()) {
-    minX = Math.min(minX, x);
-    maxX = Math.max(maxX, x);
+  for (const block of blocks) {
+    minX = Math.min(minX, block.firstX);
+    maxX = Math.max(maxX, block.lastX);
   }
-  if (xs.size === 0) {
+  if (blocks.length === 0) {
     minX = 0;
     maxX = 0;
   }
@@ -152,11 +235,12 @@ export function layoutTree(
     const y = firstRowY + row * ROW_GAP;
     rows.push({ id: generation.id, label: generation.label, y });
     for (const member of generation.members) {
-      const x = xs.get(member.id);
-      if (x === undefined) continue;
+      const block = blockOf.get(member.id);
+      if (block === undefined) continue;
+      const index = block.ids.indexOf(member.id);
       nodes.set(member.id, {
         ...member,
-        x: x + shift,
+        x: block.firstX + index * COUPLE_PITCH + shift,
         y,
         size: member.isViewer === true ? VIEWER_NODE_SIZE : NODE_SIZE,
       });

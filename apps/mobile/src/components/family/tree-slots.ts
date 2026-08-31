@@ -15,7 +15,6 @@
 
 import {
   COUPLE_PITCH,
-  FREE_STEP,
   NODE_SIZE,
   ROW_GAP,
   coupleJoint,
@@ -43,20 +42,22 @@ export type TreeSlot = {
 const PARENT_SPREAD = COUPLE_PITCH / 2;
 /** A slot may not rise above the canvas — clamp like the prototype's `max(60, y)`. */
 const MIN_Y = 40;
-/** Two centres closer than this on a row count as "that spot is taken" —
- *  the placement's own clearance (`tree-placement.ts`). */
+/** Two centres closer than this on a row count as "that spot is taken". */
 const CLEARANCE = 120;
+/** Scan step for a free spot — the block layout's sibling pitch. */
+const BLOCK_STEP = 152;
 
 /** Just enough of a node for the path helpers, which read x/y/size only. */
 function ghostAt(x: number, y: number): PositionedNode {
   return { id: 'slot', state: 'empty', x, y, size: NODE_SIZE };
 }
 
-/** Nearest free x on a row — the placement's own scan (`FREE_STEP`), so the
- *  slot stands where the person will actually land. */
+/** Nearest free x on a row, scanning outward from the preferred spot. The
+ *  real landing spot is the block layout's to decide — this only keeps the
+ *  dashed circle from sitting on somebody's face. */
 function findFreeX(layout: TreeLayout, y: number, preferred: number): number {
   const row = [...layout.nodes.values()].filter((node) => Math.abs(node.y - y) < 1);
-  const candidates = [0, 1, -1, 2, -2, 3, -3].map((step) => preferred + step * FREE_STEP);
+  const candidates = [0, 1, -1, 2, -2, 3, -3].map((step) => preferred + step * BLOCK_STEP);
   for (const x of candidates) {
     if (!row.some((node) => Math.abs(node.x - x) < CLEARANCE)) return x;
   }
