@@ -6,6 +6,12 @@ import type { FamilyTreeData } from './tree-layout';
  * this file builds into coordinates; `tree-from-graph.ts` builds the
  * semantic input both work from.
  *
+ * Deleted on the morning of 2026-08-31 for the prototype's replay placement
+ * and restored the same day: the replay had no notion of a family unit, so
+ * children of different couples interleaved along a row and their descents
+ * crossed (owner: "bị đan chéo… nên gom thành cụm rồi sắp xếp"). Grouping
+ * IS this file.
+ *
  * Organised as one exported function per rule, so a new rule is a new
  * function slotted into `layoutTree`'s pipeline rather than a bigger loop:
  *
@@ -159,12 +165,19 @@ export function assignOwners(
 const NO_BIRTH_DATE = '9999-12-31';
 
 /**
- * Siblings line up oldest to youngest, left to right (Đạt, 2026-08-27).
+ * Siblings line up under THEIR joint first, then oldest to youngest, left
+ * to right (Đạt, 2026-08-27; joint grouping added 2026-08-31 for the
+ * no-crossing rule).
  *
- * The key is the ANCHOR's birth date — the child of the couple above, never
- * the partner who married in — so a young spouse does not drag an eldest
- * sibling to the right. Members without a date keep their arrival order,
- * after everyone dated (the sort is stable).
+ * A remarried block chains three people — `[B, A, C]` with a joint on each
+ * arc — and sorting its children by age alone let a child of the RIGHT
+ * joint stand left of a child of the LEFT joint, so their threads crossed
+ * at birth. Children now group by the index of the joint they descend
+ * from; age orders within a group. The age key is the ANCHOR's birth date —
+ * the child of the couple above, never the partner who married in — so a
+ * young spouse does not drag an eldest sibling to the right. Members
+ * without a date keep their arrival order, after everyone dated (the sort
+ * is stable).
  */
 export function orderChildren(data: FamilyTreeData, blocks: Block[]): void {
   const birthOf = new Map<string, string>();
@@ -174,13 +187,25 @@ export function orderChildren(data: FamilyTreeData, blocks: Block[]): void {
     }
   }
 
+  const descentOf = new Map<string, [string, string]>();
+  for (const { from, to } of data.descents) {
+    if (!descentOf.has(to)) descentOf.set(to, from);
+  }
+
   for (const block of blocks) {
     if (block.children.length < 2) continue;
+    const jointIndexOf = (child: Block): number => {
+      const from = descentOf.get(child.anchorId);
+      if (from === undefined) return 0;
+      const indices = from.map((id) => block.ids.indexOf(id)).filter((index) => index >= 0);
+      return indices.length > 0 ? Math.min(...indices) : 0;
+    };
     block.children.sort((a, b) => {
-      const byAge = (birthOf.get(a.anchorId) ?? NO_BIRTH_DATE).localeCompare(
+      const byJoint = jointIndexOf(a) - jointIndexOf(b);
+      if (byJoint !== 0) return byJoint;
+      return (birthOf.get(a.anchorId) ?? NO_BIRTH_DATE).localeCompare(
         birthOf.get(b.anchorId) ?? NO_BIRTH_DATE,
       );
-      return byAge;
     });
   }
 }

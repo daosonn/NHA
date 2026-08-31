@@ -82,15 +82,36 @@ export function treeFromGraph(tree: FamilyTree, options: TreeFromGraphOptions): 
     .filter((edge) => edge.type === 'SPOUSE')
     .map((edge): [string, string] => [edge.fromMemberId, edge.toMemberId]);
 
+  /**
+   * Two people who parent the same child are DRAWN as a couple — arc, joint,
+   * one thread down — even when nobody recorded a SPOUSE edge between them
+   * (owner's report 2026-08-28: adding a grandmother and grandfather through
+   * the edit-mode slots gave each their own line stuck straight into the
+   * child, "hai cái dính vào chứ không kết nối rồi sinh ra"; two
+   * placeholders can never be given a spouse edge in the UI, so this was
+   * every added-parents pair). Same rule as the partner auto-join over
+   * children below: the DRAWING infers, the database still records only the
+   * edges people actually created. Someone already partnered is skipped —
+   * one person cannot be welded into two couple blocks.
+   */
+  const isPartnered = (id: string) => spousePairs.some(([a, b]) => a === id || b === id);
+  for (const parents of parentsOf.values()) {
+    if (parents.length !== 2) continue;
+    const [a, b] = parents;
+    if (a === b || isPartnered(a) || isPartnered(b)) continue;
+    spousePairs.push([a, b]);
+  }
+
   const siblingPairs = edges
     .filter((edge) => edge.type === 'SIBLING')
     .map((edge): [string, string] => [edge.fromMemberId, edge.toMemberId]);
 
-  const depths = computeDepths(
+  const depths = resolveDepths(
     tree.members.map((m) => m.id),
     parentsOf,
+    spousePairs,
+    siblingPairs,
   );
-  levelSideways(depths, spousePairs, siblingPairs);
 
   const viewerMemberId = tree.members.find((member) => member.userId === viewerUserId)?.id ?? null;
 
@@ -142,73 +163,73 @@ export function treeFromGraph(tree: FamilyTree, options: TreeFromGraphOptions): 
   };
 }
 
-/** Distance from a root, memoised, with a depth cap in place of cycle detection. */
-function computeDepths(ids: string[], parentsOf: Map<string, string[]>): Map<string, number> {
-  const depths = new Map<string, number>();
-
-  const depthOf = (id: string, seen: Set<string>): number => {
-    const cached = depths.get(id);
-    if (cached !== undefined) return cached;
-
-    const parents = parentsOf.get(id) ?? [];
-    // A cycle, or a chain deeper than any real family: stop rather than recurse.
-    if (parents.length === 0 || seen.has(id) || seen.size > MAX_DEPTH) {
-      depths.set(id, 0);
-      return 0;
-    }
-
-    seen.add(id);
-    const depth = 1 + Math.max(...parents.map((parent) => depthOf(parent, seen)));
-    seen.delete(id);
-
-    depths.set(id, depth);
-    return depth;
-  };
-
-  ids.forEach((id) => depthOf(id, new Set()));
-  return depths;
-}
-
 /**
- * Pulls everyone who belongs on the same row onto it.
+ * Everyone's generation, as the fixed point of three rules that only ever
+ * pull people DOWN (so the loop must settle):
  *
- * Depth only counts parent edges, so the two relationships that run
- * *sideways* both break it:
+ * 1. **A child sits strictly below every parent** — at least one row under
+ *    the deepest of them.
+ * 2. **A parent hangs one row above their shallowest child.** Without this a
+ *    parent added to somebody rows deep (edit mode's "add mother") has no
+ *    parents of their own, computes depth 0, and is drawn in the top row
+ *    beside the great-grandparents with a thread spanning the gap.
+ * 3. **Partners and siblings share a row** — the shallower is pulled level.
  *
- * - A partner who married in has no parent here, and would sit in the top row
- *   while their spouse sits three rows down.
- * - A sibling added without their own parent edges is, to the depth pass,
- *   parentless — so a brother lands one row *above* his sister, reading as
- *   her father. That is what the tree was drawing.
+ * These used to be two ordered passes (parent-distance, then a
+ * spouse/sibling levelling), and that order was the bug found 2026-08-31:
+ * levelling moved people, and nothing re-derived the depths that had been
+ * computed FROM them — a niece drawn above the sister who mothers her, a
+ * child of a levelled spouse left a row above both parents. Connections
+ * were right; tiers were stale. A fixed point cannot go stale.
  *
- * Both are fixed the same way: pull the shallower end down to the deeper one.
- * Down, never up, so the pass can only ever push people away from the root
- * and is guaranteed to settle. One list rather than two passes, because
- * moving a sibling can unbalance a couple and vice versa.
+ * Termination: depths only increase and are clamped to `MAX_DEPTH`, and the
+ * pass cap is the Bellman–Ford bound (constraints propagate at least one
+ * step per pass), so malformed data (a parental cycle) exhausts the cap and
+ * draws SOMETHING rather than hanging the screen.
  */
-function levelSideways(
-  depths: Map<string, number>,
+function resolveDepths(
+  ids: string[],
+  parentsOf: Map<string, string[]>,
   spousePairs: [string, string][],
   siblingPairs: [string, string][],
-): void {
+): Map<string, number> {
+  const depths = new Map<string, number>(ids.map((id) => [id, 0]));
   const pairs = [...spousePairs, ...siblingPairs];
 
-  for (let pass = 0; pass < pairs.length + 1; pass++) {
+  const childrenOf = new Map<string, string[]>();
+  for (const [child, parents] of parentsOf) {
+    for (const parent of parents) {
+      childrenOf.set(parent, [...(childrenOf.get(parent) ?? []), child]);
+    }
+  }
+
+  const at = (id: string) => depths.get(id) ?? 0;
+  const raise = (id: string, to: number): boolean => {
+    const clamped = Math.min(to, MAX_DEPTH);
+    if (at(id) >= clamped) return false;
+    depths.set(id, clamped);
+    return true;
+  };
+
+  for (let pass = 0; pass <= ids.length + 1; pass++) {
     let moved = false;
 
+    for (const [child, parents] of parentsOf) {
+      moved = raise(child, 1 + Math.max(...parents.map(at))) || moved;
+    }
+    for (const [parent, children] of childrenOf) {
+      moved = raise(parent, Math.min(...children.map(at)) - 1) || moved;
+    }
     for (const [a, b] of pairs) {
-      const depthA = depths.get(a) ?? 0;
-      const depthB = depths.get(b) ?? 0;
-      if (depthA === depthB) continue;
-
-      const deeper = Math.max(depthA, depthB);
-      depths.set(a, deeper);
-      depths.set(b, deeper);
-      moved = true;
+      const deeper = Math.max(at(a), at(b));
+      moved = raise(a, deeper) || moved;
+      moved = raise(b, deeper) || moved;
     }
 
-    if (!moved) return;
+    if (!moved) break;
   }
+
+  return depths;
 }
 
 /**
@@ -231,7 +252,10 @@ function levelSideways(
  * - **Two parents who are partners** — the joint sits on their arc.
  * - **Two parents with no spouse edge between them** — each parent gets a
  *   thread of its own; hanging the thread off the midpoint of two unrelated
- *   nodes made it appear from empty space.
+ *   nodes made it appear from empty space. Since 2026-08-28 this case is
+ *   rare: co-parents of the same child are inferred into `spousePairs`
+ *   upstream, so it remains only for a third parent or someone whose real
+ *   partner is elsewhere in the tree.
  */
 function buildDescents(
   parentsOf: Map<string, string[]>,

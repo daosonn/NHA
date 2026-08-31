@@ -6,6 +6,7 @@ import {
   coupleJoint,
   couplePath,
   descentPath,
+  singleDescentPath,
   type FamilyTreeData,
   type TreeLayout,
 } from './tree-layout';
@@ -42,6 +43,8 @@ const descentKey = (a: string, b: string, to: string) => `descent-${a}-${b}-${to
  *
  * Threads are a single curved stroke leaving the couple's joint and entering
  * the child's avatar edge — organic beziers, never right-angle branch lines.
+ * A single known parent's thread is the prototype's S-curve from their own
+ * chin instead (`singleDescentPath`).
  */
 export function TreeThreads({
   data,
@@ -121,11 +124,12 @@ export function TreeThreads({
         const b = nodes.get(bId);
         const child = nodes.get(to);
         if (a === undefined || b === undefined || child === undefined) return null;
+        const d = aId === bId ? singleDescentPath(a, child) : descentPath(coupleJoint(a, b), child);
 
         return (
           <Path
             key={descentKey(aId, bId, to)}
-            d={descentPath(coupleJoint(a, b), child)}
+            d={d}
             stroke={colors.coral.borderLight}
             strokeWidth={STROKE}
             strokeOpacity={opacityFor(descentKey(aId, bId, to))}
@@ -149,7 +153,7 @@ export function TreeThreads({
             key={`joint-${aId}-${bId}`}
             cx={joint.x}
             cy={joint.y}
-            r={3}
+            r={4}
             fill={colors.coral.primary}
             fillOpacity={opacityFor(coupleKey(aId, bId))}
           />

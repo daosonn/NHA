@@ -28,6 +28,77 @@ screens.
 
 ## Current Focus
 
+- **The tree draws like the prototype now (2026-08-31,
+  `feature/tree-layout-units`).** A day of pulling
+  `family-tree-canvas.html` and the app together, with two experiments
+  tried and reversed the same day on the owner's calls:
+  - **The prototype's replay placement was tried and taken out.**
+    `tree-placement.ts` gave each member a spot in join order
+    (`findFreeX`/`findPairX`, rows balanced on a centre axis) — perfectly
+    stable, and structurally blind: with no notion of a family unit,
+    children of different couples interleaved along a row and their
+    threads CROSSED on the first real tree ("bị đan chéo… nên gom thành
+    cụm rồi sắp xếp"). The family-unit **block layout is restored**
+    (`tree-blocks.ts`) — grouping is the cluster idea — and while putting
+    it back a latent centring bug got fixed: children now centre under a
+    parent pair WIDER than their spread, so the joint lands exactly over
+    the descent (26px off with 204 couples; latent since 08-27).
+  - **Thread shapes and spacing match the prototype**: couple pitch
+    118→204 (258 scaled to 60px nodes), rows 172→212, arc sag 16 with a
+    bigger joint dot, descents with both controls near the top, and a lone
+    parent's thread is the prototype's S-curve (`singleDescentPath`).
+  - **Both families sit symmetric around a couple** ("phải căn chỉnh sao
+    cho 2 bên đối xứng"): the spouse's parents used to land as a stray
+    root at the tree's right edge, thread slanting across. In-law blocks
+    now dock — two lone parent blocks centre side by side over the couple
+    (each above their own child, descents mirrored); against a wider
+    owning subtree they seat straight above their child, stepped outward
+    if the row is taken. Rule in `family-tree-rendering.md` § Horizontal
+    placement.
+  - **Threads never cross** ("luôn luôn không có đường cắt nhau… tự điều
+    chỉnh"): prevented structurally (bounding boxes; children grouped by
+    the joint they descend from, so a remarriage cannot cross at birth),
+    then DETECTED pairwise on straight-line proxies after placement, and
+    adjusted — swap the two subtrees at their divergence point, flip a
+    docked in-law, or restack a side branch — keeping only changes that
+    reduce the crossing count, so the pass terminates. Runs inside
+    `layoutTree`, so add/remove both re-establish the invariant and the
+    centring. Non-planar graphs keep their unavoidable crossing. Rule in
+    `family-tree-rendering.md` § Horizontal placement.
+  - **A partner's whole branch stays on their seat's side** ("nhánh của
+    bên trái thì sẽ phải nằm bên trái, nhánh của bên phải thì sẽ nằm bên
+    phải"): an in-law family with a subtree of its own (the spouse's
+    siblings) used to be appended as a stray root at the right edge,
+    thread slanting across the spine. Such branches now stack adjacent to
+    the main tree on the side their couple leans toward, and the couple's
+    seats turn so each married-in partner faces their own family. One bug
+    caught by simulation while building it: the spine root matched its own
+    detection (it too has a descent into a couple it owns) and disqualified
+    every real side branch. Rule in `family-tree-rendering.md`
+    § Horizontal placement.
+  - **The opening draw-on was built and removed the same day** (owner's
+    call: three-plus seconds of choreography on every open of a navigation
+    surface — "thấy mất thời gian quá"; the implementation stays in branch
+    history if a first-launch-only variant is ever wanted). The edit-mode
+    slot pop was shortened in the same pass (0.75→1, damping 17/420 —
+    four slots doing the full new-person bounce at once read as fussy;
+    "ngắn hơn nhưng vẫn hay").
+
+  - **Found the same day, looking at it: tiers went stale.** Depths were
+    computed once from parent edges, THEN spouses/siblings were levelled —
+    and nothing re-derived the depths that depended on the moved people: a
+    niece drew a row above the sister who mothers her, an added mother
+    landed beside the great-grandparents. `resolveDepths` now settles rows
+    as a fixed point of three pull-down rules (child below parents, parent
+    one above shallowest child, partners/siblings level) — 3 repro cases
+    fixed, detail in `family-tree-rendering.md` § Vertical placement.
+    Verified: mobile tsc, prettier, check:i18n (828 keys), and node
+    simulations (children grouped per family with no interleave, joints
+    landing exactly over their children, couple pitch 204, in-law H
+    symmetric to the pixel, remarriage and cross-block-parents cases at
+    zero crossings, plus 3 depth repros); not yet watched in a browser,
+    and nothing tapped through on a device.
+
 - **The tree adds people by tapping the spot now (2026-08-28,
   `feature/tree-layout-units`).** Per the owner's prototype
   `apps/mobile/src/family-tree-canvas.html`: the canvas's add button became
@@ -57,7 +128,11 @@ screens.
   gives the world a 96px top gutter (rides the slide; refit ignores it, so
   the pencil never resets pan/zoom) — a top-row person's add-mother/father
   slots were clamping onto their face — and the two parent slots spread
-  ±95px. Verified: api build+lint, mobile
+  ±95px. And **co-parents draw as a couple** (2026-08-28): two people
+  parenting the same child get the arc + joint + one descent even with no
+  SPOUSE edge recorded (two placeholders can never be given one), same
+  drawing-only contract as the partner auto-join; skipped when either has a
+  real partner. Detail in `family-tree-rendering.md` § Threads. Verified: api build+lint, mobile
   tsc, check:i18n (828 keys), prettier on touched files; not yet tapped
   through on a device or browser.
 

@@ -18,19 +18,21 @@ const SLOT_SIZE = 56;
 const LABEL_WIDTH = 104;
 
 /**
- * One dashed "add here" circle of edit mode. It pops in with the same spring
- * a new person arrives with, so the empty spot already moves like the node
- * that will replace it.
+ * One dashed "add here" circle of edit mode. It pops in with a quick, small
+ * spring — a hint of the arrival it promises. The first cut used the full
+ * new-person spring (0.5→1, damping 13/220) and read as fussy when four
+ * slots bounced at once (owner's call 2026-08-31: "ngắn hơn nhưng vẫn hay"),
+ * so the travel is shorter and the settle firmer.
  */
 export function TreeSlotMarker({ slot, onPress }: { slot: TreeSlot; onPress: () => void }) {
   const { t } = useTranslation();
 
-  const scale = useSharedValue(0.5);
+  const scale = useSharedValue(0.75);
   const opacity = useSharedValue(0);
 
   useEffect(() => {
-    scale.value = withSpring(1, { damping: 13, stiffness: 220 });
-    opacity.value = withTiming(1, { duration: 180 });
+    scale.value = withSpring(1, { damping: 17, stiffness: 420 });
+    opacity.value = withTiming(1, { duration: 120 });
     // Play once, when the slot appears for this selection.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
