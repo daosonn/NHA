@@ -53,9 +53,17 @@ screens.
     four slots doing the full new-person bounce at once read as fussy;
     "ngắn hơn nhưng vẫn hay").
 
-  Verified: mobile tsc, prettier, check:i18n (828 keys), and a node
-  simulation of the placement (6 scenarios); not yet watched in a
-  browser, and nothing tapped through on a device.
+  - **Found the same day, looking at it: tiers went stale.** Depths were
+    computed once from parent edges, THEN spouses/siblings were levelled —
+    and nothing re-derived the depths that depended on the moved people: a
+    niece drew a row above the sister who mothers her, an added mother
+    landed beside the great-grandparents. `resolveDepths` now settles rows
+    as a fixed point of three pull-down rules (child below parents, parent
+    one above shallowest child, partners/siblings level) — 3 repro cases
+    fixed, detail in `family-tree-rendering.md` § Vertical placement.
+    Verified: mobile tsc, prettier, check:i18n (828 keys), and a node
+    simulation of the placement (6 layout scenarios + 3 depth repros); not
+    yet watched in a browser, and nothing tapped through on a device.
 
 - **The tree adds people by tapping the spot now (2026-08-28,
   `feature/tree-layout-units`).** Per the owner's prototype

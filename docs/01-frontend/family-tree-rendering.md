@@ -49,26 +49,30 @@ That split is deliberate: placement bugs are either "wrong row" (graph
 side) or "wrong spot in the row" (layout side), and the two files never
 share blame.
 
-## Vertical placement: generations from parent-distance
+## Vertical placement: generations as a fixed point
 
-`computeDepths` gives every member a depth:
+`resolveDepths` (tree-from-graph.ts) settles every member's row as the
+fixed point of three rules that only ever pull people DOWN — monotone, so
+the loop must converge:
 
-- **No parent edges in this family → depth 0** (top row).
-- Otherwise **depth = 1 + max(depth of each parent)** — a child sits one
-  row below their _deepest_ parent.
-- `PARENT`, `ADOPTED_PARENT`, `STEP_PARENT` all count as parental
-  (`PARENTAL` in tree-from-graph.ts); `SPOUSE`/`SIBLING`/`OTHER` do not.
-- A cycle in the data (malformed edges) is cut off by `MAX_DEPTH = 32`
-  instead of hanging the screen.
+1. **A child sits strictly below every parent** (at least one row under
+   the deepest). `PARENT`, `ADOPTED_PARENT`, `STEP_PARENT` all count as
+   parental; `SPOUSE`/`SIBLING`/`OTHER` do not.
+2. **A parent hangs one row above their shallowest child** — the rule that
+   places a parent added AFTER the child (edit mode's "add mother" to
+   somebody rows deep) next to their child instead of at depth 0 in the
+   top row.
+3. **Partners and siblings share a row** — the shallower pulled level.
 
-Depth alone gets two things wrong, and `levelSideways` fixes both by
-**pulling the shallower person DOWN to the deeper one** (never up, so the
-pass always settles):
-
-- A spouse who married in has no parents here → depth 0 → would sit in
-  the top row while their partner sits three rows down.
-- A sibling added without their own parent edges is parentless → would
-  sit one row _above_ their sister, reading as her father.
+It replaced two ordered passes (parent-distance, then a spouse/sibling
+levelling) on 2026-08-31, after the ordering was caught drawing
+connections right but tiers wrong: levelling moved people and nothing
+re-derived the depths computed FROM them — a niece drawn a row above the
+sister who mothers her, a child of a levelled spouse floating above both
+parents, an added mother beside the great-grandparents. A fixed point
+cannot go stale. Malformed data (a parental cycle) exhausts the
+Bellman–Ford pass cap and the `MAX_DEPTH = 32` clamp instead of hanging
+the screen.
 
 Rows are then whatever depths actually contain someone, sorted, and
 labelled `GEN 1..n` **by index, not by depth** — so gaps in depth do not
