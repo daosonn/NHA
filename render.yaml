@@ -1,0 +1,113 @@
+# Render Blueprint — API (NestJS) + AI (FastAPI).
+#
+# Vì sao KHÔNG deploy được lên Vercel: cả hai là tiến trình chạy dài. API còn
+# gọi ffmpeg/sharp để render video và trích ảnh xem trước — việc tính bằng phút,
+# không phải serverless function.
+#
+# Bí mật (DATABASE_URL, JWT_ACCESS_SECRET, R2_*, OPENAI_API_KEY, …) KHÔNG nằm
+# trong file này: `sync: false` nghĩa là Render sẽ hỏi giá trị lúc tạo, rồi giữ
+# trong dashboard. Repo này là repo PUBLIC — đừng bao giờ commit giá trị thật.
+#
+# plan: starter (~$7/tháng, 512MB) là mức TỐI THIỂU chạy được API. Nếu render
+# video bị OOM thì nâng lên `standard` (2GB) — ffmpeg + sharp ăn RAM theo kích
+# thước ảnh, không theo số người dùng.
+
+services:
+  # ── API: NestJS + Prisma + ffmpeg ────────────────────────────────────────
+  - type: web
+    name: nha-api
+    runtime: node
+    plan: starter
+    region: singapore # gần Nhật/Việt Nam nhất; Neon đang ở us-east-2 (xem ghi chú cuối file)
+    branch: main
+    autoDeploy: false # bật tay sau khi đã kiểm; tránh mỗi commit của team lại deploy
+    healthCheckPath: /api
+    buildCommand: >-
+      npm i -g pnpm@11 &&
+      pnpm install --frozen-lockfile &&
+      pnpm build:tokens &&
+      pnpm --filter api exec prisma generate &&
+      pnpm --filter api build &&
+      pnpm --filter api exec prisma migrate deploy
+    startCommand: node apps/api/dist/main
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      # Neon — cùng DB team đang dùng
+      - key: DATABASE_URL
+        sync: false
+      # Sinh mới cho production, ĐỪNG dùng lại khoá dev 9 ký tự
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_ACCESS_EXPIRES_IN
+        value: 15m
+      - key: REFRESH_TOKEN_TTL_DAYS
+        value: "30"
+      # Ảnh/video: Cloudflare R2 (bucket private, bytes vẫn đi qua NestJS để giữ canView)
+      - key: STORAGE_DRIVER
+        value: r2
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        value: nha-media-dev
+      # Đĩa của Render là tạm: chỉ dùng cho file tạm + ảnh xem trước video
+      # (poster tự sinh lại khi cần), nên không cần persistent disk.
+      - key: UPLOAD_DIR
+        value: ./uploads
+      # Chỉ trang web trên Vercel được gọi API này
+      - key: CORS_ORIGINS
+        value: https://nha.vercel.app
+      # AI service — điền URL công khai của service nha-ai bên dưới
+      - key: AI_SERVICE_URL
+        sync: false
+      - key: AI_INTERNAL_TOKEN
+        sync: false
+      # Gợi ý quà tra sản phẩm thật trên Yahoo!ショッピング
+      - key: YAHOO_SHOPPING_APPID
+        sync: false
+      # Đăng nhập Google/Facebook: để trống thì nút trả 503, app vẫn dùng
+      # email + mật khẩu bình thường.
+      - key: OAUTH_REDIRECT_BASE_URL
+        sync: false
+      - key: OAUTH_APP_REDIRECTS
+        value: https://nha.vercel.app/auth/callback
+
+  # ── AI: FastAPI, chỗ DUY NHẤT gọi OpenAI ─────────────────────────────────
+  - type: web
+    name: nha-ai
+    runtime: python
+    plan: starter
+    region: singapore
+    branch: main
+    autoDeploy: false
+    rootDir: apps/ai
+    healthCheckPath: /health
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: MODEL_ANALYSIS
+        value: gpt-5.6-luna
+      - key: MODEL_SUGGEST
+        value: gpt-5.6-luna
+      # 0 = gọi model thật. Đặt 1 để diễn thử không tốn token.
+      - key: AI_MOCK
+        value: "0"
+      # PHẢI trùng đúng AI_INTERNAL_TOKEN của nha-api — đây là thứ duy nhất
+      # ngăn người ngoài gọi endpoint AI.
+      - key: INTERNAL_TOKEN
+        sync: false
+
+# Ghi chú độ trễ: Neon đang ở us-east-2 (Ohio). Đặt API ở singapore nghĩa là mỗi
+# truy vấn đi vòng qua Mỹ (~200ms). Muốn nhanh thì hoặc đặt API ở `ohio`, hoặc
+# tạo Neon ở Singapore. Với demo thì singapore + Neon Ohio vẫn chấp nhận được;
+# nếu thấy chậm, đổi region của API sang `ohio` trước khi đổi thứ khác.
