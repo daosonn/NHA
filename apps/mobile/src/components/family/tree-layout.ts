@@ -168,8 +168,12 @@ export function layoutTree(
     return extent;
   };
 
+  /** Everything `place` has seated this run — the main tree's bounds. */
+  const placedBlocks = new Set<Block>();
+
   // ---- placement, top-down ----------------------------------------------
   const place = (block: Block, left: number): void => {
+    placedBlocks.add(block);
     if (block.children.length > 0) {
       // Children first, side by side; parents then centre over the
       // thread-connected CORE (the interleave rule keeps it in the middle),
@@ -233,21 +237,106 @@ export function layoutTree(
     docked.add(block);
   }
 
+  // ---- a partner's whole branch stays on their seat's side ---------------
+  // (owner, 2026-08-31: "nhánh của bên trái thì sẽ phải nằm bên trái, nhánh
+  // của bên phải thì sẽ nằm bên phải"). An in-law family too big to dock —
+  // they own a subtree, the spouse's siblings live in it — used to be
+  // appended as a stray root at the right edge whatever side their
+  // child-in-law sat on, its thread slanting across the spine. Such roots
+  // now STACK ADJACENT to the main tree on the side their couple leans
+  // toward, and the couple's seats are turned so the linked partner faces
+  // their own family.
+  const sided: { root: Block; couple: Block; childId: string }[] = [];
+  const sidedSet = new Set<Block>();
+  for (const block of blocks) {
+    if (block.owner !== null || docked.has(block)) continue;
+    const descent = data.descents.find(({ from, to }) => {
+      if (!from.some((id) => block.ids.includes(id))) return false;
+      const child = blockOf.get(to);
+      // `child.owner !== block` keeps a SPINE root out: it too has descents
+      // into an owned couple — the couple it owns itself.
+      return (
+        child !== undefined && child !== block && child.owner !== null && child.owner !== block
+      );
+    });
+    if (descent === undefined) continue;
+    sided.push({ root: block, couple: blockOf.get(descent.to) as Block, childId: descent.to });
+  }
+  // A branch whose couple hangs inside ANOTHER side branch has no fixed
+  // ground to stack against — those keep the plain stray-root treatment.
+  const topRootOf = (block: Block): Block => {
+    let cursor = block;
+    while (cursor.owner !== null) cursor = cursor.owner;
+    return cursor;
+  };
+  const anchored = sided.filter(({ couple }) => {
+    const top = topRootOf(couple);
+    return !docked.has(top) && !sided.some((other) => other.root === top);
+  });
+  for (const { root } of anchored) sidedSet.add(root);
+
   /** In-law roots the untangler has told to seat on the couple's other side. */
   const flipped = new Set<Block>();
+  /** Side branches the untangler has told to stack on the other side. */
+  const sideFlipped = new Set<Block>();
 
   /**
    * The whole placement, re-runnable: roots side by side (the main tree
    * first, then any stray ownerless branch, each keeping its bounding box),
-   * then the in-law blocks seated around their couple. The untangler below
-   * re-runs this after every adjustment it tries.
+   * then the side branches stacked against the main tree, then the in-law
+   * blocks seated around their couple. The untangler below re-runs this
+   * after every adjustment it tries.
    */
   const placeAll = () => {
+    placedBlocks.clear();
     let cursor = 0;
     for (const block of blocks) {
-      if (block.owner !== null || docked.has(block)) continue;
+      if (block.owner !== null || docked.has(block) || sidedSet.has(block)) continue;
       place(block, cursor);
       cursor += extentOf(block) + BLOCK_PITCH;
+    }
+
+    // ---- side branches: pick the side, turn the seats, stack outward ----
+    let mainMin = Infinity;
+    let mainMax = -Infinity;
+    for (const block of placedBlocks) {
+      mainMin = Math.min(mainMin, block.firstX);
+      mainMax = Math.max(mainMax, block.lastX);
+    }
+    if (placedBlocks.size === 0) {
+      mainMin = 0;
+      mainMax = 0;
+    }
+    const treeMid = (mainMin + mainMax) / 2;
+    const plans = anchored.map((entry) => {
+      const coupleMid = (entry.couple.firstX + entry.couple.lastX) / 2;
+      let side: 'left' | 'right' = coupleMid < treeMid - 1 ? 'left' : 'right';
+      if (sideFlipped.has(entry.root)) side = side === 'left' ? 'right' : 'left';
+      return { ...entry, side };
+    });
+    for (const { couple, childId, side } of plans) {
+      // The linked partner takes the seat facing their family, so the
+      // thread stays outside everybody instead of crossing their spouse.
+      if (couple.ids.length !== 2) continue;
+      const atLeft = couple.ids.indexOf(childId) === 0;
+      if ((side === 'left') !== atLeft) couple.ids.reverse();
+    }
+    const seatXOf = (plan: (typeof plans)[number]) =>
+      plan.couple.firstX + plan.couple.ids.indexOf(plan.childId) * COUPLE_PITCH;
+    let cursorLeft = mainMin;
+    for (const plan of plans
+      .filter((plan) => plan.side === 'left')
+      .sort((a, b) => seatXOf(b) - seatXOf(a))) {
+      const left = cursorLeft - BLOCK_PITCH - extentOf(plan.root);
+      place(plan.root, left);
+      cursorLeft = left;
+    }
+    let cursorRight = mainMax;
+    for (const plan of plans
+      .filter((plan) => plan.side === 'right')
+      .sort((a, b) => seatXOf(a) - seatXOf(b))) {
+      place(plan.root, cursorRight + BLOCK_PITCH);
+      cursorRight += BLOCK_PITCH + extentOf(plan.root);
     }
 
     const pending = new Set(dockings.map(({ root }) => root));
@@ -417,6 +506,26 @@ export function layoutTree(
             tangled = after;
           } else {
             flipped.delete(dockedParent);
+            placeAll();
+          }
+          acted = true;
+          break;
+        }
+      }
+      const sidedTop = [s.parent, t.parent, s.child, t.child]
+        .map(topRootOf)
+        .find((block) => sidedSet.has(block));
+      if (sidedTop !== undefined) {
+        const key = `side:${sidedTop.anchorId}`;
+        if (!tried.has(key)) {
+          tried.add(key);
+          sideFlipped.add(sidedTop);
+          placeAll();
+          const after = crossings();
+          if (after.length < tangled.length) {
+            tangled = after;
+          } else {
+            sideFlipped.delete(sidedTop);
             placeAll();
           }
           acted = true;

@@ -59,11 +59,22 @@ screens.
     chỉnh"): prevented structurally (bounding boxes; children grouped by
     the joint they descend from, so a remarriage cannot cross at birth),
     then DETECTED pairwise on straight-line proxies after placement, and
-    adjusted — swap the two subtrees at their divergence point, or flip a
-    docked in-law — keeping only changes that reduce the crossing count,
-    so the pass terminates. Runs inside `layoutTree`, so add/remove both
-    re-establish the invariant and the centring. Non-planar graphs keep
-    their unavoidable crossing. Rule in `family-tree-rendering.md`
+    adjusted — swap the two subtrees at their divergence point, flip a
+    docked in-law, or restack a side branch — keeping only changes that
+    reduce the crossing count, so the pass terminates. Runs inside
+    `layoutTree`, so add/remove both re-establish the invariant and the
+    centring. Non-planar graphs keep their unavoidable crossing. Rule in
+    `family-tree-rendering.md` § Horizontal placement.
+  - **A partner's whole branch stays on their seat's side** ("nhánh của
+    bên trái thì sẽ phải nằm bên trái, nhánh của bên phải thì sẽ nằm bên
+    phải"): an in-law family with a subtree of its own (the spouse's
+    siblings) used to be appended as a stray root at the right edge,
+    thread slanting across the spine. Such branches now stack adjacent to
+    the main tree on the side their couple leans toward, and the couple's
+    seats turn so each married-in partner faces their own family. One bug
+    caught by simulation while building it: the spine root matched its own
+    detection (it too has a descent into a couple it owns) and disqualified
+    every real side branch. Rule in `family-tree-rendering.md`
     § Horizontal placement.
   - **The opening draw-on was built and removed the same day** (owner's
     call: three-plus seconds of choreography on every open of a navigation

@@ -118,7 +118,18 @@ of them twice in a day:
       nhà-nội/nhà-ngoại H). When the owning side carries a wider subtree,
       the in-laws seat straight above their child, stepped outward until
       the row has room.
-   5. **No two threads may cross** (2026-08-31, owner: "luôn luôn không có
+   5. **A partner's whole branch stays on their seat's side** (2026-08-31,
+      owner: "nhánh của bên trái thì sẽ phải nằm bên trái, nhánh của bên
+      phải thì sẽ nằm bên phải"). An in-law family too big to dock — they
+      own a subtree; the spouse's siblings live in it — used to be
+      appended as a stray root at the tree's right edge whatever side
+      their child-in-law sat on, its thread slanting across the spine.
+      Such branches now stack ADJACENT to the main tree on the side their
+      couple leans toward, innermost partner first, and the couple's seats
+      are turned so the linked partner faces their own family — the thread
+      runs outside everybody. (Detection must exclude the spine root
+      itself: it too has descents into an owned couple — the one it owns.)
+   6. **No two threads may cross** (2026-08-31, owner: "luôn luôn không có
       đường cắt nhau… nếu phát hiện cắt nhau thì tự điều chỉnh"). Three
       layers deep:
       - _prevented_: the bounding boxes above make sibling branches
@@ -130,17 +141,17 @@ of them twice in a day:
         proper intersection on straight-line proxies (shared endpoints —
         one joint fanning out, two threads into one child — don't count);
       - _adjusted_: a found crossing swaps the two subtrees at their point
-        of divergence, or flips a docked in-law to the couple's other
-        side; a change is kept only when the total crossing count DROPS,
-        so the pass cannot trade one crossing for two and always
-        terminates. A genuinely non-planar family graph keeps its crossing
-        — no flat drawing of it exists.
+        of divergence, flips a docked in-law to the couple's other side,
+        or restacks a side branch on the other flank; a change is kept
+        only when the total crossing count DROPS, so the pass cannot trade
+        one crossing for two and always terminates. A genuinely non-planar
+        family graph keeps its crossing — no flat drawing of it exists.
 
       The pass lives inside `layoutTree`, which re-runs on every payload —
       so adding or removing a member re-establishes the invariant (and the
       centring rules, which every adjustment re-applies) automatically.
 
-   6. **A crowded row widens the WORLD, not the spacing** — the canvas
+   7. **A crowded row widens the WORLD, not the spacing** — the canvas
       pans, the view opens at fit scale.
 
 What survives of the replay experiment is the prototype's LOOK: **204px**
