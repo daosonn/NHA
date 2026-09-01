@@ -50,6 +50,31 @@ export function thumbnailSource(mediaId: string, mimeType: string): ImageSource 
     : build(`thumb:${mediaId}`, media.thumbUrl(mediaId));
 }
 
+/**
+ * Ảnh nhỏ cho một media ĐÃ BIẾT là ảnh — mặt người, bìa gia đình.
+ *
+ * Different from `thumbnailSource` only in what the caller already knows:
+ * there the kind is unknown and a video has to be sent to its poster
+ * instead, here the caller has an avatar or a cover and no mime type to
+ * pass, so inventing one just to satisfy the signature would be a lie.
+ *
+ * An avatar is drawn at 38pt at its largest and used to be handed the
+ * original: the three stored today average 584 KB, the biggest 1.59 MB.
+ * `GET /media/:id` also sends no `Cache-Control`, so every screen fetched
+ * the same face again, while `/thumb` sends `private, max-age=86400`.
+ * Pointing at the thumbnail is therefore both ~12x smaller and cached.
+ *
+ * Shares `thumbnailSource`'s cache key deliberately — a picture already
+ * fetched as a grid tile is reused rather than downloaded a second time.
+ *
+ * Safe for a photograph that has no thumbnail yet: the endpoint falls back
+ * to the original (`MediaService.thumbForViewer`), so a face never
+ * collapses into initials just because the backfill has not reached it.
+ */
+export function imageThumbSource(mediaId: string): ImageSource {
+  return build(`thumb:${mediaId}`, media.thumbUrl(mediaId));
+}
+
 function build(cacheKey: string, uri: string): ImageSource {
   const token = apiAccessToken();
 

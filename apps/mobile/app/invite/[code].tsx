@@ -13,6 +13,7 @@ import { Button } from '../../src/components/ui/button';
 import { Card } from '../../src/components/ui/card';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { Text } from '../../src/components/ui/text';
+import { useToast } from '../../src/components/ui/toast';
 import { useSession } from '../../src/features/auth/session';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { invitedAsKey } from '../../src/features/family/kinship';
@@ -70,6 +71,7 @@ function Fact({
  */
 export default function InvitationScreen() {
   const { t } = useTranslation();
+  const toast = useToast();
   const { code } = useLocalSearchParams<{ code: string }>();
   const router = useRouter();
   const { status } = useSession();
@@ -97,6 +99,8 @@ export default function InvitationScreen() {
     accept.mutate(code, {
       onSuccess: (result) => {
         setFamilyId(result.familyId);
+        // Trước router.replace: toast sống ở _layout nên nó qua được chuyển màn.
+        toast.success(t('invite.page.joined'));
         router.replace('/');
       },
     });

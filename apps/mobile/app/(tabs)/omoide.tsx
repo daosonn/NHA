@@ -12,7 +12,7 @@ import { IconBadge } from '../../src/components/ui/icon-badge';
 import { Text } from '../../src/components/ui/text';
 import { useFamilies } from '../../src/features/family/use-families';
 import type { FamilySummary } from '../../src/lib/api';
-import { mediaSource } from '../../src/lib/media-source';
+import { imageThumbSource } from '../../src/lib/media-source';
 import { colors, radius, spacing, useLayout } from '../../src/theme';
 import { enter } from '../../src/theme/motion';
 import { Image } from 'expo-image';
@@ -56,7 +56,7 @@ function FamilyRow({ family, onPress }: { family: FamilySummary; onPress: () => 
           <Images size={22} color={colors.coral.deep} strokeWidth={2} />
         ) : (
           <Image
-            source={mediaSource(family.coverMediaId)}
+            source={imageThumbSource(family.coverMediaId)}
             style={{ width: '100%', height: '100%' }}
             contentFit="cover"
             transition={160}

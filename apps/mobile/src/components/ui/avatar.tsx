@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View } from 'react-native';
 
-import { mediaSource } from '../../lib/media-source';
+import { imageThumbSource } from '../../lib/media-source';
 import { colors, radius } from '../../theme';
 import { PhotoPlaceholder } from './photo-placeholder';
 import { Text } from './text';
@@ -129,7 +129,7 @@ export function Avatar({ size, name, mediaId, tone = 'light', ring, style }: Ava
         ]}
       >
         <Image
-          source={mediaSource(mediaId)}
+          source={imageThumbSource(mediaId)}
           recyclingKey={mediaId}
           contentFit="cover"
           transition={140}
