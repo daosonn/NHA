@@ -8,6 +8,7 @@ import Animated from 'react-native-reanimated';
 
 import { specialDateIcon, specialDateKindKey } from '../../src/components/ai/occasion-kind';
 import { DateTile } from '../../src/components/ai/date-tile';
+import { tileDayMonthProps } from '../../src/features/dates/date-meta';
 import { BirthdayCard } from '../../src/components/home/birthday-card';
 import { SelectRow } from '../../src/components/ai/select-row';
 import { AppHeader } from '../../src/components/layout/app-header';
@@ -351,7 +352,7 @@ export default function AiScreen() {
                         : 'transparent',
                   })}
                 >
-                  <DateTile day={item.day} month={t(`date.months.${item.month}`)} />
+                  <DateTile {...tileDayMonthProps(item, t)} />
                   <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
                     <Text variant="body2" weight="semibold" numberOfLines={1}>
                       {occasionLabel(item)}

@@ -204,7 +204,9 @@ export default function GiftAskScreen() {
               params: {
                 memberId: target!.id,
                 memberName: target!.displayName,
-                occasion: occasion.label,
+                // DTO của server chặn occasionLabel ở 80 ký tự — một title
+                // CUSTOM dài (tối đa 120) cộng " · 30 Aug" sẽ 400 nếu không cắt.
+                occasion: occasion.label.slice(0, 80),
                 occasionDate: occasion.date ?? '',
                 budget: budgetLabel(budget[0], budget[1]),
               },
@@ -265,7 +267,16 @@ export default function GiftAskScreen() {
         onClose={() => setMemberSheet(false)}
         members={members}
         selectedId={target?.id ?? null}
-        onSelect={(m) => setMemberId(m.id)}
+        onSelect={(m) => {
+          // Dịp CÓ NGÀY thuộc về một con người — đổi người nhận thì phải bỏ
+          // chọn, không thì "sinh nhật bà · 30 Aug" đi vào request cho ÔNG
+          // (message.tsx đã có guard này từ trước; màn date-detail deep-link
+          // vào đây làm ca này xảy ra thường trực chứ không còn hãn hữu).
+          if (m.id !== target?.id && occasion?.date) {
+            setOccasion(null);
+          }
+          setMemberId(m.id);
+        }}
         // query tắt (chưa có familyId) vẫn isPending mãi mãi — đừng quay vô hạn
         loading={familyId !== null && family.isPending}
         error={family.isError && !family.data}

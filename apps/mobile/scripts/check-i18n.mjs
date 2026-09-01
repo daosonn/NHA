@@ -19,7 +19,7 @@ const SOURCES = ['app', 'src'];
 /** Keys written as `t('a.b')` or handed to `t()` through a constant. */
 const LITERAL = /\bt\(\s*'([A-Za-z0-9_.]+)'/g;
 const INDIRECT =
-  /'((?:common|nav|auth|home|family|invite|member|moment|ai|settings|date|video)\.[A-Za-z0-9_.]+)'/g;
+  /'((?:common|nav|auth|home|family|invite|member|moment|ai|settings|date|dates|video)\.[A-Za-z0-9_.]+)'/g;
 
 /** Plural keys live in the catalogue as `key_one` / `key_other`, plus the
  * optional `key_zero` override i18next prefers when count === 0. */

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { BookOpen, Music, PenLine } from 'lucide-react-native';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, TextInput, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -48,8 +48,13 @@ export default function VideoSetupScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { familyId } = useActiveFamily();
-  const { draft, update, applyStoryboard } = useVideoDraft();
-  const params = useLocalSearchParams<{ memberId?: string; memberName?: string }>();
+  const { draft, update, applyStoryboard, reset } = useVideoDraft();
+  const params = useLocalSearchParams<{
+    memberId?: string;
+    memberName?: string;
+    occasion?: string;
+    occasionType?: string;
+  }>();
   const typeface = useTypeface('medium');
   const aiLocale = useAiLocale();
   const [memberSheet, setMemberSheet] = useState(false);
@@ -63,13 +68,37 @@ export default function VideoSetupScreen() {
   const members = useMemo(() => family.data?.members ?? [], [family.data]);
   const target = members.find((m) => m.id === draft.memberId) ?? members[0] ?? null;
 
-  // Từ hub "Video" — người của dịp nổi bật được chọn sẵn
+  // Từ hub "Video" hoặc màn chi tiết ngày (12d) — người + dịp được chọn sẵn.
+  // consumed-ref (pattern app/new.tsx): params chỉ áp MỘT lần cho mỗi lượt
+  // tới, vì draft provider sống theo cả nhóm /video và effect chạy lại mỗi
+  // lần màn được focus.
+  const consumedPrefill = useRef<string | null>(null);
   useEffect(() => {
-    if (params.memberId && draft.memberId === null) {
+    const key = params.memberId ?? params.occasion;
+    if (!key || consumedPrefill.current === key) return;
+    consumedPrefill.current = key;
+    // Draft dở dang về NGƯỜI KHÁC không được nuốt dịp mới: ảnh, chuyện và
+    // loại video trong đó được chọn cho người cũ. Tới từ một ngày cụ thể là
+    // chủ ý "làm video cho DỊP NÀY" → reset rồi mới áp. Cùng người thì giữ
+    // draft (ảnh đã chọn sống sót).
+    if (params.memberId && draft.memberId !== null && draft.memberId !== params.memberId) {
+      reset();
+    }
+    if (params.memberId) {
       update({ memberId: params.memberId, memberName: params.memberName ?? '' });
     }
+    if (params.occasion) {
+      // BIRTHDAY có loại video riêng — tín hiệu sạch hơn cho AI so với nhét
+      // label vào customKind; các loại khác đi qua customKind (kindLabel của
+      // server chặn 40 ký tự).
+      update(
+        params.occasionType === 'BIRTHDAY'
+          ? { kind: 'birthday', customKind: '' }
+          : { customKind: params.occasion.slice(0, 40) },
+      );
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.memberId]);
+  }, [params.memberId, params.occasion]);
 
   // Người hiển thị mặc định (members[0]) phải được GHI vào draft chứ không chỉ
   // vẽ lên màn — màn chọn ảnh đọc draft.memberId để mở bộ lọc "ảnh của người

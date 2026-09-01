@@ -110,6 +110,7 @@ export type NotificationTarget =
   | { kind: 'member'; id: string }
   | { kind: 'video'; id: string }
   | { kind: 'invite'; code: string }
+  | { kind: 'date'; id: string }
   | null;
 
 /**
@@ -133,6 +134,14 @@ export function notificationTarget(item: NotificationDetail): NotificationTarget
     return { kind: 'invite', code: payload.code };
   }
   if (payload.postId !== undefined) return { kind: 'post', id: payload.postId };
+  // A stored occasion's reminder opens its "Dates we keep" detail (12d) —
+  // before memberId, because those reminders often tag a member too and the
+  // date screen, not the person, is what the reminder is about. Derived
+  // reminders carry no specialDateId and keep landing on the member profile,
+  // which is right: a derived date IS the profile's date.
+  if (payload.specialDateId !== undefined) {
+    return { kind: 'date', id: payload.specialDateId };
+  }
   if (payload.memberId !== undefined) return { kind: 'member', id: payload.memberId };
   return null;
 }

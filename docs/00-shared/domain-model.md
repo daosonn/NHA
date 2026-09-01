@@ -117,7 +117,7 @@ Time is revived.
   e.g. the co-conspirators of a surprise; the target stays excluded by the
   owner's choice.
 
-### Special dates & widgets (decided 2026-08-14)
+### Special dates & widgets (decided 2026-08-14; extended 2026-09-01)
 
 - Upcoming special occasions render as **themed countdown widgets** on the
   family home (e.g. ANNIVERSARY · bunting · "in 3 days · 50th
@@ -125,14 +125,35 @@ Time is revived.
 - **Birthdays and memorials are derived automatically** from
   `LifeProfile.birthDate` / `deathDate`; **anniversaries and custom
   occasions are user-created** (`SpecialDate` in `database.md`).
-- Occasions recur annually; they feed reminders (Sprint 3) and the Special
-  Date Detail screen (screen 17).
-- Dates are **solar (Gregorian) only** — the product targets the Japanese
-  market (decided 2026-08-14); no lunar-calendar support needed.
-  **Reaffirmed 2026-08-18** after the Occasions mockups (9e/9f/9g) turned up
-  showing lunar dates: the mockups are what changes, not the schema. The
-  lunar toggle, the "Lunar" pill and the "lunar 10/2" line come out of the
-  design before those screens are built.
+- "Dates we keep" (2026-09-01, approved mockups 12a–12d) extends the stored
+  rows four ways:
+  - **Kinds**: BIRTHDAY / ANNIVERSARY / MEMORIAL / **TET** / **MILESTONE** /
+    CUSTOM (shown as "Other"). Enum values are never removed — Postgres
+    cannot drop one.
+  - **Vietnamese lunar dates** (`isLunar`) — **supersedes the solar-only
+    decision of 2026-08-14 (reaffirmed 2026-08-18)**: the customer's own
+    12a–12d design carries giỗ "lunar 10/2" and Tết "lunar 1/1" as first-
+    class rows. Rules: the calendar is defined by **UTC+7** midnights
+    (`src/common/lunar.ts`, Hồ Ngọc Đức's algorithm — never +8, that is the
+    Chinese calendar and drifts a day or a whole leap month); a yearly
+    lunar date **skips leap months** (the regular month is always meant);
+    lunar day 30 in a 29-day month **clamps back to 29** (a giỗ observes
+    the month's last day) — deliberately unlike solar Feb 29, which keeps
+    rolling **forward** to Mar 1.
+  - **One-off dates** (`repeatsYearly=false` + `year`, in the row's own
+    calendar — a lunar year for lunar rows). A one-off that has passed
+    disappears from every list and never reminds.
+  - **Scope**: a row belongs to exactly one of a family (`familyId`) or its
+    creator (`ownerUserId`, "Only me") — DB CHECK enforces the XOR. A
+    personal row is private like a memo (404 for anyone else) and reminds
+    the owner alone.
+- Reminders: each stored row carries its own `remindDaysBefore` (0–30,
+  in-app bell; fires that many days before AND on the day). Derived
+  birthdays/memorials keep the fixed [7, 0] leads.
+- The widget/aggregate lists compute `nextOccurrence` at request time —
+  never stored; the same occurrence code feeds the reminder job so the
+  displayed day and the notified day cannot disagree
+  (`src/common/occurrence.ts`).
 
 ## Open Questions
 

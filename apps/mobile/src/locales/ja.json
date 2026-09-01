@@ -1133,5 +1133,75 @@
       "codeNotFound": "そのコードに一致するものが見つかりません。送ってくれた人に確認してください。",
       "alreadyMember": "すでにその家族に参加しています。"
     }
+  },
+  "dates": {
+    "title": "みんなで覚えておく日",
+    "seeAll": "すべて見る {{count}}",
+    "addDate": "日付を追加",
+    "filterAll": "すべて",
+    "filterMine": "自分だけ",
+    "thisSeason": "この季節",
+    "later": "この先",
+    "loadFailed": "日付を読み込めませんでした。",
+    "emptyTitle": "まだ日付がありません",
+    "emptyBody": "誕生日はプロフィールから届きます。下から追加もできます。",
+    "meta": {
+      "everyYear": "毎年",
+      "once": "一度だけ",
+      "lunar": "旧暦{{month}}/{{day}}"
+    },
+    "kinds": {
+      "birthday": "誕生日",
+      "memorial": "命日",
+      "anniversary": "記念日",
+      "tet": "テト",
+      "milestone": "節目",
+      "other": "その他"
+    },
+    "form": {
+      "title": "新しい日付",
+      "editTitle": "日付を編集",
+      "kind": "種類",
+      "name": "呼び名",
+      "nameRequired": "名前が必要です",
+      "who": "誰のための日",
+      "date": "日付",
+      "month": "月",
+      "day": "日",
+      "year": "年",
+      "lunarMonthN": "{{month}}月",
+      "lunar": "旧暦に合わせる",
+      "lunarHint": "旧暦{{month}}/{{day}} — 毎年動きます",
+      "everyYear": "毎年くり返す",
+      "whoSees": "誰に見える",
+      "onlyMe": "自分だけ",
+      "onlyMeHint": "ほかの人には知らせません",
+      "remind": "みんなに知らせる",
+      "remindMe": "自分に知らせる",
+      "remindOnDay": "当日",
+      "remindDays_other": "{{count}}日前",
+      "save": "この日付を保存",
+      "saved": "保存しました",
+      "saveFailed": "保存できませんでした。もう一度。",
+      "delete": "この日付を削除",
+      "deleteConfirm": "もう一度押すと削除します",
+      "deleted": "削除しました"
+    },
+    "detail": {
+      "inDays_zero": "今日",
+      "inDays_other": "あと{{count}}日",
+      "keptBy": "{{name}}で共有 · {{count}}人",
+      "keptByYou": "この日付はあなただけに見えます",
+      "remindedOnDay": "当日にみんなへ通知",
+      "remindedBefore_other": "{{count}}日前にみんなへ通知",
+      "remindedDefault": "1週間前と当日にみんなへ通知",
+      "memories": "{{name}}の思い出",
+      "photoCount_other": "写真{{count}}枚",
+      "make": "この日のために作る",
+      "fromProfile": "この日付は{{name}}のプロフィールにあります。編集はそちらで。",
+      "edit": "この日付を編集",
+      "notFoundTitle": "この日付は見つかりません",
+      "notFoundBody": "家族が削除したのかもしれません。"
+    }
   }
 }

@@ -81,6 +81,9 @@ export const queryKeys = {
 
   // Khu AI (màn 21-33)
   specialDates: (familyId: string) => ['families', familyId, 'special-dates'] as const,
+  /** "Dates we keep" (12a/12b) — xuyên mọi nhà + ngày riêng, nên nằm dưới
+   *  'me' như myAlbums: rời một nhà không được giết cache của cả feed. */
+  myDates: () => ['me', 'special-dates'] as const,
   evidenceStats: (familyId: string, memberId: string) =>
     ['families', familyId, 'members', memberId, 'evidence-stats'] as const,
   savedGiftIdeas: (familyId: string, memberId: string) =>
