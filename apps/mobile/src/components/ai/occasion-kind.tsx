@@ -30,11 +30,16 @@ export function occasionLabelKey(kind: OccasionKind): string {
   return LABEL_KEYS[kind];
 }
 
-/** The API speaks SpecialDateType; the icons/labels stay the same five. */
+/** The API speaks SpecialDateType; the icons/labels stay the same five.
+ *  TET/MILESTONE landed with "Dates we keep" (12a-12d) — an unmapped type
+ *  here would be ICONS[undefined] and crash every list that draws a date,
+ *  so this map must grow BEFORE the server enum does. */
 const API_KIND: Record<SpecialDateItem['type'], OccasionKind> = {
   BIRTHDAY: 'birthday',
   ANNIVERSARY: 'anniversary',
   MEMORIAL: 'memorial',
+  TET: 'holiday',
+  MILESTONE: 'milestone',
   CUSTOM: 'holiday',
 };
 

@@ -56,11 +56,25 @@ export class SpecialDateController {
     return this.specialDateService.listCustom(user.userId, familyId);
   }
 
+  @Get(':specialDateId')
+  @ApiOperation({
+    summary:
+      'One stored row with computed nextOccurrence/daysUntil — 404 when ' +
+      'the row lives in another family (or is personal)',
+  })
+  getOne(
+    @CurrentUser() user: AuthUser,
+    @Param('familyId', ParseUUIDPipe) familyId: string,
+    @Param('specialDateId', ParseUUIDPipe) specialDateId: string,
+  ): Promise<SpecialDateDetail> {
+    return this.specialDateService.getOne(user.userId, familyId, specialDateId);
+  }
+
   @Post()
   @ApiOperation({
     summary:
       'Create a custom occasion (WBS 3.2.3) — any family member may; ' +
-      'recurs annually on month/day',
+      'solar or lunar, yearly or one-off, per-date reminder lead',
   })
   create(
     @CurrentUser() user: AuthUser,

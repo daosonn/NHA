@@ -1,15 +1,19 @@
 import { useRouter } from 'expo-router';
-import { ChevronRight, Images, TriangleAlert } from 'lucide-react-native';
+import { ChevronRight, Images, Plus, TriangleAlert } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
+import { DateRow } from '../../src/components/dates/date-row';
 import { AppHeader } from '../../src/components/layout/app-header';
 import { contentColumn } from '../../src/components/layout/content-column';
 import { NotificationBell, ScreenTitle } from '../../src/components/layout/header-slots';
+import { Card } from '../../src/components/ui/card';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { IconBadge } from '../../src/components/ui/icon-badge';
 import { Text } from '../../src/components/ui/text';
+import { dateDetailParams } from '../../src/features/dates/date-meta';
+import { useMyDates } from '../../src/features/dates/use-my-dates';
 import { useFamilies } from '../../src/features/family/use-families';
 import type { FamilySummary } from '../../src/lib/api';
 import { imageThumbSource } from '../../src/lib/media-source';
@@ -98,6 +102,10 @@ export default function OmoideScreen() {
   const router = useRouter();
 
   const { data: families, isPending, isError, refetch } = useFamilies();
+  // "Dates we keep" (12a) — feed tổng hợp xuyên mọi nhà + ngày riêng, cố ý
+  // KHÔNG dùng useActiveFamily: tab này vừa bỏ khái niệm "nhà đang chọn"
+  // (28/08) và mục ngày không được lén đưa nó quay lại.
+  const myDates = useMyDates();
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background.page }}>
@@ -208,6 +216,76 @@ export default function OmoideScreen() {
             />
           </Animated.View>
         ))}
+
+        {/* ---- Dates we keep (12a) — chỉ vẽ khi feed về; lỗi thì ẩn cả mục:
+             danh sách nhà phía trên đã là nơi báo lỗi tải của tab này, một ô
+             lỗi thứ hai chồng lên chỉ thêm ồn. ---- */}
+        {myDates.isSuccess && (
+          <Animated.View entering={enter.up(0)} style={{ gap: 9, paddingTop: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+              <Text
+                variant="caption"
+                weight="semibold"
+                color={colors.text.secondary}
+                style={{ flex: 1 }}
+              >
+                {t('dates.title')}
+              </Text>
+              {myDates.data.length > 0 && (
+                <Pressable
+                  onPress={() => router.push('/dates')}
+                  accessibilityRole="button"
+                  hitSlop={8}
+                >
+                  <Text variant="caption" weight="semibold" color={colors.coral.deep}>
+                    {t('dates.seeAll', { count: myDates.data.length })}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+
+            <Card padding={8}>
+              {myDates.data.slice(0, 2).map((item, index) => (
+                <DateRow
+                  key={item.id ?? `${item.type}-${item.familyId}-${item.members[0]?.memberId ?? index}`}
+                  item={item}
+                  trailing="chevron"
+                  meta="kind"
+                  divider={index > 0}
+                  onPress={() =>
+                    router.push({ pathname: '/dates/[id]', params: dateDetailParams(item) })
+                  }
+                />
+              ))}
+              {/* hàng "Add a date" — luôn có, kể cả khi chưa có ngày nào:
+                  chính cái nút là lý do mục này tồn tại */}
+              <Pressable
+                onPress={() => router.push('/dates/new')}
+                accessibilityRole="button"
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 11,
+                  padding: 6,
+                  borderTopWidth: myDates.data.length > 0 ? 1 : 0,
+                  borderTopColor: colors.state.borderDefault,
+                  backgroundColor: pressed ? colors.background.surfaceSoft : 'transparent',
+                })}
+              >
+                <IconBadge
+                  size={44}
+                  background={colors.background.subtle}
+                  foreground={colors.text.muted}
+                  renderIcon={(props) => <Plus {...props} strokeWidth={2.1} />}
+                />
+                <Text variant="body2" weight="semibold" style={{ flex: 1 }}>
+                  {t('dates.addDate')}
+                </Text>
+                <ChevronRight size={17} color={colors.text.subtle} strokeWidth={2} />
+              </Pressable>
+            </Card>
+          </Animated.View>
+        )}
       </ScrollView>
     );
   }

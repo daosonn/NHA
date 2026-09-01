@@ -4,6 +4,12 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
+import {
+  MS_PER_DAY,
+  occursOn,
+  todayUtc,
+  type OccurrenceSpec,
+} from '../common/occurrence';
 import { PrismaService } from '../database/prisma/prisma.service';
 import { NotificationType } from '../generated/prisma/enums';
 import {
@@ -12,18 +18,23 @@ import {
 } from './notification.service';
 
 /**
- * How far ahead a reminder fires (WBS 3.2.2). Two moments per occasion:
- * a week out (time to plan) and the day itself. **Assumption to confirm
- * with the team** — no lead time is written down anywhere; per-user
- * tuning belongs to notification settings (3.4.5), which do not exist yet.
+ * How far ahead a PROFILE reminder fires (WBS 3.2.2): a week out (time to
+ * plan) and the day itself. Stored SpecialDate rows carry their own lead
+ * (`remindDaysBefore`, mockup 12c) and no longer use this constant.
  */
-const LEAD_DAYS = [7, 0] as const;
+const PROFILE_LEAD_DAYS = [7, 0] as const;
+
+/** DTO cap on SpecialDate.remindDaysBefore — the dedupe horizon below is
+ *  derived from it so a longer lead can never silently break idempotency
+ *  (the old hardcoded 9-day horizon would have re-sent a 10-day lead). */
+const MAX_SPECIAL_LEAD_DAYS = 30;
+
+const DEDUPE_HORIZON_DAYS =
+  Math.max(...PROFILE_LEAD_DAYS, MAX_SPECIAL_LEAD_DAYS) + 2;
 
 /** Twice a day: a reminder day is never missed even if one run lands
  *  mid-deploy, and the dedupe below makes the second run a no-op. */
 const RUN_EVERY_MS = 12 * 60 * 60 * 1000;
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const REMINDER_TYPES = [
   NotificationType.BIRTHDAY_REMINDER,
@@ -90,16 +101,17 @@ export class ReminderService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** One full pass over every lead. Public so a future admin/internal
-   *  trigger can reuse it; nothing user-facing calls this. */
+  /** One full pass. Public so a future admin/internal trigger can reuse
+   *  it; nothing user-facing calls this. */
   async runOnce(): Promise<{ created: number }> {
-    const today = this.todayUtc();
+    const today = todayUtc();
     const candidates: ReminderCandidate[] = [];
-    for (const lead of LEAD_DAYS) {
+    for (const lead of PROFILE_LEAD_DAYS) {
       const target = new Date(today.getTime() + lead * MS_PER_DAY);
       candidates.push(...(await this.profileReminders(target, lead)));
-      candidates.push(...(await this.specialDateReminders(target, lead)));
     }
+    // Stored rows carry their own lead — one table read, leads per row.
+    candidates.push(...(await this.specialDateReminders(today)));
     const fresh = await this.dropAlreadySent(candidates);
     const rows: NewNotification[] = fresh.map((candidate) => ({
       recipientUserId: candidate.recipientUserId,
@@ -157,7 +169,10 @@ export class ReminderService implements OnModuleInit, OnModuleDestroy {
             },
           ];
       for (const occasion of occasions) {
-        if (!occasion.date || !this.occursOn(occasion.date, target)) {
+        if (
+          !occasion.date ||
+          !occursOn(this.profileSpec(occasion.date), target)
+        ) {
           continue;
         }
         out.push(
@@ -229,21 +244,29 @@ export class ReminderService implements OnModuleInit, OnModuleDestroy {
     return out;
   }
 
-  /** Stored custom occasions landing on the target day (anniversaries
-   *  etc., WBS 3.2.3 rows). Everyone in the family hears, including the
-   *  people the occasion is about — the couple wants their anniversary. */
-  private async specialDateReminders(
-    target: Date,
-    lead: number,
-  ): Promise<ReminderCandidate[]> {
+  /** Stored custom occasions (WBS 3.2.3 rows) — each row carries its own
+   *  lead, so this runs once per pass and loops leads per row. Family rows
+   *  notify everyone in the family, including the people the occasion is
+   *  about (the couple wants their anniversary); personal ("Only me") rows
+   *  notify the owner alone. Lunar and one-off dates go through the same
+   *  shared `occursOn` the widgets display with, so the reminder day and
+   *  the shown day can never disagree. */
+  private async specialDateReminders(today: Date): Promise<
+    ReminderCandidate[]
+  > {
     const rows = await this.prisma.specialDate.findMany({
       select: {
         id: true,
         familyId: true,
+        ownerUserId: true,
         type: true,
         title: true,
         month: true,
         day: true,
+        isLunar: true,
+        repeatsYearly: true,
+        year: true,
+        remindDaysBefore: true,
         family: {
           select: {
             members: {
@@ -254,34 +277,45 @@ export class ReminderService implements OnModuleInit, OnModuleDestroy {
         },
       },
     });
-    const occursOnIso = target.toISOString().slice(0, 10);
     const out: ReminderCandidate[] = [];
     for (const row of rows) {
-      const rolled = new Date(
-        Date.UTC(target.getUTCFullYear(), row.month - 1, row.day),
-      );
-      if (rolled.getTime() !== target.getTime()) {
-        continue;
-      }
-      for (const { userId } of row.family.members) {
-        if (!userId) {
+      const spec: OccurrenceSpec = {
+        month: row.month,
+        day: row.day,
+        isLunar: row.isLunar,
+        repeatsYearly: row.repeatsYearly,
+        year: row.year,
+      };
+      const recipients =
+        row.ownerUserId !== null
+          ? [row.ownerUserId]
+          : (row.family?.members ?? [])
+              .map((m) => m.userId)
+              .filter((id): id is string => id !== null);
+      for (const lead of new Set([row.remindDaysBefore, 0])) {
+        const target = new Date(today.getTime() + lead * MS_PER_DAY);
+        if (!occursOn(spec, target)) {
           continue;
         }
-        out.push({
-          recipientUserId: userId,
-          type: NotificationType.EVENT_REMINDER,
-          dedupeKey: `special:${row.id}:${occursOnIso}:${lead}`,
-          payload: {
-            kind: 'special',
-            familyId: row.familyId,
-            specialDateId: row.id,
-            specialDateType: row.type,
-            // User-entered title = data, not server copy.
-            title: row.title,
-            occursOn: occursOnIso,
-            daysUntil: lead,
-          },
-        });
+        const occursOnIso = target.toISOString().slice(0, 10);
+        for (const userId of recipients) {
+          out.push({
+            recipientUserId: userId,
+            type: NotificationType.EVENT_REMINDER,
+            dedupeKey: `special:${row.id}:${occursOnIso}:${lead}`,
+            payload: {
+              kind: 'special',
+              scope: row.ownerUserId !== null ? 'PERSONAL' : 'FAMILY',
+              familyId: row.familyId,
+              specialDateId: row.id,
+              specialDateType: row.type,
+              // User-entered title = data, not server copy.
+              title: row.title,
+              occursOn: occursOnIso,
+              daysUntil: lead,
+            },
+          });
+        }
       }
     }
     return out;
@@ -296,7 +330,7 @@ export class ReminderService implements OnModuleInit, OnModuleDestroy {
     if (candidates.length === 0) {
       return [];
     }
-    const horizon = new Date(Date.now() - 9 * MS_PER_DAY);
+    const horizon = new Date(Date.now() - DEDUPE_HORIZON_DAYS * MS_PER_DAY);
     const existing = await this.prisma.notification.findMany({
       where: {
         type: { in: [...REMINDER_TYPES] },
@@ -318,20 +352,16 @@ export class ReminderService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  /** Does this annual date land on the target day, Feb 29 rolling to
-   *  Mar 1 in non-leap years (Date.UTC overflows forward)? */
-  private occursOn(date: Date, target: Date): boolean {
-    const rolled = new Date(
-      Date.UTC(target.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-    );
-    return rolled.getTime() === target.getTime();
-  }
-
-  private todayUtc(): Date {
-    const now = new Date();
-    return new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-    );
+  /** A profile birth/death date as an occurrence spec — always solar and
+   *  yearly, so Feb-29 rolling stays identical to the widgets'. */
+  private profileSpec(date: Date): OccurrenceSpec {
+    return {
+      month: date.getUTCMonth() + 1,
+      day: date.getUTCDate(),
+      isLunar: false,
+      repeatsYearly: true,
+      year: null,
+    };
   }
 
   private async safelyRun(label: string): Promise<void> {
