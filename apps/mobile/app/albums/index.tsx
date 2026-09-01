@@ -12,9 +12,10 @@ import { contentColumn } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { Text } from '../../src/components/ui/text';
+import { useToast } from '../../src/components/ui/toast';
 import { useAlbums, useCreateAlbum } from '../../src/features/album/use-albums';
 import type { AlbumSummary } from '../../src/lib/api';
-import { mediaSource } from '../../src/lib/media-source';
+import { imageThumbSource } from '../../src/lib/media-source';
 import { colors, radius, spacing } from '../../src/theme';
 import { enter } from '../../src/theme/motion';
 
@@ -44,7 +45,7 @@ function AlbumCard({ album, onPress }: { album: AlbumSummary; onPress: () => voi
           <Images size={26} color={colors.text.lightMuted} strokeWidth={1.8} />
         ) : (
           <Image
-            source={mediaSource(album.coverMediaId)}
+            source={imageThumbSource(album.coverMediaId)}
             recyclingKey={album.coverMediaId}
             contentFit="cover"
             transition={160}
@@ -125,6 +126,7 @@ function NewAlbumTile({ onPress }: { onPress: () => void }) {
  */
 export default function AlbumsScreen() {
   const { t } = useTranslation();
+  const toast = useToast();
   const router = useRouter();
 
   const albums = useAlbums();
@@ -221,6 +223,7 @@ export default function AlbumsScreen() {
           create.mutate(values, {
             onSuccess: (album) => {
               setCreating(false);
+              toast.success(t('albums.toast.created'));
               open(album.id);
             },
           })

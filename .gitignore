@@ -61,3 +61,7 @@ apps/api/assets/music/
 # apps/mobile/assets/home instead — 4 JPEGs, ~440 KB, which are committed.
 # Regenerate those with the sharp snippet in src/fixtures/home.ts's history.
 apps/mobile/assets/Duc/
+
+# Sổ tay cá nhân của người làm dự án — ghi chú học tập, không phải tài liệu
+# nhóm. Quyết định nào đáng cho cả nhóm biết thì thuộc về docs/.
+notes/
