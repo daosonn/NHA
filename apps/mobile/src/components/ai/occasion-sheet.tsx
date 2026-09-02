@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
+import { tileDayMonthProps } from '../../features/dates/date-meta';
 import { useOccasionLabel } from '../../features/ai/use-special-dates';
 import type { SpecialDateItem } from '../../lib/api';
 import { formatDayMonth } from '../../lib/date';
@@ -106,7 +107,7 @@ export function OccasionSheet({
                 backgroundColor: pressed ? colors.background.subtle : 'transparent',
               })}
             >
-              <DateTile day={item.day} month={t(`date.months.${item.month}`)} />
+              <DateTile {...tileDayMonthProps(item, t)} />
               <View style={{ flex: 1, minWidth: 0, gap: 1 }}>
                 <Text variant="body2" weight="semibold" numberOfLines={1}>
                   {label}

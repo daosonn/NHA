@@ -11,6 +11,7 @@ import { Platform } from 'react-native';
 import { apiBaseUrl, apiRequest } from './client';
 import type {
   CreateVideoJobRequest,
+  CreateSpecialDateRequest,
   EvidenceRef,
   EvidenceStats,
   GiftIdeasRequest,
@@ -18,10 +19,13 @@ import type {
   MessageRequest,
   MessageResponse,
   MusicCatalog,
+  MyUpcomingSpecialDates,
   SavedGiftIdea,
+  SpecialDateDetail,
   StoryboardRequest,
   StoryboardResponse,
   UpcomingSpecialDates,
+  UpdateSpecialDateRequest,
   VideoJob,
 } from './ai-types';
 import type {
@@ -380,6 +384,34 @@ export const specialDates = {
   /** Hub "Coming up" + occasion pickers — soonest first, derived from profiles + custom rows. */
   upcoming: (familyId: string, limit?: number) =>
     apiRequest<UpcomingSpecialDates>(`/families/${familyId}/special-dates${query({ limit })}`),
+
+  /** "Dates we keep" (12a/12b) — mọi ngày sắp tới xuyên mọi nhà + ngày riêng. */
+  mine: (limit?: number) =>
+    apiRequest<MyUpcomingSpecialDates>(`/me/special-dates${query({ limit })}`),
+
+  // CRUD dòng của NHÀ — route family giữ nguyên như server.
+  create: (familyId: string, body: CreateSpecialDateRequest) =>
+    apiRequest<SpecialDateDetail>(`/families/${familyId}/special-dates`, {
+      method: 'POST',
+      body,
+    }),
+  update: (familyId: string, id: string, body: UpdateSpecialDateRequest) =>
+    apiRequest<SpecialDateDetail>(`/families/${familyId}/special-dates/${id}`, {
+      method: 'PATCH',
+      body,
+    }),
+  remove: (familyId: string, id: string) =>
+    apiRequest<{ success: boolean }>(`/families/${familyId}/special-dates/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // CRUD dòng "Only me" — riêng tư như memo, 404 với người khác.
+  createMine: (body: CreateSpecialDateRequest) =>
+    apiRequest<SpecialDateDetail>('/me/special-dates', { method: 'POST', body }),
+  updateMine: (id: string, body: UpdateSpecialDateRequest) =>
+    apiRequest<SpecialDateDetail>(`/me/special-dates/${id}`, { method: 'PATCH', body }),
+  removeMine: (id: string) =>
+    apiRequest<{ success: boolean }>(`/me/special-dates/${id}`, { method: 'DELETE' }),
 };
 
 export const ai = {

@@ -238,16 +238,36 @@ export type VideoJob = {
 
 // ---------------------------------------------------------------- special dates (hub "Coming up")
 
+export type SpecialDateType =
+  | 'BIRTHDAY'
+  | 'ANNIVERSARY'
+  | 'MEMORIAL'
+  | 'TET'
+  | 'MILESTONE'
+  | 'CUSTOM';
+
 export type SpecialDateItem = {
   source: 'DERIVED' | 'CUSTOM';
-  type: 'BIRTHDAY' | 'ANNIVERSARY' | 'MEMORIAL' | 'CUSTOM';
+  /** id dòng — null ⇔ DERIVED (không có gì để sửa/mở). Optional vì server
+   *  cũ chưa gửi; hook use-my-dates chuẩn hoá về null. */
+  id?: string | null;
+  type: SpecialDateType;
   /** CUSTOM có title; DERIVED client tự ghép nhãn từ type + tên thành viên */
   title: string | null;
+  /** month/day theo lịch của isLunar: ÂM khi isLunar=true. */
   month: number;
   day: number;
+  /** true ⇒ ngày âm lịch VN — nextOccurrence vẫn là ngày DƯƠNG đã đổi. */
+  isLunar?: boolean;
+  repeatsYearly?: boolean;
+  /** một-lần: năm của nó (năm ÂM khi isLunar). */
+  year?: number | null;
   originYear: number | null;
   /** số năm tại lần tới ("turns 70", "30 years") — null khi không rõ năm gốc */
   ordinal: number | null;
+  /** nhắc chuông trước N ngày (+ đúng ngày); DERIVED cố định 7.
+   *  null ở client = server cũ chưa gửi (use-my-dates chuẩn hoá vậy). */
+  remindDaysBefore?: number | null;
   theme: string;
   nextOccurrence: string; // ISO YYYY-MM-DD
   daysUntil: number;
@@ -255,6 +275,54 @@ export type SpecialDateItem = {
 };
 
 export type UpcomingSpecialDates = { items: SpecialDateItem[] };
+
+/** Item của feed tổng hợp GET /me/special-dates — "Dates we keep" 12a/12b. */
+export type MySpecialDateItem = SpecialDateItem & {
+  scope: 'FAMILY' | 'PERSONAL';
+  familyId: string | null;
+  familyName: string | null;
+};
+
+export type MyUpcomingSpecialDates = { items: MySpecialDateItem[] };
+
+/** Một dòng đã lưu, như màn sửa nhìn thấy (GET one / POST / PATCH). */
+export type SpecialDateDetail = {
+  id: string;
+  scope: 'FAMILY' | 'PERSONAL';
+  familyId: string | null;
+  type: SpecialDateType;
+  title: string;
+  month: number;
+  day: number;
+  isLunar: boolean;
+  repeatsYearly: boolean;
+  year: number | null;
+  originYear: number | null;
+  remindDaysBefore: number;
+  theme: string;
+  nextOccurrence: string | null;
+  daysUntil: number | null;
+  members: { memberId: string; displayName: string }[];
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateSpecialDateRequest = {
+  type: SpecialDateType;
+  title: string;
+  month: number;
+  day: number;
+  isLunar?: boolean;
+  repeatsYearly?: boolean;
+  year?: number;
+  remindDaysBefore?: number;
+  originYear?: number | null;
+  theme: string;
+  memberIds?: string[];
+};
+
+export type UpdateSpecialDateRequest = Partial<CreateSpecialDateRequest>;
 
 export type MusicCatalog = {
   themes: {

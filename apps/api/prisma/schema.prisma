@@ -51,7 +51,9 @@ enum SpecialDateType {
   BIRTHDAY
   ANNIVERSARY
   MEMORIAL
-  CUSTOM
+  TET // Tết Nguyên Đán — mặc định đi với isLunar (2026-09-01, mockup 12c)
+  MILESTONE // tốt nghiệp, thôi nôi… — hay dùng với repeatsYearly=false
+  CUSTOM // "Other" trên UI — KHÔNG đổi tên: PG không DROP VALUE được
 }
 
 enum SpecialDateTheme {
@@ -125,7 +127,8 @@ model User {
   createdLifeEvents   LifeEvent[]          @relation("LifeEventCreator")
   editedLifeEvents    LifeEvent[]          @relation("LifeEventLastEditor")
   editHistories       EditHistory[]
-  createdSpecialDates SpecialDate[]
+  createdSpecialDates SpecialDate[]        @relation("SpecialDateCreator")
+  ownedSpecialDates   SpecialDate[]        @relation("SpecialDateOwner")
   notifications       Notification[]
   videoJobs           VideoJob[]
   sentInvitations     Invitation[]         @relation("InvitationInviter")
@@ -499,21 +502,40 @@ model EditHistory {
 // ─── Special dates, notifications ───────────────────────────────────────────
 
 model SpecialDate {
-  id          String           @id @default(uuid())
-  familyId    String
+  id       String  @id @default(uuid())
+  /// Phạm vi: đúng MỘT trong familyId / ownerUserId (XOR CHECK trong
+  /// migration — Prisma không biểu diễn được, cùng kiểu LifeProfile).
+  /// familyId = cả nhà thấy; ownerUserId = "Only me" (mockup 12c).
+  familyId String?
+  ownerUserId String?
   type        SpecialDateType
   title       String
-  month       Int // recurs annually; countdown computed at display time
-  day         Int
-  originYear  Int? // for ordinals ("50th", "turns 63")
-  theme       SpecialDateTheme
-  createdById String
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  /// month/day theo lịch của isLunar: dương 1-12/1-31, ÂM 1-12/1-30.
+  month Int
+  day   Int
+  /// true ⇒ ngày ÂM lịch VN (tz +7): ngày dương trôi theo năm, tháng nhuận
+  /// bỏ qua, ngày 30 thiếu kẹp lùi 29 (src/common/lunar.ts).
+  isLunar Boolean @default(false)
+  /// false ⇒ một lần — `year` bắt buộc (theo lịch của chính dòng: năm ÂM
+  /// khi isLunar). Một-lần đã qua biến khỏi danh sách và không nhắc nữa.
+  repeatsYearly Boolean @default(true)
+  year          Int?
+  originYear    Int? // for ordinals ("50th", "turns 63")
+  /// Nhắc chuông trong app trước N ngày (cộng thêm đúng ngày); 0 = chỉ
+  /// đúng ngày. ReminderService đọc theo từng dòng (mockup 12c "10 days").
+  remindDaysBefore Int              @default(7)
+  theme            SpecialDateTheme
+  createdById      String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
-  family    Family              @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  createdBy User                @relation(fields: [createdById], references: [id])
+  family    Family?             @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  owner     User?               @relation("SpecialDateOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  createdBy User                @relation("SpecialDateCreator", fields: [createdById], references: [id])
   members   SpecialDateMember[]
+
+  @@index([familyId])
+  @@index([ownerUserId])
 }
 
 model SpecialDateMember {

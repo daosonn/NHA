@@ -4,6 +4,7 @@ import {
   ArrayMaxSize,
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsEnum,
   IsInt,
   IsOptional,
@@ -47,6 +48,56 @@ export class CreateSpecialDateDto {
   @Min(1)
   @Max(31)
   day!: number;
+
+  @ApiPropertyOptional({
+    default: false,
+    description:
+      'true ⇒ month/day are Vietnamese LUNAR (âm lịch, tz +7). The solar ' +
+      'day is converted per year: leap months are skipped, a missing day ' +
+      '30 clamps back to 29 (a giỗ observes the last day of the month).',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isLunar?: boolean;
+
+  @ApiPropertyOptional({
+    default: true,
+    description:
+      'false ⇒ one-off: `year` becomes required (in the same calendar as ' +
+      'month/day — a LUNAR year when isLunar). A one-off that has passed ' +
+      'disappears from lists and never reminds.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  repeatsYearly?: boolean;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    minimum: 1900,
+    maximum: 2100,
+    description: 'One-off only — the year it happens, in the row calendar.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1900)
+  @Max(2100)
+  year?: number | null;
+
+  @ApiPropertyOptional({
+    default: 7,
+    minimum: 0,
+    maximum: 30,
+    description:
+      'In-app bell reminder lead: notified this many days before AND on ' +
+      'the day itself; 0 = day-of only. (Mockup 12c "Remind everyone".)',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(30)
+  remindDaysBefore?: number;
 
   @ApiPropertyOptional({
     nullable: true,

@@ -113,7 +113,8 @@ export default function MessageScreen() {
     // — "Say it differently" cùng tone mà không force sẽ trả lại nguyên bản cũ.
     suggest.mutate(
       {
-        occasionLabel: occasion.label,
+        // server chặn 80 ký tự — title CUSTOM dài + " · 30 Aug" sẽ 400 nếu không cắt
+        occasionLabel: occasion.label.slice(0, 80),
         extraNote: extraNote.trim() || undefined,
         tone: useTone,
         locale,

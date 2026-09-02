@@ -592,20 +592,26 @@ Screen 19. **No migration** — `Notification` shipped in the sprint-0 schema.
   nothing, only the first one does. Invitations raise nothing yet — the
   invitee has no account to notify, so who receives `FAMILY_INVITE` is an
   open product question.
-- **Reminders (WBS 3.2.2, added 2026-08-20).** A twice-daily server job
-  turns profile dates and stored SpecialDate rows into notifications, at
-  **7 days ahead and on the day** (lead times are an assumption to
-  confirm; per-user tuning waits for 3.4.5): `BIRTHDAY_REMINDER` for a
-  living member's `birthDate`; `EVENT_REMINDER` with `payload.kind:
-"memorial"` for a `deathDate` (a deceased member gets no birthday
-  reminder) and with `kind: "special"` for custom occasions. Everyone in
-  the family hears **except the person whose birthday it is**; custom
-  occasions notify everyone, the couple included. One reminder per person
-  per occurrence per lead, idempotent across restarts (`payload.dedupeKey`).
-  Payloads carry ids, `occursOn`, `daysUntil` and _data snapshots_
-  (`displayName`, a custom occasion's `title`) — still no composed
-  sentences. Same calendar rules as the widgets: UTC days, Feb 29 → Mar 1
-  in non-leap years.
+- **Reminders (WBS 3.2.2, added 2026-08-20; per-date leads 2026-09-01).**
+  A twice-daily server job turns profile dates and stored SpecialDate rows
+  into notifications. Profile dates keep the fixed **7 days ahead and on
+  the day**: `BIRTHDAY_REMINDER` for a living member's `birthDate`;
+  `EVENT_REMINDER` with `payload.kind: "memorial"` for a `deathDate` (a
+  deceased member gets no birthday reminder). **Stored rows carry their
+  own lead** (`remindDaysBefore` 0–30, default 7): `EVENT_REMINDER` with
+  `kind: "special"` fires that many days before AND on the day. Everyone
+  in the family hears **except the person whose birthday it is**; custom
+  occasions notify everyone, the couple included — and a **personal
+  ("Only me") row notifies its owner alone** (`payload.scope:
+  'PERSONAL'`, `familyId: null`). Lunar and one-off rows fire through the
+  same occurrence code the widgets display with, so the reminded day and
+  the shown day cannot disagree. One reminder per person per occurrence
+  per lead, idempotent across restarts (`payload.dedupeKey`; the dedupe
+  horizon is derived from the maximum lead — 32 days — so a long lead can
+  never silently re-send). Payloads carry ids, `occursOn`, `daysUntil`,
+  `specialDateId` and _data snapshots_ (`displayName`, a custom occasion's
+  `title`) — still no composed sentences. Same calendar rules as the
+  widgets: UTC days, Feb 29 → Mar 1 in non-leap years.
 - **The server sends no display text.** Only `type` plus a `payload` of
   ids — the app writes the sentence, the same rule the special-date
   widgets follow. A Japanese user must not be handed an English sentence
@@ -682,51 +688,81 @@ chosen per post in the composer, and profile visibility has no product
 definition — a stored toggle the server does not enforce would be a lie
 the UI tells. Notification settings (3.4.5) will join this controller.
 
-### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side; CRUD = WBS 3.2.3, added 2026-08-20)
+### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side; CRUD = WBS 3.2.3, added 2026-08-20; v2 "Dates we keep" 2026-09-01)
 
-| Route                                                     | Returns                |
-| --------------------------------------------------------- | ---------------------- |
-| `GET /families/:familyId/special-dates`                   | `UpcomingSpecialDates` |
-| `GET /families/:familyId/special-dates/custom`            | `SpecialDateDetail[]`  |
-| `POST /families/:familyId/special-dates`                  | `SpecialDateDetail`    |
-| `PATCH /families/:familyId/special-dates/:specialDateId`  | `SpecialDateDetail`    |
-| `DELETE /families/:familyId/special-dates/:specialDateId` | `{ success }`          |
+| Route                                                      | Returns                |
+| ---------------------------------------------------------- | ---------------------- |
+| `GET /families/:familyId/special-dates`                    | `UpcomingSpecialDates` |
+| `GET /families/:familyId/special-dates/custom`             | `SpecialDateDetail[]`  |
+| `GET /families/:familyId/special-dates/:specialDateId`     | `SpecialDateDetail`    |
+| `POST /families/:familyId/special-dates`                   | `SpecialDateDetail`    |
+| `PATCH /families/:familyId/special-dates/:specialDateId`   | `SpecialDateDetail`    |
+| `DELETE /families/:familyId/special-dates/:specialDateId`  | `{ success }`          |
+| `GET /me/special-dates?limit&familyId&scope`               | `UpcomingSpecialDates` |
+| `GET /me/special-dates/custom`                             | `SpecialDateDetail[]`  |
+| `GET /me/special-dates/:specialDateId`                     | `SpecialDateDetail`    |
+| `POST /me/special-dates`                                   | `SpecialDateDetail`    |
+| `PATCH /me/special-dates/:specialDateId`                   | `SpecialDateDetail`    |
+| `DELETE /me/special-dates/:specialDateId`                  | `{ success }`          |
 
-**CRUD (WBS 3.2.3).** `SpecialDateDetail` is `{ id, type, title, month,
-day, originYear, theme, members[], createdById, createdAt, updatedAt }` —
-the stored row **with its id**, which the merged widget items below never
-carry; the management side of screen 17 reads `GET .../custom` (calendar
-order), never the widget GET. Any family member creates, edits and
-deletes (no roles in the MVP — `createdById` is provenance, not
-ownership). Create body: `{ type, title (≤120, trimmed), month, day,
-originYear?, theme, memberIds? }`; `memberIds` must belong to this family
-and **replaces** on PATCH; `originYear: null` clears the ordinal. The
-month/day pair must be a real date — validated as the _resulting_ pair on
-PATCH, so changing only the month cannot leave Feb 31 behind; **Feb 29 is
-legal** and rolls to Mar 1 in non-leap years at display time. Deleting
-removes the occasion from the widgets; derived birthdays/memorials are
-untouched (edit those on the profile). A row addressed through another
-family's URL is a 404.
+**CRUD (WBS 3.2.3; extended 2026-09-01).** `SpecialDateDetail` is
+`{ id, scope, familyId, type, title, month, day, isLunar, repeatsYearly,
+year, originYear, remindDaysBefore, theme, nextOccurrence, daysUntil,
+members[], createdById, createdAt, updatedAt }` — the stored row **with
+its id**, which merged widget items historically never carried (they now
+carry `id: null` when DERIVED). Any family member creates, edits and
+deletes family rows (no roles in the MVP — `createdById` is provenance,
+not ownership). Create body: `{ type (now incl. TET | MILESTONE), title
+(≤120, trimmed), month, day, isLunar?, repeatsYearly?, year?,
+remindDaysBefore? (0–30, default 7), originYear?, theme, memberIds? }`;
+`memberIds` **replaces** on PATCH; `originYear: null` clears the ordinal.
 
-`UpcomingSpecialDates` is `{ items: SpecialDateItem[] }`, soonest first,
-`?limit` 1–50 (default 10). Each item:
-`{ source: 'DERIVED'|'CUSTOM', type, title, month, day, originYear,
-ordinal, theme, nextOccurrence, daysUntil, members[] }` with `members[]`
-items `{ memberId, displayName }`.
+- `isLunar: true` ⇒ month/day are **Vietnamese lunar** (tz +7). The solar
+  day is computed per year: leap months are skipped; lunar day 30 in a
+  29-day month clamps back to 29. `nextOccurrence` in every response is
+  always the **solar** date.
+- `repeatsYearly: false` ⇒ one-off: `year` becomes required (in the row's
+  own calendar — a lunar year for lunar rows); a passed one-off is
+  **omitted from every list** and never reminds; flipping the flag back
+  on clears `year`. A solar one-off validates against its actual year
+  (Feb 29 2027 is a 400); a recurring solar pair keeps the old rule —
+  **Feb 29 is legal** and rolls to Mar 1 in non-leap years at display
+  time; validated as the _resulting_ pair on PATCH.
+- **Personal scope ("Only me", `/me/special-dates`)**: the row belongs to
+  its creator (`scope: 'PERSONAL'`, `familyId: null`); it is private the
+  way memos are — anyone else gets a **404**, never a 403; `memberIds`
+  may come from **any family the creator belongs to** (a personal giỗ is
+  usually about a placeholder in one of their trees). Family rows keep
+  their CRUD under the family URL; a row addressed through another
+  family's URL stays 404.
+
+**Aggregate feed (`GET /me/special-dates`, screens 12a/12b).** Derived +
+custom across **every** family of the caller plus their personal rows,
+soonest first, `?limit` 1–50 (default 20). `?familyId=` narrows to one
+family (403 unless a member); `?scope=FAMILY|PERSONAL` narrows by scope —
+each 12b chip is one query.
+
+`UpcomingSpecialDates` is `{ items: SpecialDateItem[] }` (per-family GET:
+soonest first, `?limit` 1–50 default 10). Each item:
+`{ source: 'DERIVED'|'CUSTOM', id (null = DERIVED), scope, familyId,
+familyName, type, title, month, day, isLunar, repeatsYearly, year,
+originYear, ordinal, remindDaysBefore, theme, nextOccurrence, daysUntil,
+members[] }` with `members[]` items `{ memberId, displayName }`.
 
 - **DERIVED** items come from LifeProfile dates: a birthday per living
   member with a `birthDate` (theme `CONFETTI_CANDLES`), a memorial per
   member with a `deathDate` (theme `FLORAL_BORDER`). A deceased member
-  gets a memorial only, no birthday. No rows are stored.
-- **CUSTOM** items are `SpecialDate` rows (anniversaries etc.), managed
-  through the CRUD above (task 3.2.3, done 2026-08-20).
+  gets a memorial only, no birthday. No rows are stored; `id` is `null`
+  (edit those on the profile) and `remindDaysBefore` reads 7 (the fixed
+  profile leads).
+- **CUSTOM** items are `SpecialDate` rows, managed through the CRUD above.
 - `title` is only set on CUSTOM items. **Derived items carry no text**:
   build the label client-side from `type`, `members` and `ordinal`
   ("Dad turns 63", 三回忌) — i18n lives in the app, per the
   relationship-label principle.
-- `nextOccurrence` (YYYY-MM-DD) and `daysUntil`/`ordinal` are computed
-  at request time, never stored. Feb 29 occurrences roll to Mar 1 in
-  non-leap years.
+- `nextOccurrence` (YYYY-MM-DD, always solar) and `daysUntil`/`ordinal`
+  are computed at request time, never stored — by the same
+  `src/common/occurrence.ts` the reminder job uses.
 
 ### Media — `apps/api/src/media/` (task 1.5.3, merged in PR #5)
 

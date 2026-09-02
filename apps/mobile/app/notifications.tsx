@@ -144,7 +144,9 @@ export default function NotificationsScreen() {
           ? { pathname: '/video/[id]', params: { id: target.id } }
           : target.kind === 'invite'
             ? { pathname: '/invite/[code]', params: { code: target.code } }
-            : { pathname: '/member/[id]', params: { id: target.id } },
+            : target.kind === 'date'
+              ? { pathname: '/dates/[id]', params: { id: target.id } }
+              : { pathname: '/member/[id]', params: { id: target.id } },
     );
   };
 

@@ -203,12 +203,17 @@ erDiagram
     }
     SpecialDate {
         uuid id PK
-        uuid familyId FK
-        enum type "BIRTHDAY | ANNIVERSARY | MEMORIAL | CUSTOM"
+        uuid familyId FK "null - XOR ownerUserId (CHECK)"
+        uuid ownerUserId FK "null - set = personal (Only me)"
+        enum type "BIRTHDAY | ANNIVERSARY | MEMORIAL | TET | MILESTONE | CUSTOM"
         string title
-        int month "recurs annually"
-        int day
+        int month "lunar month when isLunar"
+        int day "solar 1-31 / lunar 1-30"
+        boolean isLunar "VN lunar (tz +7); occurrence converted per year"
+        boolean repeatsYearly "false = one-off; year required"
+        int year "null - one-off only, in the row's own calendar"
         int originYear "null - for ordinals like 50th"
+        int remindDaysBefore "0-30; in-app bell, plus day-of"
         enum theme "BUNTING | CONFETTI_CANDLES | FLORAL_BORDER | ..."
         uuid createdById FK
         datetime createdAt

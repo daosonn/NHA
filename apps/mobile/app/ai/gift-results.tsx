@@ -76,7 +76,8 @@ export default function GiftResultsScreen() {
     lastForce.current = force;
     ideas.mutate(
       {
-        occasionLabel: params.occasion,
+        // phòng thủ 80 ký tự — params có thể tới từ deep link ngoài màn ask
+        occasionLabel: params.occasion.slice(0, 80),
         occasionDate: params.occasionDate || undefined,
         budgetLabel: params.budget,
         locale, // ý tưởng phải cùng ngôn ngữ với màn hình người dùng đang xem
@@ -124,7 +125,7 @@ export default function GiftResultsScreen() {
         title: idea.title,
         why: idea.why,
         priceRange: idea.price_range ?? undefined,
-        occasionLabel: params.occasion,
+        occasionLabel: params.occasion.slice(0, 80),
       },
       {
         onSuccess: () => toast.success(t('ai.gifts.savedToast')),
