@@ -481,6 +481,20 @@ Neon branch — `migrate dev` is not a command to point at the shared database
 (§ Neon rules). Once the migration is committed and reviewed, the shared
 database gets it via `prisma migrate deploy`.
 
+**The same applies when you _pull_ somebody else's schema change**, which is
+the more common case and the easier one to miss — `src/generated/prisma` is
+gitignored, so no `git pull` can bring it up to date:
+
+```
+pnpm --filter api prisma:generate
+```
+
+Skipping it produces TypeScript errors saying the new fields do not exist,
+which reads like broken code rather than a stale artifact. On 2026-09-02 that
+cost a morning (`project-status.md`). If the API then compiles but throws
+`ColumnNotFound` at startup, that is the other half: the migration has not
+reached the shared database yet.
+
 Why lint, build and tests all stay green with a stale client: services pass
 Prisma an **extracted `as const` select object** (`profileSelect` in
 `profile.service.ts` is the pattern). TypeScript only applies
