@@ -16,8 +16,9 @@ import { Avatar } from '../ui/avatar';
 import { Text } from '../ui/text';
 
 const AVATAR = 34;
-/** Each avatar tucks under the previous one. */
-const OVERLAP = -9;
+/** Faces sit apart, not tucked under each other (owner's call 2026-09-01 —
+ *  covers are photographs now, and an overlapped photo reads as clipped). */
+const OVERLAP = 6;
 /** Matches the strip fill so the ring reads as a gap, not a stroke. */
 const RING = `0 0 0 2px ${colors.background.subtle}`;
 const RING_ACTIVE = `${RING}, 0 0 0 3px rgba(240,112,95,0.35)`;

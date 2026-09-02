@@ -15,6 +15,8 @@ export type PhotoRowProps = {
   tiles: PhotoTile[];
   /** Opens the moment the tile belongs to. */
   onPress: (tile: PhotoTile) => void;
+  /** Giữ lâu — chỗ của các hành động phụ (đặt ảnh bìa nhà, 2026-09-01). */
+  onLongPress?: (tile: PhotoTile) => void;
 };
 
 /**
@@ -24,7 +26,7 @@ export type PhotoRowProps = {
  * photos stretch to fill four columns — the last day of a month should line
  * up with every other day, not have wider tiles.
  */
-export function PhotoRow({ tiles, onPress }: PhotoRowProps) {
+export function PhotoRow({ tiles, onPress, onLongPress }: PhotoRowProps) {
   const { t } = useTranslation();
   const missing = 4 - tiles.length;
 
@@ -34,6 +36,7 @@ export function PhotoRow({ tiles, onPress }: PhotoRowProps) {
         <Pressable
           key={tile.id}
           onPress={() => onPress(tile)}
+          onLongPress={onLongPress === undefined ? undefined : () => onLongPress(tile)}
           accessibilityRole="button"
           accessibilityLabel={t('omoide.openMoment')}
           style={{ flex: 1, aspectRatio: 1 }}

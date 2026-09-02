@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -19,6 +20,7 @@ import { AddMemberDto } from './dto/add-member.dto';
 import { CreateFamilyDto } from './dto/create-family.dto';
 import { CreateRelationshipDto } from './dto/create-relationship.dto';
 import { JoinFamilyDto } from './dto/join-family.dto';
+import { UpdateFamilyDto } from './dto/update-family.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import {
   FamilyService,
@@ -71,6 +73,25 @@ export class FamilyController {
     @Param('familyId', ParseUUIDPipe) familyId: string,
   ): Promise<FamilyDetail> {
     return this.familyService.getFamily(user.userId, familyId);
+  }
+
+  @Patch(':familyId')
+  @ApiOperation({
+    summary:
+      "Edit the family — today only its cover photo. Any member may; " +
+      'the cover must be an image from a post shared to this family, or ' +
+      'one the setter uploaded. coverMediaId: null clears it.',
+  })
+  update(
+    @CurrentUser() user: AuthUser,
+    @Param('familyId', ParseUUIDPipe) familyId: string,
+    @Body() dto: UpdateFamilyDto,
+  ): Promise<{ id: string; coverMediaId: string | null }> {
+    if (dto.coverMediaId === undefined) {
+      // {} không được lặng lẽ GỠ ảnh bìa — gỡ là null tường minh.
+      throw new BadRequestException('Nothing to update');
+    }
+    return this.familyService.setCover(user.userId, familyId, dto.coverMediaId);
   }
 
   @Get(':familyId/tree')

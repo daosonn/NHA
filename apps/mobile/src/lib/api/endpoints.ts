@@ -178,6 +178,14 @@ export const families = {
 
   detail: (familyId: string) => apiRequest<FamilyDetail>(`/families/${familyId}`),
 
+  /** Đặt/gỡ ảnh bìa nhà (null = gỡ) — ảnh từ bài đã chia sẻ vào nhà này,
+   *  hoặc ảnh chính mình tải lên. Ai trong nhà cũng đặt được. */
+  setCover: (familyId: string, coverMediaId: string | null) =>
+    apiRequest<{ id: string; coverMediaId: string | null }>(`/families/${familyId}`, {
+      method: 'PATCH',
+      body: { coverMediaId },
+    }),
+
   /** Nodes plus edges for the family-tree screen; the client owns the layout. */
   tree: (familyId: string) => apiRequest<FamilyTree>(`/families/${familyId}/tree`),
 
