@@ -14,6 +14,7 @@ import { colors } from '../../theme';
 import { enter, swapIn } from '../../theme/motion';
 import { SegmentedTabs } from '../ui/segmented-tabs';
 import { Text } from '../ui/text';
+import { useToast } from '../ui/toast';
 import { AlbumGrid } from './album-grid';
 import { MemoActionsSheet } from './memo-actions-sheet';
 import { MemoList } from './memo-list';
@@ -86,6 +87,7 @@ export function ProfileBody({
   onAddPrivate,
 }: ProfileBodyProps) {
   const { t } = useTranslation();
+  const toast = useToast();
 
   // Openable straight onto a tab: Omoide sends people here to look at
   // somebody's photographs, and landing on the timeline first would make
@@ -244,7 +246,10 @@ export function ProfileBody({
           // No undo: a real DELETE takes the media files with it, so putting
           // the note back would mean writing a new one that has lost its
           // photos. The confirm step carries that — see `use-memos.ts`.
-          deleteMemo.mutate(memo);
+          deleteMemo.mutate(memo, {
+            // Cùng khoá với memo/[id].tsx: một hành động thì một câu trả lời.
+            onSuccess: () => toast.success(t('member.memoDelete.toast')),
+          });
           setActing(null);
         }}
       />

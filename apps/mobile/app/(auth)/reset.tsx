@@ -10,6 +10,7 @@ import { Button } from '../../src/components/ui/button';
 import { OtpInput } from '../../src/components/ui/otp-input';
 import { Text } from '../../src/components/ui/text';
 import { TextField } from '../../src/components/ui/text-field';
+import { useToast } from '../../src/components/ui/toast';
 import { authErrorKey } from '../../src/features/auth/auth-error';
 import {
   useConfirmPasswordReset,
@@ -48,6 +49,7 @@ function countdown(seconds: number): string {
  */
 export default function ResetPasswordScreen() {
   const { t } = useTranslation();
+  const toast = useToast();
   const router = useRouter();
   const { email } = useLocalSearchParams<{ email?: string }>();
 
@@ -99,7 +101,12 @@ export default function ResetPasswordScreen() {
 
     confirm.mutate(
       { email: email as string, code, newPassword: password },
-      { onSuccess: () => router.replace('/sign-in') },
+      {
+        onSuccess: () => {
+          toast.success(t('auth.reset.done'));
+          router.replace('/sign-in');
+        },
+      },
     );
   };
 

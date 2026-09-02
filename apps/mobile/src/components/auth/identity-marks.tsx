@@ -13,6 +13,10 @@ import { colors } from '../../theme';
  * Putting it back is a product decision, not a styling one: App Store
  * guideline 4.8 ties it to whether the iOS build ships any other
  * third-party login at all.
+ *
+ * Facebook went on 2026-09-01 (owner's call). Only the button went: the
+ * server kept its route, so an account already linked through Facebook
+ * would still sign in. None is — every OAuth account on record is Google.
  */
 
 export function GoogleMark({ size = 19 }: { size?: number }) {
@@ -30,17 +34,6 @@ export function GoogleMark({ size = 19 }: { size?: number }) {
       <Path
         fill="#EA4335"
         d="M12 5.98c1.47 0 2.79.5 3.83 1.5l2.87-2.87C16.95 2.99 14.7 2 12 2a10 10 0 0 0-8.94 5.5l3.35 2.6C7.2 7.73 9.4 5.97 12 5.97Z"
-      />
-    </Svg>
-  );
-}
-
-export function FacebookMark({ size = 19 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Path
-        fill="#1877F2"
-        d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5.02 3.66 9.18 8.44 9.94v-7.03H7.9v-2.91h2.54V9.85c0-2.52 1.49-3.91 3.77-3.91 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.78-1.63 1.57v1.89h2.78l-.45 2.91h-2.33V22c4.78-.76 8.44-4.92 8.44-9.94Z"
       />
     </Svg>
   );

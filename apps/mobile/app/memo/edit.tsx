@@ -18,6 +18,7 @@ import { NoteField } from '../../src/components/member/note-field';
 import { MediaStrip, type DraftMedia } from '../../src/components/moment/media-strip';
 import { Card } from '../../src/components/ui/card';
 import { Text } from '../../src/components/ui/text';
+import { useToast } from '../../src/components/ui/toast';
 import { useCreateMemo, useMemo, useUpdateMemo } from '../../src/features/member/use-memos';
 import { ApiError, type MemoDetail } from '../../src/lib/api';
 import { colors, radius, spacing } from '../../src/theme';
@@ -146,10 +147,20 @@ function MemoEditorForm({
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
+  const toast = useToast();
 
   const create = useCreateMemo(familyId, memberId);
   const update = useUpdateMemo(memo?.id ?? null);
   const mutation = memo === null ? create : update;
+
+  /**
+   * Viết một ghi chú mới và sửa một ghi chú cũ đều kết thúc bằng "đã lưu".
+   * Người dùng không phân biệt hai đường đó, nên câu trả lời cũng không nên.
+   */
+  const saved = () => {
+    toast.success(t('member.memoEditor.saved'));
+    onDone();
+  };
 
   const [title, setTitle] = useState(memo?.title ?? '');
   const [content, setContent] = useState(memo?.content ?? '');
@@ -207,7 +218,7 @@ function MemoEditorForm({
           category,
           media: photos,
         },
-        { onSuccess: onDone },
+        { onSuccess: saved },
       );
       return;
     }
@@ -219,7 +230,7 @@ function MemoEditorForm({
         content: trimmed === (memo.content ?? '') ? undefined : trimmed === '' ? null : trimmed,
         category: category === memo.category ? undefined : category,
       },
-      { onSuccess: onDone },
+      { onSuccess: saved },
     );
   };
 

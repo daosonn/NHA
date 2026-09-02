@@ -1334,6 +1334,32 @@ dev` **did not regenerate the client**, and the stale client survived
 
 ## In Progress
 
+- **⚠ Pulling someone else's schema change means regenerating the client
+  (2026-09-02).** `apps/api/src/generated/prisma` is gitignored, so it is a
+  per-machine build artifact that no `git pull` can update. A stale one does
+  not warn: it fails as a wall of TypeScript errors claiming fields do not
+  exist, which reads like broken code rather than a stale artifact.
+
+  ```powershell
+  pnpm --filter api prisma:generate
+  ```
+
+  The rule was already written down for the person _authoring_ a migration
+  (`local-environment.md` § After changing `schema.prisma`), but not for
+  everyone else pulling it — which is the common case, and the one that bit
+  us: `c53a529` added five columns to `SpecialDate`, and `pnpm dev:api`
+  answered with 14 errors about `ownerUserId`, `isLunar`, `repeatsYearly`,
+  `year` and `remindDaysBefore` "not existing". Nothing was wrong with the
+  code. If you see errors of that shape after a pull, run this before
+  reading a single line of the source.
+
+  The matching migration `20260901062532_extend_special_date_lunar_personal`
+  had also never reached shared Neon, so the API compiled and then threw
+  `DriverAdapterError: ColumnNotFound` at startup. Applied 2026-09-02 with
+  `prisma migrate deploy` (additive only, `SpecialDate` was empty). Two
+  separate faults with one symptom — a schema change needs **both** the
+  database migrated and every machine regenerated.
+
 - **⚠ Everyone has two scripts to run after pulling (2026-08-28).** Media
   moved into the R2 bucket, and photographs now have thumbnails. Both are
   shared, so what one person uploads serves the team — but only that person's
@@ -1357,6 +1383,35 @@ dev` **did not regenerate the client**, and the stale client survived
   traffic became 2.6 MB. What remains is ~0.7s of R2 round-trip per picture,
   fixed whatever the size — presigned URLs or a CDN are what would remove
   that, deliberately deferred (owner's call, 2026-08-28: no real users yet).
+
+- **Faces and cover tiles use the thumbnail too (2026-09-01)**: the switch
+  above reached the photo grid but not `Avatar`, which still asked for the
+  original — the three avatars stored average 584 KB, the biggest 1.59 MB, to
+  draw a circle 38pt across. `imageThumbSource()` in `media-source.ts` is for
+  a media the caller already knows is a picture (a face, a cover), so it goes
+  straight to `/thumb` without inventing a mime type; it shares
+  `thumbnailSource`'s cache key, so a face fetched for a grid tile is not
+  fetched twice. Measured: 1 753 KB of avatars became 83 KB. It also picks up
+  caching that was never there — `/thumb` sends `Cache-Control: private,
+max-age=86400` while `GET /media/:id` sends none, so every screen change
+  used to refetch the same face. Family and album covers moved with it; the
+  full-size viewer and the AI card preview deliberately did not.
+
+- **Facebook sign-in removed from the app (2026-09-01, owner's call)**: the
+  button, its logo and its strings are gone, and three settings sentences no
+  longer promise a way in that is not offered. **The server was left alone** —
+  its OAuth route and `OAuthProvider` still name Facebook, so an account
+  already linked through it would keep working. None is: every OAuth account
+  in the database is Google (checked before removing).
+
+- **Five task-completion toasts that were missing (2026-09-01)**: accepting an
+  invitation, resetting a password, saving a note, deleting a note from a
+  profile, and creating an album all finished in silence. Each had a sibling
+  that already spoke — deleting a note toasted while saving one did not — so
+  these close inconsistencies rather than add a new convention. Note that a
+  toast fired in `onSuccess` must come **before** any navigation, and the
+  screen must not unmount first, or React Query drops the callback and the
+  toast never appears (`app/memo/[id].tsx` records that bug).
 
 - **Omoide is two levels (2026-08-28)**: the tab lists families, each opening
   its own shelf at `/omoide/[familyId]` with a row of faces that opens one
@@ -1578,6 +1633,13 @@ dev` **did not regenerate the client**, and the stale client survived
 - Sprint 3 (notifications / reminders / settings / release).
   Sprint-2 group 2.6 (AI Quality Time) was **dropped** 2026-08-20 —
   see Important Decisions / PR #28.
+- **Server-side email is English-only.** The app ships EN/JA
+  (`apps/mobile/src/locales/`), but `apps/api/src/mail/mail.service.ts`
+  hardcodes its subject and body — a Japanese user asking for a password
+  reset gets an English message. Fixing it needs a locale stored on `User`
+  (the request arrives unauthenticated, so the app's current language is
+  not available to the server) plus templates per language. Noticed
+  2026-08-28.
 
 ## Important Decisions
 
