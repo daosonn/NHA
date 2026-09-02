@@ -83,6 +83,7 @@ import type {
   UpdatePostRequest,
   UpdateAlbumRequest,
   UnreadCount,
+  UpdateFamilyRequest,
   UpdateProfileRequest,
   VerifyResetCodeRequest,
   VerifyResetCodeResult,
@@ -178,13 +179,21 @@ export const families = {
 
   detail: (familyId: string) => apiRequest<FamilyDetail>(`/families/${familyId}`),
 
-  /** Đặt/gỡ ảnh bìa nhà (null = gỡ) — ảnh từ bài đã chia sẻ vào nhà này,
-   *  hoặc ảnh chính mình tải lên. Ai trong nhà cũng đặt được. */
+  /** Sửa nhà (màn 13b): tên / địa chỉ / giới thiệu / ảnh bìa — gửi gì sửa
+   *  nấy, ai trong nhà cũng sửa được. Ảnh bìa phải từ bài đã chia sẻ vào
+   *  nhà này hoặc ảnh chính mình tải lên; null gỡ. */
+  update: (familyId: string, body: UpdateFamilyRequest) =>
+    apiRequest<{
+      id: string;
+      name: string;
+      coverMediaId: string | null;
+      address: string | null;
+      about: string | null;
+    }>(`/families/${familyId}`, { method: 'PATCH', body }),
+
+  /** Giữ tên cũ cho chỗ gọi đặt-bìa-nhanh trên shelf Omoide. */
   setCover: (familyId: string, coverMediaId: string | null) =>
-    apiRequest<{ id: string; coverMediaId: string | null }>(`/families/${familyId}`, {
-      method: 'PATCH',
-      body: { coverMediaId },
-    }),
+    families.update(familyId, { coverMediaId }),
 
   /** Nodes plus edges for the family-tree screen; the client owns the layout. */
   tree: (familyId: string) => apiRequest<FamilyTree>(`/families/${familyId}/tree`),

@@ -37,6 +37,10 @@ export interface FamilySummary {
   memberCount: number;
   /** Ảnh đại diện gia đình (id Media) — mặt cả nhà trong dải chuyển gia đình */
   coverMediaId: string | null;
+  /** "Hanoi, Vietnam" — dòng phụ dưới tên nhà (mockup 13a). */
+  address: string | null;
+  /** Đôi câu tự giới thiệu, ≤140 (mockup 13b). */
+  about: string | null;
 }
 
 export interface FamilyDetail {
@@ -44,6 +48,9 @@ export interface FamilyDetail {
   name: string;
   inviteCode: string;
   createdAt: Date;
+  coverMediaId: string | null;
+  address: string | null;
+  about: string | null;
   members: FamilyMemberSummary[];
 }
 
@@ -147,6 +154,9 @@ export class FamilyService {
         name: true,
         inviteCode: true,
         createdAt: true,
+        coverMediaId: true,
+        address: true,
+        about: true,
         members: { select: memberSelect },
       },
     });
@@ -164,6 +174,8 @@ export class FamilyService {
         createdAt: true,
         createdById: true,
         coverMediaId: true,
+        address: true,
+        about: true,
         _count: { select: { members: true } },
       },
     });
@@ -182,15 +194,26 @@ export class FamilyService {
    * (nhánh canView "family cover" ở MediaService mở nốt quyền đọc cho các
    * thành viên còn lại).
    */
-  async setCover(
+  async update(
     userId: string,
     familyId: string,
-    coverMediaId: string | null,
-  ): Promise<{ id: string; coverMediaId: string | null }> {
+    dto: {
+      name?: string;
+      address?: string | null;
+      about?: string | null;
+      coverMediaId?: string | null;
+    },
+  ): Promise<{
+    id: string;
+    name: string;
+    coverMediaId: string | null;
+    address: string | null;
+    about: string | null;
+  }> {
     await this.requireMembership(familyId, userId);
-    if (coverMediaId !== null) {
+    if (dto.coverMediaId !== undefined && dto.coverMediaId !== null) {
       const media = await this.prisma.media.findUnique({
-        where: { id: coverMediaId },
+        where: { id: dto.coverMediaId },
         select: {
           mimeType: true,
           uploaderUserId: true,
@@ -208,10 +231,31 @@ export class FamilyService {
         throw new NotFoundException('Media not found');
       }
     }
+    if (dto.name !== undefined && dto.name.trim() === '') {
+      throw new BadRequestException('A family needs a name');
+    }
     return this.prisma.family.update({
       where: { id: familyId },
-      data: { coverMediaId },
-      select: { id: true, coverMediaId: true },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name.trim() }),
+        // chuỗi rỗng = xoá — form gửi nguyên ô trống thay vì null tường minh
+        ...(dto.address !== undefined && {
+          address: dto.address === null ? null : dto.address.trim() || null,
+        }),
+        ...(dto.about !== undefined && {
+          about: dto.about === null ? null : dto.about.trim() || null,
+        }),
+        ...(dto.coverMediaId !== undefined && {
+          coverMediaId: dto.coverMediaId,
+        }),
+      },
+      select: {
+        id: true,
+        name: true,
+        coverMediaId: true,
+        address: true,
+        about: true,
+      },
     });
   }
 
@@ -270,6 +314,9 @@ export class FamilyService {
         name: true,
         inviteCode: true,
         createdAt: true,
+        coverMediaId: true,
+        address: true,
+        about: true,
         members: { select: memberSelect, orderBy: { joinedAt: 'asc' } },
       },
     });

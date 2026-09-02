@@ -187,8 +187,14 @@ model Family {
   /// Ảnh đại diện của gia đình — ảnh cả nhà, hiện ở đầu màn cây gia phả.
   /// Cùng kiểu với Album.coverMediaId: SetNull để xoá ảnh không xoá gia đình.
   coverMediaId String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  /// "Hanoi, Vietnam" — dòng phụ dưới tên nhà trên màn Omoide (mockup 13a);
+  /// chữ tự do, không phải toạ độ.
+  address String?
+  /// Đôi câu cả nhà tự giới thiệu ("Four generations in the same lane…"),
+  /// ≤140 ký tự — DTO chặn (mockup 13b).
+  about     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   coverMedia    Media?         @relation("FamilyCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
   createdBy     User           @relation("FamilyCreator", fields: [createdById], references: [id])

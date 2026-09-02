@@ -314,7 +314,32 @@
       }
     },
     "noFamilyBody": "The tree starts with a family. Create one, or join with a code someone sent you.",
-    "unplacedRow": "UNPLACED"
+    "unplacedRow": "UNPLACED",
+    "edit": {
+      "title": "Edit family",
+      "save": "Save changes",
+      "saved": "Saved",
+      "saveFailed": "That did not save. Try again.",
+      "name": "Name",
+      "aboutSection": "About the family",
+      "address": "Address",
+      "about": "About",
+      "membersSection": "Members and privacy",
+      "members_one": "{{count}} member",
+      "members_other": "{{count}} members",
+      "whoCanAdd": "Who can add photos",
+      "anyMember": "Any member",
+      "upload": "Upload",
+      "pickFromAlbum": "Pick from album",
+      "pickHint": "A photo from this family's shelf.",
+      "noPhotos": "No photos in this family yet.",
+      "leave": "Leave this family",
+      "leaveTitle": "Leave {{name}}?",
+      "leaveBody": "You stop seeing its posts and dates. Your own posts are not deleted.",
+      "leaveConfirm": "Leave",
+      "leaveKeep": "Stay",
+      "leftToast": "You left the family"
+    }
   },
   "invite": {
     "sheet": {
@@ -913,7 +938,6 @@
     "mediaCount_other": "{{count}} photos"
   },
   "omoide": {
-    "summary": "{{photos}} photos by {{people}} people",
     "openMoment": "View this photo full screen",
     "loadFailed": "Could not load the photos.",
     "emptyTitle": "No photos yet",
@@ -931,7 +955,14 @@
     "coverBody": "Everyone in {{name}} sees this photo beside the family name.",
     "coverConfirm": "Set as cover",
     "coverSet": "Cover updated",
-    "coverFailed": "Could not set the cover. Try again."
+    "coverFailed": "Could not set the cover. Try again.",
+    "since": "since {{year}}",
+    "manage": "Manage",
+    "invite": "Invite",
+    "membersChip_one": "{{count}} member",
+    "membersChip_other": "{{count}} members",
+    "photosChip_one": "{{count}} photo",
+    "photosChip_other": "{{count}} photos"
   },
   "profileEdit": {
     "title": "Edit profile",

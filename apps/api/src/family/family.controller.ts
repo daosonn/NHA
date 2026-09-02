@@ -78,20 +78,32 @@ export class FamilyController {
   @Patch(':familyId')
   @ApiOperation({
     summary:
-      "Edit the family — today only its cover photo. Any member may; " +
-      'the cover must be an image from a post shared to this family, or ' +
-      'one the setter uploaded. coverMediaId: null clears it.',
+      'Edit the family (mockup 13b) — name, address, about, cover photo. ' +
+      'Any member may (wiki rule); the cover must be an image from a post ' +
+      'shared to this family, or one the setter uploaded. null clears a ' +
+      'nullable field.',
   })
   update(
     @CurrentUser() user: AuthUser,
     @Param('familyId', ParseUUIDPipe) familyId: string,
     @Body() dto: UpdateFamilyDto,
-  ): Promise<{ id: string; coverMediaId: string | null }> {
-    if (dto.coverMediaId === undefined) {
-      // {} không được lặng lẽ GỠ ảnh bìa — gỡ là null tường minh.
+  ): Promise<{
+    id: string;
+    name: string;
+    coverMediaId: string | null;
+    address: string | null;
+    about: string | null;
+  }> {
+    if (
+      dto.name === undefined &&
+      dto.address === undefined &&
+      dto.about === undefined &&
+      dto.coverMediaId === undefined
+    ) {
+      // {} không được lặng lẽ coi là "xong" — cũng không được gỡ gì.
       throw new BadRequestException('Nothing to update');
     }
-    return this.familyService.setCover(user.userId, familyId, dto.coverMediaId);
+    return this.familyService.update(user.userId, familyId, dto);
   }
 
   @Get(':familyId/tree')

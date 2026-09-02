@@ -18,7 +18,7 @@ export type PhotoDay = {
   rows: PhotoTile[][];
 };
 
-const COLUMNS = 4;
+const COLUMNS = 3; // mockup 13a: ba cột, ô to hơn — trước là 4 (mockup 10b)
 
 /**
  * Posts in, rows of tiles out.
