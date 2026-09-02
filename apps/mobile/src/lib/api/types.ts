@@ -519,7 +519,7 @@ export type ProfileDetail = {
   avatarMediaId: string | null;
   /**
    * Whether this account can sign in with a password. `false` means a
-   * social-only account (signed up with Google/Facebook): Settings offers
+   * social-only account (signed up with Google): Settings offers
    * "set a password" — the emailed-code reset flow — instead of the
    * change-password form, which requires a current password that does not
    * exist. Only your own route (`GET /me/profile`) carries a value; read

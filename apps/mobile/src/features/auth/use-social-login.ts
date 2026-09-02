@@ -65,7 +65,11 @@ export function readCallback(url: string): CallbackResult | null {
 }
 
 /**
- * Sign in with Google or Facebook.
+ * Sign in with Google.
+ *
+ * `start` still takes an `OAuthProvider` rather than nothing at all: the
+ * server kept its Facebook route when the button was dropped on 2026-09-01,
+ * so the provider is a real parameter here, just one no screen passes.
  *
  * The flow leaves the app: the browser goes to the provider, the provider
  * returns to the server's callback, and the server redirects back here with

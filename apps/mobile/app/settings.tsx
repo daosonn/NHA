@@ -105,7 +105,7 @@ export default function SettingsScreen() {
   // The account carries no picture; the member row in the active family does.
   const me = useMemberForUser(user?.id ?? null);
   const locale = useLocale();
-  // A social-only account (signed up with Google/Facebook) has no password,
+  // A social-only account (signed up with Google) has no password,
   // so its row says "Set a password" — "requires your current one" would be
   // a lie. The destination screen makes the same call from the same field.
   const profile = useMyProfile();

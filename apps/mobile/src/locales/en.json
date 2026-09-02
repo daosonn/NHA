@@ -18,7 +18,7 @@
     "or": "or"
   },
   "nav": {
-    "omoide": "Omoide",
+    "omoide": "Memory",
     "ai": "AI",
     "profile": "Profile",
     "newMoment": "New moment",
@@ -28,7 +28,7 @@
     "settings": "Account and settings",
     "tab": {
       "home": "Home",
-      "omoide": "Omoide",
+      "omoide": "Memory",
       "family": "Family",
       "ai": "AI",
       "profile": "Profile"
@@ -95,6 +95,7 @@
       "subtitle": "Anyone still signed in on another device will be signed out.",
       "newPassword": "New password",
       "confirmPassword": "Confirm password",
+      "done": "Password changed. Sign in to continue.",
       "mismatch": "The two do not match",
       "submit": "Save and sign in",
       "errors": {
@@ -107,9 +108,7 @@
       "checkFields": "Check the fields above and try again."
     },
     "google": "Google",
-    "facebook": "Facebook",
     "continueGoogle": "Continue with Google",
-    "continueFacebook": "Continue with Facebook",
     "social": {
       "finishing": "Finishing sign-in…",
       "errors": {
@@ -386,6 +385,7 @@
       "yourSpot": "YOUR SPOT"
     },
     "page": {
+      "joined": "Joined the family",
       "title": "Invitation",
       "headline": "{{inviter}} invited you to {{family}}",
       "subtitleBefore": "They saved a spot for you as their ",
@@ -495,6 +495,7 @@
       "aboutWhen": "About {{name}} · {{when}}"
     },
     "memoEditor": {
+      "saved": "Note saved",
       "titleNew": "New note",
       "titleEdit": "Edit note",
       "cancel": "Cancel",
@@ -789,13 +790,13 @@
       },
       "set": {
         "title": "Set a password",
-        "row": "This account signs in with Google or Facebook",
-        "explain": "This account signs in with Google or Facebook, so there is no password to change. You can set one — after that, both ways in work.",
+        "row": "This account signs in with Google",
+        "explain": "This account signs in with Google, so there is no password to change. You can set one — after that, both ways in work.",
         "howItWorks": "Choose a new password first. We will then email a 6-digit code to your address — entering it confirms the change.",
         "send": "Email me a code",
         "submit": "Set password",
         "done": "Password set. Sign in to continue.",
-        "signsOutAll": "Setting a password signs this account out everywhere — this phone included. Sign back in with your new password, or with Google or Facebook as before."
+        "signsOutAll": "Setting a password signs this account out everywhere — this phone included. Sign back in with your new password, or with Google as before."
       }
     },
     "notifications": {
@@ -1174,6 +1175,7 @@
     "toast": {
       "cover": "Cover updated",
       "removed": "Removed from the album",
+      "created": "Album created",
       "deleted": "Album deleted"
     }
   },
