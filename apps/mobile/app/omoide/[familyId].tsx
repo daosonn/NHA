@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Images, TriangleAlert } from 'lucide-react-native';
+import { Camera, Images, PenLine, Plus, TriangleAlert, Users } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, SectionList, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -17,11 +17,13 @@ import { Button } from '../../src/components/ui/button';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { Text } from '../../src/components/ui/text';
 import { useToast } from '../../src/components/ui/toast';
+import { useActiveFamily } from '../../src/features/family/active-family';
+import { useFamilies } from '../../src/features/family/use-families';
 import { useFamilyTree } from '../../src/features/family/use-family-tree';
 import { useFamilyPhotos, type PhotoTile } from '../../src/features/omoide/use-family-photos';
 import { families } from '../../src/lib/api';
 import { formatFullDate } from '../../src/lib/date';
-import { thumbnailSource } from '../../src/lib/media-source';
+import { mediaSource, thumbnailSource } from '../../src/lib/media-source';
 import { queryKeys } from '../../src/lib/query-keys';
 import { colors, radius, spacing, useLayout } from '../../src/theme';
 import { enter } from '../../src/theme/motion';
@@ -59,6 +61,16 @@ export default function FamilyPhotosScreen() {
   );
   const toast = useToast();
   const queryClient = useQueryClient();
+  const { setFamilyId } = useActiveFamily();
+  // Hero 13a cần address + năm lập nhà — list families đã có sẵn cả hai.
+  const summary = useFamilies().data?.find((f) => f.id === familyId);
+
+  // "Manage" và "Invite" đều dẫn tới tab cây — nơi quản lý thành viên và
+  // luồng mời đã sống đủ; chuyển nhà đang chọn TRƯỚC để cây mở đúng nhà này.
+  const goManage = (invite: boolean) => {
+    if (familyId) setFamilyId(familyId);
+    router.push(invite ? { pathname: '/family', params: { invite: '1' } } : '/family');
+  };
 
   // Chạm vào một ô ở đây là muốn XEM tấm đó, không phải đọc bài đăng của nó.
   const openMoment = (tile: PhotoTile) =>
@@ -92,6 +104,19 @@ export default function FamilyPhotosScreen() {
       <AppHeader
         left={<BackButton />}
         center={<ScreenTitle title={tree.data?.name ?? t('nav.omoide')} />}
+        right={
+          <Pressable
+            onPress={() =>
+              router.push({ pathname: '/family/edit', params: { familyId: familyId ?? '' } })
+            }
+            accessibilityRole="button"
+            accessibilityLabel={t('family.edit.title')}
+            hitSlop={8}
+            style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <PenLine size={18} color={colors.text.primary} strokeWidth={2} />
+          </Pressable>
+        }
       />
       {renderBody()}
 
@@ -180,25 +205,121 @@ export default function FamilyPhotosScreen() {
           if (feed.hasNextPage && !feed.isFetchingNextPage) void feed.fetchNextPage();
         }}
         ListHeaderComponent={
-          <Animated.View entering={enter.up(0)} style={{ paddingTop: 14, gap: 12 }}>
-            <Text
-              variant="body2"
-              color={colors.text.muted}
-              style={{ paddingHorizontal: spacing.xl }}
-            >
-              {t('omoide.summary', { photos: total, people: contributors })}
-            </Text>
+          <Animated.View entering={enter.up(0)} style={{ paddingTop: 10, gap: 14 }}>
+            {/* ---- hero 13a: bìa tròn + tên lớn + dòng phụ + chips ---- */}
+            <View style={{ alignItems: 'center', gap: 11, paddingHorizontal: spacing.xl }}>
+              <View
+                style={{
+                  width: 96,
+                  height: 96,
+                  borderRadius: radius.full,
+                  overflow: 'hidden',
+                  backgroundColor: colors.coral.light,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: `0 0 0 3px ${colors.background.card}, 0 4px 16px rgba(24,24,27,0.1)`,
+                }}
+              >
+                {summary?.coverMediaId ? (
+                  <Image
+                    source={mediaSource(summary.coverMediaId)}
+                    contentFit="cover"
+                    style={{ width: '100%', height: '100%' }}
+                    accessibilityIgnoresInvertColors
+                  />
+                ) : (
+                  <Images size={28} color={colors.coral.deep} strokeWidth={2} />
+                )}
+              </View>
+              <View style={{ alignItems: 'center', gap: 4 }}>
+                <Text serif weight="bold" style={{ fontSize: 24, lineHeight: 30, letterSpacing: -0.3 }}>
+                  {tree.data?.name ?? ''}
+                </Text>
+                {(summary?.address || summary?.createdAt) && (
+                  <Text variant="caption" color={colors.text.muted} numberOfLines={1}>
+                    {[
+                      summary?.address ?? null,
+                      summary?.createdAt
+                        ? t('omoide.since', { year: summary.createdAt.slice(0, 4) })
+                        : null,
+                    ]
+                      .filter((part): part is string => part !== null)
+                      .join(' · ')}
+                  </Text>
+                )}
+                {summary?.about ? (
+                  <Text
+                    variant="caption"
+                    color={colors.text.secondary}
+                    numberOfLines={2}
+                    style={{ textAlign: 'center', maxWidth: 300 }}
+                  >
+                    {summary.about}
+                  </Text>
+                ) : null}
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View
+                  style={{
+                    height: 34,
+                    paddingHorizontal: 14,
+                    borderRadius: radius.full,
+                    backgroundColor: colors.background.card,
+                    boxShadow: `inset 0 0 0 1px ${colors.state.borderDefault}`,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <Users size={14} color={colors.text.muted} strokeWidth={2.2} />
+                  <Text variant="caption" weight="semibold">
+                    {t('omoide.membersChip', { count: tree.data?.members.length ?? 0 })}
+                  </Text>
+                </View>
+                <View
+                  style={{
+                    height: 34,
+                    paddingHorizontal: 14,
+                    borderRadius: radius.full,
+                    backgroundColor: colors.background.card,
+                    boxShadow: `inset 0 0 0 1px ${colors.state.borderDefault}`,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <Camera size={14} color={colors.text.muted} strokeWidth={2.2} />
+                  <Text variant="caption" weight="semibold">
+                    {t('omoide.photosChip', { count: total })}
+                  </Text>
+                </View>
+              </View>
+            </View>
 
             {people.length > 0 && (
               <View style={{ gap: 7 }}>
-                <Text
-                  variant="caption"
-                  weight="semibold"
-                  color={colors.text.secondary}
-                  style={{ paddingHorizontal: spacing.xl }}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'baseline',
+                    gap: 8,
+                    paddingHorizontal: spacing.xl,
+                  }}
                 >
-                  {t('omoide.byPerson')}
-                </Text>
+                  <Text
+                    variant="caption"
+                    weight="semibold"
+                    color={colors.text.secondary}
+                    style={{ flex: 1 }}
+                  >
+                    {t('omoide.byPerson')}
+                  </Text>
+                  <Pressable onPress={() => goManage(false)} accessibilityRole="button" hitSlop={8}>
+                    <Text variant="caption" weight="semibold" color={colors.coral.deep}>
+                      {t('omoide.manage')}
+                    </Text>
+                  </Pressable>
+                </View>
 
                 <ScrollView
                   horizontal
@@ -230,6 +351,34 @@ export default function FamilyPhotosScreen() {
                       </Text>
                     </Pressable>
                   ))}
+
+                  {/* ô "Invite" nét đứt cuối dải (13a) — cùng ngôn ngữ hình
+                      với mọi chỗ-còn-trống khác trong app */}
+                  <Pressable
+                    onPress={() => goManage(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('omoide.invite')}
+                    style={{ alignItems: 'center', gap: 5, width: 62 }}
+                  >
+                    <View
+                      style={{
+                        width: 52,
+                        height: 52,
+                        borderRadius: radius.full,
+                        borderWidth: 1.5,
+                        borderStyle: 'dashed',
+                        borderColor: colors.coral.borderSoft,
+                        backgroundColor: colors.coral.subtle,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Plus size={19} color={colors.coral.deep} strokeWidth={2.2} />
+                    </View>
+                    <Text variant="badge" color={colors.text.secondary} numberOfLines={1}>
+                      {t('omoide.invite')}
+                    </Text>
+                  </Pressable>
                 </ScrollView>
               </View>
             )}

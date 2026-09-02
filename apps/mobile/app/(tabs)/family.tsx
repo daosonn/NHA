@@ -1,6 +1,6 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LockKeyhole, Send, Trash2, TriangleAlert, UsersRound } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
@@ -80,6 +80,18 @@ export default function FamilyTreeScreen() {
   const cancelInvitation = useCancelInvitation(familyId);
 
   const [inviting, setInviting] = useState(false);
+
+  // ?invite=1 — nut Invite tren shelf Omoide (13a) nhay thang vao luong moi.
+  // consumed-ref: chi ap mot lan moi luot toi, vi tab luon mounted.
+  const inviteParam = useLocalSearchParams<{ invite?: string }>().invite;
+  const consumedInvite = useRef(false);
+  useEffect(() => {
+    if (inviteParam === '1' && !consumedInvite.current) {
+      consumedInvite.current = true;
+      setInviting(true);
+    }
+    if (inviteParam !== '1') consumedInvite.current = false;
+  }, [inviteParam]);
   /**
    * Chế độ chỉnh sửa cây (prototype `src/family-tree-canvas.html`,
    * 28/08): bút chì bật nó, chạm một người để chọn, các ô nét đứt quanh họ

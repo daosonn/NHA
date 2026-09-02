@@ -306,7 +306,31 @@
       }
     },
     "noFamilyBody": "家系図は家族から始まります。家族をつくるか、届いたコードで参加しましょう。",
-    "unplacedRow": "未配置"
+    "unplacedRow": "未配置",
+    "edit": {
+      "title": "家族を編集",
+      "save": "変更を保存",
+      "saved": "保存しました",
+      "saveFailed": "保存できませんでした。もう一度。",
+      "name": "名前",
+      "aboutSection": "家族について",
+      "address": "住所",
+      "about": "紹介",
+      "membersSection": "メンバーと公開範囲",
+      "members_other": "{{count}}人",
+      "whoCanAdd": "写真を追加できる人",
+      "anyMember": "メンバー全員",
+      "upload": "アップロード",
+      "pickFromAlbum": "アルバムから選ぶ",
+      "pickHint": "この家族の棚にある写真から。",
+      "noPhotos": "この家族の写真はまだありません。",
+      "leave": "この家族から抜ける",
+      "leaveTitle": "{{name}}から抜けますか？",
+      "leaveBody": "投稿や記念日が見えなくなります。自分の投稿は消えません。",
+      "leaveConfirm": "抜ける",
+      "leaveKeep": "とどまる",
+      "leftToast": "家族から抜けました"
+    }
   },
   "invite": {
     "sheet": {
@@ -875,7 +899,6 @@
     "mediaCount_other": "{{count}}枚"
   },
   "omoide": {
-    "summary": "{{people}}人が投稿した写真 {{photos}}枚",
     "openMoment": "写真を大きく表示",
     "loadFailed": "写真を読み込めませんでした。",
     "emptyTitle": "まだ写真がありません",
@@ -892,7 +915,12 @@
     "coverBody": "{{name}}のみんなに、家族名のとなりに表示されます。",
     "coverConfirm": "カバーに設定",
     "coverSet": "カバーを更新しました",
-    "coverFailed": "設定できませんでした。もう一度。"
+    "coverFailed": "設定できませんでした。もう一度。",
+    "since": "{{year}}年から",
+    "manage": "管理",
+    "invite": "招待",
+    "membersChip_other": "{{count}}人",
+    "photosChip_other": "写真{{count}}枚"
   },
   "profileEdit": {
     "title": "プロフィールを編集",

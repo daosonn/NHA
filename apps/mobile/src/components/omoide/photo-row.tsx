@@ -7,9 +7,9 @@ import type { PhotoTile } from '../../features/omoide/use-family-photos';
 import { thumbnailSource } from '../../lib/media-source';
 import { colors, radius } from '../../theme';
 
-/** Mockup 10b: four across, hairline gaps, barely-rounded corners. */
-export const GRID_GAP = 3;
-const TILE_RADIUS = 3;
+/** Mockup 13a: three across (was four, 10b), small gaps, rounded corners. */
+export const GRID_GAP = 7;
+const TILE_RADIUS = 10;
 
 export type PhotoRowProps = {
   tiles: PhotoTile[];
@@ -28,7 +28,7 @@ export type PhotoRowProps = {
  */
 export function PhotoRow({ tiles, onPress, onLongPress }: PhotoRowProps) {
   const { t } = useTranslation();
-  const missing = 4 - tiles.length;
+  const missing = 3 - tiles.length; // phải khớp COLUMNS của group-photos.ts
 
   return (
     <View style={{ flexDirection: 'row', gap: GRID_GAP }}>

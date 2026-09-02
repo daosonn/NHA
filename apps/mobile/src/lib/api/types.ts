@@ -133,6 +133,10 @@ export type FamilySummary = {
   memberCount: number;
   /** Ảnh đại diện gia đình (id Media) — hiện trong dải chuyển gia đình */
   coverMediaId: string | null;
+  /** Dòng phụ dưới tên nhà (13a) — 'Hanoi, Vietnam'. */
+  address: string | null;
+  /** Đôi câu cả nhà tự giới thiệu, ≤140 (13b). */
+  about: string | null;
 };
 
 /** `GET /api/families/:familyId` and `POST /api/families`. */
@@ -141,7 +145,18 @@ export type FamilyDetail = {
   name: string;
   inviteCode: string;
   createdAt: IsoDateTime;
+  coverMediaId: string | null;
+  address: string | null;
+  about: string | null;
   members: FamilyMemberSummary[];
+};
+
+/** PATCH /families/:id (màn 13b) — gửi gì sửa nấy; chuỗi rỗng xoá field. */
+export type UpdateFamilyRequest = {
+  name?: string;
+  address?: string | null;
+  about?: string | null;
+  coverMediaId?: string | null;
 };
 
 /** `POST /api/families/join`. */
