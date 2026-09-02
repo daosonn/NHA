@@ -1,6 +1,6 @@
 import { Network, Plus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import Animated, {
   clamp,
   interpolate,
@@ -193,15 +193,25 @@ export function GroupStrip({
           trayStyle,
         ]}
       >
+        {/* Nhiều nhà thì dải mặt CUỘN trong phần co giãn của khay — nút "+"
+            và nắp cây đứng ngoài, không bao giờ bị đẩy mất (Sơn dính 16 nhà
+            tràn khay, 01/09). flexGrow:0 để khay ngắn khi ít nhà. */}
         {onSelectGroup !== undefined && (
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>{faces}</View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ flexShrink: 1, flexGrow: 0 }}
+            contentContainerStyle={{ flexDirection: 'row', alignItems: 'center' }}
+          >
+            {faces}
+          </ScrollView>
         )}
 
         <Pressable
           onPress={onPress}
           accessibilityRole="button"
           accessibilityLabel={t('home.openFamilyTree')}
-          style={{ flexDirection: 'row', alignItems: 'center' }}
+          style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1, minWidth: 0 }}
         >
           {onSelectGroup === undefined && faces}
 
