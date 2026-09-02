@@ -1184,7 +1184,6 @@
       "saved": "保存しました",
       "saveFailed": "保存できませんでした。もう一度。",
       "delete": "この日付を削除",
-      "deleteConfirm": "もう一度押すと削除します",
       "deleted": "削除しました"
     },
     "detail": {

@@ -24,7 +24,7 @@ import { useActiveFamily } from '../../src/features/family/active-family';
 import { useFamilies } from '../../src/features/family/use-families';
 import { families as familiesApi } from '../../src/lib/api';
 import type { SpecialDateType } from '../../src/lib/api';
-import { useSafeBack } from '../../src/lib/back';
+import { collapseTo, useSafeBack } from '../../src/lib/back';
 import { queryKeys } from '../../src/lib/query-keys';
 import { colors, spacing } from '../../src/theme';
 
@@ -127,7 +127,6 @@ export default function NewDateScreen() {
     params.scope === 'me' ? 'me' : (params.familyId ?? ''),
   );
   const [remind, setRemind] = useState<number>(10);
-  const [armedDelete, setArmedDelete] = useState(false);
 
   useEffect(() => {
     if (audience === '' && familyList.data !== undefined) {
@@ -210,11 +209,11 @@ export default function NewDateScreen() {
     }
   };
 
+  // Một chạm là xoá (chốt của Sơn 01/09 — bỏ "tap again"), rồi VỀ THẲNG
+  // Omoide: goBack sẽ rơi lại màn chi tiết của chính ngày vừa xoá và trưng
+  // "This date is gone" — đúng dữ liệu, sai cảm giác. Toast TRƯỚC navigate
+  // (React Query bỏ qua callback của mutate khi component unmount).
   const onDelete = () => {
-    if (!armedDelete) {
-      setArmedDelete(true);
-      return;
-    }
     remove.mutate(
       {
         familyId: editing?.scope === 'PERSONAL' ? null : (editing?.familyId ?? null),
@@ -223,7 +222,7 @@ export default function NewDateScreen() {
       {
         onSuccess: () => {
           toast.success(t('dates.form.deleted'));
-          goBack();
+          collapseTo(router, '/omoide');
         },
         onError: () => toast.failure(t('dates.form.saveFailed')),
       },
@@ -247,7 +246,7 @@ export default function NewDateScreen() {
           />
           {isEdit && (
             <Button
-              label={t(armedDelete ? 'dates.form.deleteConfirm' : 'dates.form.delete')}
+              label={t('dates.form.delete')}
               variant="destructive"
               size="large"
               fullWidth

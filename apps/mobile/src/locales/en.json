@@ -1228,7 +1228,6 @@
       "saved": "Saved",
       "saveFailed": "That did not save. Try again.",
       "delete": "Delete this date",
-      "deleteConfirm": "Tap again to delete",
       "deleted": "Deleted"
     },
     "detail": {
