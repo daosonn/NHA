@@ -18,7 +18,7 @@
     "or": "or"
   },
   "nav": {
-    "omoide": "Omoide",
+    "omoide": "Memory",
     "ai": "AI",
     "profile": "Profile",
     "newMoment": "New moment",
@@ -28,7 +28,7 @@
     "settings": "Account and settings",
     "tab": {
       "home": "Home",
-      "omoide": "Omoide",
+      "omoide": "Memory",
       "family": "Family",
       "ai": "AI",
       "profile": "Profile"

@@ -1334,6 +1334,32 @@ dev` **did not regenerate the client**, and the stale client survived
 
 ## In Progress
 
+- **⚠ Pulling someone else's schema change means regenerating the client
+  (2026-09-02).** `apps/api/src/generated/prisma` is gitignored, so it is a
+  per-machine build artifact that no `git pull` can update. A stale one does
+  not warn: it fails as a wall of TypeScript errors claiming fields do not
+  exist, which reads like broken code rather than a stale artifact.
+
+  ```powershell
+  pnpm --filter api prisma:generate
+  ```
+
+  The rule was already written down for the person _authoring_ a migration
+  (`local-environment.md` § After changing `schema.prisma`), but not for
+  everyone else pulling it — which is the common case, and the one that bit
+  us: `c53a529` added five columns to `SpecialDate`, and `pnpm dev:api`
+  answered with 14 errors about `ownerUserId`, `isLunar`, `repeatsYearly`,
+  `year` and `remindDaysBefore` "not existing". Nothing was wrong with the
+  code. If you see errors of that shape after a pull, run this before
+  reading a single line of the source.
+
+  The matching migration `20260901062532_extend_special_date_lunar_personal`
+  had also never reached shared Neon, so the API compiled and then threw
+  `DriverAdapterError: ColumnNotFound` at startup. Applied 2026-09-02 with
+  `prisma migrate deploy` (additive only, `SpecialDate` was empty). Two
+  separate faults with one symptom — a schema change needs **both** the
+  database migrated and every machine regenerated.
+
 - **⚠ Everyone has two scripts to run after pulling (2026-08-28).** Media
   moved into the R2 bucket, and photographs now have thumbnails. Both are
   shared, so what one person uploads serves the team — but only that person's
