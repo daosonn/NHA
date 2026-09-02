@@ -1,6 +1,6 @@
 import { Network, Plus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import Animated, {
   clamp,
   interpolate,
@@ -193,7 +193,23 @@ export function GroupStrip({
         ]}
       >
         {onSelectGroup !== undefined && (
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>{faces}</View>
+          // Every group renders here (see `toStripGroups` — this is the
+          // switcher, not a preview), so the row has no upper bound on width.
+          // A plain row overflowed the tray and spilled past the screen edge
+          // once a family had enough groups; scrolling keeps every face
+          // reachable without growing past the available width.
+          // `flexShrink`/`minWidth: 0` let the scroller shrink to fit beside
+          // its siblings instead of forcing the tray wider than the screen —
+          // react-native-web needs `minWidth: 0` explicitly, the same trap as
+          // the icon box in `SideNav`.
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ flexShrink: 1, minWidth: 0 }}
+            contentContainerStyle={{ flexDirection: 'row', alignItems: 'center' }}
+          >
+            {faces}
+          </ScrollView>
         )}
 
         <Pressable
