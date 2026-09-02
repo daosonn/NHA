@@ -174,6 +174,48 @@ export class FamilyService {
   }
 
   /**
+   * Đặt/gỡ ảnh bìa gia đình (mặt cả nhà trên Omoide + group strip Home).
+   *
+   * Ai trong nhà cũng đặt được — cùng tinh thần wiki như special dates. Ảnh
+   * phải là thứ CẢ NHÀ được xem, vì bìa hiện với mọi thành viên: một ảnh từ
+   * bài đã chia sẻ vào chính nhà này, hoặc ảnh do chính người đặt tải lên
+   * (nhánh canView "family cover" ở MediaService mở nốt quyền đọc cho các
+   * thành viên còn lại).
+   */
+  async setCover(
+    userId: string,
+    familyId: string,
+    coverMediaId: string | null,
+  ): Promise<{ id: string; coverMediaId: string | null }> {
+    await this.requireMembership(familyId, userId);
+    if (coverMediaId !== null) {
+      const media = await this.prisma.media.findUnique({
+        where: { id: coverMediaId },
+        select: {
+          mimeType: true,
+          uploaderUserId: true,
+          post: { select: { families: { select: { familyId: true } } } },
+        },
+      });
+      // 404 cho cả "không tồn tại" lẫn "không được dùng" — không xác nhận
+      // một media riêng tư có tồn tại hay không (quy tắc của MediaService).
+      const shared = media?.post?.families.some((f) => f.familyId === familyId);
+      if (
+        !media ||
+        !media.mimeType.startsWith('image/') ||
+        (!shared && media.uploaderUserId !== userId)
+      ) {
+        throw new NotFoundException('Media not found');
+      }
+    }
+    return this.prisma.family.update({
+      where: { id: familyId },
+      data: { coverMediaId },
+      select: { id: true, coverMediaId: true },
+    });
+  }
+
+  /**
    * Xóa cả gia đình — cho trường hợp tạo nhầm (26/08 Sơn có 15 nhà rác).
    *
    * Hai cổng gác: chỉ NGƯỜI TẠO, và chỉ khi không còn tài khoản nào khác đang

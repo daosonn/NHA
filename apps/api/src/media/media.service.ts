@@ -454,7 +454,27 @@ export class MediaService {
     // belongs to (WBS 3.4.2): a user's to anyone sharing a family with
     // them, a placeholder's to that family's members. Setting a photo as
     // your avatar is the deliberate act that widens it this far.
-    return this.isViewableAsAvatar(userId, media.id);
+    if (await this.isViewableAsAvatar(userId, media.id)) {
+      return true;
+    }
+    // Same deliberate-act rule for a family's cover photo (2026-09-01):
+    // choosing it as the face of the family is what widens it to every
+    // member — without this branch a cover that is not also a shared post
+    // (a seeded one, or an own-upload) 404s for everyone but its uploader.
+    return this.isViewableAsFamilyCover(userId, media.id);
+  }
+
+  /** Cover của một nhà mà viewer là thành viên — cùng cỡ bảng và cùng chỗ
+   *  đứng cuối hàng như isViewableAsAvatar. */
+  private async isViewableAsFamilyCover(
+    userId: string,
+    mediaId: string,
+  ): Promise<boolean> {
+    const asCover = await this.prisma.family.findFirst({
+      where: { coverMediaId: mediaId, members: { some: { userId } } },
+      select: { id: true },
+    });
+    return asCover !== null;
   }
 
   /** No index sits on `avatarKey`; both tables are small (people, not

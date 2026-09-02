@@ -888,7 +888,12 @@
     "openFamily": "{{name}}の写真を開く",
     "familyMembers_other": "{{count}}人",
     "byPerson": "人ごと",
-    "openPersonAlbum": "{{name}}のアルバムを開く"
+    "openPersonAlbum": "{{name}}のアルバムを開く",
+    "coverTitle": "家族のカバー写真",
+    "coverBody": "{{name}}のみんなに、家族名のとなりに表示されます。",
+    "coverConfirm": "カバーに設定",
+    "coverSet": "カバーを更新しました",
+    "coverFailed": "設定できませんでした。もう一度。"
   },
   "profileEdit": {
     "title": "プロフィールを編集",

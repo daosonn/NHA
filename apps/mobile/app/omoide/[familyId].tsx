@@ -1,19 +1,28 @@
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Images, TriangleAlert } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, SectionList, View } from 'react-native';
 import Animated from 'react-native-reanimated';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { Sheet } from '../../src/components/ai/sheet';
 import { AppHeader } from '../../src/components/layout/app-header';
 import { contentColumnBleed } from '../../src/components/layout/content-column';
 import { BackButton, ScreenTitle } from '../../src/components/layout/header-slots';
 import { PhotoRow, GRID_GAP } from '../../src/components/omoide/photo-row';
 import { Avatar } from '../../src/components/ui/avatar';
+import { Button } from '../../src/components/ui/button';
 import { EmptyState } from '../../src/components/ui/empty-state';
 import { Text } from '../../src/components/ui/text';
+import { useToast } from '../../src/components/ui/toast';
 import { useFamilyTree } from '../../src/features/family/use-family-tree';
 import { useFamilyPhotos, type PhotoTile } from '../../src/features/omoide/use-family-photos';
+import { families } from '../../src/lib/api';
 import { formatFullDate } from '../../src/lib/date';
+import { thumbnailSource } from '../../src/lib/media-source';
+import { queryKeys } from '../../src/lib/query-keys';
 import { colors, radius, spacing, useLayout } from '../../src/theme';
 import { enter } from '../../src/theme/motion';
 
@@ -48,10 +57,31 @@ export default function FamilyPhotosScreen() {
   const { days, total, contributors, isPending, isError, refetch, ...feed } = useFamilyPhotos(
     familyId ?? null,
   );
+  const toast = useToast();
+  const queryClient = useQueryClient();
 
   // Chạm vào một ô ở đây là muốn XEM tấm đó, không phải đọc bài đăng của nó.
   const openMoment = (tile: PhotoTile) =>
     router.push({ pathname: '/media/[id]', params: { id: tile.id, mime: tile.mimeType } });
+
+  // Giữ lâu một ẢNH → đặt làm ảnh bìa nhà (Sơn yêu cầu 01/09 — trước đó
+  // coverMediaId chỉ đọc, không có đường nào đặt từ UI). Video không làm
+  // bìa được nên giữ-lâu video không mở gì.
+  const [coverPick, setCoverPick] = useState<PhotoTile | null>(null);
+  const setCover = useMutation({
+    mutationFn: (mediaId: string) => families.setCover(familyId as string, mediaId),
+    onSuccess: () => {
+      // Bìa hiện ở list nhà (Omoide tab + group strip Home) và trong tree/detail.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.families() });
+      setCoverPick(null);
+      toast.success(t('omoide.coverSet'));
+    },
+    onError: () => toast.failure(t('omoide.coverFailed')),
+  });
+  const pickCover = (tile: PhotoTile) => {
+    if (!tile.mimeType.startsWith('image/')) return;
+    setCoverPick(tile);
+  };
 
   // Only linked members: a placeholder's album would open a profile with
   // nothing in it, which reads as a broken link rather than an empty one.
@@ -64,6 +94,39 @@ export default function FamilyPhotosScreen() {
         center={<ScreenTitle title={tree.data?.name ?? t('nav.omoide')} />}
       />
       {renderBody()}
+
+      {/* Xác nhận đặt bìa — có ảnh xem trước để biết mình vừa giữ trúng tấm nào. */}
+      <Sheet
+        visible={coverPick !== null}
+        onClose={() => setCoverPick(null)}
+        title={t('omoide.coverTitle')}
+        subtitle={t('omoide.coverBody', { name: tree.data?.name ?? '' })}
+      >
+        {coverPick !== null && (
+          <View style={{ gap: 14, alignItems: 'center' }}>
+            <Image
+              source={thumbnailSource(coverPick.id, coverPick.mimeType)}
+              recyclingKey={coverPick.id}
+              contentFit="cover"
+              style={{
+                width: 96,
+                height: 96,
+                borderRadius: radius.xl,
+                backgroundColor: colors.background.subtle,
+              }}
+              accessibilityIgnoresInvertColors
+            />
+            <Button
+              label={t('omoide.coverConfirm')}
+              variant="primary"
+              size="large"
+              fullWidth
+              loading={setCover.isPending}
+              onPress={() => setCover.mutate(coverPick.id)}
+            />
+          </View>
+        )}
+      </Sheet>
     </View>
   );
 
@@ -209,7 +272,7 @@ export default function FamilyPhotosScreen() {
               entering={enter.up(cascadeIndex < CASCADE_ROWS ? cascadeIndex : 0)}
               style={{ paddingHorizontal: spacing.md, paddingBottom: GRID_GAP }}
             >
-              <PhotoRow tiles={item} onPress={openMoment} />
+              <PhotoRow tiles={item} onPress={openMoment} onLongPress={pickCover} />
             </Animated.View>
           );
         }}

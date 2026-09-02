@@ -926,7 +926,12 @@
     "familyMembers": "{{count}} person",
     "familyMembers_other": "{{count}} people",
     "byPerson": "By person",
-    "openPersonAlbum": "Open {{name}}'s album"
+    "openPersonAlbum": "Open {{name}}'s album",
+    "coverTitle": "Family cover photo",
+    "coverBody": "Everyone in {{name}} sees this photo beside the family name.",
+    "coverConfirm": "Set as cover",
+    "coverSet": "Cover updated",
+    "coverFailed": "Could not set the cover. Try again."
   },
   "profileEdit": {
     "title": "Edit profile",

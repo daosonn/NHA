@@ -16,8 +16,9 @@ import { Avatar } from '../ui/avatar';
 import { Text } from '../ui/text';
 
 const AVATAR = 34;
-/** Each avatar tucks under the previous one. */
-const OVERLAP = -9;
+/** Faces sit apart, not tucked under each other (owner's call 2026-09-01 —
+ *  covers are photographs now, and an overlapped photo reads as clipped). */
+const OVERLAP = 6;
 /** Matches the strip fill so the ring reads as a gap, not a stroke. */
 const RING = `0 0 0 2px ${colors.background.subtle}`;
 const RING_ACTIVE = `${RING}, 0 0 0 3px rgba(240,112,95,0.35)`;
@@ -192,6 +193,9 @@ export function GroupStrip({
           trayStyle,
         ]}
       >
+        {/* Nhiều nhà thì dải mặt CUỘN trong phần co giãn của khay — nút "+"
+            và nắp cây đứng ngoài, không bao giờ bị đẩy mất (Sơn dính 16 nhà
+            tràn khay, 01/09). flexGrow:0 để khay ngắn khi ít nhà. */}
         {onSelectGroup !== undefined && (
           // Every group renders here (see `toStripGroups` — this is the
           // switcher, not a preview), so the row has no upper bound on width.
@@ -216,7 +220,7 @@ export function GroupStrip({
           onPress={onPress}
           accessibilityRole="button"
           accessibilityLabel={t('home.openFamilyTree')}
-          style={{ flexDirection: 'row', alignItems: 'center' }}
+          style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1, minWidth: 0 }}
         >
           {onSelectGroup === undefined && faces}
 
