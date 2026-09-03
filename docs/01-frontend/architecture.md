@@ -632,10 +632,11 @@ design and motion both: white cards down one continuous rail (year chip in
 coral serif inside the card — no year column), and every effect driven by
 scroll position, not time. Entries rise/fade with the scroll; the entry
 near a reading point at 42% of the viewport is "active" — its dot swells
-coral with a pulsing halo, a triangle points at it from the card, a
-rounded coral pill runs down the card's left edge (softened from the
-handoff's hard strip on the owner's 2026-09-03 call — "bẻ góc 1 chút"),
-and the rail's coral fill slides to its dot (scaleY, not height). A lone photo drifts in parallax inside its
+coral with a pulsing halo, a triangle points at it from the card, a coral
+band hugs the card's left edge with its ends curving around the corner
+arcs (the handoff's `inset 4px 0 0` box-shadow, reproduced in RN as a
+left-border-only overlay sharing the card's radius), and the rail's coral
+fill slides to its dot (scaleY, not height). A lone photo drifts in parallax inside its
 frame. Worklets live in `components/member/timeline-motion.ts` (UI thread,
 transform/opacity only — geometry constants in `TL`); the route owns the
 `Animated.ScrollView` and hands motion down through `ProfileBody`. Reduced

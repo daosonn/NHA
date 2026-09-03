@@ -73,23 +73,24 @@ function TimelineRow({ event, isLatest, index, motion, onOpenPhoto }: RowProps) 
           contentStyle,
         ]}
       >
-        {/* The coral accent down the active card's left edge. The handoff
-            drew it as a hard full-height strip (inset box-shadow); here it
-            is a rounded pill, inset and shy of both ends, so it speaks the
-            same rounded language as the card, the chip and the dot instead
-            of reading as a strip glued to the edge. */}
+        {/* The coral accent down the active card's left edge — the
+            handoff's `inset 4px 0 0` box-shadow. A left border on a
+            full-card overlay sharing the card's radius reproduces it
+            exactly: the band hugs the edge and its ends taper around the
+            corner arcs, the way an inset shadow follows a rounded box. */}
         {motion !== undefined && (
           <Animated.View
             pointerEvents="none"
             style={[
               {
                 position: 'absolute',
-                left: 6,
-                top: 12,
-                bottom: 12,
-                width: 4,
-                borderRadius: radius.full,
-                backgroundColor: colors.coral.primary,
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                borderLeftWidth: 4,
+                borderLeftColor: colors.coral.primary,
+                borderRadius: radius['3xl'],
               },
               activeAccentStyle,
             ]}
