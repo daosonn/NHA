@@ -42,8 +42,6 @@ import { easing } from '../../theme/motion';
  *   dim carries the de-emphasis alone.
  * - No momentum tail: native scrolling emits events through the fling
  *   already — the rAF tail exists for desktop wheels.
- * - No triangle pointer / left coral bar: those anchor to a white card
- *   surface, and the shipped timeline draws rows on the page, not cards.
  * - Only transform and opacity are animated per frame (the rail fill
  *   scales rather than growing in height) — the motion README's rule.
  */
@@ -74,6 +72,27 @@ const PULSE_MS = 2600;
 const END_SLACK = 8;
 /** Photo parallax amplitude — the image drifts slower than its card. */
 const PARALLAX = 14;
+
+/**
+ * Card/rail geometry, straight from the handoff. Cards indent 52px; the
+ * rail runs at x 25 (2px wide → centre 26); the dot hangs 32px left of the
+ * card edge (52 − 32 = 20, 12px wide → centre 26, on the rail), 20px down
+ * (centre 26). The triangle overlaps the card's left edge and points at
+ * the dot. The progress fill starts where the rail does.
+ */
+export const TL = {
+  cardInset: 52,
+  railX: 25,
+  railW: 2,
+  railTop: 6,
+  dot: 12,
+  dotLeft: 20,
+  dotTop: 20,
+  /** Dot centre below the card top — the scale origin and the fill target. */
+  dotCentreY: 26,
+  triLeft: 41,
+  triTop: 18,
+} as const;
 
 type RowBox = { y: number; h: number };
 
@@ -226,6 +245,7 @@ export function useTimelineScrollMotion() {
  */
 export function useTimelineListMotion(motion: TimelineMotion | undefined, count: number) {
   const listRef = useRef<View | null>(null);
+  const listH = useSharedValue(0);
 
   const measure = () => {
     if (motion === undefined) return;
@@ -242,6 +262,31 @@ export function useTimelineListMotion(motion: TimelineMotion | undefined, count:
   // Kept in a ref so the registration below always calls the fresh closure.
   const measureRef = useRef(measure);
   measureRef.current = measure;
+
+  const onListLayout = (event: LayoutChangeEvent) => {
+    listH.value = event.nativeEvent.layout.height;
+    measure();
+  };
+
+  /**
+   * The rail's coral fill, sliding to the ACTIVE card's dot centre — the
+   * handoff transitions `height` over 380ms; height is a layout prop, so
+   * this scales a full-length bar from the top instead.
+   */
+  const progress = useDerivedValue(() => {
+    const zeroTiming = { duration: FILL_MS, easing: easing.settle };
+    if (motion === undefined) return withTiming(0, zeroTiming);
+    const i = motion.activeIndex.value;
+    const box = motion.boxes.value[i];
+    const railH = listH.value - TL.railTop;
+    if (i < 0 || box === undefined || railH <= 0) return withTiming(0, zeroTiming);
+    const p = Math.min(1, Math.max(0, (box.y + TL.dotCentreY - TL.railTop) / railH));
+    return withTiming(p, zeroTiming);
+  });
+
+  const progressStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleY: progress.value }],
+  }));
 
   useEffect(() => {
     if (motion === undefined) return;
@@ -264,7 +309,7 @@ export function useTimelineListMotion(motion: TimelineMotion | undefined, count:
     }
   }, [motion, count]);
 
-  return { listRef, onListLayout: measure };
+  return { listRef, onListLayout, progressStyle };
 }
 
 /**
@@ -286,10 +331,6 @@ export function useTimelineRowMotion(motion: TimelineMotion | undefined, index: 
   const swell = useDerivedValue(
     () =>
       withTiming(activeIdx.value === index ? 1 : 0, { duration: SWELL_MS, easing: easing.bounce }),
-    [index],
-  );
-  const filled = useDerivedValue(
-    () => withTiming(activeIdx.value > index ? 1 : 0, { duration: FILL_MS, easing: easing.settle }),
     [index],
   );
 
@@ -315,8 +356,10 @@ export function useTimelineRowMotion(motion: TimelineMotion | undefined, index: 
     };
   });
 
-  // Scale lives on the content column, not the row — scaling the row would
-  // drag the dot off the rail. Origin left keeps the text anchored to it.
+  // Scale lives on the card, not the row — the dot and triangle sit outside
+  // it, so they stay pinned to the rail. The origin ('0 26px', the dot's
+  // height on the card's left edge) keeps the edge anchored beside the dot,
+  // which is where the handoff put its origin too.
   const contentStyle = useAnimatedStyle(() => {
     if (motion === undefined) return {};
     const vh = motion.viewportH.value;
@@ -330,6 +373,7 @@ export function useTimelineRowMotion(motion: TimelineMotion | undefined, index: 
     return { transform: [{ scale: SCALE_MIN + (1 - SCALE_MIN) * Math.min(m.o, m.f) }] };
   });
 
+  // The handoff's dot: ring 3px gray → 3.5px coral, swelling to 1.5×.
   const dotStyle = useAnimatedStyle(() => {
     if (motion === undefined) return {};
     return {
@@ -338,10 +382,16 @@ export function useTimelineRowMotion(motion: TimelineMotion | undefined, index: 
         [0, 1],
         [colors.state.borderDashed, colors.coral.brand],
       ),
-      borderWidth: 1.5 + 1.5 * activeness.value,
-      transform: [{ scale: 1 + 0.45 * swell.value }],
+      borderWidth: 3 + 0.5 * activeness.value,
+      transform: [{ scale: 1 + 0.5 * swell.value }],
     };
   });
+
+  // The triangle pointing at the dot and the coral bar down the card's
+  // left edge — both simply fade with active state (300ms in the handoff).
+  const activeAccentStyle = useAnimatedStyle(() => ({
+    opacity: motion === undefined ? 0 : activeness.value,
+  }));
 
   const haloStyle = useAnimatedStyle(() => {
     if (motion === undefined) return { opacity: 0 };
@@ -349,14 +399,6 @@ export function useTimelineRowMotion(motion: TimelineMotion | undefined, index: 
     return {
       opacity: activeness.value * (1 - p) * 0.5,
       transform: [{ scale: 1 + p * 1.8 }],
-    };
-  });
-
-  const fillStyle = useAnimatedStyle(() => {
-    if (motion === undefined) return { opacity: 0 };
-    return {
-      opacity: filled.value,
-      transform: [{ scaleY: filled.value }],
     };
   });
 
@@ -380,5 +422,13 @@ export function useTimelineRowMotion(motion: TimelineMotion | undefined, index: 
     motion.boxes.value = next;
   };
 
-  return { rowStyle, contentStyle, dotStyle, haloStyle, fillStyle, parallaxStyle, onRowLayout };
+  return {
+    rowStyle,
+    contentStyle,
+    dotStyle,
+    haloStyle,
+    activeAccentStyle,
+    parallaxStyle,
+    onRowLayout,
+  };
 }

@@ -625,20 +625,24 @@ real and the edit screen writes it, so dropping it would quietly lose what
 somebody wrote about their own life. A paragraph belongs beside the name, not
 in a list of one-line facts.
 
-#### Timeline motion (2026-09-03)
+#### Timeline cards & motion (2026-09-03)
 
-The timeline is scroll-driven (owner's handoff
-`apps/mobile/src/edit-timeline.html`): entries rise/fade with scroll
-position, one entry near a reading point at 42% of the viewport is
-"active" — its dot swells coral with a pulsing halo and the rail's coral
-fill slides down to it — and a lone photo drifts in parallax inside its
-frame. All of it lives in `components/member/timeline-motion.ts` as
-UI-thread worklets animating only transform/opacity; the route owns the
-`Animated.ScrollView` and hands the motion down through `ProfileBody`.
-Reduced motion, or any context without a scroll owner, renders the static
-timeline unchanged (coral marks the latest entry there). Grayscale, the
-momentum tail and the card-anchored triangle/left-bar from the handoff were
-deliberately not ported — reasons in the module's header comment.
+The timeline is the owner's handoff `apps/mobile/src/edit-timeline.html`,
+design and motion both: white cards down one continuous rail (year chip in
+coral serif inside the card — no year column), and every effect driven by
+scroll position, not time. Entries rise/fade with the scroll; the entry
+near a reading point at 42% of the viewport is "active" — its dot swells
+coral with a pulsing halo, a triangle points at it from the card, a coral
+bar runs down the card's left edge, and the rail's coral fill slides to
+its dot (scaleY, not height). A lone photo drifts in parallax inside its
+frame. Worklets live in `components/member/timeline-motion.ts` (UI thread,
+transform/opacity only — geometry constants in `TL`); the route owns the
+`Animated.ScrollView` and hands motion down through `ProfileBody`. Reduced
+motion, or any context without a scroll owner, renders the same cards
+static, coral marking the latest entry. Grayscale and the momentum tail
+were deliberately not ported — reasons in the module's header comment. The
+handoff's "who added this" line is not drawn: `LifeEvent` carries no
+author on the wire.
 
 #### Album
 

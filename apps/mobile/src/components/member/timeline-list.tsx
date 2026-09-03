@@ -2,8 +2,9 @@ import { MapPin, Milestone, TriangleAlert } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, View } from 'react-native';
 import Animated from 'react-native-reanimated';
+import Svg, { Path } from 'react-native-svg';
 
-import { colors, radius } from '../../theme';
+import { colors, elevation, radius } from '../../theme';
 import type { LifeEventDetail } from '../../lib/api';
 import { formatDayMonth } from '../../lib/date';
 import { thumbnailSource } from '../../lib/media-source';
@@ -11,142 +12,102 @@ import { EmptyState } from '../ui/empty-state';
 import { Text } from '../ui/text';
 import { EventPhotos } from './event-photos';
 import {
+  TL,
   useTimelineListMotion,
   useTimelineRowMotion,
   type TimelineMotion,
 } from './timeline-motion';
 
-const YEAR_COLUMN = 40;
-const RAIL_COLUMN = 16;
-const DOT = 11;
-/** Distance from the row top to the dot's centre — where the rail line starts. */
-const DOT_CENTRE = DOT / 2 + 3;
-
 type RowProps = {
   event: LifeEventDetail;
   /** Opens one of this entry's photos full size. */
   onOpenPhoto?: (media: { id: string; mimeType: string }) => void;
-  /** Repeated years are drawn once — the rail already implies continuity. */
-  showYear: boolean;
   isLatest: boolean;
-  isLast: boolean;
   /** This row's index in the list — how it finds its own scroll metrics. */
   index: number;
   /** Scroll-linked motion. Absent = the static timeline, unchanged. */
   motion?: TimelineMotion;
 };
 
-function TimelineRow({ event, showYear, isLatest, isLast, index, motion, onOpenPhoto }: RowProps) {
+/**
+ * One white card beside the rail (the handoff's `.card`): year chip, title,
+ * description, photos. The dot and the triangle pointing at it sit OUTSIDE
+ * the card, so the card can scale toward the reading point without
+ * dragging them off the rail.
+ */
+function TimelineRow({ event, isLatest, index, motion, onOpenPhoto }: RowProps) {
   const day = formatDayMonth(event.eventDate);
   const meta = [event.place, day].filter((part) => part !== null).join(' · ');
 
-  const { rowStyle, contentStyle, dotStyle, haloStyle, fillStyle, parallaxStyle, onRowLayout } =
-    useTimelineRowMotion(motion, index);
+  const {
+    rowStyle,
+    contentStyle,
+    dotStyle,
+    haloStyle,
+    activeAccentStyle,
+    parallaxStyle,
+    onRowLayout,
+  } = useTimelineRowMotion(motion, index);
 
   return (
-    <Animated.View style={[{ flexDirection: 'row', gap: 10 }, rowStyle]} onLayout={onRowLayout}>
-      <View style={{ width: YEAR_COLUMN, alignItems: 'flex-end' }}>
-        {showYear && (
-          <Text serif variant="body2" weight="semibold" color={colors.text.muted}>
-            {event.eventDate.slice(0, 4)}
-          </Text>
-        )}
-      </View>
-
-      <View style={{ width: RAIL_COLUMN, alignItems: 'center' }}>
-        {!isLast && (
-          <View
-            style={{
-              position: 'absolute',
-              top: DOT_CENTRE,
-              bottom: 0,
-              width: 1.5,
-              backgroundColor: colors.state.borderStrong,
-            }}
-          />
-        )}
-
-        {/* The coral fill sliding down the rail as the active card moves.
-            It scales from the top rather than growing in height, so the
-            per-frame work stays on transform/opacity. */}
-        {!isLast && motion !== undefined && (
-          <Animated.View
-            style={[
-              {
-                position: 'absolute',
-                top: DOT_CENTRE,
-                bottom: 0,
-                width: 1.5,
-                backgroundColor: colors.coral.primary,
-                transformOrigin: 'top',
-              },
-              fillStyle,
-            ]}
-          />
-        )}
-
-        {motion === undefined ? (
-          <View
-            style={{
-              width: DOT,
-              height: DOT,
-              marginTop: 3,
-              borderRadius: radius.full,
-              backgroundColor: isLatest ? colors.coral.primary : colors.background.card,
-              borderWidth: isLatest ? 0 : 1.5,
-              borderColor: colors.state.borderDashed,
-            }}
-          />
-        ) : (
-          // With motion on, coral follows the READING position instead of
-          // marking the latest entry — the active dot swells with a coral
-          // ring and a pulsing halo.
-          <Animated.View
-            style={[
-              {
-                width: DOT,
-                height: DOT,
-                marginTop: 3,
-                borderRadius: radius.full,
-                backgroundColor: colors.background.card,
-                borderWidth: 1.5,
-                borderColor: colors.state.borderDashed,
-              },
-              dotStyle,
-            ]}
-          >
-            <Animated.View
-              style={[
-                {
-                  position: 'absolute',
-                  top: -2,
-                  left: -2,
-                  right: -2,
-                  bottom: -2,
-                  borderRadius: radius.full,
-                  borderWidth: 1.5,
-                  borderColor: colors.coral.brand,
-                },
-                haloStyle,
-              ]}
-            />
-          </Animated.View>
-        )}
-      </View>
-
+    <Animated.View style={rowStyle} onLayout={onRowLayout}>
       <Animated.View
         style={[
           {
-            flex: 1,
-            gap: 3,
-            paddingBottom: isLast ? 0 : 22,
-            // Scaling anchors to the rail side, so the text never drifts
-            // away from its dot while it grows toward the reading point.
-            transformOrigin: 'left center',
+            marginLeft: TL.cardInset,
+            backgroundColor: colors.background.card,
+            borderRadius: radius['3xl'],
+            borderWidth: 1,
+            borderColor: colors.state.borderDefault,
+            padding: 14,
+            gap: 10,
+            transformOrigin: `0px ${TL.dotCentreY}px`,
+            ...elevation.card,
           },
           contentStyle,
         ]}
       >
+        {/* The coral bar down the left edge of the active card. */}
+        {motion !== undefined && (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              {
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: 4,
+                backgroundColor: colors.coral.primary,
+                borderTopLeftRadius: radius['3xl'],
+                borderBottomLeftRadius: radius['3xl'],
+              },
+              activeAccentStyle,
+            ]}
+          />
+        )}
+
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View
+            style={{
+              height: 24,
+              paddingHorizontal: 10,
+              borderRadius: radius.full,
+              backgroundColor: colors.coral.soft,
+              justifyContent: 'center',
+            }}
+          >
+            <Text
+              serif
+              weight="semibold"
+              color={colors.coral.deep}
+              style={{ fontSize: 14, lineHeight: 16, letterSpacing: 0.8 }}
+            >
+              {event.eventDate.slice(0, 4)}
+            </Text>
+          </View>
+        </View>
+
         <Text variant="body1" weight="semibold">
           {event.title}
         </Text>
@@ -168,30 +129,76 @@ function TimelineRow({ event, showYear, isLatest, isLast, index, motion, onOpenP
           </Text>
         )}
 
-        {/* The photos themselves — a count line stood here until the editor
-            made attaching them easy, and a number is not a photograph. */}
         {event.media.length > 0 && (
-          <View style={{ marginTop: 4 }}>
-            <EventPhotos
-              photos={event.media.map((item) => ({
-                key: item.id,
-                mediaId: item.id,
-                mimeType: item.mimeType,
-                source: thumbnailSource(item.id, item.mimeType),
-              }))}
-              parallaxStyle={motion === undefined ? undefined : parallaxStyle}
-              onOpen={
-                onOpenPhoto === undefined
-                  ? undefined
-                  : (photo) => {
-                      if (photo.mediaId === undefined || photo.mimeType === undefined) return;
-                      onOpenPhoto({ id: photo.mediaId, mimeType: photo.mimeType });
-                    }
-              }
-            />
-          </View>
+          <EventPhotos
+            photos={event.media.map((item) => ({
+              key: item.id,
+              mediaId: item.id,
+              mimeType: item.mimeType,
+              source: thumbnailSource(item.id, item.mimeType),
+            }))}
+            parallaxStyle={motion === undefined ? undefined : parallaxStyle}
+            onOpen={
+              onOpenPhoto === undefined
+                ? undefined
+                : (photo) => {
+                    if (photo.mediaId === undefined || photo.mimeType === undefined) return;
+                    onOpenPhoto({ id: photo.mediaId, mimeType: photo.mimeType });
+                  }
+            }
+          />
         )}
       </Animated.View>
+
+      {/* Dot + halo, pinned to the rail. Coral follows the READING position
+          with motion on; statically it marks the latest entry instead. */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          {
+            position: 'absolute',
+            left: TL.dotLeft,
+            top: TL.dotTop,
+            width: TL.dot,
+            height: TL.dot,
+            borderRadius: radius.full,
+            backgroundColor: colors.background.card,
+            borderWidth: 3,
+            borderColor:
+              motion === undefined && isLatest ? colors.coral.brand : colors.state.borderDashed,
+          },
+          dotStyle,
+        ]}
+      >
+        <Animated.View
+          style={[
+            {
+              position: 'absolute',
+              top: -5,
+              left: -5,
+              right: -5,
+              bottom: -5,
+              borderRadius: radius.full,
+              borderWidth: 1.5,
+              borderColor: colors.coral.brand,
+              opacity: 0,
+            },
+            haloStyle,
+          ]}
+        />
+      </Animated.View>
+
+      {/* The triangle pointing from the card at the active dot. */}
+      {motion !== undefined && (
+        <Animated.View
+          pointerEvents="none"
+          style={[{ position: 'absolute', left: TL.triLeft, top: TL.triTop }, activeAccentStyle]}
+        >
+          <Svg width={13} height={16} viewBox="0 0 13 16">
+            <Path d="M13 0.5 L1 8 L13 15.5 Z" fill={colors.coral.primary} />
+          </Svg>
+        </Animated.View>
+      )}
     </Animated.View>
   );
 }
@@ -206,32 +213,25 @@ export type TimelineListProps = {
   loading?: boolean;
   failed?: boolean;
   onRetry?: () => void;
-  /**
-   * Adds a milestone. Nothing passes it yet — `LifeEvent` has no endpoint
-   * (task 1.6.8), so the button is simply not drawn.
-   *
-   * When it does arrive it is gated the same way the profile is, because a
-   * life event is part of that profile: your own timeline and a placeholder's
-   * are editable, a linked member's is theirs alone
-   * (`docs/00-shared/domain-model.md` → wiki-style). `ProfileBody` already
-   * holds the `editability` that decides it.
-   */
+  /** Adds a milestone — wired to the staged editor on your own profile. */
   onAddEvent?: () => void;
   /**
    * Scroll-linked motion from the route that owns the ScrollView
    * (`timeline-motion.ts`). Absent — reduced motion, or a context without
-   * a scroll owner — the timeline renders static, exactly as before.
+   * a scroll owner — the timeline renders static.
    */
   motion?: TimelineMotion;
 };
 
 /**
- * A life in the order it was lived — oldest first.
+ * A life in the order it was lived — oldest first, as cards down a rail
+ * (the owner's handoff `src/edit-timeline.html`).
  *
  * A feed reads newest-first because the top is the news; a life story reads
  * the other way, because the top is the beginning. With scroll motion on,
- * the coral node follows the reader down the rail; without it, the most
- * recent event is the one coral node, which is where the reader ends up.
+ * the coral dot follows the reader down the rail and the rail fills behind
+ * them; without it, coral marks the most recent entry, which is where the
+ * reader ends up.
  */
 export function TimelineList({
   events,
@@ -244,7 +244,7 @@ export function TimelineList({
 }: TimelineListProps) {
   const { t } = useTranslation();
 
-  const { listRef, onListLayout } = useTimelineListMotion(motion, events.length);
+  const { listRef, onListLayout, progressStyle } = useTimelineListMotion(motion, events.length);
 
   if (loading) {
     return (
@@ -279,15 +279,46 @@ export function TimelineList({
 
   return (
     // collapsable=false: the root is measured against the scroll frame, and
-    // Android would otherwise flatten a style-less View out of the tree.
-    <View ref={listRef} onLayout={onListLayout} collapsable={false}>
+    // Android would otherwise flatten a plain View out of the tree.
+    <View ref={listRef} onLayout={onListLayout} collapsable={false} style={{ gap: 16 }}>
+      {/* One continuous rail behind every card: the gray line, then the
+          coral fill scaling down to the active dot. */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          left: TL.railX,
+          top: TL.railTop,
+          bottom: 0,
+          width: TL.railW,
+          borderRadius: radius.full,
+          backgroundColor: colors.state.borderStrong,
+        }}
+      />
+      {motion !== undefined && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            {
+              position: 'absolute',
+              left: TL.railX,
+              top: TL.railTop,
+              bottom: 0,
+              width: TL.railW,
+              borderRadius: radius.full,
+              backgroundColor: colors.coral.primary,
+              transformOrigin: 'top',
+            },
+            progressStyle,
+          ]}
+        />
+      )}
+
       {events.map((event, i) => (
         <TimelineRow
           key={event.id}
           event={event}
-          showYear={i === 0 || event.eventDate.slice(0, 4) !== events[i - 1]?.eventDate.slice(0, 4)}
           isLatest={i === events.length - 1}
-          isLast={i === events.length - 1}
           index={i}
           motion={motion}
           onOpenPhoto={onOpenPhoto}

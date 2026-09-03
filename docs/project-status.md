@@ -29,25 +29,30 @@ screens.
 ## Current Focus
 
 - **The timeline moves with the reader (2026-09-03,
-  `feature/timeline-scroll-motion`).** Per the owner's motion handoff
-  (`apps/mobile/src/edit-timeline.html`): every effect on the Life Profile
-  timeline is driven by scroll POSITION, not time. Cards rise 24px and fade
-  in over the bottom 30% of the viewport, fade out over the top 22%, and are
-  emphasised (opacity 0.65→1, scale 0.965→1) by closeness to a reading
-  point at 42% of the viewport. One entry is ACTIVE at a time — highest
-  focus still visible; its dot swells with a coral ring and a pulsing halo,
-  the rail's coral fill slides down to it (380ms), a lone photo drifts in
-  parallax inside its frame, and hitting the end of the scroll forces the
-  last entry active since it can never reach the reading point. All worklets
-  on the UI thread (`components/member/timeline-motion.ts`), only
-  transform/opacity per frame; the routes own the `Animated.ScrollView` and
-  hand the motion down through `ProfileBody`. Under OS reduced motion — or
-  anywhere without a scroll owner — the timeline renders static exactly as
-  before, where coral marks the latest entry instead of the reading
-  position. Dropped from the handoff deliberately: grayscale (no
-  cross-platform `filter` in RN), the momentum tail (native scroll already
-  emits through the fling), and the triangle/left-bar (they anchor to a
-  white card surface the shipped row design does not have). First look
+  `feature/timeline-scroll-motion`).** Per the owner's handoff
+  (`apps/mobile/src/edit-timeline.html`) — first shipped as motion on the
+  old row layout, then redrawn as the handoff's CARDS the same day on the
+  owner's call ("tôi muốn làm giống với cái html tôi gửi"): white cards
+  down one continuous rail, year as a coral serif chip inside the card
+  (the year column is gone). Every effect is driven by scroll POSITION,
+  not time. Cards rise 24px and fade in over the bottom 30% of the
+  viewport, fade out over the top 22%, and are emphasised (opacity
+  0.65→1, scale 0.965→1) by closeness to a reading point at 42% of the
+  viewport. One entry is ACTIVE at a time — highest focus still visible;
+  its dot swells with a coral ring and a pulsing halo, a triangle points
+  at it from the card, a coral bar runs down the card's left edge, the
+  rail's coral fill slides to its dot (380ms, scaleY — height is layout),
+  a lone photo drifts in parallax inside its frame, and hitting the end of
+  the scroll forces the last entry active since it can never reach the
+  reading point. All worklets on the UI thread
+  (`components/member/timeline-motion.ts`), only transform/opacity per
+  frame; the routes own the `Animated.ScrollView` and hand the motion down
+  through `ProfileBody`. Under OS reduced motion — or anywhere without a
+  scroll owner — the same cards render static, coral marking the latest
+  entry instead of the reading position. Dropped from the handoff
+  deliberately: grayscale (no cross-platform `filter` in RN), the momentum
+  tail (native scroll already emits through the fling), and the "who added
+  this" line (`LifeEvent` carries no author on the wire). First look
   caught one real bug ("lướt đến đâu bị mất hình đến đấy"): the list's
   anchor inside the scroll content was measured once, and when the
   async-loading hero/facts above it grew, every effect shifted up by that
