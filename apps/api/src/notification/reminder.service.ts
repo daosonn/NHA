@@ -251,9 +251,9 @@ export class ReminderService implements OnModuleInit, OnModuleDestroy {
    *  notify the owner alone. Lunar and one-off dates go through the same
    *  shared `occursOn` the widgets display with, so the reminder day and
    *  the shown day can never disagree. */
-  private async specialDateReminders(today: Date): Promise<
-    ReminderCandidate[]
-  > {
+  private async specialDateReminders(
+    today: Date,
+  ): Promise<ReminderCandidate[]> {
     const rows = await this.prisma.specialDate.findMany({
       select: {
         id: true,

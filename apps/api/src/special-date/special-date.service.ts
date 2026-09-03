@@ -211,9 +211,7 @@ export class SpecialDateService {
     });
     const familyIds = memberships
       .map((m) => m.familyId)
-      .filter(
-        (id) => query.familyId === undefined || id === query.familyId,
-      );
+      .filter((id) => query.familyId === undefined || id === query.familyId);
     const familyNames = new Map(
       memberships.map((m) => [m.familyId, m.family.name]),
     );

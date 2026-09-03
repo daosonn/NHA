@@ -84,7 +84,13 @@ describe('nextOccurrenceOf', () => {
     it('một lần thiếu năm (dữ liệu hỏng) → null, không nổ', () => {
       expect(
         nextOccurrenceOf(
-          { month: 5, day: 19, isLunar: false, repeatsYearly: false, year: null },
+          {
+            month: 5,
+            day: 19,
+            isLunar: false,
+            repeatsYearly: false,
+            year: null,
+          },
           d('2026-09-01'),
         ),
       ).toBeNull();

@@ -85,7 +85,9 @@ function getNewMoonDay(k: number, timeZone: number): number {
   C1 = C1 - 0.0004 * Math.sin(dr * 3 * Mpr);
   C1 = C1 + 0.0104 * Math.sin(dr * 2 * F) - 0.0051 * Math.sin(dr * (M + Mpr));
   C1 =
-    C1 - 0.0074 * Math.sin(dr * (M - Mpr)) + 0.0004 * Math.sin(dr * (2 * F + M));
+    C1 -
+    0.0074 * Math.sin(dr * (M - Mpr)) +
+    0.0004 * Math.sin(dr * (2 * F + M));
   C1 =
     C1 -
     0.0004 * Math.sin(dr * (2 * F - M)) -
@@ -313,7 +315,9 @@ export function lunarOneOffSolarDate(
 ): Date | null {
   const solar =
     convertLunar2Solar(lunarDay, lunarMonth, lunarYear, false) ??
-    (lunarDay === 30 ? convertLunar2Solar(29, lunarMonth, lunarYear, false) : null);
+    (lunarDay === 30
+      ? convertLunar2Solar(29, lunarMonth, lunarYear, false)
+      : null);
   if (solar === null) {
     return null;
   }

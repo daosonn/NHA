@@ -28,6 +28,19 @@ screens.
 
 ## Current Focus
 
+- **Timeline edits no longer post to the feed (2026-09-03,
+  `feature/demo-account`).** Creating a milestone used to also announce it
+  in the family feed as an EVENT post (behind `shareToFeed`, default
+  true, own-profile creates fanning out to every family). Removed on the
+  owner's call — a timeline edit is record-keeping, not news: the post
+  block and the DTO flag are gone from `life-event.service.ts`, the
+  "share with the family" checkbox left the timeline editor, and the
+  contract note lives in `api-contract.md` § Life Events. Old clients
+  still sending the flag are stripped harmlessly by the ValidationPipe;
+  EVENT posts created before the change stay in the feed. Verified: api
+  build+lint, mobile tsc + check:i18n (928 keys), and against the live
+  API — feed count unchanged across a create, test row deleted.
+
 - **Public demo login on the welcome screen (2026-09-03,
   `feature/demo-account`).** The welcome CTA now opens **sign-in** (not
   registration) with the public demo account prefilled

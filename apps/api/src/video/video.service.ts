@@ -857,7 +857,9 @@ export class VideoService {
       // Nhạc riêng mà file không có trên máy này → dựng phim không nhạc còn
       // hơn fail cả video vì một track.
       if (!row || !(await this.storage.exists(row.storageKey))) {
-        this.logger.warn(`nhạc ${musicId} không có file trên máy chủ — bỏ nhạc`);
+        this.logger.warn(
+          `nhạc ${musicId} không có file trên máy chủ — bỏ nhạc`,
+        );
         return null;
       }
       return await media.path(row.storageKey);

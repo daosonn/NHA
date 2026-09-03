@@ -519,7 +519,10 @@ export class PostService {
     );
   }
 
-  private async toDetail(userId: string, post: PostRecord): Promise<PostDetail> {
+  private async toDetail(
+    userId: string,
+    post: PostRecord,
+  ): Promise<PostDetail> {
     // Author-only (see update()/remove()); the fine print — an ex-member
     // author can still un-share but not keep sharing — stays enforced by
     // the write paths themselves.

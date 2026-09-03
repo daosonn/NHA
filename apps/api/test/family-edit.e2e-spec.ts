@@ -48,27 +48,33 @@ describe('Family edit (13b) + leave', () => {
     }).compile();
     app = moduleRef.createNestApplication();
     app.setGlobalPrefix('api');
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
     http = app.getHttpServer();
 
     tokenA = (
       await json<AuthBody>(
-        request(http).post('/api/auth/register').send({
-          email: `famedit_a_${stamp}@example.com`,
-          password: 'password-123',
-          name: 'Edit A',
-        }),
+        request(http)
+          .post('/api/auth/register')
+          .send({
+            email: `famedit_a_${stamp}@example.com`,
+            password: 'password-123',
+            name: 'Edit A',
+          }),
         201,
       )
     ).accessToken;
     tokenB = (
       await json<AuthBody>(
-        request(http).post('/api/auth/register').send({
-          email: `famedit_b_${stamp}@example.com`,
-          password: 'password-123',
-          name: 'Edit B',
-        }),
+        request(http)
+          .post('/api/auth/register')
+          .send({
+            email: `famedit_b_${stamp}@example.com`,
+            password: 'password-123',
+            name: 'Edit B',
+          }),
         201,
       )
     ).accessToken;
@@ -112,14 +118,11 @@ describe('Family edit (13b) + leave', () => {
   it('any member edits name/address/about; blanks clear; {} is a 400', async () => {
     // B (không phải người tạo) sửa được — wiki rule
     const patched = await json<FamilyPatched>(
-      request(http)
-        .patch(`/api/families/${familyId}`)
-        .set(as(tokenB))
-        .send({
-          name: 'ヴァン家',
-          address: 'Hanoi, Vietnam',
-          about: 'Four generations in the same lane.',
-        }),
+      request(http).patch(`/api/families/${familyId}`).set(as(tokenB)).send({
+        name: 'ヴァン家',
+        address: 'Hanoi, Vietnam',
+        about: 'Four generations in the same lane.',
+      }),
       200,
     );
     expect(patched.name).toBe('ヴァン家');
@@ -170,7 +173,10 @@ describe('Family edit (13b) + leave', () => {
     );
     expect(patched.coverMediaId).toBe(media.id);
     // B xem được ảnh orphan của A vì nó là bìa nhà chung (luật mới)
-    await request(http).get(`/api/media/${media.id}`).set(as(tokenB)).expect(200);
+    await request(http)
+      .get(`/api/media/${media.id}`)
+      .set(as(tokenB))
+      .expect(200);
     // B KHÔNG đặt lại được ảnh riêng của A làm bìa (không phải của B, không từ post chung)
     await request(http)
       .patch(`/api/families/${familyId}`)

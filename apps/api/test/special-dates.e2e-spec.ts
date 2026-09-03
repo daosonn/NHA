@@ -80,7 +80,9 @@ describe('Special dates v2 (Dates we keep, 12a-12d)', () => {
     }).compile();
     app = moduleRef.createNestApplication();
     app.setGlobalPrefix('api');
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
     http = app.getHttpServer();
   });
@@ -94,21 +96,25 @@ describe('Special dates v2 (Dates we keep, 12a-12d)', () => {
   it('setup: 2 users, 3 families, members with profile dates', async () => {
     tokenA = (
       await json<AuthBody>(
-        request(http).post('/api/auth/register').send({
-          email: `dates_a_${stamp}@example.com`,
-          password: 'password-123',
-          name: 'Dates A',
-        }),
+        request(http)
+          .post('/api/auth/register')
+          .send({
+            email: `dates_a_${stamp}@example.com`,
+            password: 'password-123',
+            name: 'Dates A',
+          }),
         201,
       )
     ).accessToken;
     tokenB = (
       await json<AuthBody>(
-        request(http).post('/api/auth/register').send({
-          email: `dates_b_${stamp}@example.com`,
-          password: 'password-123',
-          name: 'Dates B',
-        }),
+        request(http)
+          .post('/api/auth/register')
+          .send({
+            email: `dates_b_${stamp}@example.com`,
+            password: 'password-123',
+            name: 'Dates B',
+          }),
         201,
       )
     ).accessToken;
@@ -277,13 +283,25 @@ describe('Special dates v2 (Dates we keep, 12a-12d)', () => {
     await request(http)
       .post(`/api/families/${f1}/special-dates`)
       .set(as(tokenA))
-      .send({ ...base, type: 'MILESTONE', month: 5, day: 19, repeatsYearly: false })
+      .send({
+        ...base,
+        type: 'MILESTONE',
+        month: 5,
+        day: 19,
+        repeatsYearly: false,
+      })
       .expect(400);
     // lead vượt trần
     await request(http)
       .post(`/api/families/${f1}/special-dates`)
       .set(as(tokenA))
-      .send({ ...base, type: 'CUSTOM', month: 5, day: 19, remindDaysBefore: 31 })
+      .send({
+        ...base,
+        type: 'CUSTOM',
+        month: 5,
+        day: 19,
+        remindDaysBefore: 31,
+      })
       .expect(400);
     // Feb 29 một-lần ở năm thường là nói dối, không phải ngày
     await request(http)

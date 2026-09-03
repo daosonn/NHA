@@ -419,6 +419,12 @@ Same rules as the profile it hangs off:
 - **No-op PATCHes are value-checked**: a PATCH that changes nothing (a
   retry, a save with no edits) stamps no editor and writes no EditHistory
   row.
+- **A milestone touches the timeline only (changed 2026-09-03).** POST
+  used to also announce it in the family feed as an EVENT post, behind a
+  `shareToFeed` flag defaulting to true; both are gone — a timeline edit
+  is record-keeping, not news. Clients still sending `shareToFeed` are
+  harmless (the global ValidationPipe strips unknown fields). EVENT posts
+  created before the change stay in the feed as ordinary posts.
 
 ### Memos — `apps/api/src/memo/` (task 1.6.5, added 2026-08-19)
 
@@ -603,7 +609,7 @@ Screen 19. **No migration** — `Notification` shipped in the sprint-0 schema.
   in the family hears **except the person whose birthday it is**; custom
   occasions notify everyone, the couple included — and a **personal
   ("Only me") row notifies its owner alone** (`payload.scope:
-  'PERSONAL'`, `familyId: null`). Lunar and one-off rows fire through the
+'PERSONAL'`, `familyId: null`). Lunar and one-off rows fire through the
   same occurrence code the widgets display with, so the reminded day and
   the shown day cannot disagree. One reminder per person per occurrence
   per lead, idempotent across restarts (`payload.dedupeKey`; the dedupe
@@ -690,20 +696,20 @@ the UI tells. Notification settings (3.4.5) will join this controller.
 
 ### Special dates — `apps/api/src/special-date/` (task 1.2.5 API side; CRUD = WBS 3.2.3, added 2026-08-20; v2 "Dates we keep" 2026-09-01)
 
-| Route                                                      | Returns                |
-| ---------------------------------------------------------- | ---------------------- |
-| `GET /families/:familyId/special-dates`                    | `UpcomingSpecialDates` |
-| `GET /families/:familyId/special-dates/custom`             | `SpecialDateDetail[]`  |
-| `GET /families/:familyId/special-dates/:specialDateId`     | `SpecialDateDetail`    |
-| `POST /families/:familyId/special-dates`                   | `SpecialDateDetail`    |
-| `PATCH /families/:familyId/special-dates/:specialDateId`   | `SpecialDateDetail`    |
-| `DELETE /families/:familyId/special-dates/:specialDateId`  | `{ success }`          |
-| `GET /me/special-dates?limit&familyId&scope`               | `UpcomingSpecialDates` |
-| `GET /me/special-dates/custom`                             | `SpecialDateDetail[]`  |
-| `GET /me/special-dates/:specialDateId`                     | `SpecialDateDetail`    |
-| `POST /me/special-dates`                                   | `SpecialDateDetail`    |
-| `PATCH /me/special-dates/:specialDateId`                   | `SpecialDateDetail`    |
-| `DELETE /me/special-dates/:specialDateId`                  | `{ success }`          |
+| Route                                                     | Returns                |
+| --------------------------------------------------------- | ---------------------- |
+| `GET /families/:familyId/special-dates`                   | `UpcomingSpecialDates` |
+| `GET /families/:familyId/special-dates/custom`            | `SpecialDateDetail[]`  |
+| `GET /families/:familyId/special-dates/:specialDateId`    | `SpecialDateDetail`    |
+| `POST /families/:familyId/special-dates`                  | `SpecialDateDetail`    |
+| `PATCH /families/:familyId/special-dates/:specialDateId`  | `SpecialDateDetail`    |
+| `DELETE /families/:familyId/special-dates/:specialDateId` | `{ success }`          |
+| `GET /me/special-dates?limit&familyId&scope`              | `UpcomingSpecialDates` |
+| `GET /me/special-dates/custom`                            | `SpecialDateDetail[]`  |
+| `GET /me/special-dates/:specialDateId`                    | `SpecialDateDetail`    |
+| `POST /me/special-dates`                                  | `SpecialDateDetail`    |
+| `PATCH /me/special-dates/:specialDateId`                  | `SpecialDateDetail`    |
+| `DELETE /me/special-dates/:specialDateId`                 | `{ success }`          |
 
 **CRUD (WBS 3.2.3; extended 2026-09-01).** `SpecialDateDetail` is
 `{ id, scope, familyId, type, title, month, day, isLunar, repeatsYearly,
