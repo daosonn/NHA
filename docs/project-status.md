@@ -40,7 +40,8 @@ screens.
   0.65→1, scale 0.965→1) by closeness to a reading point at 42% of the
   viewport. One entry is ACTIVE at a time — highest focus still visible;
   its dot swells with a coral ring and a pulsing halo, a triangle points
-  at it from the card, a coral bar runs down the card's left edge, the
+  at it from the card, a rounded coral pill runs down the card's left
+  edge (softened from the handoff's hard strip, owner's call), the
   rail's coral fill slides to its dot (380ms, scaleY — height is layout),
   a lone photo drifts in parallax inside its frame, and hitting the end of
   the scroll forces the last entry active since it can never reach the

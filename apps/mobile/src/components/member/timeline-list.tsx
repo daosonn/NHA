@@ -61,26 +61,35 @@ function TimelineRow({ event, isLatest, index, motion, onOpenPhoto }: RowProps) 
             borderColor: colors.state.borderDefault,
             padding: 14,
             gap: 10,
+            // The card clips its own children: the coral bar is a plain
+            // rectangle and the rounded corners cut it, the way the
+            // handoff's inset box-shadow followed the card's radius. A 4px
+            // bar carrying its own radius-20 corners pokes out of the
+            // card's curve instead.
+            overflow: 'hidden',
             transformOrigin: `0px ${TL.dotCentreY}px`,
             ...elevation.card,
           },
           contentStyle,
         ]}
       >
-        {/* The coral bar down the left edge of the active card. */}
+        {/* The coral accent down the active card's left edge. The handoff
+            drew it as a hard full-height strip (inset box-shadow); here it
+            is a rounded pill, inset and shy of both ends, so it speaks the
+            same rounded language as the card, the chip and the dot instead
+            of reading as a strip glued to the edge. */}
         {motion !== undefined && (
           <Animated.View
             pointerEvents="none"
             style={[
               {
                 position: 'absolute',
-                left: 0,
-                top: 0,
-                bottom: 0,
+                left: 6,
+                top: 12,
+                bottom: 12,
                 width: 4,
+                borderRadius: radius.full,
                 backgroundColor: colors.coral.primary,
-                borderTopLeftRadius: radius['3xl'],
-                borderBottomLeftRadius: radius['3xl'],
               },
               activeAccentStyle,
             ]}

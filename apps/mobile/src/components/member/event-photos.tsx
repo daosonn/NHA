@@ -111,6 +111,11 @@ export function EventPhotos({
         borderRadius: radius.lg,
         overflow: 'hidden',
         backgroundColor: colors.background.subtle,
+        // Forces a stacking context. On the web, a TRANSFORMED child (the
+        // parallax layer) escapes a rounded overflow clip unless the
+        // clipping frame has one — the photo painted square over the
+        // frame's corners. Harmless on native.
+        zIndex: 0,
       },
     );
   }

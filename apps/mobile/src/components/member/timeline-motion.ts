@@ -245,7 +245,6 @@ export function useTimelineScrollMotion() {
  */
 export function useTimelineListMotion(motion: TimelineMotion | undefined, count: number) {
   const listRef = useRef<View | null>(null);
-  const listH = useSharedValue(0);
 
   const measure = () => {
     if (motion === undefined) return;
@@ -263,8 +262,7 @@ export function useTimelineListMotion(motion: TimelineMotion | undefined, count:
   const measureRef = useRef(measure);
   measureRef.current = measure;
 
-  const onListLayout = (event: LayoutChangeEvent) => {
-    listH.value = event.nativeEvent.layout.height;
+  const onListLayout = () => {
     measure();
   };
 
@@ -272,14 +270,21 @@ export function useTimelineListMotion(motion: TimelineMotion | undefined, count:
    * The rail's coral fill, sliding to the ACTIVE card's dot centre — the
    * handoff transitions `height` over 380ms; height is a layout prop, so
    * this scales a full-length bar from the top instead.
+   *
+   * The rail's length comes from `boxes` (the last card's bottom edge),
+   * the same source every card effect uses — not from a separate layout
+   * measurement that could go stale or never arrive.
    */
   const progress = useDerivedValue(() => {
     const zeroTiming = { duration: FILL_MS, easing: easing.settle };
     if (motion === undefined) return withTiming(0, zeroTiming);
+    const rows = motion.boxes.value;
     const i = motion.activeIndex.value;
-    const box = motion.boxes.value[i];
-    const railH = listH.value - TL.railTop;
-    if (i < 0 || box === undefined || railH <= 0) return withTiming(0, zeroTiming);
+    const box = rows[i];
+    const last = rows[rows.length - 1];
+    if (i < 0 || box === undefined || last === undefined) return withTiming(0, zeroTiming);
+    const railH = last.y + last.h - TL.railTop;
+    if (railH <= 0) return withTiming(0, zeroTiming);
     const p = Math.min(1, Math.max(0, (box.y + TL.dotCentreY - TL.railTop) / railH));
     return withTiming(p, zeroTiming);
   });
