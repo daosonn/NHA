@@ -2,9 +2,13 @@ import { Image } from 'expo-image';
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { colors, radius } from '../../theme';
 import { Text } from '../ui/text';
+
+/** How much taller the parallax layer is than its frame, each side. */
+const PARALLAX_BLEED = 16;
 
 export type EventPhoto = {
   key: string;
@@ -31,10 +35,18 @@ export type EventPhoto = {
 export function EventPhotos({
   photos,
   onOpen,
+  parallaxStyle,
 }: {
   photos: EventPhoto[];
   /** Opens one at full size. The editor leaves it off — see `mediaId`. */
   onOpen?: (photo: EventPhoto) => void;
+  /**
+   * Scroll-linked drift for the lone-photo frame (`timeline-motion.ts`):
+   * the image layer is taller than its frame and translates against the
+   * scroll, so it moves slower than its card. Only the single photo gets
+   * it — the square row reads as tiles, not as a window onto a picture.
+   */
+  parallaxStyle?: ComponentProps<typeof Animated.View>['style'];
 }) {
   const { t } = useTranslation();
 
@@ -65,14 +77,34 @@ export function EventPhotos({
 
   const only = photos[0];
   if (photos.length === 1 && only !== undefined) {
-    return wrap(
-      only,
+    const image = (
       <Image
         source={only.source}
         contentFit="cover"
         transition={150}
         style={{ width: '100%', height: '100%' }}
-      />,
+      />
+    );
+    return wrap(
+      only,
+      parallaxStyle === undefined ? (
+        image
+      ) : (
+        <Animated.View
+          style={[
+            {
+              position: 'absolute',
+              top: -PARALLAX_BLEED,
+              bottom: -PARALLAX_BLEED,
+              left: 0,
+              right: 0,
+            },
+            parallaxStyle,
+          ]}
+        >
+          {image}
+        </Animated.View>
+      ),
       {
         width: '100%',
         height: 110,

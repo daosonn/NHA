@@ -1,5 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { AppHeader } from '../../src/components/layout/app-header';
 import { contentColumn } from '../../src/components/layout/content-column';
@@ -9,6 +10,7 @@ import {
   ScreenTitle,
 } from '../../src/components/layout/header-slots';
 import { ProfileBody } from '../../src/components/member/profile-body';
+import { useTimelineScrollMotion } from '../../src/components/member/timeline-motion';
 import { useSession } from '../../src/features/auth/session';
 import { useActiveFamily } from '../../src/features/family/active-family';
 import { useFamilies } from '../../src/features/family/use-families';
@@ -49,6 +51,11 @@ export default function MemberScreen() {
   // Bắt ra hằng để narrowing sống sót vào closure bên dưới.
   const avatarMediaId = profile.avatarMediaId;
 
+  // The timeline's scroll-linked motion lives with the screen because the
+  // screen owns the ScrollView (`timeline-motion.ts`).
+  const { motion, scrollHandler, frameRef, onFrameLayout, onContentSizeChange } =
+    useTimelineScrollMotion();
+
   return (
     <View className="flex-1 bg-page">
       <AppHeader
@@ -58,41 +65,51 @@ export default function MemberScreen() {
         paddingRight={spacing.lg}
       />
 
-      <ScrollView
-        contentContainerStyle={{ ...contentColumn, paddingTop: spacing.xl, paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
-      >
-        <ProfileBody
-          profile={profile}
-          familyId={familyId}
-          memberId={id}
-          initialTab={tab === 'album' || tab === 'memo' ? tab : 'timeline'}
-          onEdit={() =>
-            familyId === null
-              ? undefined
-              : router.push({
-                  pathname: '/profile/edit',
-                  params: { familyId, memberId: id },
-                })
-          }
-          onAddMemo={() =>
-            familyId === null
-              ? undefined
-              : router.push({ pathname: '/memo/edit', params: { familyId, memberId: id } })
-          }
-          onOpenMemo={(memo) => router.push({ pathname: '/memo/[id]', params: { id: memo.id } })}
-          onEditMemo={(memo) => router.push({ pathname: '/memo/edit', params: { id: memo.id } })}
-          onOpenMoment={(postId) => router.push({ pathname: '/post/[id]', params: { id: postId } })}
-          onViewAvatar={
-            avatarMediaId === null
-              ? undefined
-              : () => router.push({ pathname: '/media/[id]', params: { id: avatarMediaId } })
-          }
-          onOpenPhoto={(item) =>
-            router.push({ pathname: '/media/[id]', params: { id: item.id, mime: item.mimeType } })
-          }
-        />
-      </ScrollView>
+      {/* The frame is what the effects measure against — the scroll viewport
+          below the header, not the window. */}
+      <View style={{ flex: 1 }} ref={frameRef} onLayout={onFrameLayout} collapsable={false}>
+        <Animated.ScrollView
+          onScroll={scrollHandler}
+          onContentSizeChange={onContentSizeChange}
+          scrollEventThrottle={16}
+          contentContainerStyle={{ ...contentColumn, paddingTop: spacing.xl, paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <ProfileBody
+            timelineMotion={motion}
+            profile={profile}
+            familyId={familyId}
+            memberId={id}
+            initialTab={tab === 'album' || tab === 'memo' ? tab : 'timeline'}
+            onEdit={() =>
+              familyId === null
+                ? undefined
+                : router.push({
+                    pathname: '/profile/edit',
+                    params: { familyId, memberId: id },
+                  })
+            }
+            onAddMemo={() =>
+              familyId === null
+                ? undefined
+                : router.push({ pathname: '/memo/edit', params: { familyId, memberId: id } })
+            }
+            onOpenMemo={(memo) => router.push({ pathname: '/memo/[id]', params: { id: memo.id } })}
+            onEditMemo={(memo) => router.push({ pathname: '/memo/edit', params: { id: memo.id } })}
+            onOpenMoment={(postId) =>
+              router.push({ pathname: '/post/[id]', params: { id: postId } })
+            }
+            onViewAvatar={
+              avatarMediaId === null
+                ? undefined
+                : () => router.push({ pathname: '/media/[id]', params: { id: avatarMediaId } })
+            }
+            onOpenPhoto={(item) =>
+              router.push({ pathname: '/media/[id]', params: { id: item.id, mime: item.mimeType } })
+            }
+          />
+        </Animated.ScrollView>
+      </View>
     </View>
   );
 }

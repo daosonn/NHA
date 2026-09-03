@@ -21,6 +21,7 @@ import { MemoList } from './memo-list';
 import { ProfileFacts } from './profile-facts';
 import { ProfileHero } from './profile-hero';
 import { TimelineList } from './timeline-list';
+import type { TimelineMotion } from './timeline-motion';
 
 type Tab = 'timeline' | 'album' | 'memo';
 
@@ -53,6 +54,11 @@ export type ProfileBodyProps = {
   initialTab?: Tab;
   /** Start a post with no audience. Only wired on your own page. */
   onAddPrivate?: () => void;
+  /**
+   * Scroll-linked timeline motion (`timeline-motion.ts`). The route owns
+   * the ScrollView, so it owns this too; the body only hands it down.
+   */
+  timelineMotion?: TimelineMotion;
 };
 
 /**
@@ -85,6 +91,7 @@ export function ProfileBody({
   onOpenPhoto,
   initialTab = 'timeline',
   onAddPrivate,
+  timelineMotion,
 }: ProfileBodyProps) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -196,6 +203,7 @@ export function ProfileBody({
             // The same viewer the Album tab opens. A photo is a photo
             // wherever it is drawn.
             onOpenPhoto={onOpenPhoto}
+            motion={timelineMotion}
           />
         </Animated.View>
       )}

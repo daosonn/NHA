@@ -625,6 +625,21 @@ real and the edit screen writes it, so dropping it would quietly lose what
 somebody wrote about their own life. A paragraph belongs beside the name, not
 in a list of one-line facts.
 
+#### Timeline motion (2026-09-03)
+
+The timeline is scroll-driven (owner's handoff
+`apps/mobile/src/edit-timeline.html`): entries rise/fade with scroll
+position, one entry near a reading point at 42% of the viewport is
+"active" — its dot swells coral with a pulsing halo and the rail's coral
+fill slides down to it — and a lone photo drifts in parallax inside its
+frame. All of it lives in `components/member/timeline-motion.ts` as
+UI-thread worklets animating only transform/opacity; the route owns the
+`Animated.ScrollView` and hands the motion down through `ProfileBody`.
+Reduced motion, or any context without a scroll owner, renders the static
+timeline unchanged (coral marks the latest entry there). Grayscale, the
+momentum tail and the card-anchored triangle/left-bar from the handoff were
+deliberately not ported — reasons in the module's header comment.
+
 #### Album
 
 **Derived, not curated** — the family's posts that this person is tagged in

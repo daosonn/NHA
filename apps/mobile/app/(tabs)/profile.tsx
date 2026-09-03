@@ -2,12 +2,14 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { AppHeader } from '../../src/components/layout/app-header';
 import { contentColumn } from '../../src/components/layout/content-column';
 import { ScreenTitle, SettingsButton } from '../../src/components/layout/header-slots';
 import { ProfileBody } from '../../src/components/member/profile-body';
+import { useTimelineScrollMotion } from '../../src/components/member/timeline-motion';
 import { Text } from '../../src/components/ui/text';
 import { useSession } from '../../src/features/auth/session';
 import { useActiveFamily } from '../../src/features/family/active-family';
@@ -110,6 +112,11 @@ export default function ProfileScreen() {
   // Bắt ra hằng để narrowing sống sót vào closure bên dưới.
   const avatarMediaId = profile.avatarMediaId;
 
+  // The timeline's scroll-linked motion lives with the screen because the
+  // screen owns the ScrollView (`timeline-motion.ts`).
+  const { motion, scrollHandler, frameRef, onFrameLayout, onContentSizeChange } =
+    useTimelineScrollMotion();
+
   return (
     <View className="flex-1 bg-page">
       <AppHeader
@@ -118,58 +125,68 @@ export default function ProfileScreen() {
         paddingRight={spacing.lg}
       />
 
-      <ScrollView
-        contentContainerStyle={{
-          ...contentColumn,
-          paddingTop: spacing.xl,
-          paddingBottom: expanded ? spacing['4xl'] : BOTTOM_INSET,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-        {permissionDenied && (
-          <Text
-            variant="caption"
-            color={colors.themes.destructive.text}
-            accessibilityRole="alert"
-            style={{ paddingBottom: 10 }}
-          >
-            {t('moment.permissionDenied')}
-          </Text>
-        )}
+      {/* The frame is what the effects measure against — the scroll viewport
+          below the header, not the window. */}
+      <View style={{ flex: 1 }} ref={frameRef} onLayout={onFrameLayout} collapsable={false}>
+        <Animated.ScrollView
+          onScroll={scrollHandler}
+          onContentSizeChange={onContentSizeChange}
+          scrollEventThrottle={16}
+          contentContainerStyle={{
+            ...contentColumn,
+            paddingTop: spacing.xl,
+            paddingBottom: expanded ? spacing['4xl'] : BOTTOM_INSET,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          {permissionDenied && (
+            <Text
+              variant="caption"
+              color={colors.themes.destructive.text}
+              accessibilityRole="alert"
+              style={{ paddingBottom: 10 }}
+            >
+              {t('moment.permissionDenied')}
+            </Text>
+          )}
 
-        <ProfileBody
-          profile={profile}
-          familyId={familyId}
-          memberId={memberId}
-          ownProfile
-          onEdit={() => router.push('/profile/edit')}
-          onEditTimeline={() => router.push('/profile/edit-timeline')}
-          // The compose screen with every family unticked. Reusing it rather
-          // than building a second uploader means a private picture gets the
-          // same caption box, the same picker and the same tag rules as any
-          // other — it just goes nowhere but here.
-          onAddPrivate={() => router.push({ pathname: '/new', params: { private: '1' } })}
-          onChangeAvatar={() => void pickAvatar()}
-          uploadingAvatar={updateAvatar.isPending}
-          // Không có ảnh thật thì vòng tròn chữ cái đứng yên — không có gì để xem
-          onViewAvatar={
-            avatarMediaId === null
-              ? undefined
-              : () => router.push({ pathname: '/media/[id]', params: { id: avatarMediaId } })
-          }
-          onAddMemo={() =>
-            familyId === null || memberId === null
-              ? undefined
-              : router.push({ pathname: '/memo/edit', params: { familyId, memberId } })
-          }
-          onOpenMemo={(memo) => router.push({ pathname: '/memo/[id]', params: { id: memo.id } })}
-          onEditMemo={(memo) => router.push({ pathname: '/memo/edit', params: { id: memo.id } })}
-          onOpenMoment={(postId) => router.push({ pathname: '/post/[id]', params: { id: postId } })}
-          onOpenPhoto={(item) =>
-            router.push({ pathname: '/media/[id]', params: { id: item.id, mime: item.mimeType } })
-          }
-        />
-      </ScrollView>
+          <ProfileBody
+            profile={profile}
+            familyId={familyId}
+            memberId={memberId}
+            ownProfile
+            timelineMotion={motion}
+            onEdit={() => router.push('/profile/edit')}
+            onEditTimeline={() => router.push('/profile/edit-timeline')}
+            // The compose screen with every family unticked. Reusing it rather
+            // than building a second uploader means a private picture gets the
+            // same caption box, the same picker and the same tag rules as any
+            // other — it just goes nowhere but here.
+            onAddPrivate={() => router.push({ pathname: '/new', params: { private: '1' } })}
+            onChangeAvatar={() => void pickAvatar()}
+            uploadingAvatar={updateAvatar.isPending}
+            // Không có ảnh thật thì vòng tròn chữ cái đứng yên — không có gì để xem
+            onViewAvatar={
+              avatarMediaId === null
+                ? undefined
+                : () => router.push({ pathname: '/media/[id]', params: { id: avatarMediaId } })
+            }
+            onAddMemo={() =>
+              familyId === null || memberId === null
+                ? undefined
+                : router.push({ pathname: '/memo/edit', params: { familyId, memberId } })
+            }
+            onOpenMemo={(memo) => router.push({ pathname: '/memo/[id]', params: { id: memo.id } })}
+            onEditMemo={(memo) => router.push({ pathname: '/memo/edit', params: { id: memo.id } })}
+            onOpenMoment={(postId) =>
+              router.push({ pathname: '/post/[id]', params: { id: postId } })
+            }
+            onOpenPhoto={(item) =>
+              router.push({ pathname: '/media/[id]', params: { id: item.id, mime: item.mimeType } })
+            }
+          />
+        </Animated.ScrollView>
+      </View>
     </View>
   );
 }
