@@ -28,6 +28,20 @@ screens.
 
 ## Current Focus
 
+- **Public demo login on the welcome screen (2026-09-03,
+  `feature/demo-account`).** The welcome CTA now opens **sign-in** (not
+  registration) with the public demo account prefilled
+  (`/sign-in?demo=1`, credentials in
+  `src/features/auth/demo-account.ts` — deliberately shipped in the
+  client, not a secret), so a first visit is one tap from being inside.
+  The account (`user.alphaclub@gmail.com`, name "Alpha Club") was
+  registered against the shared Neon database, which the deployed Render
+  API also uses. It belongs to no family yet — deliberately not joined to
+  山田家: it is a write-capable login handed to strangers, and deletes are
+  hard deletes, so what it may touch needs an owner's decision. Verified:
+  tsc, prettier, check:i18n, and the flow driven in a browser (CTA →
+  prefilled form → signed in, input values read from the DOM).
+
 - **The timeline moves with the reader (2026-09-03,
   `feature/timeline-scroll-motion`).** Per the owner's handoff
   (`apps/mobile/src/edit-timeline.html`) — first shipped as motion on the

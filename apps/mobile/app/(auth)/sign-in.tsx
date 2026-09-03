@@ -14,6 +14,7 @@ import { Text } from '../../src/components/ui/text';
 import { TextField } from '../../src/components/ui/text-field';
 import { TextLink } from '../../src/components/ui/text-link';
 import { authErrorKey } from '../../src/features/auth/auth-error';
+import { DEMO_ACCOUNT } from '../../src/features/auth/demo-account';
 import { useSession } from '../../src/features/auth/session';
 import { colors } from '../../src/theme';
 
@@ -24,9 +25,11 @@ export default function SignInScreen() {
 
   // Filled in when social login sent them here: the address already has a
   // password, and retyping what they just proved they own is a small insult.
-  const { email: prefill } = useLocalSearchParams<{ email?: string }>();
-  const [email, setEmail] = useState(prefill ?? '');
-  const [password, setPassword] = useState('');
+  // `demo=1` (the welcome CTA) prefills the public demo login instead, so a
+  // first visit is one tap from being inside.
+  const { email: prefill, demo } = useLocalSearchParams<{ email?: string; demo?: string }>();
+  const [email, setEmail] = useState(demo === '1' ? DEMO_ACCOUNT.email : (prefill ?? ''));
+  const [password, setPassword] = useState(demo === '1' ? DEMO_ACCOUNT.password : '');
   const [stayed, setStayed] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);

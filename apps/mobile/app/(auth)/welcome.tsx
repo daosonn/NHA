@@ -30,11 +30,15 @@ export default function WelcomeScreen() {
   /** The two ways in. Identical on both layouts, so written once. */
   const actions = (
     <>
+      {/* The primary CTA opens SIGN-IN with the public demo login prefilled
+          (owner's call, 2026-09-03) — a first visit lands one tap from being
+          inside, instead of at a registration form. Creating an account still
+          exists behind the sign-in screen's mode tabs. */}
       <Button
-        label={t('auth.welcome.create')}
+        label={t('auth.welcome.start')}
         size="large"
         fullWidth
-        onPress={() => router.push('/sign-up')}
+        onPress={() => router.push({ pathname: '/sign-in', params: { demo: '1' } })}
       />
 
       <SocialButtons layout="stack" continueWording />
