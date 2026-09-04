@@ -57,7 +57,6 @@ import type {
   GalleryMediaItem,
   InvitationPreview,
   InvitationSummary,
-  JoinFamilyRequest,
   JoinFamilyResult,
   LoginRequest,
   CreateLifeEventRequest,
@@ -207,9 +206,6 @@ export const families = {
 
   create: (body: CreateFamilyRequest) =>
     apiRequest<FamilyDetail>('/families', { method: 'POST', body }),
-
-  join: (body: JoinFamilyRequest) =>
-    apiRequest<JoinFamilyResult>('/families/join', { method: 'POST', body }),
 
   /** Chỉ người tạo, và chỉ khi không còn tài khoản nào khác trong nhà (403/409). */
   remove: (familyId: string) =>

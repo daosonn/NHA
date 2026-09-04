@@ -40,9 +40,23 @@ function groupByDay(items: GalleryMediaItem[]): DayGroup[] {
     .map(([date, dayItems]) => ({ date, items: dayItems }));
 }
 
+/** Khoảng hở giữa hai ô, tính theo pixel như mắt nhìn thấy. */
 const GRID_GAP = 6;
-/** Ba cột: (100 − 2 khoảng hở ~1.7%) / 3. */
-const TILE_WIDTH = '32.2%';
+
+/**
+ * Ba cột, ở MỌI bề rộng.
+ *
+ * Trước đây là `width: '32.2%'` cộng `gap: 6` — phần trăm tính theo
+ * container còn khe thì cộng thêm bằng pixel, nên ba ô chỉ lọt một dòng khi
+ * container rộng ít nhất ~353px (0.966·W + 12 ≤ W). Hẹp hơn thì ô thứ ba rơi
+ * xuống dòng và lưới lặng lẽ thành hai cột với ô to gấp rưỡi — đúng thứ
+ * người dùng nhìn thấy trên máy hẹp, ngày 04/09.
+ *
+ * Giờ mỗi ô chiếm đúng một phần ba và tự đệm bên trong, nên tổng bề rộng
+ * luôn là 100% dù container to nhỏ thế nào. Hàng bù lại nửa khe ở hai mép
+ * ngoài để lưới vẫn thẳng hàng với tiêu đề phía trên.
+ */
+const TILE_WIDTH = '33.333%';
 
 export type AlbumGridProps = {
   gallery: MemberGallery | undefined;
@@ -193,58 +207,65 @@ export function AlbumGrid({
             {formatFullDate(day.date) ?? day.date}
           </Text>
 
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              marginHorizontal: -GRID_GAP / 2,
+            }}
+          >
             {day.items.map((item) => {
               const isVideo = item.mimeType.startsWith('video/');
               return (
-                <Pressable
-                  key={item.id}
-                  onPress={() => onOpenPhoto?.(item)}
-                  onLongPress={
-                    item.postId !== null ? () => onOpenMoment?.(item.postId as string) : undefined
-                  }
-                  accessibilityRole="imagebutton"
-                  accessibilityLabel={t('member.moments.openPhoto')}
-                  style={{
-                    width: TILE_WIDTH,
-                    aspectRatio: 1,
-                    borderRadius: radius.lg,
-                    overflow: 'hidden',
-                    backgroundColor: colors.background.subtle,
-                  }}
-                >
-                  {/* Lót sau ảnh: đang tải hay tải hỏng đều còn vân nền, không ô trắng */}
-                  <PhotoPlaceholder style={StyleSheet.absoluteFill} />
-                  <Image
-                    source={thumbnailSource(item.id, item.mimeType)}
-                    recyclingKey={item.id}
-                    contentFit="cover"
-                    transition={160}
-                    style={StyleSheet.absoluteFill}
-                  />
-                  {isVideo && (
-                    <View
-                      style={{
-                        position: 'absolute',
-                        right: 5,
-                        bottom: 5,
-                        width: 22,
-                        height: 22,
-                        borderRadius: radius.full,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: 'rgba(24,24,27,0.62)',
-                      }}
-                    >
-                      <Play
-                        size={11}
-                        color={colors.text.white}
-                        strokeWidth={2.4}
-                        fill={colors.text.white}
-                      />
-                    </View>
-                  )}
-                </Pressable>
+                <View key={item.id} style={{ width: TILE_WIDTH, padding: GRID_GAP / 2 }}>
+                  <Pressable
+                    onPress={() => onOpenPhoto?.(item)}
+                    onLongPress={
+                      item.postId !== null ? () => onOpenMoment?.(item.postId as string) : undefined
+                    }
+                    accessibilityRole="imagebutton"
+                    accessibilityLabel={t('member.moments.openPhoto')}
+                    style={{
+                      width: '100%',
+                      aspectRatio: 1,
+                      borderRadius: radius.lg,
+                      overflow: 'hidden',
+                      backgroundColor: colors.background.subtle,
+                    }}
+                  >
+                    {/* Lót sau ảnh: đang tải hay tải hỏng đều còn vân nền, không ô trắng */}
+                    <PhotoPlaceholder style={StyleSheet.absoluteFill} />
+                    <Image
+                      source={thumbnailSource(item.id, item.mimeType)}
+                      recyclingKey={item.id}
+                      contentFit="cover"
+                      transition={160}
+                      style={StyleSheet.absoluteFill}
+                    />
+                    {isVideo && (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          right: 5,
+                          bottom: 5,
+                          width: 22,
+                          height: 22,
+                          borderRadius: radius.full,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: 'rgba(24,24,27,0.62)',
+                        }}
+                      >
+                        <Play
+                          size={11}
+                          color={colors.text.white}
+                          strokeWidth={2.4}
+                          fill={colors.text.white}
+                        />
+                      </View>
+                    )}
+                  </Pressable>
+                </View>
               );
             })}
           </View>

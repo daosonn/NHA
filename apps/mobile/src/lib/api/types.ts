@@ -183,16 +183,14 @@ export type CreateFamilyRequest = {
 };
 
 /**
- * `POST /api/families/join`.
+ * `POST /api/families/join` is **not called by this app** (2026-09-04).
  *
- * `linkMemberId` attaches the account to a placeholder that is already in
- * the tree, so everything written about that person stays attached — see
- * `docs/00-shared/domain-model.md`.
+ * The route and `Family.inviteCode` still exist server-side, so a code
+ * issued before that date still opens the door to anyone who kept it. The
+ * app stopped offering it because of what it does: joining that way creates
+ * a member with no relationship edges, floating beside the tree. Closing it
+ * for good is a backend change, and is filed under § For the backend owner.
  */
-export type JoinFamilyRequest = {
-  inviteCode: string;
-  linkMemberId?: string;
-};
 
 /** `POST /api/families/:familyId/members` — adds a placeholder. */
 export type AddMemberRequest = {

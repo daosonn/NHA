@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
-import { InviteCodeCard } from '../../src/components/family/invite-code-card';
 import { FormScreen } from '../../src/components/layout/form-screen';
 import { Avatar } from '../../src/components/ui/avatar';
 import { BrandMark } from '../../src/components/ui/brand-mark';
@@ -70,11 +69,24 @@ function GroupMark() {
  * family strip and from every no-family empty state; the link under the form
  * hands people holding a code to `join-family` instead.
  *
- * Two states, because the invite code cannot exist before the group does:
- * the server mints `Family.inviteCode` inside `POST /families`. The mockup
- * shows the code on the form, which would mean inventing eight characters and
- * hoping the server agrees. So the form creates the group, and the code is
- * handed over on the way out.
+ * Two states: the form, then a confirmation that hands over the next step.
+ *
+ * That second state used to hand over `Family.inviteCode` — a standing key
+ * anyone could use to walk in. It was removed on 2026-09-04 (owner's call)
+ * because of what joining that way actually did: `POST /families/join`
+ * creates a `FamilyMember` with **no relationship edges**, so the person
+ * arrives as a node floating beside the tree and somebody has to notice and
+ * connect them by hand. The screen's own copy promised the opposite — "hand
+ * out the code and the tree fills itself in" — and at this exact moment the
+ * group holds one member and zero spots, so there was nothing for a joiner
+ * to attach to anyway.
+ *
+ * Every way in now goes through an **invitation against a spot**
+ * (`Invitation.memberId`), which carries the relationship, expires, can be
+ * revoked, and on accept links the account to a placeholder already standing
+ * in the right place — migrating its life events across. So this screen
+ * sends people to the tree to build spots and invite into them, which is the
+ * order the product actually works in.
  */
 export default function NewFamilyScreen() {
   const { t } = useTranslation();
@@ -115,7 +127,10 @@ export default function NewFamilyScreen() {
             label={t('family.new.done')}
             size="large"
             fullWidth
-            onPress={() => safeBack(router, '/')}
+            // Straight into the invite flow on the tree, which is the only
+            // way into this group now. `?invite=1` is the same door Omoide's
+            // Invite button uses, so there is one flow and not two.
+            onPress={() => router.replace({ pathname: '/family', params: { invite: '1' } })}
           />
         }
       >
@@ -147,17 +162,9 @@ export default function NewFamilyScreen() {
           </Text>
         </View>
 
-        <View style={{ gap: 8 }}>
-          <Text variant="caption" weight="semibold" color={colors.text.secondary}>
-            {t('family.new.codeLabel')}
-          </Text>
-
-          <InviteCodeCard code={created.inviteCode} subtitle={t('family.new.codeMeta')} />
-
-          <Text variant="badge" color={colors.text.subtle}>
-            {t('family.new.codeHint')}
-          </Text>
-        </View>
+        <Text variant="badge" color={colors.text.subtle} style={{ textAlign: 'center' }}>
+          {t('family.new.nextHint')}
+        </Text>
       </FormScreen>
     );
   }

@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { LockKeyhole, Send, Trash2, TriangleAlert, UsersRound } from 'lucide-react-native';
+import { LockKeyhole, Send, TriangleAlert, UsersRound } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
@@ -301,26 +301,10 @@ export default function FamilyTreeScreen() {
         center={<ScreenTitle title={t('family.title')} />}
         right={
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            {/* Xóa nhà tạo nhầm — chỉ người lập ra nhà thấy nút này. */}
-            {canDeleteActive && activeFamily !== undefined && (
-              <Pressable
-                onPress={() => {
-                  deleteFamily.reset();
-                  setDeletingFamily(activeFamily);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={t('family.delete.action', { name: activeFamily.name })}
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: radius.full,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Trash2 size={19} color={colors.text.secondary} strokeWidth={2.1} />
-              </Pressable>
-            )}
+            {/* Xóa nhà đã CHUYỂN xuống dưới cây, sau cái bút (2026-09-04,
+                owner's call). Ở đây nó nằm cạnh nút điều hướng, một chạm là
+                tới, trên chính màn hình mà việc thường làm là ngắm gia đình
+                mình — mà xóa thì không hoàn tác được và cascade cả nhà. */}
 
             {/* Lời mời đã gửi sống sau nút này (badge = số đang chờ) — banner
                 nổi trên canvas bị bỏ 2026-08-26 vì nó che đúng cái cây đang xem. */}
@@ -469,6 +453,19 @@ export default function FamilyTreeScreen() {
                 onManageNode={(node) => setManagingId(node.id)}
                 editing={editing}
                 onToggleEditing={toggleEditing}
+                onDeleteFamily={
+                  canDeleteActive && activeFamily !== undefined
+                    ? () => {
+                        deleteFamily.reset();
+                        setDeletingFamily(activeFamily);
+                      }
+                    : undefined
+                }
+                deleteFamilyLabel={
+                  activeFamily === undefined
+                    ? undefined
+                    : t('family.delete.action', { name: activeFamily.name })
+                }
                 selectedId={selectedId}
                 onPickSlot={pickSlot}
               />
