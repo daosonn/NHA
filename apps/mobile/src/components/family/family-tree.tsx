@@ -663,6 +663,8 @@ export function FamilyTree({
                 key={node.id}
                 node={node}
                 selected={editing && node.id === selectedId}
+                // An empty node is already a "+" circle, so it needs no badge.
+                showAdd={editing && node.state !== 'empty' && node.id !== selectedId}
                 appear={appearedIds.has(node.id)}
                 onPress={onSelectNode}
                 onLongPress={onManageNode}
