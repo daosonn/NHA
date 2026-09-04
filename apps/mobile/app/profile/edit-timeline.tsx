@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { Images, Info, Pencil, Plus, Trash2 } from 'lucide-react-native';
+import { Info, Pencil, Plus, Trash2 } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
@@ -37,6 +37,21 @@ import { enter } from '../../src/theme/motion';
  * server hears one batch when Done is tapped (`useCommitMyTimeline`).
  * Cancel simply leaves; the drafts die with the screen.
  *
+ * Photos are editable on a SAVED entry since 2026-09-03 — added and
+ * removed in the same strip as an unsaved one's. It was the API that
+ * prevented this, not the screen: `UpdateLifeEventDto` omitted `mediaIds`
+ * ("fixed at creation"), so the sheet used to draw a line saying photos
+ * could not change rather than a picker that lied. Removing a saved photo
+ * deletes it outright when Done commits, file and all, which is why the
+ * strip carries a warning rather than only an X.
+ *
+ * A timeline entry NEVER reaches the family feed. It used to be able to —
+ * there was an "Also share this with the family" switch, on by default — and
+ * that was the wrong default for what this screen is: a life being recorded,
+ * not news being broadcast. The switch, and the `shareToFeed` flag behind
+ * it, are gone from the API as well as from here, so adding a milestone
+ * writes the milestone and nothing else.
+ *
  * Own timeline only for now: the edit link that leads here is drawn by
  * `editability === 'self'`, the recorded 2026-08-19 decision. The mockup
  * itself is drawn on Dad's page — opening this to placeholder (wiki)
@@ -56,20 +71,33 @@ type DraftEntry = {
   /** Date-only `YYYY-MM-DD`. */
   eventDate: string;
   /**
-   * A saved entry's photo count, display only — media is fixed at creation,
-   * so an existing entry's photos are never edited here.
-   */
-  mediaCount: number;
-  /** A saved entry's media rows, to DRAW its photos (never edited). */
-  serverMedia: PostMediaSummary[];
-  /**
-   * A NEW entry's picked photos, still local files. Uploaded by Done, so an
-   * abandoned draft leaves nothing on the server. Always empty on saved rows.
+   * The entry's photos — saved rows and unsaved picks in ONE list.
+   *
+   * A tile that came from the server carries `mediaId`; one just picked
+   * carries `uri` and no id. That is the only difference the screen needs,
+   * and keeping them together is what lets the sheet show, add to and remove
+   * from a saved entry's photos with a single strip. Before 2026-09-03 these
+   * were two fields — `serverMedia` to draw and `media` to upload — because
+   * the API would not let a saved entry's photos change at all.
+   *
+   * Nothing is uploaded until Done, so an abandoned draft leaves nothing on
+   * the server.
    */
   media: DraftMedia[];
   /** An existing entry with unsaved edits. */
   dirty: boolean;
 };
+
+/** A photo already on the server as a strip tile — no `uri`, so no upload. */
+function toSavedPhoto(item: PostMediaSummary): DraftMedia {
+  return {
+    id: item.id,
+    mediaId: item.id,
+    kind: item.mimeType.startsWith('video/') ? 'video' : 'photo',
+    tone: 'light',
+    mimeType: item.mimeType,
+  };
+}
 
 /** The picker's asset as a draft tile — photos only on the timeline form. */
 function toDraftPhoto(asset: ImagePicker.ImagePickerAsset, index: number): DraftMedia {
@@ -124,9 +152,7 @@ export default function EditTimelineScreen() {
         description: event.description ?? '',
         place: event.place ?? '',
         eventDate: dayOnly(event.eventDate),
-        mediaCount: event.media.length,
-        serverMedia: event.media,
-        media: [],
+        media: event.media.map(toSavedPhoto),
         dirty: false,
       })),
     );
@@ -135,39 +161,17 @@ export default function EditTimelineScreen() {
   const entries = drafts ?? [];
   const changed = removed.length > 0 || entries.some((entry) => entry.id === null || entry.dirty);
 
-  const saveEntry = (
-    key: string | 'new',
-    fields: Omit<DraftEntry, 'key' | 'id' | 'mediaCount' | 'serverMedia' | 'dirty'>,
-  ) => {
+  const saveEntry = (key: string | 'new', fields: Omit<DraftEntry, 'key' | 'id' | 'dirty'>) => {
     setDrafts((current) => {
       const list = current ?? [];
       if (key === 'new') {
         return inOrder([
           ...list,
-          {
-            ...fields,
-            key: `new-${nextLocalKey.current++}`,
-            id: null,
-            mediaCount: fields.media.length,
-            serverMedia: [],
-            dirty: false,
-          },
+          { ...fields, key: `new-${nextLocalKey.current++}`, id: null, dirty: false },
         ]);
       }
       return inOrder(
-        list.map((entry) =>
-          entry.key === key
-            ? {
-                ...entry,
-                ...fields,
-                dirty: true,
-                // Photos are editable only while the entry is unsaved; a
-                // saved entry keeps its own count — its media never changes.
-                mediaCount: entry.id === null ? fields.media.length : entry.mediaCount,
-                media: entry.id === null ? fields.media : entry.media,
-              }
-            : entry,
-        ),
+        list.map((entry) => (entry.key === key ? { ...entry, ...fields, dirty: true } : entry)),
       );
     });
     setEditingKey(null);
@@ -195,6 +199,10 @@ export default function EditTimelineScreen() {
             description: entry.description === '' ? null : entry.description,
             place: entry.place === '' ? null : entry.place,
           },
+          // The whole desired set, kept photos and new picks together. The
+          // hook uploads the picks and turns this into `mediaIds`, because
+          // only it knows the ids the uploads come back with.
+          media: entry.media,
         })),
       creates: entries
         .filter((entry) => entry.id === null)
@@ -467,19 +475,18 @@ function EntryCard({
         </Text>
       )}
 
-      {/* The photos themselves, same layout as the read view — a saved
-          entry draws its server media, a draft draws the picked files. */}
+      {/* The photos themselves, same layout as the read view. One list now,
+          so a card shows a saved photo and a just-picked one side by side —
+          which is what an entry mid-edit actually looks like. */}
       <EventPhotos
-        photos={
-          entry.id === null
-            ? entry.media
-                .filter((item) => item.uri !== undefined)
-                .map((item) => ({ key: item.id, source: { uri: item.uri as string } }))
-            : entry.serverMedia.map((item) => ({
+        photos={entry.media.map((item) =>
+          item.mediaId !== undefined
+            ? {
                 key: item.id,
-                source: thumbnailSource(item.id, item.mimeType),
-              }))
-        }
+                source: thumbnailSource(item.mediaId, item.mimeType ?? 'image/jpeg'),
+              }
+            : { key: item.id, source: { uri: item.uri as string } },
+        )}
       />
 
       {isDraft && (
@@ -518,9 +525,6 @@ function EntrySheet({
   const [media, setMedia] = useState<DraftMedia[]>([]);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  /** Photos attach only while the entry is unsaved — media is fixed at creation. */
-  const photosEditable = entry === null || entry.id === null;
 
   // Reseed on every open: the sheet stays mounted between uses (its exit
   // animation needs that), so mount-time state would be one target stale.
@@ -650,35 +654,28 @@ function EntrySheet({
           {/* The share-to-feed switch stood here until 2026-09-03: creating
               a milestone no longer writes a feed post at all (owner's call —
               a timeline edit is record-keeping, not news). */}
-          {photosEditable ? (
-            <View style={{ gap: 2 }}>
-              <Text variant="caption" weight="semibold" color={colors.text.secondary}>
-                {t('member.editTimeline.photosLabel')}
+          {/* Saved or not, the same strip. Removing a saved photo DELETES it
+              when Done commits — the hint says so, because an X that quietly
+              destroys a photograph of somebody's wedding should say what it
+              does before it is tapped, not after. */}
+          <View style={{ gap: 2 }}>
+            <Text variant="caption" weight="semibold" color={colors.text.secondary}>
+              {t('member.editTimeline.photosLabel')}
+            </Text>
+            <MediaStrip
+              media={media}
+              onAdd={() => void pick()}
+              onRemove={(item) => setMedia((current) => current.filter((m) => m.id !== item.id))}
+            />
+            <Text variant="badge" color={colors.text.subtle}>
+              {t('member.editTimeline.photosHint')}
+            </Text>
+            {permissionDenied && (
+              <Text variant="caption" color={colors.themes.destructive.text}>
+                {t('moment.permissionDenied')}
               </Text>
-              <MediaStrip
-                media={media}
-                onAdd={() => void pick()}
-                onRemove={(item) => setMedia((current) => current.filter((m) => m.id !== item.id))}
-              />
-              {permissionDenied && (
-                <Text variant="caption" color={colors.themes.destructive.text}>
-                  {t('moment.permissionDenied')}
-                </Text>
-              )}
-            </View>
-          ) : (
-            /* A saved entry's photos cannot change (media is fixed at
-               creation) — say so instead of drawing a picker that lies. */
-            entry !== null &&
-            entry.mediaCount > 0 && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Images size={13} color={colors.text.subtle} strokeWidth={2} />
-                <Text variant="badge" color={colors.text.subtle} style={{ flex: 1 }}>
-                  {t('member.editTimeline.photosFixed', { count: entry.mediaCount })}
-                </Text>
-              </View>
-            )
-          )}
+            )}
+          </View>
 
           {error !== null && (
             <Text
