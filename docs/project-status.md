@@ -28,6 +28,19 @@ screens.
 
 ## Current Focus
 
+- **Timeline rail fill and dim bands drifted after photos loaded
+  (2026-09-04).** Reported by the owner: the coral fill stopped off the
+  active dot and some cards dimmed at the wrong scroll positions. Cause:
+  the aspect-ratio photo change (below) makes a card grow when its image
+  loads, shifting every row under it, while row boxes were recorded only
+  by each row's own `onLayout` — which does not fire for a pure position
+  shift on web, and races on native. Fix: the content-size trigger that
+  already re-measures the list anchor now sweeps a `measureLayout`
+  re-measure over every row, and the row's animated translate moved to an
+  inner view so the measured wrapper stays untransformed.
+  `member/timeline-motion.ts`, `member/timeline-list.tsx`. Verified:
+  mobile tsc + prettier; motion needs an on-device pass.
+
 - **Timeline photos draw at their own shape (2026-09-04).** The lone
   photo on a timeline card was a fixed 110px-tall `cover` letterbox that
   cropped most of the picture. It now sizes its frame from the photo's

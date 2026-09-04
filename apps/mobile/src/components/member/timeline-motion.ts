@@ -115,6 +115,17 @@ export type TimelineMotion = {
    * mid-screen.
    */
   remeasureList: { current: (() => void) | null };
+  /**
+   * Per-row re-measurers, keyed by row index, swept by the same
+   * content-size trigger as `remeasureList` and handed the list root to
+   * measure against. Rows report their own onLayout, but that only fires
+   * when a row's OWN frame changes — a photo above finishing its load
+   * (event photos size themselves to the picture) pushes the rows below
+   * it without changing them, and on web a pure position shift fires no
+   * onLayout at all. Stale boxes are exactly the rail fill stopping short
+   * of the active dot and the dim bands landing on the wrong cards.
+   */
+  rowMeasurers: Map<number, (list: View) => void>;
   /** Row layouts relative to the list root, by index. */
   boxes: SharedValue<RowBox[]>;
   activeIndex: SharedValue<number>;
@@ -222,6 +233,7 @@ export function useTimelineScrollMotion() {
     atEnd,
     listTop,
     remeasureList: { current: null },
+    rowMeasurers: new Map(),
     boxes,
     activeIndex,
     pulse,
@@ -256,6 +268,9 @@ export function useTimelineListMotion(motion: TimelineMotion | undefined, count:
         motion.listTop.value = listY - frameY + motion.scrollY.value;
       });
     });
+    // The rows too — their boxes go stale the same way the anchor does
+    // (see `TimelineMotion.rowMeasurers`), and from the same causes.
+    motion.rowMeasurers.forEach((measureRow) => measureRow(list));
   };
 
   // Kept in a ref so the registration below always calls the fresh closure.
@@ -325,6 +340,28 @@ export function useTimelineRowMotion(motion: TimelineMotion | undefined, index: 
   // Hooks run unconditionally; a dummy value stands in when motion is off.
   const zero = useSharedValue(0);
   const activeIdx = motion?.activeIndex ?? zero;
+
+  /**
+   * Attached to the row's OUTER, untransformed wrapper — `measureLayout`
+   * against the list root gives the row's layout box regardless of scroll
+   * position, and keeping the wrapper free of the entrance translate keeps
+   * the web measurement (bounding rects, which include transforms) honest.
+   */
+  const rowRef = useRef<View | null>(null);
+
+  useEffect(() => {
+    if (motion === undefined) return;
+    motion.rowMeasurers.set(index, (list) => {
+      rowRef.current?.measureLayout(list, (_x, y, _width, height) => {
+        const next = motion.boxes.value.slice();
+        next[index] = { y, h: height };
+        motion.boxes.value = next;
+      });
+    });
+    return () => {
+      motion.rowMeasurers.delete(index);
+    };
+  }, [motion, index]);
 
   const activeness = useDerivedValue(
     () =>
@@ -428,6 +465,7 @@ export function useTimelineRowMotion(motion: TimelineMotion | undefined, index: 
   };
 
   return {
+    rowRef,
     rowStyle,
     contentStyle,
     dotStyle,

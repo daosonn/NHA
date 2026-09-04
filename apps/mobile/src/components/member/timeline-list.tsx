@@ -46,6 +46,7 @@ function TimelineRow({ event, isLatest, index, motion, onOpenPhoto }: RowProps) 
   const meta = [event.place, day].filter((part) => part !== null).join(' · ');
 
   const {
+    rowRef,
     rowStyle,
     contentStyle,
     dotStyle,
@@ -56,166 +57,172 @@ function TimelineRow({ event, isLatest, index, motion, onOpenPhoto }: RowProps) 
   } = useTimelineRowMotion(motion, index);
 
   return (
-    <Animated.View style={rowStyle} onLayout={onRowLayout}>
-      <Animated.View
-        style={[
-          {
-            marginLeft: TL.cardInset,
-            backgroundColor: colors.background.card,
-            borderRadius: radius['3xl'],
-            borderWidth: 1,
-            borderColor: colors.state.borderDefault,
-            padding: 14,
-            gap: 10,
-            // The card clips its own children: the coral bar is a plain
-            // rectangle and the rounded corners cut it, the way the
-            // handoff's inset box-shadow followed the card's radius. A 4px
-            // bar carrying its own radius-20 corners pokes out of the
-            // card's curve instead.
-            overflow: 'hidden',
-            transformOrigin: `0px ${TL.dotCentreY}px`,
-            ...elevation.card,
-          },
-          contentStyle,
-        ]}
-      >
-        {/* The coral accent down the active card's left edge — the
+    // The plain outer wrapper is what the motion measures (box + re-measure
+    // sweep) — it must stay untransformed, so the entrance translate lives
+    // on the inner view. collapsable, or Android flattens it away from the
+    // measuring refs.
+    <View ref={rowRef} onLayout={onRowLayout} collapsable={false}>
+      <Animated.View style={rowStyle}>
+        <Animated.View
+          style={[
+            {
+              marginLeft: TL.cardInset,
+              backgroundColor: colors.background.card,
+              borderRadius: radius['3xl'],
+              borderWidth: 1,
+              borderColor: colors.state.borderDefault,
+              padding: 14,
+              gap: 10,
+              // The card clips its own children: the coral bar is a plain
+              // rectangle and the rounded corners cut it, the way the
+              // handoff's inset box-shadow followed the card's radius. A 4px
+              // bar carrying its own radius-20 corners pokes out of the
+              // card's curve instead.
+              overflow: 'hidden',
+              transformOrigin: `0px ${TL.dotCentreY}px`,
+              ...elevation.card,
+            },
+            contentStyle,
+          ]}
+        >
+          {/* The coral accent down the active card's left edge — the
             handoff's `inset 4px 0 0` box-shadow. A left border on a
             full-card overlay sharing the card's radius reproduces it
             exactly: the band hugs the edge and its ends taper around the
             corner arcs, the way an inset shadow follows a rounded box. */}
-        {motion !== undefined && (
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              {
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                borderLeftWidth: 4,
-                borderLeftColor: colors.coral.primary,
-                borderRadius: radius['3xl'],
-              },
-              activeAccentStyle,
-            ]}
-          />
-        )}
+          {motion !== undefined && (
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  borderLeftWidth: 4,
+                  borderLeftColor: colors.coral.primary,
+                  borderRadius: radius['3xl'],
+                },
+                activeAccentStyle,
+              ]}
+            />
+          )}
 
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View
-            style={{
-              height: 24,
-              paddingHorizontal: 10,
-              borderRadius: radius.full,
-              backgroundColor: colors.coral.soft,
-              justifyContent: 'center',
-            }}
-          >
-            <Text
-              serif
-              weight="semibold"
-              color={colors.coral.deep}
-              style={{ fontSize: 14, lineHeight: 16, letterSpacing: 0.8 }}
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View
+              style={{
+                height: 24,
+                paddingHorizontal: 10,
+                borderRadius: radius.full,
+                backgroundColor: colors.coral.soft,
+                justifyContent: 'center',
+              }}
             >
-              {event.eventDate.slice(0, 4)}
-            </Text>
+              <Text
+                serif
+                weight="semibold"
+                color={colors.coral.deep}
+                style={{ fontSize: 14, lineHeight: 16, letterSpacing: 0.8 }}
+              >
+                {event.eventDate.slice(0, 4)}
+              </Text>
+            </View>
           </View>
-        </View>
 
-        <Text variant="body1" weight="semibold">
-          {event.title}
-        </Text>
-
-        {meta !== '' && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            {event.place !== null && (
-              <MapPin size={12} color={colors.text.subtle} strokeWidth={2} />
-            )}
-            <Text variant="caption" color={colors.text.subtle}>
-              {meta}
-            </Text>
-          </View>
-        )}
-
-        {event.description !== null && (
-          <Text variant="body2" color={colors.text.body}>
-            {event.description}
+          <Text variant="body1" weight="semibold">
+            {event.title}
           </Text>
-        )}
 
-        {event.media.length > 0 && (
-          <EventPhotos
-            photos={event.media.map((item) => ({
-              key: item.id,
-              mediaId: item.id,
-              mimeType: item.mimeType,
-              source: thumbnailSource(item.id, item.mimeType),
-            }))}
-            parallaxStyle={motion === undefined ? undefined : parallaxStyle}
-            onOpen={
-              onOpenPhoto === undefined
-                ? undefined
-                : (photo) => {
-                    if (photo.mediaId === undefined || photo.mimeType === undefined) return;
-                    onOpenPhoto({ id: photo.mediaId, mimeType: photo.mimeType });
-                  }
-            }
-          />
-        )}
-      </Animated.View>
+          {meta !== '' && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              {event.place !== null && (
+                <MapPin size={12} color={colors.text.subtle} strokeWidth={2} />
+              )}
+              <Text variant="caption" color={colors.text.subtle}>
+                {meta}
+              </Text>
+            </View>
+          )}
 
-      {/* Dot + halo, pinned to the rail. Coral follows the READING position
+          {event.description !== null && (
+            <Text variant="body2" color={colors.text.body}>
+              {event.description}
+            </Text>
+          )}
+
+          {event.media.length > 0 && (
+            <EventPhotos
+              photos={event.media.map((item) => ({
+                key: item.id,
+                mediaId: item.id,
+                mimeType: item.mimeType,
+                source: thumbnailSource(item.id, item.mimeType),
+              }))}
+              parallaxStyle={motion === undefined ? undefined : parallaxStyle}
+              onOpen={
+                onOpenPhoto === undefined
+                  ? undefined
+                  : (photo) => {
+                      if (photo.mediaId === undefined || photo.mimeType === undefined) return;
+                      onOpenPhoto({ id: photo.mediaId, mimeType: photo.mimeType });
+                    }
+              }
+            />
+          )}
+        </Animated.View>
+
+        {/* Dot + halo, pinned to the rail. Coral follows the READING position
           with motion on; statically it marks the latest entry instead. */}
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          {
-            position: 'absolute',
-            left: TL.dotLeft,
-            top: TL.dotTop,
-            width: TL.dot,
-            height: TL.dot,
-            borderRadius: radius.full,
-            backgroundColor: colors.background.card,
-            borderWidth: 3,
-            borderColor:
-              motion === undefined && isLatest ? colors.coral.brand : colors.state.borderDashed,
-          },
-          dotStyle,
-        ]}
-      >
         <Animated.View
+          pointerEvents="none"
           style={[
             {
               position: 'absolute',
-              top: -5,
-              left: -5,
-              right: -5,
-              bottom: -5,
+              left: TL.dotLeft,
+              top: TL.dotTop,
+              width: TL.dot,
+              height: TL.dot,
               borderRadius: radius.full,
-              borderWidth: 1.5,
-              borderColor: colors.coral.brand,
-              opacity: 0,
+              backgroundColor: colors.background.card,
+              borderWidth: 3,
+              borderColor:
+                motion === undefined && isLatest ? colors.coral.brand : colors.state.borderDashed,
             },
-            haloStyle,
+            dotStyle,
           ]}
-        />
-      </Animated.View>
-
-      {/* The triangle pointing from the card at the active dot. */}
-      {motion !== undefined && (
-        <Animated.View
-          pointerEvents="none"
-          style={[{ position: 'absolute', left: TL.triLeft, top: TL.triTop }, activeAccentStyle]}
         >
-          <Svg width={13} height={16} viewBox="0 0 13 16">
-            <Path d="M13 0.5 L1 8 L13 15.5 Z" fill={colors.coral.primary} />
-          </Svg>
+          <Animated.View
+            style={[
+              {
+                position: 'absolute',
+                top: -5,
+                left: -5,
+                right: -5,
+                bottom: -5,
+                borderRadius: radius.full,
+                borderWidth: 1.5,
+                borderColor: colors.coral.brand,
+                opacity: 0,
+              },
+              haloStyle,
+            ]}
+          />
         </Animated.View>
-      )}
-    </Animated.View>
+
+        {/* The triangle pointing from the card at the active dot. */}
+        {motion !== undefined && (
+          <Animated.View
+            pointerEvents="none"
+            style={[{ position: 'absolute', left: TL.triLeft, top: TL.triTop }, activeAccentStyle]}
+          >
+            <Svg width={13} height={16} viewBox="0 0 13 16">
+              <Path d="M13 0.5 L1 8 L13 15.5 Z" fill={colors.coral.primary} />
+            </Svg>
+          </Animated.View>
+        )}
+      </Animated.View>
+    </View>
   );
 }
 
