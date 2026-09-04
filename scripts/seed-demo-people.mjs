@@ -49,8 +49,8 @@ const PASSWORD = '12345678';
 const API_PHOTO = (seed) => 'https://picsum.photos/seed/' + seed + '/1200/900';
 
 /**
- * The parents, generation 2 — between `ojisan@gmail.com` above them and the
- * grandchildren below.
+ * The parents and their youngest — generations 2 and 3, under
+ * `ojisan@gmail.com`, who is already in the database.
  *
  * Written to MEET the grandfather's timeline rather than stand apart from
  * it: his is a Vietnamese life told in Japanese (study in Guangdong, home to
@@ -60,10 +60,22 @@ const API_PHOTO = (seed) => 'https://picsum.photos/seed/' + seed + '/1200/900';
  * Japanese — the same split `son.demo@nha.com` already uses, and the right
  * one for a Vietnamese family shown to a Japanese audience.
  *
- * Dates are chosen so the generations line up: the father's birth sits
- * inside the grandfather's army years, and the youngest child arrives in
- * 2005 — the birth year of `datthitran2005@gmail.com`, already in the
- * database and looking like the grandchild.
+ * The dates are the part doing the work, because they are what makes three
+ * separate timelines read as one family:
+ *
+ *   - the father is born inside the grandfather's army years, and his own
+ *     first milestone says so;
+ *   - the mother's "youngest child is born" and the son's own birth are the
+ *     SAME DAY, 2005-01-11 — the one date that would look like a mistake if
+ *     the two disagreed;
+ *   - the father reaches Aichi as a technical intern in 1995, and the son
+ *     lands in the same prefecture for a summer placement in 2026. Thirty-one
+ *     years, same door. That echo is the point of the whole set.
+ *
+ * The son is born in Bắc Giang while the family lives in Hải Dương, which is
+ * the owner's brief and also ordinary: his mother went back to her own
+ * family to give birth, so that is what his papers say. His schooling is in
+ * Hải Dương, where they actually live.
  */
 const PEOPLE = [
   {
@@ -152,6 +164,72 @@ const PEOPLE = [
         eventDate: '2010-03-06',
         place: 'ハイズオン省',
         description: '席は六つだけ。朝は近所の人ばかりです。',
+      },
+    ],
+  },
+  {
+    /**
+     * The public demo login itself — the account the welcome CTA prefills.
+     * The grandchild is who a first-time visitor arrives as, so this is the
+     * one profile that has to be furnished; an empty one is the first thing
+     * a stranger sees.
+     *
+     * `name` is only ever sent at REGISTER, and this account already exists,
+     * so running this leaves the name the owner set (ダット) alone. It is
+     * here for a fresh database, nothing else — do not expect edits to it to
+     * reach the live account.
+     */
+    email: 'user.alphaclub@gmail.com',
+    name: 'ダット',
+    role: 'chau',
+    profile: {
+      bio: '大学で情報技術を。父の店で工具を渡していた子どもが、いまは画面の前にいます。この夏、父が三十年前に降りた国へ行きました。',
+      birthDate: '2005-01-11',
+      birthPlace: 'ベトナム・バクザン省',
+      occupation: '大学生（情報技術）',
+      interests: ['プログラミング', 'バスケットボール', '日本語'],
+    },
+    events: [
+      {
+        title: '母の里帰り先、バクザン省で生まれる',
+        photo: 'fam-9',
+        eventDate: '2005-01-11',
+        place: 'バクザン省',
+        description: '母が実家に帰って産んだので、戸籍の生まれはバクザンになっています。',
+      },
+      {
+        title: '小学校に入学',
+        photo: 'fam-8',
+        eventDate: '2011-09-05',
+        place: 'ハイズオン省',
+      },
+      {
+        title: '父の店で工具の名前を覚える',
+        photo: 'nha-19',
+        eventDate: '2017-06-20',
+        place: 'ハイズオン省',
+        description: '渡すのが遅いと怒られた。おかげで今でも名前だけは全部言えます。',
+      },
+      {
+        title: '高校に入学',
+        photo: 'fam-10',
+        eventDate: '2020-09-07',
+        place: 'ハイズオン省',
+      },
+      {
+        title: '大学に入学（情報技術）',
+        photo: 'nha-16',
+        eventDate: '2023-09-11',
+        place: 'ハノイ',
+        description: '家を出た日。母は食堂を閉めて駅まで来ました。',
+      },
+      {
+        title: '夏の実習で来日',
+        photo: 'nha-15',
+        eventDate: '2026-07-06',
+        place: '愛知県',
+        description:
+          '父が技能実習生として立ったのと同じ県。三十一年あいて、この家から二人目が同じ場所に立ちました。',
       },
     ],
   },
