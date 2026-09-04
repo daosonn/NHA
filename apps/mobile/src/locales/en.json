@@ -222,12 +222,10 @@
       "youHint": "You keep the group. Relations get set as people arrive.",
       "submit": "Create group",
       "doneTitle": "Group created",
-      "doneBody": "It is on your family strip now. Hand out the code and the tree fills itself in.",
-      "codeLabel": "Family code",
-      "codeMeta": "Made for this group · does not expire",
-      "codeHint": "Anyone with this code joins the group. You can add spots to the tree afterwards.",
+      "doneBody": "It is on your family strip now. Put the people you know on the tree, then invite each of them to their own spot.",
       "done": "Done",
-      "joinLink": "Have a code someone sent you? Join their family"
+      "joinLink": "Have a code someone sent you? Join their family",
+      "nextHint": "An invitation holds one spot, so whoever accepts arrives already connected to everyone else."
     },
     "nodeHint": "Press and hold to change their place in the tree.",
     "member": {
@@ -1202,14 +1200,13 @@
   },
   "joinFamily": {
     "heading": "Join with a code",
-    "body": "The eight characters someone in the family sent you — a family code or an invitation code, either works.",
+    "body": "The eight characters from the invitation somebody in the family sent you.",
     "codeLabel": "Invite code",
     "codePlaceholder": "ABCD2345",
     "submit": "Join family",
     "createLink": "Starting a new family instead?",
     "errors": {
-      "codeNotFound": "Nothing matches that code. Check it with whoever sent it.",
-      "alreadyMember": "You are already in that family."
+      "codeNotFound": "Nothing matches that code. Check it with whoever sent it."
     }
   },
   "dates": {
