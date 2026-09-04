@@ -875,6 +875,67 @@ Raised by the frontend, neither actionable from `apps/mobile`.
   production kept. Backend review of the frontend-written CORS code done in
   the same pass — no other issues found. Verified by live preflight tests.
 
+- ~~**A saved life event's photos cannot be changed (2026-09-03).**~~ —
+  **done the same day, and done in `apps/api` by the frontend session on the
+  owner's explicit instruction ("b sửa nốt giúp tôi cái chỉnh sửa ảnh
+  timeline đi"), which crosses the standing rule that this list is for things
+  the frontend does NOT touch. Flagged loudly for that reason: the API half
+  wants a review by whoever owns `apps/api`.** Option 1 below is what
+  landed — `mediaIds` accepted on PATCH as a full replacement. Details in
+  `api-contract.md` § Life events → Media; the original request is kept
+  below because the reasoning still explains the shape.
+
+The endpoint was exercised by the owner on a running stack ("t test thấy
+ổn rồi") but is **not covered by an automated test**: `family-edit`,
+`special-dates` and `ai-video` all state they need a **LOCAL** Postgres
+and never Neon, and `apps/api/.env` points at the shared Neon database,
+so running them would write test rows into the team's data. A spec for
+the media-replacement path — add, remove, files unlinked, `EditHistory`
+carrying `mediaIds` — is what this still owes.
+
+The original request follows.
+
+- **A saved life event's photos cannot be changed (2026-09-03).** Asked for
+  by the owner — "chức năng sửa timeline đang không cho sửa ảnh, nên có chức
+  năng cho xoá or thêm ảnh" — and **not doable from `apps/mobile`**:
+  `UpdateLifeEventDto` is `PartialType(OmitType(CreateLifeEventDto,
+['mediaIds']))`, deliberately, with the note "Media is fixed at creation
+  (same rule as posts)". There is no attach, no detach, and `MediaController`
+  has no `DELETE`, so neither adding nor removing is reachable by any
+  sequence of calls the app can make. The edit sheet says so today rather
+  than drawing a picker that lies ("photos can't be changed after saving").
+
+  **Asked for**, either one:
+  1. `mediaIds` accepted on `PATCH .../life-events/:eventId` as a full
+     replacement — an array replaces the set, omitted leaves it alone, the
+     same "only an array replaces" rule `taggedMemberIds` already follows on
+     that DTO. `attachMediaInTx` and `assertAttachableMedia` already do the
+     ownership checks this needs.
+  2. Or `POST`/`DELETE .../life-events/:eventId/media` if a replacement is
+     the wrong shape for edit history.
+
+  Worth deciding alongside the same restriction on posts, since the rule and
+  the reason are shared. The one-parent CHECK on `Media` is not the blocker:
+  a photo moving _into_ a life event has no other parent, and detaching means
+  deleting the row, not reparenting it. The app side is small once either
+  exists — the sheet already stages `DraftMedia` and `uploadDrafts` is shared
+  by every media-carrying feature.
+
+- **Creating a family is three sequential round trips (2026-09-03).** Not a
+  bug, and not urgent — recorded because the owner asked why it feels slow
+  and the answer is mostly geography. Measured from a dev machine: a trivial
+  `SELECT 1` against Neon has a **median round trip of 164 ms** (warm pool;
+  1 164 ms to open a cold connection). `createFamily` then does
+  `requireUser` → `generateInviteCode` (a uniqueness `findUnique`, in a
+  retry loop) → `family.create`, each awaiting the last, so the request
+  cannot finish in under ~490 ms of pure database wait however fast the
+  server is. The client half was worse and **is fixed** (see In Progress:
+  the submit button was also waiting on a refetch). If this ever needs to be
+  faster: the invite-code check is the cheapest to remove — mint the code and
+  let the `@unique` constraint reject a collision on insert, retrying only
+  on the P2002, which replaces a guaranteed round trip with one that
+  essentially never happens.
+
 ## Completed
 
 ### Setup Phase
@@ -1680,6 +1741,62 @@ max-age=86400` while `GET /media/:id` sends none, so every screen change
   `local-environment.md` § Media storage. Still to come: presigned URLs, which
   would take the API out of the delivery path.
 
+- **Timeline photos are editable on a saved entry (2026-09-03)**, both
+  halves. **API**: `UpdateLifeEventDto` stopped omitting `mediaIds` and now
+  takes the set as a replacement, the same "only an array replaces" rule
+  `taggedMemberIds` follows; `updateEvent` splits the incoming set into ids
+  new to the entry (checked by `assertAttachableMedia`, attached with
+  `attachMediaInTx`) and ids dropped from it (rows deleted, storage keys
+  unlinked best-effort **after** the commit, the order `removeEvent` uses).
+  A photo-only edit leaves the field write empty, so the "did anything
+  change" guard had to learn about media or such an edit would have silently
+  no-opped. Nothing is omitted from the create shape any more either:
+  `shareToFeed` was the only exclusion, and it left `CreateLifeEventDto`
+  entirely in the feed-removal change above, so `UpdateLifeEventDto` is now
+  a plain `PartialType(CreateLifeEventDto)`.
+  **App**: `DraftEntry` lost `mediaCount` and `serverMedia` — an entry's
+  photos are now ONE `DraftMedia[]` where a saved tile carries `mediaId` and
+  a fresh pick carries `uri`, which is what lets one `MediaStrip` show, add
+  to and remove from both. `MediaStrip` grew a `mediaId` branch drawing the
+  authenticated thumbnail through `expo-image` (RN's `Image` cannot carry the
+  Authorization header). The commit hook uploads an update's picks and
+  splices kept ids + uploaded ids into `mediaIds`, and **always sends the
+  field** — an omitted `mediaIds` means "leave the photos alone", so a
+  removal has to arrive as the shorter array.
+  The `photosFixed` copy is gone, replaced by `photosHint`: "Removing a
+  photo deletes it for good when you press Done." Removal really is a
+  delete — file and all — so the strip says so before the X is tapped rather
+  than after. Whether that deserves a confirmation dialog on top is a
+  product call; the hint is the floor, not necessarily the answer.
+
+- **The family switcher was shaved and too small (2026-09-03, owner's
+  report: "vòng tròn chỗ chọn nhà ở cây gia đình đang bị lẹm mất… đang bị
+  nhỏ")**. One complaint, two unrelated faults. **Clipping**: the rings on
+  those faces are `boxShadow`, painted outside the element's own box, and the
+  horizontal `ScrollView` added on 2026-09-01 to keep a long row reachable
+  clips what leaves its content box — `overflow-y` hidden, and the scroller
+  is only as tall as the faces in it. The selected face lost the top and
+  bottom of its ring, the first and last face lost their outer edge. Fixed by
+  padding the content container by the ring's bleed (`RING_BLEED`), which is
+  load-bearing, not breathing room. **Size**: the faces were still 34px, the
+  size they were given as a _preview_ on Home; on the tree screen this row is
+  the switcher — the only thing naming the tree on screen — and 34 was also
+  under the 44pt touch minimum. Now 40px in a 60px tray, cap 44.
+  Third fault found while in there and worth its own line: the active ring
+  was `rgba(240,112,95,0.35)` at 3px over a 2px gap ring, i.e. **one pixel at
+  35% opacity**, so "which family am I looking at" was effectively unmarked.
+  Now a solid 2px `coral.brand`.
+
+- **Creating or joining a family kept the button spinning through a second
+  request (2026-09-03)**: React Query awaits whatever `onSuccess` returns,
+  and both `useCreateFamily` and `useJoinFamily` returned their
+  `invalidateQueries` promise — so the form sat there after the server had
+  already answered, waiting for the families list to refetch. Both `void` it
+  now, as `useCommitMyTimeline` already did. The list still refreshes; the
+  button stops claiming the work is unfinished. This is the client half of the
+  latency note in § For the backend owner, and the half that was actually
+  wrong rather than merely remote.
+
 - **Social login (Google + Facebook)** (2026-08-17): backend merged to
   `main` in PR #3 — `OAuthAccount` table + OAuth authorization-code
   endpoints in the AuthModule. **Google verified end-to-end 2026-08-18**
@@ -1687,6 +1804,40 @@ max-age=86400` while `GET /media/:id` sends none, so every screen change
   Facebook (1.1.9) stays unticked until its happy path is verified —
   needs the tester-role invite accepted on the Meta app. Frontend
   buttons come with the auth UI (1.1.1/1.1.4).
+
+- **Welcome's second line now carries registration (2026-09-03)**: a
+  loose end left by the demo-login change above it. With the button going to
+  sign-in, "Already have an account? → Sign in" underneath pointed at the
+  same place the button did, and nothing on the screen led to sign-up any
+  more except the mode tabs one screen in. That line is now "New here? →
+  Create your family" (`auth.welcome.noAccount`; `haveAccount` and the
+  now-unreached `auth.welcome.signIn` are gone, `create` is back as the
+  link's label beside upstream's `start`).
+
+  This branch reached the same screen independently and by a worse route —
+  relabelling the button "Sign in" and pushing `/sign-in` plainly. The demo
+  prefill on `main` does more for a first visit, so that side won and only
+  the line beneath it survived from here.
+
+- **The faces on Welcome are people again (2026-09-03)**: the avatar stack
+  passed `tone` and no name, which dropped `Avatar` to its last tier — the
+  striped placeholder — so the row read as four grey hatched circles, which
+  proves nothing about a family being there. `AvatarStackItem` takes an
+  optional `name` now, and the list moved to `fixtures/welcome-faces.ts`
+  because `welcome.tsx` and `auth-shell.tsx` each held their own copy of it.
+  Initials on a per-name tint, **not photographs**: shipping a real family's
+  private pictures to make this point is not a trade worth making, and the
+  four names land on four different theme colours. Real pictures would need
+  no new plumbing — give an item a `mediaId` and `Avatar` already prefers it.
+  The decorative stacks beside a photo count (`ai/gifts`, `video/setup`) pass
+  no name and keep the stripes.
+  Verified across this branch: api tsc, mobile tsc, check:i18n (928 keys),
+  `expo export` web bundle, prettier. The **photo editing was exercised by
+  the owner** on a running stack ("t test thấy ổn rồi"). The e2e suite was
+  NOT run: `family-edit`, `special-dates` and `ai-video` all require a
+  LOCAL Postgres and `apps/api/.env` points at the shared Neon database, so
+  running them would write test rows into the team's data. A test for the
+  media-replacement path is the obvious gap.
 
 ## Not Started
 
