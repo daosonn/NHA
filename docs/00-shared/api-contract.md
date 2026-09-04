@@ -410,8 +410,20 @@ Same rules as the profile it hangs off:
   a linked member's events are theirs alone (403). Every PATCH writes an
   `EditHistory` row; `updatedById` is the last editor.
 - **Media**: attach your own unattached uploads via `mediaIds` at
-  creation; fixed afterwards, exactly like posts. Deleting the event
-  deletes its media rows and files.
+  creation, and **replace the set on PATCH** (2026-09-03). An array is the
+  new set; omitted or `null` leaves the photos alone, so a removal must
+  arrive as the shorter array rather than as an omission. Ids new to the set
+  follow the creation rule (your own uploads, no parent yet); ids dropped
+  from it have their `Media` rows **and their stored files deleted** — this
+  is not a detach, because a row with no parent is visible to nobody. A
+  photo-only change still stamps `updatedById` and writes an `EditHistory`
+  row, whose snapshot now carries `mediaIds`. Deleting the event deletes its
+  media rows and files, as before.
+  Posts are **not** included in this: their attachments are still fixed at
+  creation (see § Posts). Whether that should change too is a product
+  question, and the life-event side was opened on the owner's call because
+  a photo on the wrong milestone could otherwise only be fixed by deleting
+  the milestone.
 - **Tags** (`taggedMemberIds`, "members involved" — screen 10): on the
   member-scoped routes they must belong to **that family** (so every
   viewer can resolve them — same principle as post tags); on `/me` routes,

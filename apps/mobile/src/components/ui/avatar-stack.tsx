@@ -6,6 +6,13 @@ import { Text } from './text';
 
 export type AvatarStackItem = {
   id: string;
+  /**
+   * Whose face this is. Given, `Avatar` draws their initials on a tint of
+   * their own; omitted, the stack falls back to the striped placeholder,
+   * which is what the decorative stacks beside a photo count want.
+   */
+  name?: string;
+  /** Only reached by the items that carry no name. */
   tone?: 'light' | 'dark';
 };
 
@@ -39,6 +46,7 @@ export function AvatarStack({
         <Avatar
           key={item.id}
           size={size}
+          name={item.name}
           tone={item.tone}
           ring={ring}
           style={index > 0 ? { marginLeft: -overlap } : undefined}

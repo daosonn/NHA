@@ -247,6 +247,21 @@ export class LifeEventService {
       );
     }
 
+    // Same rule for media: null or omitted leaves the photos alone, an array
+    // is the new set. Only the ids NEW to the set are checked as attachable —
+    // one already on this event fails `attachableWhere` by definition
+    // (`lifeEventId` is not null), so passing the whole set to the pre-flight
+    // would reject every edit that keeps a photo.
+    const mediaIds = dto.mediaIds ?? undefined;
+    const existingMediaIds = existing.media.map((item) => item.id);
+    const addedMediaIds =
+      mediaIds?.filter((id) => !existingMediaIds.includes(id)) ?? [];
+    const droppedMediaIds =
+      mediaIds === undefined
+        ? []
+        : existingMediaIds.filter((id) => !mediaIds.includes(id));
+    await assertAttachableMedia(this.prisma, editorUserId, addedMediaIds);
+
     // Build the write from values that actually differ, so a PATCH that
     // changes nothing (a client retry, a save with no edits) stamps no
     // editor and appends no EditHistory row — the wiki log records edits,
@@ -269,6 +284,7 @@ export class LifeEventService {
       taggedMemberIds && !sameIdSet(taggedMemberIds, existingTagIds)
         ? taggedMemberIds
         : undefined;
+    const mediaChanged = addedMediaIds.length > 0 || droppedMediaIds.length > 0;
     const data: Prisma.LifeEventUpdateInput = {
       ...(next.title !== existing.title && { title: next.title }),
       ...(next.description !== existing.description && {
@@ -286,37 +302,73 @@ export class LifeEventService {
         },
       }),
     };
-    if (Object.keys(data).length === 0) {
+    // Media lives in its own rows, so a photo-only edit leaves `data`
+    // empty — it still has to reach the transaction, stamp the editor and
+    // append its history row.
+    if (Object.keys(data).length === 0 && !mediaChanged) {
       return this.toDetail(existing);
     }
 
-    const event = await this.prisma.$transaction(async (tx) => {
-      const full = await tx.lifeEvent
-        .update({
-          where: { id: eventId },
-          data: { ...data, updatedBy: { connect: { id: editorUserId } } },
-          include: eventInclude,
-        })
-        .catch(rethrowMissingAs404);
-      // Wiki edits are logged from the start so history display/undo can
-      // be added later without data loss (domain-model.md).
-      await tx.editHistory.create({
-        data: {
-          entityType: EditEntityType.LIFE_EVENT,
-          entityId: eventId,
-          editorUserId,
-          snapshot: {
-            title: full.title,
-            description: full.description,
-            eventDate: full.eventDate.toISOString(),
-            place: full.place,
-            type: full.type,
-            taggedMemberIds: full.memberTags.map((tag) => tag.memberId),
+    const { event, orphanedKeys } = await this.prisma.$transaction(
+      async (tx) => {
+        // Dropped first: a photo leaving frees nothing the additions need,
+        // but doing it before the attach keeps the row count honest if the
+        // attach throws and rolls everything back.
+        //
+        // Deleted, not detached. A Media row may have exactly one parent, so
+        // an unparented row is invisible to every reader and reattachable by
+        // nobody but its uploader — an orphan with a file still on the disk.
+        // Deleting the whole entry already deletes its photos this way, and
+        // anyone editing here already has the power to do that.
+        let keys: string[] = [];
+        if (droppedMediaIds.length > 0) {
+          const gone = await tx.media.findMany({
+            // Scoped to this event as well as the ids: a request naming
+            // someone else's media must not delete it.
+            where: { id: { in: droppedMediaIds }, lifeEventId: eventId },
+            select: { storageKey: true },
+          });
+          keys = gone.map((item) => item.storageKey);
+          await tx.media.deleteMany({
+            where: { id: { in: droppedMediaIds }, lifeEventId: eventId },
+          });
+        }
+        await attachMediaInTx(tx, editorUserId, addedMediaIds, {
+          lifeEventId: eventId,
+        });
+
+        const full = await tx.lifeEvent
+          .update({
+            where: { id: eventId },
+            data: { ...data, updatedBy: { connect: { id: editorUserId } } },
+            include: eventInclude,
+          })
+          .catch(rethrowMissingAs404);
+        // Wiki edits are logged from the start so history display/undo can
+        // be added later without data loss (domain-model.md).
+        await tx.editHistory.create({
+          data: {
+            entityType: EditEntityType.LIFE_EVENT,
+            entityId: eventId,
+            editorUserId,
+            snapshot: {
+              title: full.title,
+              description: full.description,
+              eventDate: full.eventDate.toISOString(),
+              place: full.place,
+              type: full.type,
+              taggedMemberIds: full.memberTags.map((tag) => tag.memberId),
+              mediaIds: full.media.map((item) => item.id),
+            },
           },
-        },
-      });
-      return full;
-    });
+        });
+        return { event: full, orphanedKeys: keys };
+      },
+    );
+    // After the commit, and best-effort: a file left behind is waste, a file
+    // removed under a transaction that then rolls back is a broken picture.
+    // Same order `removeEvent` uses.
+    await this.storage.removeAllBestEffort(orphanedKeys);
     return this.toDetail(event);
   }
 

@@ -2,19 +2,12 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { welcomeFaces } from '../../fixtures/welcome-faces';
 import { colors, spacing } from '../../theme';
 import { CatHappy } from '../motion/cats';
 import { AvatarStack } from '../ui/avatar-stack';
 import { BrandMark } from '../ui/brand-mark';
 import { Text } from '../ui/text';
-
-/** Faces of a family that already exists — proof, not decoration. */
-const FACES = [
-  { id: 'a', tone: 'light' as const },
-  { id: 'b', tone: 'dark' as const },
-  { id: 'c', tone: 'light' as const },
-  { id: 'd', tone: 'dark' as const },
-];
 
 /**
  * Readable width for the contents of a half-window pane.
@@ -31,7 +24,10 @@ const PANE_PADDING = 40;
  *
  * The same mark, headline, subtitle and faces the Welcome screen shows on a
  * phone — moved here rather than copied, so signing in on a wide window is met
- * by the same sentence as arriving is.
+ * by the same sentence as arriving is. The faces come from
+ * `fixtures/welcome-faces` for the same reason: the two screens each held
+ * their own copy of that list, which is two places for one row of people to
+ * drift apart.
  *
  * The cat is from the motion kit, and using it here is a deliberate reading of
  * that kit's rule rather than an oversight. `motion/README.md` reserves the
@@ -75,7 +71,7 @@ function BrandPane() {
             family rather than as a second, unrelated illustration. */}
         <CatHappy size={104} />
 
-        <AvatarStack items={FACES} size={32} surface={colors.coral.light} remaining={6} />
+        <AvatarStack items={welcomeFaces} size={32} surface={colors.coral.light} remaining={6} />
       </View>
     </View>
   );
