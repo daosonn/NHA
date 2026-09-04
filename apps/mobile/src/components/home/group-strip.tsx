@@ -281,6 +281,15 @@ export function GroupStrip({
           )}
         </Pressable>
 
+        {/* All the slack, in one place, BEFORE the add button.
+            It used to sit after it, which left "+" floating in the middle of
+            an otherwise empty tray on the tree screen — the faces pack left,
+            the add button follows them, and the rest of the pill is dead
+            space. Adding a family is not a step in that row; it is the thing
+            you reach for when none of the faces is the one you want, so it
+            belongs at the far end, against the tray's edge. */}
+        <View style={{ flex: 1 }} />
+
         {/* Coral, like every other "there is room here" mark in the app — the
             empty tree node and the invite sheet's spot both use this dashed
             circle. Grey read as disabled next to faces that are not. */}
@@ -302,8 +311,6 @@ export function GroupStrip({
         >
           <Plus size={17} color={colors.coral.deep} strokeWidth={2.2} />
         </Pressable>
-
-        <View style={{ flex: 1 }} />
 
         {showTreeLink && (
           <Pressable
