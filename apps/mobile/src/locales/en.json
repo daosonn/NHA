@@ -52,8 +52,8 @@
       "title": "A private home for\nthe family story",
       "subtitle": "Photos, notes and the small things worth keeping. Only your family can see them.",
       "start": "Start",
-      "haveAccount": "Already have an account?",
-      "signIn": "Sign in",
+      "noAccount": "New here?",
+      "create": "Create your family",
       "legal": "By continuing you agree to the Terms and Privacy Policy."
     },
     "signIn": {
