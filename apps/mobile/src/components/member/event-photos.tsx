@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import type { ComponentProps } from 'react';
+import { useState, type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -9,6 +9,16 @@ import { Text } from '../ui/text';
 
 /** How much taller the parallax layer is than its frame, each side. */
 const PARALLAX_BLEED = 16;
+
+/**
+ * The lone photo's frame follows the photo's own aspect ratio (measured on
+ * load), not a fixed 110px letterbox — the same rule as the feed's single
+ * photo (`feed/post-media.tsx`). The clamp keeps a 3:4 card and a 16:9
+ * shot intact; only extremes (a 9:16 portrait, a panorama) get trimmed.
+ */
+const DEFAULT_SINGLE_RATIO = 3 / 2;
+const MIN_SINGLE_RATIO = 0.72;
+const MAX_SINGLE_RATIO = 1.9;
 
 export type EventPhoto = {
   key: string;
@@ -50,6 +60,10 @@ export function EventPhotos({
 }) {
   const { t } = useTranslation();
 
+  // Measured natural ratio of the lone photo, keyed so a swapped draft
+  // photo does not inherit the previous one's shape.
+  const [measured, setMeasured] = useState<{ key: string; ratio: number } | null>(null);
+
   if (photos.length === 0) return null;
 
   /**
@@ -77,12 +91,23 @@ export function EventPhotos({
 
   const only = photos[0];
   if (photos.length === 1 && only !== undefined) {
+    const ratio = Math.min(
+      MAX_SINGLE_RATIO,
+      Math.max(
+        MIN_SINGLE_RATIO,
+        measured?.key === only.key ? measured.ratio : DEFAULT_SINGLE_RATIO,
+      ),
+    );
     const image = (
       <Image
         source={only.source}
         contentFit="cover"
         transition={150}
         style={{ width: '100%', height: '100%' }}
+        onLoad={(e) => {
+          const { width, height } = e.source;
+          if (width > 0 && height > 0) setMeasured({ key: only.key, ratio: width / height });
+        }}
       />
     );
     return wrap(
@@ -107,7 +132,7 @@ export function EventPhotos({
       ),
       {
         width: '100%',
-        height: 110,
+        aspectRatio: ratio,
         borderRadius: radius.lg,
         overflow: 'hidden',
         backgroundColor: colors.background.subtle,

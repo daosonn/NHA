@@ -695,7 +695,10 @@ a white card on the same rail-and-dot thread the read view draws, with a
 serif year chip (`#FEF3F1`/`coral.deep`), pencil and trash at its top
 right; a new, uncommitted entry rendered dimmed with a gray year chip and
 "Draft · not published yet". The entry form is a sheet: a date field that
-accepts `1998` or `1998-06-12` (year-only lands on Jan 1), title
+accepts `1998` or `1998-06-12` (year-only lands on Jan 1 — and the read
+card reads a 01-01 date back as year-only, showing no day/month beside
+the place; a genuine New Year's Day entry loses its day label, the known
+cost of that encoding, 2026-09-04), title
 (required), story, place, and **photos** via the moment composer's own
 `MediaStrip` + picker (2026-08-26).
 
@@ -708,7 +711,10 @@ form says "photos can't be changed after saving" instead of drawing a
 picker that lies.
 
 **The photos are drawn, not counted** (`member/event-photos.tsx`): one
-photo runs the card's width at 110, several become a row of squares with
+photo runs the card's width at its own aspect ratio, measured on load and
+clamped to [0.72, 1.9] like the feed's single photo (was a fixed 110px
+letterbox until 2026-09-04 — it cropped most of the picture); several
+become a row of squares with
 "+N" on the last — the mockup's layout — and the same component now draws
 them on the READ timeline too, which until 2026-08-26 said "3 photos"
 where the photographs belonged. Editor cards draw local files for drafts

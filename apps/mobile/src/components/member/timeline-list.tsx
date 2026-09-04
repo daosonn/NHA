@@ -6,7 +6,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { colors, elevation, radius } from '../../theme';
 import type { LifeEventDetail } from '../../lib/api';
-import { formatDayMonth } from '../../lib/date';
+import { dayOnly, formatDayMonth } from '../../lib/date';
 import { thumbnailSource } from '../../lib/media-source';
 import { EmptyState } from '../ui/empty-state';
 import { Text } from '../ui/text';
@@ -36,7 +36,13 @@ type RowProps = {
  * dragging them off the rail.
  */
 function TimelineRow({ event, isLatest, index, motion, onOpenPhoto }: RowProps) {
-  const day = formatDayMonth(event.eventDate);
+  // The editor stores a year-only entry as Jan 1 (`parseWhen` in
+  // edit-timeline.tsx) — the schema has no "no day given" state. So a
+  // 01-01 date is read back as year-only and the card shows just the year
+  // chip, no invented "1 Jan". An entry genuinely dated New Year's Day
+  // pays for this by losing its day label.
+  const yearOnly = dayOnly(event.eventDate).endsWith('-01-01');
+  const day = yearOnly ? null : formatDayMonth(event.eventDate);
   const meta = [event.place, day].filter((part) => part !== null).join(' · ');
 
   const {

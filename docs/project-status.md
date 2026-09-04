@@ -28,6 +28,24 @@ screens.
 
 ## Current Focus
 
+- **Timeline photos draw at their own shape (2026-09-04).** The lone
+  photo on a timeline card was a fixed 110px-tall `cover` letterbox that
+  cropped most of the picture. It now sizes its frame from the photo's
+  measured aspect ratio, clamped to [0.72, 1.9] — the same rule the
+  feed's single photo already used (`feed/post-media.tsx`). The square
+  "+N" row for multiple photos is unchanged. `member/event-photos.tsx`;
+  design-system.md updated. Verified: mobile tsc + prettier.
+
+- **Year-only milestones show no day on the card (2026-09-04).** The
+  editor stores a year-only entry as Jan 1 (`parseWhen`); the read card
+  used to render that as a literal "1 Jan" beside the place. It now reads
+  a 01-01 `eventDate` back as year-only and drops the day/month — the
+  year chip already carries the year. Known cost: an entry genuinely
+  dated New Year's Day loses its day label (no granularity flag in the
+  schema; adding one is the proper fix if this ever matters).
+  `member/timeline-list.tsx`; design-system.md updated. Verified: mobile
+  tsc + prettier.
+
 - **Timeline edits no longer post to the feed (2026-09-03,
   `feature/demo-account`).** Creating a milestone used to also announce it
   in the family feed as an EVENT post (behind `shareToFeed`, default
