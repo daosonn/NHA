@@ -1,4 +1,4 @@
-import { Check, Crosshair, Minus, Pencil, Plus } from 'lucide-react-native';
+import { Check, Crosshair, Minus, Pencil, Plus, Trash2 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
@@ -111,6 +111,54 @@ export function CanvasHint({ children }: { children: string }) {
  * and this button only opens and closes that mode. White pencil at rest,
  * coral check while editing.
  */
+/** The floating buttons are all this size, so the stack lines up. */
+const FAB = 52;
+/** `bottom-lg` on the pencil, in numbers, so the button above can clear it. */
+const FAB_INSET = 16;
+const FAB_GAP = 12;
+
+/**
+ * Delete this family — directly above the edit toggle, and only while edit
+ * mode is open.
+ *
+ * It used to be a trash icon in the screen header, one tap from anywhere,
+ * sitting beside the invitations button on a screen whose whole job is
+ * looking at your family (owner's call, 2026-09-04). Deleting a family is
+ * irreversible and cascades; it does not belong next to navigation. Behind
+ * the pencil it costs one deliberate tap to reach, which is the point, and
+ * it lives where the other editing tools already are.
+ *
+ * Soft destructive fill rather than solid red: the same tint-and-deep-text
+ * pattern the palette uses everywhere (`design-system.md`), and a solid red
+ * disc floating over the tree would read as an alarm rather than a tool. The
+ * confirmation sheet is where the weight belongs, and that has not changed.
+ */
+export function DeleteFamilyButton({ label, onPress }: { label: string; onPress?: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={[
+        {
+          position: 'absolute',
+          right: FAB_INSET,
+          bottom: FAB_INSET + FAB + FAB_GAP,
+          width: FAB,
+          height: FAB,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: radius.full,
+          backgroundColor: colors.themes.destructive.bg,
+        },
+        elevation.floating,
+      ]}
+    >
+      <Trash2 size={20} color={colors.themes.destructive.text} strokeWidth={2.1} />
+    </Pressable>
+  );
+}
+
 export function EditToggleButton({ editing, onPress }: { editing: boolean; onPress?: () => void }) {
   const { t } = useTranslation();
 

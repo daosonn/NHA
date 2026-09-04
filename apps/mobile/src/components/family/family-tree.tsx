@@ -19,7 +19,7 @@ import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 import { colors, radius } from '../../theme';
 import { Text } from '../ui/text';
-import { CanvasHint, EditToggleButton, ZoomControls } from './tree-controls';
+import { CanvasHint, DeleteFamilyButton, EditToggleButton, ZoomControls } from './tree-controls';
 import {
   layoutTree,
   type FamilyTreeData,
@@ -157,6 +157,16 @@ export type FamilyTreeProps = {
    */
   editing?: boolean;
   onToggleEditing?: () => void;
+  /**
+   * Delete this whole family, offered above the pencil **while editing**.
+   * Omitted by a screen whose viewer may not delete — only the person who
+   * created the family may, so the button is absent rather than disabled:
+   * a disabled control invites the question of how to enable it, and there
+   * is no answer here.
+   */
+  onDeleteFamily?: () => void;
+  /** Names the family in the delete button's label, for screen readers. */
+  deleteFamilyLabel?: string;
   /** The person the slots are drawn around; `null` = nobody chosen yet. */
   selectedId?: string | null;
   onPickSlot?: (slot: TreeSlot) => void;
@@ -181,6 +191,8 @@ export function FamilyTree({
   onManageNode,
   editing = false,
   onToggleEditing,
+  onDeleteFamily,
+  deleteFamilyLabel,
   selectedId = null,
   onPickSlot,
 }: FamilyTreeProps) {
@@ -685,6 +697,9 @@ export function FamilyTree({
             : t('family.editHintSlot')
           : `${t('family.hint')} · ${Math.round(zoom * 100)}%`}
       </CanvasHint>
+      {editing && onDeleteFamily !== undefined && (
+        <DeleteFamilyButton label={deleteFamilyLabel ?? ''} onPress={onDeleteFamily} />
+      )}
       <EditToggleButton editing={editing} onPress={onToggleEditing} />
     </View>
   );
