@@ -408,6 +408,18 @@ uses** (`auth.welcome.title` / `.subtitle`, the mark, the avatar stack) — move
 into `layout/auth-shell.tsx` rather than copied, so arriving and signing in are
 met by the same sentence. No new i18n keys.
 
+The faces themselves were the exception to that, and were fixed on
+2026-09-03: each screen held its own copy of the list, so one row of people
+lived in two places. They now come from `fixtures/welcome-faces.ts`. They
+also carry **names** now — without one `Avatar` falls to its last tier, the
+striped placeholder, so the row read as four grey hatched circles, which
+proves nothing about a family being there. Initials on a per-name tint, not
+photographs: the point is not worth shipping a real family's private
+pictures for. A `mediaId` on an item is all real pictures would need, since
+`Avatar` already prefers a photograph over the letters.
+Names live in a fixture rather than the catalogues on purpose —
+`architecture.md` files a name under _the data_, beside a memo's content.
+
 **The cat is here on purpose**, `CatHappy`, directly above the faces so it
 reads as being _with_ the family rather than as a second illustration. That is
 a deliberate reading of the motion kit's rule, not an oversight:
@@ -537,11 +549,24 @@ tree moved onto the bottom bar and posting became Home's compose bar
 (§ Bottom navigation). Switching
 families now happens where the trees are. The strip itself is unchanged:
 
-The family switcher: overlapped 34px faces, a dashed
+The family switcher: 40px faces set 6px apart, a dashed
 coral circle that starts an invite, then the way into the family tree.
 
-That last one is a **filled cap** at the tray's right end: 40px tall,
+That last one is a **filled cap** at the tray's right end: 44px tall,
 `coral.light`, `coral.deep` label and `Network` glyph, no border.
+
+**Grown from 34px on 2026-09-03**, with the selected face's ring changed
+from `rgba(240,112,95,0.35)` at 3px — one pixel at 35% opacity over the gap
+ring — to a solid 2px `coral.brand`. 34 was the size this row was given
+when it was a _preview_ on Home; as the tree's switcher it is the only
+control naming the tree on screen, and it was also below the 44pt touch
+minimum.
+
+Rings here are `boxShadow`, painted outside the element's own box, so the
+horizontal scroller that keeps a long row reachable **must be padded by the
+ring's bleed** or it shaves the faces: `overflow-y` is hidden and the
+scroller is only as tall as the faces in it. Before that padding the
+selected family read as a circle with a flat top and bottom.
 
 It took three attempts on 2026-08-21, and the two failures are the useful
 part:
@@ -694,26 +719,42 @@ The pieces: a dashed **"Add an entry"** tile above the list; each entry as
 a white card on the same rail-and-dot thread the read view draws, with a
 serif year chip (`#FEF3F1`/`coral.deep`), pencil and trash at its top
 right; a new, uncommitted entry rendered dimmed with a gray year chip and
-"Draft · not published yet". The entry form is a sheet: a date field that
+"Draft · not saved yet". The entry form is a sheet: a date field that
 accepts `1998` or `1998-06-12` (year-only lands on Jan 1), title
 (required), story, place, and **photos** via the moment composer's own
 `MediaStrip` + picker (2026-08-26).
 
 Photos follow the staging rule all the way down: picked files stay LOCAL
 in the draft, and `Done` uploads them (`uploadDrafts`, the shared upload)
-just before creating each entry — an abandoned draft leaves no orphan
-uploads. And because media is **fixed at creation** server-side, the
-picker appears only on an entry that is not saved yet; a saved entry's
-form says "photos can't be changed after saving" instead of drawing a
-picker that lies.
+just before writing each entry — an abandoned draft leaves no orphan
+uploads.
+
+**A saved entry's photos are editable too since 2026-09-03**, in the same
+strip and with the same X, because `mediaIds` became replaceable on PATCH
+(`api-contract.md` § Life events → Media). Until then the picker appeared
+only on an unsaved entry and a saved one's form said "photos can't be
+changed after saving" — honest about the API, but it meant a photo on the
+wrong milestone could only be fixed by deleting the milestone.
+
+One strip serves both because a tile says which it is: `DraftMedia.mediaId`
+means the file is already on the server (draw the authenticated thumbnail,
+send the id back), `uri` means it is a local pick (draw the file, upload
+it). The editor used to hold those as two separate fields.
+
+Removing a saved photo **deletes it, file and all**, when Done commits —
+a `Media` row may have one parent, so an unparented row is invisible to
+everyone and an orphan on disk. So the strip carries a line saying so
+("Removing a photo deletes it for good when you press Done") rather than
+only an X. A confirmation dialog on top of that is an open product call.
 
 **The photos are drawn, not counted** (`member/event-photos.tsx`): one
 photo runs the card's width at 110, several become a row of squares with
 "+N" on the last — the mockup's layout — and the same component now draws
 them on the READ timeline too, which until 2026-08-26 said "3 photos"
-where the photographs belonged. Editor cards draw local files for drafts
-and `thumbnailSource` for saved rows, so an entry looks like the same
-entry with the tools out.
+where the photographs belonged. Editor cards draw one list — a saved
+photo through `thumbnailSource` and a just-picked one from its local
+file, side by side, which is what an entry mid-edit actually is — so an
+entry looks like the same entry with the tools out.
 
 One limit stays: **own profile only** — the mockup is drawn on Dad's
 page, but offering this on placeholder (wiki) profiles is the recorded

@@ -11,15 +11,8 @@ import { BrandMark } from '../../src/components/ui/brand-mark';
 import { Button } from '../../src/components/ui/button';
 import { Text } from '../../src/components/ui/text';
 import { TextLink } from '../../src/components/ui/text-link';
+import { welcomeFaces } from '../../src/fixtures/welcome-faces';
 import { colors, spacing, useLayout } from '../../src/theme';
-
-/** Faces of a family that already exists — proof, not decoration. */
-const FACES = [
-  { id: 'a', tone: 'light' as const },
-  { id: 'b', tone: 'dark' as const },
-  { id: 'c', tone: 'light' as const },
-  { id: 'd', tone: 'dark' as const },
-];
 
 export default function WelcomeScreen() {
   const { t } = useTranslation();
@@ -27,7 +20,20 @@ export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
   const { expanded } = useLayout();
 
-  /** The two ways in. Identical on both layouts, so written once. */
+  /**
+   * The two ways in. Identical on both layouts, so written once.
+   *
+   * Neither of them is "create an account" any more. The button used to read
+   * "Create your family" and open the sign-up form, which met everyone who
+   * already has a family here — an account is made once and signed into for
+   * years — with the wrong form and the wrong sentence.
+   *
+   * So the line beneath the button is the one that leads to registration
+   * now, and it says so: "New here? → Create your family". It used to read
+   * "Already have an account? → Sign in", which stopped meaning anything the
+   * moment the button above it started going to sign-in as well.
+   * `AuthModeTabs` at the top of the sign-in form is the second way through.
+   */
   const actions = (
     <>
       {/* The primary CTA opens SIGN-IN with the public demo login prefilled
@@ -45,19 +51,19 @@ export default function WelcomeScreen() {
     </>
   );
 
-  /** Already have an account, and the legal line. Also identical. */
+  /** No account yet, and the legal line. Also identical. */
   const aside = (
     <>
       <View
         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
       >
         <Text variant="body1" color={colors.text.muted}>
-          {t('auth.welcome.haveAccount')}
+          {t('auth.welcome.noAccount')}
         </Text>
         <TextLink
-          label={t('auth.welcome.signIn')}
+          label={t('auth.welcome.create')}
           variant="body1"
-          onPress={() => router.push('/sign-in')}
+          onPress={() => router.push('/sign-up')}
         />
       </View>
 
@@ -133,7 +139,7 @@ export default function WelcomeScreen() {
           </Text>
         </View>
 
-        <AvatarStack items={FACES} size={34} surface={colors.coral.light} remaining={6} />
+        <AvatarStack items={welcomeFaces} size={34} surface={colors.coral.light} remaining={6} />
       </View>
 
       <ContentColumn style={{ paddingTop: 26, gap: 10 }}>{actions}</ContentColumn>

@@ -19,7 +19,7 @@ import { ApiError, type FamilyDetail } from '../../src/lib/api';
 import { colors, radius } from '../../src/theme';
 
 /**
- * Shorter than the server's 100. A group name is read inside a 34px avatar
+ * Shorter than the server's 100. A group name is read inside a 40px avatar
  * strip, so anything longer is truncated before anyone sees it.
  */
 const MAX_NAME = 30;

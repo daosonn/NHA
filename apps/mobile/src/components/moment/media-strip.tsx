@@ -1,7 +1,9 @@
+import { Image as RemoteImage } from 'expo-image';
 import { Plus, X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Image, Pressable, ScrollView, View } from 'react-native';
 
+import { thumbnailSource } from '../../lib/media-source';
 import { colors, radius } from '../../theme';
 import { PhotoPlaceholder } from '../ui/photo-placeholder';
 import { Text } from '../ui/text';
@@ -46,6 +48,16 @@ export type DraftMedia = {
    * like before there is a file behind it, not a permanent stand-in.
    */
   uri?: string;
+  /**
+   * Set when this tile is a file **already on the server** — its `Media` id.
+   *
+   * Added 2026-09-03 so the timeline editor can show an entry's saved photos
+   * in the same strip as the ones just picked, and remove either. It is what
+   * separates the two: a tile with a `mediaId` needs no upload (`uploadDrafts`
+   * skips it, having no `uri`), and keeping it in the set means sending its id
+   * back rather than sending bytes.
+   */
+  mediaId?: string;
   /** Needed by the upload — React Native's `FormData` wants both. */
   fileName?: string;
   mimeType?: string;
@@ -76,7 +88,23 @@ export function MediaStrip({ media, onRemove, onAdd }: MediaStripProps) {
     >
       {media.map((item) => (
         <View key={item.id} style={{ width: TILE, height: TILE }}>
-          {item.uri !== undefined ? (
+          {item.mediaId !== undefined ? (
+            /* `expo-image`, not RN's: `GET /media/:id/thumb` is
+               authenticated, and only this one carries the Authorization
+               header (see `media-source.ts`). A video sends its poster. */
+            <RemoteImage
+              source={thumbnailSource(item.mediaId, item.mimeType ?? 'image/jpeg')}
+              contentFit="cover"
+              transition={140}
+              style={{
+                width: TILE,
+                height: TILE,
+                borderRadius: radius.xl,
+                borderWidth: 1,
+                borderColor: colors.state.borderDefault,
+              }}
+            />
+          ) : item.uri !== undefined ? (
             <Image
               source={{ uri: item.uri }}
               style={{

@@ -15,23 +15,41 @@ import { colors, radius } from '../../theme';
 import { Avatar } from '../ui/avatar';
 import { Text } from '../ui/text';
 
-const AVATAR = 34;
+/**
+ * 34 before 2026-09-03, and too small for what this row now does.
+ *
+ * It was sized when it was a *preview* on Home — three faces saying a family
+ * exists. It is the family SWITCHER on the tree screen: the only control that
+ * says which tree is on screen and the only way to change it. A 34px target
+ * is also under the 44pt minimum for a thing people tap all day.
+ */
+const AVATAR = 40;
 /** Faces sit apart, not tucked under each other (owner's call 2026-09-01 —
  *  covers are photographs now, and an overlapped photo reads as clipped). */
 const OVERLAP = 6;
 /** Matches the strip fill so the ring reads as a gap, not a stroke. */
 const RING = `0 0 0 2px ${colors.background.subtle}`;
-const RING_ACTIVE = `${RING}, 0 0 0 3px rgba(240,112,95,0.35)`;
+/**
+ * Which family is on screen — solid `coral.brand`, 2px of it.
+ *
+ * It was `rgba(240,112,95,0.35)` at 3px, which over a 2px gap ring leaves a
+ * ONE pixel line at 35% opacity: the selected face was all but
+ * indistinguishable from the six beside it. This is the strip's only state,
+ * so it gets a mark that survives being looked at on a phone outdoors.
+ */
+const RING_ACTIVE = `${RING}, 0 0 0 4px ${colors.coral.brand}`;
+/** How far the widest ring reaches outside a face's own box. */
+const RING_BLEED = 4;
 
 /** Resting height, and what the row occupies once it has condensed. */
-const TRAY = 52;
-const TRAY_CONDENSED = 45;
-/** 52 × 0.86 ≈ 45, so the scale and the reclaimed height agree. */
+const TRAY = 60;
+const TRAY_CONDENSED = 52;
+/** 60 × 0.86 ≈ 52, so the scale and the reclaimed height agree. */
 const CONDENSED_SCALE = 0.86;
 /** How far the page scrolls before the strip has finished condensing. */
 export const CONDENSE_DISTANCE = 90;
 
-const CAP = 40;
+const CAP = 44;
 /** Pointer devices only; this never fires on a touchscreen. */
 const HOVER_SCALE = 1.06;
 const HOVER_MS = 140;
@@ -95,6 +113,12 @@ export type GroupStripProps = {
  * Nothing here may nest: `react-native-web` turns every
  * `accessibilityRole="button"` into a real `<button>`, and a button inside a
  * button swallows the inner press. So the tray's contents are siblings.
+ *
+ * Sizes grew on 2026-09-03 (owner: the circles looked shaved and the row too
+ * small). Two separate faults behind one complaint: the faces were still at
+ * the 34px they were given as a Home *preview* rather than as the tree's
+ * switcher, and the rings were being clipped by the scroller that keeps a
+ * long row reachable — see `RING_BLEED` at the ScrollView.
  */
 export function GroupStrip({
   groups,
@@ -210,7 +234,20 @@ export function GroupStrip({
             horizontal
             showsHorizontalScrollIndicator={false}
             style={{ flexShrink: 1, minWidth: 0 }}
-            contentContainerStyle={{ flexDirection: 'row', alignItems: 'center' }}
+            // The padding is what stops the faces being SHAVED, and it is not
+            // cosmetic breathing room. A ring here is a `boxShadow`, which is
+            // painted OUTSIDE the element's own box, and `react-native-web`
+            // gives a horizontal ScrollView `overflow-x: auto` with
+            // `overflow-y: hidden`. The scroller is only as tall as the 40px
+            // faces inside it, so without this the active ring lost its top
+            // and bottom edge, and the first and last face lost their outer
+            // one — the selected family read as a circle with a flat side.
+            contentContainerStyle={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingVertical: RING_BLEED,
+              paddingHorizontal: RING_BLEED,
+            }}
           >
             {faces}
           </ScrollView>
@@ -263,7 +300,7 @@ export function GroupStrip({
             justifyContent: 'center',
           }}
         >
-          <Plus size={15} color={colors.coral.deep} strokeWidth={2.2} />
+          <Plus size={17} color={colors.coral.deep} strokeWidth={2.2} />
         </Pressable>
 
         <View style={{ flex: 1 }} />

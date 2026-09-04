@@ -599,7 +599,7 @@ export type CreateLifeEventRequest = {
 
 /**
  * Omit a key to leave it alone. Title and `eventDate` cannot be cleared —
- * sending `null` for either is a 400. Media cannot change.
+ * sending `null` for either is a 400.
  */
 export type UpdateLifeEventRequest = {
   title?: string;
@@ -608,6 +608,16 @@ export type UpdateLifeEventRequest = {
   place?: string | null;
   type?: string | null;
   taggedMemberIds?: string[];
+  /**
+   * **Replaces** the entry's photos: the array is the new set, omitted leaves
+   * them alone. Ids new to the set must be your own uploads with no parent
+   * yet — upload first, then send them here. Ids dropped from the set are
+   * deleted outright, file and all, so this is not a detach.
+   *
+   * Editable since 2026-09-03; before that media was fixed at creation and
+   * the only way to change a photo was to delete the milestone.
+   */
+  mediaIds?: string[];
 };
 
 // -------------------------------------------------------- notifications

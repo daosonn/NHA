@@ -49,6 +49,17 @@ pnpm --filter api exec prisma migrate deploy   # apply migrations to Neon
 pnpm --filter api exec prisma generate         # generate the Prisma client
 ```
 
+After a `git pull` that touched `apps/api/prisma/schema.prisma`:
+
+```powershell
+pnpm --filter api prisma:generate
+```
+
+`apps/api/src/generated` is gitignored, so no pull can bring it up to date. A
+stale client makes `pnpm dev:api` fail to compile with "property does not
+exist" errors on the new columns — it reads like broken code rather than a
+stale artifact. Details in `docs/04-devops/local-environment.md`.
+
 Then:
 
 ```powershell
