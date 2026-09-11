@@ -29,6 +29,14 @@ export type TreeNodeProps = {
   node: PositionedNode;
   /** Edit mode's chosen person — drawn with the deep-coral ring. */
   selected?: boolean;
+  /**
+   * Show the "+" badge — edit mode, on every person who is NOT the current
+   * anchor. Without it the first step of adding somebody is invisible: the
+   * canvas caption said "tap a person to add family around them" and that
+   * was the only clue there was (owner, 2026-09-04: "t ko bt phải nhấn vào
+   * avatar để thêm node"). A caption nobody reads is not an affordance.
+   */
+  showAdd?: boolean;
   /** True for a person who was not in the previous payload: they pop in. */
   appear?: boolean;
   onPress?: (node: PositionedNode) => void;
@@ -101,6 +109,38 @@ function PendingBadge() {
   );
 }
 
+/**
+ * "Tap me and spots appear around me."
+ *
+ * Top-right, because bottom-right is the clock a reserved spot already
+ * wears and a person can be both. Coral fill with a white mark, the same
+ * language every other add in the app uses — the dashed empty node, the
+ * group strip's "+", the invite sheet's spot.
+ *
+ * It leaves the ANCHOR alone once one is chosen: that node has the deep
+ * coral ring and its dashed slots are on screen, so a "+" there would point
+ * at work already done. Every other face keeps its badge, which is what
+ * says you can switch to somebody else.
+ */
+function AddBadge() {
+  return (
+    <View
+      className="absolute items-center justify-center border-2"
+      style={{
+        right: -2,
+        top: -2,
+        width: 20,
+        height: 20,
+        borderRadius: radius.full,
+        backgroundColor: colors.coral.primary,
+        borderColor: colors.background.card,
+      }}
+    >
+      <Plus size={12} color={colors.text.white} strokeWidth={3} />
+    </View>
+  );
+}
+
 function NodeLabel({ node }: { node: PositionedNode }) {
   const { t } = useTranslation();
 
@@ -162,6 +202,7 @@ function NodeLabel({ node }: { node: PositionedNode }) {
 export function TreeNode({
   node,
   selected = false,
+  showAdd = false,
   appear = false,
   onPress,
   onLongPress,
@@ -195,7 +236,13 @@ export function TreeNode({
       onLongPress={() => onLongPress?.(node)}
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityHint={onLongPress === undefined ? undefined : t('family.nodeHint')}
+      accessibilityHint={
+        showAdd
+          ? t('family.editHint')
+          : onLongPress === undefined
+            ? undefined
+            : t('family.nodeHint')
+      }
       accessibilityState={selected ? { selected: true } : undefined}
       className="absolute items-center"
       style={{
@@ -208,6 +255,7 @@ export function TreeNode({
         <View>
           <NodeBody node={node} selected={selected} />
           {node.state === 'pending' && <PendingBadge />}
+          {showAdd && <AddBadge />}
         </View>
 
         <View className="mt-[5px] items-center gap-[1px]">

@@ -1,11 +1,16 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { families } from '../../lib/api';
-import type { CreateFamilyRequest, JoinFamilyRequest } from '../../lib/api';
+import type { CreateFamilyRequest } from '../../lib/api';
 import { queryKeys } from '../../lib/query-keys';
 
 /**
- * Creating and joining both change the same list, so both invalidate it.
+ * Creating changes the families list, so it invalidates it.
+ *
+ * Joining by `Family.inviteCode` used to live here too. It went on
+ * 2026-09-04 with the family code itself — an invitation against a spot
+ * (`/invitations/:code/accept`) is the only way into a family now, and that
+ * one lives in `use-invitations.ts`.
  *
  * `invalidateQueries` rather than writing the response into the cache by
  * hand: `POST /families` returns a `FamilyDetail` and the list holds
@@ -26,17 +31,6 @@ export function useCreateFamily() {
 
   return useMutation({
     mutationFn: (body: CreateFamilyRequest) => families.create(body),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.families() });
-    },
-  });
-}
-
-export function useJoinFamily() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (body: JoinFamilyRequest) => families.join(body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.families() });
     },

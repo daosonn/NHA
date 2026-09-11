@@ -10,18 +10,21 @@ import { Button } from '../src/components/ui/button';
 import { Text } from '../src/components/ui/text';
 import { TextField } from '../src/components/ui/text-field';
 import { TextLink } from '../src/components/ui/text-link';
-import { useJoinFamily } from '../src/features/family/use-family-mutations';
 import { ApiError, invitations } from '../src/lib/api';
 import { colors } from '../src/theme';
 
-/** `Family.inviteCode` — eight characters, no I/O/0/1 so it survives being read aloud. */
+/** `Invitation.code` — eight characters, no I/O/0/1 so it survives being read aloud. */
 const CODE_LENGTH = 8;
 
+/**
+ * Only `GET /invitations/:code` runs from here now, and it answers 404 or
+ * nothing. "Already a member" used to be possible when this screen could
+ * also spend a family code; the invitation page owns that case today.
+ */
 function errorKey(error: unknown): string {
   if (!(error instanceof ApiError)) return 'errors.generic';
   if (error.isOffline) return 'errors.offline';
   if (error.status === 404) return 'joinFamily.errors.codeNotFound';
-  if (error.status === 409) return 'joinFamily.errors.alreadyMember';
   return 'errors.generic';
 }
 
@@ -33,53 +36,43 @@ function errorKey(error: unknown): string {
  * `family/new.tsx` — two doors marked "create" leading to different rooms
  * (Đạt, 2026-08-27). Now each form does one thing and cross-links the other:
  * creation happens only in `family/new`, joining only here.
+ *
+ * The box took TWO kinds of code until 2026-09-04: it asked about an
+ * invitation first and fell through to `Family.inviteCode`. That fallback is
+ * gone (owner's call). A family code put the joiner in the group with no
+ * relationship edges at all — a node floating beside the tree that somebody
+ * else had to notice and connect — while an invitation lands them on a spot
+ * that already knows who they are. Only one of those is a way into a family
+ * tree, so only one is offered.
  */
 export default function JoinFamilyScreen() {
   const { t } = useTranslation();
   const router = useRouter();
 
   const [code, setCode] = useState('');
-  // The invitation lookup below is a plain request, not a mutation, so the
-  // button's spinner needs its own flag for that leg of the trip.
+  // The lookup is a plain request, not a mutation, so the button's spinner
+  // needs a flag of its own.
   const [checkingInvite, setCheckingInvite] = useState(false);
 
-  const join = useJoinFamily();
+  const [failure, setFailure] = useState<unknown>(null);
 
   const ready = code.trim().length === CODE_LENGTH;
 
   const submit = async () => {
+    const entered = code.trim().toUpperCase();
+    setCheckingInvite(true);
+    setFailure(null);
     try {
-      // A typed code can be either kind — the person who received it cannot
-      // tell a per-spot invitation code from `Family.inviteCode`, and this
-      // box is the only place in the app that takes a typed code. Ask about
-      // the invitation first (`GET /invitations/:code` is public); only a
-      // miss falls through to the family-code join. The order also settles
-      // the one-in-a-trillion string that lives in both tables.
-      const entered = code.trim().toUpperCase();
-      setCheckingInvite(true);
-      let isInvitation = false;
-      try {
-        await invitations.preview(entered);
-        isInvitation = true;
-      } catch {
-        // Not a live invitation (or unreachable) — the join below gives the
-        // honest answer either way: it fails the same way for the same cause.
-      } finally {
-        setCheckingInvite(false);
-      }
-
-      if (isInvitation) {
-        // The invitation page says who invited them, as what, and where they
-        // land — everything this bare code box cannot — and owns the accept.
-        router.push({ pathname: '/invite/[code]', params: { code: entered } });
-        return;
-      }
-
-      await join.mutateAsync({ inviteCode: entered });
-      // Back to Home, which now has a family to show.
-      safeBack(router, '/');
-    } catch {
-      // Rendered from `join.error` below; nothing to do here.
+      // `GET /invitations/:code` is public, so this works before the person
+      // is anybody in this family. It is only a look: the invitation page it
+      // hands over to says who invited them, as what, and where they land —
+      // everything a bare code box cannot — and owns the accept.
+      await invitations.preview(entered);
+      router.push({ pathname: '/invite/[code]', params: { code: entered } });
+    } catch (error) {
+      setFailure(error);
+    } finally {
+      setCheckingInvite(false);
     }
   };
 
@@ -88,13 +81,13 @@ export default function JoinFamilyScreen() {
       onBack={() => safeBack(router, '/')}
       footer={
         <>
-          {join.error !== null && (
+          {failure !== null && (
             <Text
               variant="caption"
               color={colors.themes.destructive.text}
               accessibilityRole="alert"
             >
-              {t(errorKey(join.error))}
+              {t(errorKey(failure))}
             </Text>
           )}
 
@@ -103,7 +96,7 @@ export default function JoinFamilyScreen() {
             size="large"
             fullWidth
             disabled={!ready}
-            loading={join.isPending || checkingInvite}
+            loading={checkingInvite}
             onPress={() => void submit()}
           />
         </>
