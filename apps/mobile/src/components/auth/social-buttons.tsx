@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { View } from 'react-native';
 
 import { useSocialLogin } from '../../features/auth/use-social-login';
 import { Button } from '../ui/button';
@@ -32,10 +33,16 @@ export type SocialButtonsProps = {
  * of two buttons: `row` is the variant that follows a password form and so
  * carries the "or" rule, `stack` is Welcome, where signing in with Google is
  * the first thing offered and there is nothing above it to separate from.
+ *
+ * **Disabled for the demo (2026-09-11).** The button stays visible but
+ * greyed out and unpressable: the OAuth round-trip leaves the demo script.
+ * The flow itself still works — `useSocialLogin` and the server route are
+ * untouched — so re-enabling is restoring the `onPress`/`loading` wiring
+ * this component had before this date.
  */
 export function SocialButtons({ layout = 'row', continueWording = false }: SocialButtonsProps) {
   const { t } = useTranslation();
-  const { start, pending, available } = useSocialLogin();
+  const { available } = useSocialLogin();
 
   if (!available) return null;
 
@@ -45,10 +52,13 @@ export function SocialButtons({ layout = 'row', continueWording = false }: Socia
       variant="neutral"
       size="large"
       fullWidth
-      loading={pending === 'google'}
-      disabled={pending !== null}
-      onPress={() => start('google')}
-      renderIcon={() => <GoogleMark />}
+      disabled
+      renderIcon={() => (
+        // Brand colours read as pressable; dimmed to match the disabled text.
+        <View style={{ opacity: 0.45 }}>
+          <GoogleMark />
+        </View>
+      )}
     />
   );
 

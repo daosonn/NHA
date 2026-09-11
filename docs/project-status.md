@@ -28,6 +28,17 @@ screens.
 
 ## Current Focus
 
+- **Google button disabled for the demo (2026-09-11).** The sign-in-with-
+  Google button stays visible but greyed out and unpressable — the OAuth
+  round-trip leaves the demo script. Flow and server route untouched;
+  re-enabling is restoring the `onPress`/`loading` wiring in
+  `auth/social-buttons.tsx`. Verified: mobile tsc + prettier.
+
+- **Welcome CTA copy: はじめに → はじめる (2026-09-11).** The primary
+  button on the Welcome screen read はじめに, which reads as a heading
+  ("Introduction"), not an action. Now はじめる (`auth.welcome.start`,
+  `ja.json`). Verified: mobile check:i18n (928 keys).
+
 - **Timeline rail fill and dim bands drifted after photos loaded
   (2026-09-04).** Reported by the owner: the coral fill stopped off the
   active dot and some cards dimmed at the wrong scroll positions. Cause:
